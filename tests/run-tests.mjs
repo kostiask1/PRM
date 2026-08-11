@@ -1510,6 +1510,8 @@ const FSD_MONSTER_STAT_BLOCK_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/monster-stat-block-store-facade";
 const FSD_SIDEBAR_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/sidebar-store-facade";
+const FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/bestiary-browser-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -2523,6 +2525,7 @@ await run(
 			}
 		}
 		assert.deepEqual(bestiaryConsumers, [
+			"src/app/ui/BestiaryBrowserRuntimeHost.tsx",
 			"src/pages/encounter/ui/components/BestiaryAiDraftModal.tsx",
 			"src/pages/encounter/ui/components/EncounterBestiaryAiModals.tsx",
 			"src/pages/encounter/ui/components/MonsterAiEditModal.tsx",
@@ -8899,6 +8902,238 @@ await run(
 );
 
 await run(
+	"Phase 154 gives Bestiary Browser an injected runtime",
+	async () => {
+		const [
+			runtimeSource,
+			browserSource,
+			widgetEntry,
+			widgetTypeEntry,
+			runtimeHostSource,
+			mainContentSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowserRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+			fs.readFile("src/widgets/bestiary-browser/index.d.ts", "utf8"),
+			fs.readFile("src/app/ui/BestiaryBrowserRuntimeHost.tsx", "utf8"),
+			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"BestiaryBrowserConfirmation",
+			["message: string;", "title: string;"],
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"BestiaryBrowserMessage",
+			["message: string;", "title: string;"],
+		);
+		assertExportedInterfaceFragments(runtimeSource, "BestiaryBrowserRuntime", [
+			"activeCampaign: CampaignSourceSettings | null;",
+			"activeCampaignSlug: string | null;",
+			"currentLanguage: string;",
+			"globalIgnoreSourcesList: string[];",
+			"replaceCampaigns(campaigns: unknown[]): void;",
+			"showMessage(message: BestiaryBrowserMessage): void;",
+			"setGlobalIgnoreSourcesList(ignoreSourcesList: string[]): void;",
+			"syncEvent: unknown;",
+			"useSearchDebounce: boolean;",
+		]);
+		assert.match(
+			runtimeSource,
+			/requestConfirmation\(\s*copy: BestiaryBrowserConfirmation,\s*\): Promise<unknown>;/,
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"BestiaryBrowserRuntimeProviderProps",
+			[
+				"runtime: BestiaryBrowserRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<BestiaryBrowserRuntime | null>(null)",
+				"<BestiaryBrowserRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(BestiaryBrowserRuntimeContext);",
+				'"BestiaryBrowserRuntimeProvider is required to render bestiary controls"',
+			],
+			"Bestiary Browser runtime provider",
+		);
+		assert.match(widgetEntry, /BestiaryBrowserRuntimeProvider/);
+		assert.doesNotMatch(
+			widgetEntry + "\n" + widgetTypeEntry,
+			/useBestiaryBrowserRuntime/,
+		);
+		assertPublicTypeSurface(widgetTypeEntry, [
+			"BestiaryBrowserConfirmation",
+			"BestiaryBrowserMessage",
+			"BestiaryBrowserRuntime",
+			"BestiaryBrowserRuntimeProviderProps",
+		]);
+		for (const source of [runtimeSource, browserSource]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(|\balert\(|\bconfirm\(/,
+			);
+		}
+		const browserPropsSource = browserSource.match(
+			/export interface BestiaryBrowserProps \{[\s\S]*?^\}/m,
+		)?.[0];
+		assert.ok(browserPropsSource);
+		assert.doesNotMatch(browserPropsSource, /runtime/i);
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				"const {",
+				"activeCampaign,",
+				"activeCampaignSlug,",
+				"currentLanguage,",
+				"globalIgnoreSourcesList,",
+				"requestConfirmation,",
+				"replaceCampaigns,",
+				"showMessage,",
+				"setGlobalIgnoreSourcesList,",
+				"syncEvent: rawSyncEvent,",
+				"useSearchDebounce,",
+				"} = useBestiaryBrowserRuntime();",
+				"const syncEvent = useMemo(",
+				"() => parseBestiarySyncEvent(rawSyncEvent),",
+				"[rawSyncEvent],",
+				"const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);",
+				"onCampaigns: replaceCampaigns,",
+				"onUiIgnoreSources: setGlobalIgnoreSourcesList,",
+				"showMessage({",
+				"const confirmed = await requestConfirmation({",
+				"if (!confirmed) return;",
+				"title: lang.t(\"Import custom creatures\"),",
+				"title: lang.t(\"Import error\"),",
+			],
+			"Bestiary Browser injected runtime and preserved save/delete flow",
+		);
+		assertSourceTokensInOrder(
+			runtimeHostSource,
+			[
+				"const dispatch = useAppDispatch();",
+				"state.localization.language",
+				"state.ui.useSearchDebounce !== false",
+				"state.navigation.activeCampaignSlug",
+				"state.active.campaign",
+				"state.ui.ignoreSourcesList || []",
+				"state.sync.event",
+				'const replaceCampaigns = useCallback<',
+				"dispatch(setCampaignsAction(campaigns));",
+				'const setGlobalIgnoreSourcesList = useCallback<',
+				"dispatch(setUiSettingsAction({ ignoreSourcesList }));",
+				'const showMessage = useCallback<BestiaryBrowserRuntime[\"showMessage\"]>',
+				"dispatch(alert(message));",
+				"const requestConfirmation = useCallback<",
+				"(copy) => dispatch(confirm(copy)),",
+				"const runtime = useMemo<BestiaryBrowserRuntime>",
+				"syncEvent,",
+				"<BestiaryBrowserRuntimeProvider runtime={runtime}>",
+			],
+			"app-local Bestiary Browser runtime host",
+		);
+		assertSourceTokensInOrder(
+			mainContentSource,
+			[
+				'import BestiaryBrowserRuntimeHost from "../ui/BestiaryBrowserRuntimeHost.tsx";',
+				"<BestiaryBrowserRuntimeHost>",
+				"<CampaignSearchRuntimeHost>",
+				"<Outlet />",
+				"</CampaignSearchRuntimeHost>",
+				"</BestiaryBrowserRuntimeHost>",
+			],
+			"Bestiary Browser runtime scope across routed page content",
+		);
+
+		const forbiddenBestiaryStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/bestiary-browser",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenBestiaryStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenBestiaryStoreImporters, []);
+
+		for (const source of [
+			'import { setCampaignsAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { setCampaignsAction } from "../../../shared/model/index.js";',
+			"SRC/WIDGETS/BESTIARY-BROWSER/ui/BestiaryBrowser.tsx",
+			FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { setCampaignsAction } from "../../../shared/model/index.js";',
+				"src/widgets/sidebar/ui/Sidebar.tsx",
+				FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/widgets\/bestiary-browser\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/bestiary-browser-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
 	"reference preview orchestration belongs to the rules-reference feature",
 	async () => {
 		const [
@@ -9071,10 +9306,8 @@ await run(
 			"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
 			"utf8",
 		);
-		assert.match(
-			source,
-			/const rawSyncEvent = useAppSelector\(\(state\) => state\.sync\.event\);/,
-		);
+		assert.match(source, /syncEvent:\s*rawSyncEvent,/);
+		assert.match(source, /\} = useBestiaryBrowserRuntime\(\);/);
 		assert.match(
 			source,
 			/const syncEvent = useMemo\(\s*\(\) => parseBestiarySyncEvent\(rawSyncEvent\),\s*\[rawSyncEvent\],\s*\);/,

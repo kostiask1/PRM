@@ -120,6 +120,7 @@ const SPELLS_BROWSER_WIDGET_PATH_PREFIX = "src/widgets/spells-browser/";
 const MONSTER_STAT_BLOCK_WIDGET_PATH_PREFIX =
 	"src/widgets/monster-stat-block/";
 const SIDEBAR_WIDGET_PATH_PREFIX = "src/widgets/sidebar/";
+const BESTIARY_BROWSER_WIDGET_PATH_PREFIX = "src/widgets/bestiary-browser/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -736,6 +737,16 @@ const SIDEBAR_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
 		"Sidebar must receive app-global navigation, modal, error, settings, and dice effects through its injected runtime and may not import shared/model or app/model directly.",
 });
 
+const BESTIARY_BROWSER_STORE_FACADE_RULE =
+	createInjectedRuntimeStoreFacadeRule({
+		featurePathPrefix: BESTIARY_BROWSER_WIDGET_PATH_PREFIX,
+		description:
+			"Require Bestiary Browser to receive app-global preferences, campaign state, sync events, and messages through its injected runtime.",
+		messageId: "injectedRuntime",
+		message:
+			"Bestiary Browser must receive app-global preferences, campaign state, sync events, and messages through its injected runtime and may not import shared/model or app/model directly.",
+	});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -762,6 +773,8 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"monster-stat-block-store-facade":
 			MONSTER_STAT_BLOCK_STORE_FACADE_RULE,
 		"sidebar-store-facade": SIDEBAR_STORE_FACADE_RULE,
+		"bestiary-browser-store-facade":
+			BESTIARY_BROWSER_STORE_FACADE_RULE,
 	}),
 });
 

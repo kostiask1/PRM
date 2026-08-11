@@ -700,6 +700,8 @@ Next:
 - Phase 152 adds scoped `fsd-boundaries/monster-stat-block-store-facade` enforcement for `src/widgets/monster-stat-block/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public type/provider surface, stable App commands, add-to-encounter ordering/filtering, both dice bindings, stable Bestiary/AI/Rules slots, App scope over route and modal rendering, and bypass matrix. The expanded complete suite passes 438/438 tests. `MD-R02` remains in progress because the compatibility facade still has other page/widget consumers.
 - Completed Phase 153 by removing Sidebar's three direct facade consumers: navigation/modal/error effects in `Sidebar.tsx`, delayed Player Questions dice state/requests, and delayed Settings state/commands. The widget-owned `SidebarRuntime` retains its public `SidebarProps` while `app/ui/SidebarRuntimeHost.tsx` maps the live selectors/actions and covers both Sidebar and root modal rendering.
 - Phase 153 adds scoped `fsd-boundaries/sidebar-store-facade` enforcement for `src/widgets/sidebar/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public type/provider surface, app-host mapping, delayed-modal scope, import/export error/finally ordering, close-before-open/navigation behavior, `forceTab`, raw Settings and false-only Player Questions debounce policy, public-prop stability, and bypass matrix. The expanded complete suite passes 439/439 tests. `MD-R02` remains in progress because the compatibility facade still has other page/widget consumers.
+- Completed Phase 154 by removing Bestiary Browser's direct selectors plus campaign/settings, alert, and confirmation facade access. The widget-owned `BestiaryBrowserRuntime` exposes only live language/debounce/campaign/source/sync values and narrow replacement/message/confirmation commands; `app/ui/BestiaryBrowserRuntimeHost.tsx` maps them around `MainContentLayout`'s routed content while the browser retains raw sync parsing, transport, local selection/history/abort state, localized copy, and stable slots.
+- Phase 154 adds scoped `fsd-boundaries/bestiary-browser-store-facade` enforcement for `src/widgets/bestiary-browser/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public type/provider surface, route-host mapping/scope, raw sync identity, false-only debounce, campaign/global source-save ordering, delete confirmation, public-prop stability, and bypass matrix. The expanded complete suite passes 440/440 tests. `MD-R02` remains in progress because the compatibility facade still has other page/widget consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -784,7 +786,11 @@ modal/roll behavior, enforces the focused widget store boundary, and passes
 438/438 tests. Phase 153 gives Sidebar a widget-owned runtime with live
 app-host-mapped navigation, modal/error, settings, and dice contracts; it keeps
 its public props and delayed modal children live, enforces the focused widget
-store boundary, and passes 439/439 tests.
+store boundary, and passes 439/439 tests. Phase 154 gives Bestiary Browser a
+widget-owned runtime with live preferences/campaign/source/sync state and
+replacement/message/confirmation commands; it keeps browser-local parsing,
+transport, selection/history state, and composition slots, enforces the focused
+widget store boundary through a route-layout host, and passes 440/440 tests.
 
 ### Provenance and transfer rule
 
@@ -814,7 +820,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime; Phase 145 gives Dice an App-provided request runtime plus an app-local live request host; Phase 146 gives Images a feature-owned gallery runtime supplied by a narrow app-local host; Phase 147 gives Campaign Entity Card a widget-owned creation runtime supplied by a narrow app-local host; Phase 148 gives Campaign Search a widget-owned runtime supplied by a narrow route-layout host; Phase 149 gives Campaign Entity Modal an App-supplied confirmation/refresh runtime while keeping localized copy widget-owned; Phase 150 gives Rules Reference Modal a widget-owned runtime supplied through the existing App root while keeping its stable content factories unchanged; Phase 151 gives Spells Browser a widget-owned runtime supplied through the same App-root scope while keeping its stable factory slot unchanged; Phase 152 gives Monster Stat Block a widget-owned runtime supplied through that App-root scope while keeping its stable Bestiary, AI Response, and Rules Reference slots unchanged; Phase 153 gives Sidebar a widget-owned runtime supplied by an app-local host that covers delayed root-modal children while keeping `SidebarProps` unchanged. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime; Phase 145 gives Dice an App-provided request runtime plus an app-local live request host; Phase 146 gives Images a feature-owned gallery runtime supplied by a narrow app-local host; Phase 147 gives Campaign Entity Card a widget-owned creation runtime supplied by a narrow app-local host; Phase 148 gives Campaign Search a widget-owned runtime supplied by a narrow route-layout host; Phase 149 gives Campaign Entity Modal an App-supplied confirmation/refresh runtime while keeping localized copy widget-owned; Phase 150 gives Rules Reference Modal a widget-owned runtime supplied through the existing App root while keeping its stable content factories unchanged; Phase 151 gives Spells Browser a widget-owned runtime supplied through the same App-root scope while keeping its stable factory slot unchanged; Phase 152 gives Monster Stat Block a widget-owned runtime supplied through that App-root scope while keeping its stable Bestiary, AI Response, and Rules Reference slots unchanged; Phase 153 gives Sidebar a widget-owned runtime supplied by an app-local host that covers delayed root-modal children while keeping `SidebarProps` unchanged; Phase 154 gives Bestiary Browser a widget-owned runtime supplied by a narrow route-layout host while keeping raw sync parsing and public composition slots unchanged. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -1088,6 +1094,15 @@ Status: **In progress**
   private widget provider supplied by `app/ui/SidebarRuntimeHost.tsx` around
   both Sidebar and root modal rendering; keep `SidebarProps` unchanged; and
   enforce that the widget cannot regain direct app/shared-store facade access.
+- [x] Migrate Bestiary Browser in Phase 154: retain API loading, raw sync-event
+  parsing, source derivation and campaign-vs-global persistence, localization,
+  custom selection/history/edit/AI behavior, delete confirmation, and stable
+  composition slots; inject only live language/debounce/campaign/source/sync
+  state plus campaign replacement, global-source patch, message, and
+  confirmation commands through a private widget provider supplied by
+  `app/ui/BestiaryBrowserRuntimeHost.tsx` around routed content; keep public
+  props unchanged and enforce that the widget cannot regain direct
+  app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -1105,7 +1120,7 @@ Status: **In progress**
   tests; Phase 146 passes 432/432 tests; Phase 147 passes 433/433 tests; Phase
   148 passes 434/434 tests; Phase 149 passes 435/435 tests; Phase 150 passes
   436/436 tests; Phase 151 passes 437/437 tests; Phase 152 passes 438/438
-  tests; Phase 153 passes 439/439 tests.
+  tests; Phase 153 passes 439/439 tests; Phase 154 passes 440/440 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1477,6 +1492,30 @@ modal updates, import strategy -> close -> deferred file-click order, and
 Rules Reference `forceTab` forwarding. It passes 439/439 tests. Complete
 lint/typecheck remain tracked under `MD-R04`; the shared compatibility facade
 remains in progress under `MD-R02`.
+
+### Recovery R24 / Phase 154 - Bestiary Browser injected runtime
+
+Status: **Completed**
+
+- [x] Define the widget-owned `BestiaryBrowserRuntime` provider with live
+  language, false-only debounce, active campaign/source settings, and raw sync
+  event state, plus campaign replacement, global-source patch, message, and
+  confirmation commands; expose only provider/types through the widget root and
+  keep the Context hook private to the slice.
+- [x] Let `app/ui/BestiaryBrowserRuntimeHost.tsx` own the live selectors and
+  stable action mapping, and scope the provider around `MainContentLayout`'s
+  routed `<Outlet />` without threading runtime props through `EncounterPage`.
+- [x] Keep Bestiary API loaders, raw sync parsing/effect dependency,
+  campaign-versus-global selected-source persistence order, localized message
+  copy, confirmation-before-delete, custom history/edit/AI behavior, and all
+  public composition slots unchanged; prevent every Bestiary Browser file from
+  importing `app/model` or `shared/model` with the scoped boundary rule.
+
+Phase 154 preserves the raw sync event identity before parsing, `false`-only
+search-debounce policy, source-save update -> list -> replacement behavior,
+confirmation-before-delete order, and runtime-free public props. It passes
+440/440 tests. Complete lint/typecheck remain tracked under `MD-R04`; the
+shared compatibility facade remains in progress under `MD-R02`.
 
 ## Validation required for every phase
 

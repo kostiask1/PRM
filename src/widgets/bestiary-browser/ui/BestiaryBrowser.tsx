@@ -28,13 +28,6 @@ import type {
 import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
 import { isAbortError } from "../../../shared/api/index.ts";
-import {
-	alert,
-	confirm,
-	setCampaignsAction,
-	setUiSettingsAction,
-} from "../../../shared/model/index.js";
-import { useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
 import { Button } from "../../../shared/ui/index.js";
 import {
 	MonsterAiActionModal,
@@ -57,7 +50,6 @@ import {
 	getIgnoreSourcesListFromSelectedSources,
 	getSelectedSourcesFromIgnoreList,
 	normalizeSourceCode,
-	type CampaignSourceSettings,
 } from "../../../entities/reference/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
 import {
@@ -116,6 +108,7 @@ import type {
 	BestiaryAssistantSlot,
 	BestiaryMonsterStatBlockSlot,
 } from "./bestiaryComposition.ts";
+import { useBestiaryBrowserRuntime } from "./BestiaryBrowserRuntime.tsx";
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 
@@ -178,23 +171,18 @@ export default function BestiaryBrowser({
 	onActiveMonsterChange = null,
 	onSelectMonster = null,
 }: BestiaryBrowserProps) {
-	const dispatch = useAppDispatch();
-	const currentLanguage = useAppSelector(
-		(state) => state.localization.language,
-	);
-	const useSearchDebounce = useAppSelector(
-		(state) => state.ui.useSearchDebounce !== false,
-	);
-	const activeCampaignSlug = useAppSelector(
-		(state) => state.navigation.activeCampaignSlug,
-	);
-	const activeCampaign = useAppSelector(
-		(state) => state.active.campaign,
-	) as CampaignSourceSettings | null;
-	const globalIgnoreSourcesList = useAppSelector(
-		(state) => state.ui.ignoreSourcesList || [],
-	);
-	const rawSyncEvent = useAppSelector((state) => state.sync.event);
+	const {
+		activeCampaign,
+		activeCampaignSlug,
+		currentLanguage,
+		globalIgnoreSourcesList,
+		requestConfirmation,
+		replaceCampaigns,
+		showMessage,
+		setGlobalIgnoreSourcesList,
+		syncEvent: rawSyncEvent,
+		useSearchDebounce,
+	} = useBestiaryBrowserRuntime();
 	const syncEvent = useMemo(
 		() => parseBestiarySyncEvent(rawSyncEvent),
 		[rawSyncEvent],
@@ -397,22 +385,25 @@ export default function BestiaryBrowser({
 				},
 				updateCampaign: api.updateCampaign,
 				listCampaigns: api.listCampaigns,
-				onCampaigns: (campaigns) =>
-					dispatch(setCampaignsAction(campaigns)),
+				onCampaigns: replaceCampaigns,
 				updateSettings: api.updateSettings,
-				onUiIgnoreSources: (ignoreSourcesList) =>
-					dispatch(setUiSettingsAction({ ignoreSourcesList })),
+				onUiIgnoreSources: setGlobalIgnoreSourcesList,
 				onLogError: (error) =>
 					console.error("Failed to save ignored sources", error),
-				onError: (error) => dispatch(
-					alert({
+				onError: (error) =>
+					showMessage({
 						title: lang.t("Error"),
 						message: getErrorMessage(error, lang.t("Unknown error")),
 					}),
-				),
 			});
 		},
-		[activeCampaignSlug, dispatch, filterSourceOptions],
+		[
+			activeCampaignSlug,
+			filterSourceOptions,
+			replaceCampaigns,
+			showMessage,
+			setGlobalIgnoreSourcesList,
+		],
 	);
 
 	const restoreCustomMonsters = async (
@@ -439,10 +430,10 @@ export default function BestiaryBrowser({
 			setUndoStack(transition.undoStack);
 			setRedoStack(transition.redoStack);
 		} catch (err) {
-			dispatch(alert({
+			showMessage({
 				title: lang.t("Undo error"),
 				message: getErrorMessage(err, lang.t("Unknown error")),
-			}));
+			});
 		}
 	};
 
@@ -460,10 +451,10 @@ export default function BestiaryBrowser({
 			setRedoStack(transition.redoStack);
 			setUndoStack(transition.undoStack);
 		} catch (err) {
-			dispatch(alert({
+			showMessage({
 				title: lang.t("Redo error"),
 				message: getErrorMessage(err, lang.t("Unknown error")),
-			}));
+			});
 		}
 	};
 
@@ -823,10 +814,10 @@ export default function BestiaryBrowser({
 			update: updateEditedCustomMonster,
 			onApplied: applyUpdatedCustomMonster,
 			onClose: closeEditCustomMonster,
-			onError: (error) => dispatch(alert({
+			onError: (error) => showMessage({
 				title: lang.t("Error"),
 				message: getErrorMessage(error, lang.t("Unknown error")),
-			})),
+			}),
 		});
 	};
 
@@ -942,12 +933,10 @@ export default function BestiaryBrowser({
 			onUndoSnapshot: pushCustomUndoSnapshot,
 			onUpdate: handleCustomBestiaryUpdate,
 			onError: (error) => {
-				dispatch(
-					alert({
-						title: lang.t("AI history error"),
-						message: getErrorMessage(error, lang.t("Unknown error")),
-					}),
-				);
+				showMessage({
+					title: lang.t("AI history error"),
+					message: getErrorMessage(error, lang.t("Unknown error")),
+				});
 			},
 		});
 	};
@@ -960,14 +949,12 @@ export default function BestiaryBrowser({
 	const handleDeleteCustomMonster = async (monster: BestiaryMonster) => {
 		const startPlan = getCustomMonsterDeleteStartPlan(monster);
 		if (startPlan.kind === "skip") return;
-		const confirmed = await dispatch(
-			confirm({
-				title: lang.t("Delete custom creature"),
-				message: lang.t('Delete custom creature "{name}"?', {
-					name: startPlan.monsterName,
-				}),
+		const confirmed = await requestConfirmation({
+			title: lang.t("Delete custom creature"),
+			message: lang.t('Delete custom creature "{name}"?', {
+				name: startPlan.monsterName,
 			}),
-		);
+		});
 		if (!confirmed) return;
 
 		const undoSnapshot = cloneCustomMonsters(customMonsters);
@@ -986,12 +973,10 @@ export default function BestiaryBrowser({
 				removeDeletedCustomMonsterFavorite(current, startPlan.monsterName),
 			);
 		} catch (err) {
-			dispatch(
-				alert({
-					title: lang.t("Delete error"),
-					message: getErrorMessage(err, lang.t("Unknown error")),
-				}),
-			);
+			showMessage({
+				title: lang.t("Delete error"),
+				message: getErrorMessage(err, lang.t("Unknown error")),
+			});
 		}
 	};
 
@@ -1027,21 +1012,17 @@ export default function BestiaryBrowser({
 				},
 			);
 			pushCustomUndoSnapshot(undoSnapshot);
-			dispatch(
-				alert({
-					title: lang.t("Import custom creatures"),
-					message: lang.t("Imported custom creatures: {count}", {
-						count: validImported.length,
-					}),
+			showMessage({
+				title: lang.t("Import custom creatures"),
+				message: lang.t("Imported custom creatures: {count}", {
+					count: validImported.length,
 				}),
-			);
+			});
 		} catch (err) {
-			dispatch(
-				alert({
-					title: lang.t("Import error"),
+			showMessage({
+				title: lang.t("Import error"),
 				message: getErrorMessage(err, lang.t("Unknown error")),
-				}),
-			);
+			});
 		}
 	};
 
