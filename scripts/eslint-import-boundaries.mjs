@@ -123,6 +123,7 @@ const SIDEBAR_WIDGET_PATH_PREFIX = "src/widgets/sidebar/";
 const BESTIARY_BROWSER_WIDGET_PATH_PREFIX = "src/widgets/bestiary-browser/";
 const AI_ASSISTANT_WIDGET_PATH_PREFIX = "src/widgets/ai-assistant/";
 const SESSION_PAGE_PATH_PREFIX = "src/pages/session/";
+const ENCOUNTER_PAGE_PATH_PREFIX = "src/pages/encounter/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -767,6 +768,16 @@ const SESSION_PAGE_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
 		"Session Page must receive app-global navigation, state, modal, and refresh effects through its injected runtime and may not import shared/model or app/model directly.",
 });
 
+const ENCOUNTER_PAGE_STORE_FACADE_RULE =
+	createInjectedRuntimeStoreFacadeRule({
+		featurePathPrefix: ENCOUNTER_PAGE_PATH_PREFIX,
+		description:
+			"Require Encounter Page to receive app-global navigation, state, dice, settings, and message effects through its injected runtime.",
+		messageId: "injectedRuntime",
+		message:
+			"Encounter Page must receive app-global navigation, state, dice, settings, and message effects through its injected runtime and may not import shared/model or app/model directly.",
+	});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -797,6 +808,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 			BESTIARY_BROWSER_STORE_FACADE_RULE,
 		"ai-assistant-store-facade": AI_ASSISTANT_STORE_FACADE_RULE,
 		"session-page-store-facade": SESSION_PAGE_STORE_FACADE_RULE,
+		"encounter-page-store-facade": ENCOUNTER_PAGE_STORE_FACADE_RULE,
 	}),
 });
 

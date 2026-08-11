@@ -73,13 +73,7 @@ const EncounterAiResponseModal = createAiResponseModalComponent({
 });
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
-import {
-	alert,
-	refreshEntitiesAction,
-	setUiSettingsAction,
-} from "../../../shared/model/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
 import {
 	getEncounterCharacterDisplayName,
@@ -120,6 +114,7 @@ import type {
 	CampaignRecord,
 	CharacterData,
 } from "../../../entities/campaign/index.js";
+import { useEncounterPageRuntime } from "../model/EncounterPageRuntime.tsx";
 
 type EncounterDraftMode = "local" | "global";
 type EncounterDisplayMode = "grid" | "single";
@@ -794,22 +789,19 @@ function useEncounterAiModelLoading({
 
 
 function EncounterView() {
-	const campaign = useAppSelector(
-		(state) => state.active.campaign as CampaignRecord | null,
-	);
-	const sessionId = useAppSelector(
-		(state) => state.navigation.activeSessionFileName,
-	);
-	const currentLanguage = useAppSelector(
-		(state) => state.localization.language,
-	);
-	const dispatch = useAppDispatch();
-	const displayMode = useAppSelector((state) =>
-		getEncounterDisplayMode(state.ui.encounterViewMode),
-	);
-	const gridColumns = useAppSelector((state) =>
-		getEncounterGridColumns(state.ui.encounterGridColumns),
-	);
+	const {
+		activeCampaign: runtimeCampaign,
+		activeSessionFileName: sessionId,
+		currentLanguage,
+		encounterGridColumns,
+		encounterViewMode,
+		patchUiSettings,
+		refreshEntities,
+		showMessage,
+	} = useEncounterPageRuntime();
+	const campaign = runtimeCampaign as CampaignRecord | null;
+	const displayMode = getEncounterDisplayMode(encounterViewMode);
+	const gridColumns = getEncounterGridColumns(encounterGridColumns);
 	const [focusedMonsterId, setFocusedMonsterId] = useState<string | null>(null);
 	const [modalCharacter, setModalCharacter] =
 		useState<EncounterViewParticipant | null>(null);
@@ -1002,14 +994,12 @@ function EncounterView() {
 					monster as EncounterViewParticipant,
 					{ preserveCurrentHp: false },
 				),
-				onRefresh: () => dispatch(refreshEntitiesAction()),
+				onRefresh: refreshEntities,
 				onClose: closeEditMonsterFields,
-				onError: (error) => dispatch(
-				alert({
+				onError: (error) => showMessage({
 					title: lang.t("Error"),
 					message: error instanceof Error ? error.message : lang.t("Unknown error"),
 				}),
-				),
 			},
 		);
 	};
@@ -1144,12 +1134,10 @@ function EncounterView() {
 					onMonsterUpdate: view.updateMonsterFromAi,
 				},
 			),
-			onError: (error) => dispatch(
-				alert({
+			onError: (error) => showMessage({
 					title: lang.t("AI history error"),
 					message: error instanceof Error ? error.message : lang.t("Unknown error"),
-				}),
-			),
+			}),
 			onComplete: () => setIsRestoringAiResponse(false),
 		});
 	};
@@ -1203,7 +1191,7 @@ function EncounterView() {
 
 	const updateEncounterViewMode = (mode: EncounterDisplayMode) => {
 		const nextMode = mode === "grid" ? "grid" : "single";
-		dispatch(setUiSettingsAction({ encounterViewMode: nextMode }));
+		patchUiSettings({ encounterViewMode: nextMode });
 		api.updateSettings({ encounterViewMode: nextMode }).catch((error) => {
 			console.error("Failed to save encounter view mode setting", error);
 		});
@@ -1211,7 +1199,7 @@ function EncounterView() {
 
 	const updateEncounterGridColumns = (columns: number) => {
 		const nextColumns = Math.min(4, Math.max(1, Number(columns) || 2));
-		dispatch(setUiSettingsAction({ encounterGridColumns: nextColumns }));
+		patchUiSettings({ encounterGridColumns: nextColumns });
 		api.updateSettings({ encounterGridColumns: nextColumns }).catch((error) => {
 			console.error("Failed to save encounter grid columns setting", error);
 		});
@@ -1235,12 +1223,10 @@ function EncounterView() {
 
 	const handleCreatePlayer = async () => {
 		if (!playerDraft.firstName?.trim()) {
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Name is required to create an entry."),
-				}),
-			);
+			showMessage({
+				title: lang.t("Error"),
+				message: lang.t("Name is required to create an entry."),
+			});
 			return;
 		}
 		const payload = buildCreateEntityPayload(ENCOUNTER_CHARACTER_DEFAULTS, playerDraft);
@@ -1251,17 +1237,15 @@ function EncounterView() {
 				"characters",
 				payload as CampaignEntityRecord,
 			),
-			onRefresh: () => dispatch(refreshEntitiesAction()),
+			onRefresh: refreshEntities,
 			onAdd: view.handleAddCharacter,
 			onReset: resetPlayerCreateForm,
 			onError: (error) => {
-			console.error("Failed to create player from encounter", error);
-			dispatch(
-				alert({
+				console.error("Failed to create player from encounter", error);
+				showMessage({
 					title: lang.t("Error"),
 					message: lang.t("Failed to create entity."),
-				}),
-			);
+				});
 			},
 			onComplete: () => setIsPlayerSubmitting(false),
 		});

@@ -1516,6 +1516,8 @@ const FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/ai-assistant-store-facade";
 const FSD_SESSION_PAGE_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/session-page-store-facade";
+const FSD_ENCOUNTER_PAGE_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/encounter-page-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -9723,6 +9725,228 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/pages\/session\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/session-page-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 157 gives Encounter Page an injected runtime",
+	async () => {
+		const [
+			runtimeSource,
+			viewSource,
+			pageSource,
+			pageEntry,
+			pageTypeEntry,
+			runtimeHostSource,
+			mainContentSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/pages/encounter/model/EncounterPageRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/encounter/model/useEncounterView.ts", "utf8"),
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			fs.readFile("src/pages/encounter/index.js", "utf8"),
+			fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			fs.readFile("src/app/ui/EncounterPageRuntimeHost.tsx", "utf8"),
+			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(runtimeSource, "EncounterPageRuntime", [
+			"activeEncounterId: string | number | null;",
+			"activeSessionFileName: string | null;",
+			"currentLanguage: string;",
+			"diceRolledResult: EncounterPageDiceResult | null;",
+			"encounterGridColumns: unknown;",
+			"encounterViewMode: unknown;",
+			"refreshEntities(): void;",
+			"requestCampaignReload(): void;",
+			"setActiveEncounter(encounter: unknown): void;",
+			"setActiveSession(session: unknown): void;",
+			"syncEvent: EncounterSyncEvent | null;",
+			"theme: \"light\" | \"dark\";",
+		]);
+		assert.match(
+			runtimeSource,
+			/navigateToSession\(\s*campaignSlug: string,\s*sessionFileName: string\s*\): void;/,
+		);
+		assert.match(runtimeSource, /\bpatchUiSettings\(/);
+		assert.match(runtimeSource, /\brequestDiceRoll\(/);
+		assert.match(runtimeSource, /\brequestPrompt\(/);
+		assert.match(runtimeSource, /\bshowMessage\(/);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"EncounterPageRuntimeProviderProps",
+			[
+				"runtime: EncounterPageRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<EncounterPageRuntime | null>",
+				"<EncounterPageRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(EncounterPageRuntimeContext);",
+				'"EncounterPageRuntimeProvider is required to render encounter controls"',
+			],
+			"Encounter Page runtime provider",
+		);
+		assert.match(pageEntry, /EncounterPageRuntimeProvider/);
+		assert.doesNotMatch(
+			pageEntry + "\n" + pageTypeEntry,
+			/useEncounterPageRuntime/,
+		);
+		assertPublicTypeSurface(pageTypeEntry, [
+			"EncounterPageRuntime",
+			"EncounterPageRuntimeProviderProps",
+		]);
+		for (const source of [runtimeSource, viewSource, pageSource]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(|\balert\(|\bprompt\(|\bnavigateTo\(/,
+			);
+		}
+		assert.match(viewSource, /\buseEncounterPageRuntime\(\)/);
+		for (const runtimeMember of [
+			"activeCampaign",
+			"activeEncounterId",
+			"activeSessionFileName",
+			"diceRolledResult",
+			"navigateToSession",
+			"requestCampaignReload",
+			"requestDiceRoll",
+			"requestPrompt",
+			"setActiveEncounter",
+			"setActiveSession",
+			"showMessage",
+			"syncEvent",
+			"theme",
+		]) {
+			assert.match(viewSource, new RegExp(`\\b${runtimeMember}\\b`));
+		}
+		assert.match(pageSource, /\buseEncounterPageRuntime\(\)/);
+		for (const runtimeMember of [
+			"currentLanguage",
+			"encounterGridColumns",
+			"encounterViewMode",
+			"patchUiSettings",
+			"refreshEntities",
+			"showMessage",
+		]) {
+			assert.match(pageSource, new RegExp(`\\b${runtimeMember}\\b`));
+		}
+		for (const hostToken of [
+			"const dispatch = useAppDispatch();",
+			"state.active.campaign",
+			"state.navigation.activeSessionFileName",
+			"state.navigation.activeEncounterId",
+			"state.sync.event",
+			"state.dice.rolledResult",
+			"state.ui.theme",
+			"state.localization.language",
+			"state.ui.encounterViewMode",
+			"state.ui.encounterGridColumns",
+			"setActiveSessionAction",
+			"setActiveEncounterAction",
+			"requestCampaignsReloadAction",
+			"requestDiceRollAction",
+			"refreshEntitiesAction",
+			"setUiSettingsAction",
+			"dispatch(alert(message));",
+			"dispatch(prompt(copy))",
+			"const runtime = useMemo<EncounterPageRuntime>",
+			"<EncounterPageRuntimeProvider runtime={runtime}>",
+		]) {
+			assert.ok(
+				runtimeHostSource.includes(hostToken),
+				`${hostToken} must remain in the app-local Encounter Page runtime host`,
+			);
+		}
+		assertSourceTokensInOrder(
+			mainContentSource,
+			[
+				'import EncounterPageRuntimeHost from "../ui/EncounterPageRuntimeHost.tsx";',
+				"function EncounterRoute() {",
+				"if (!campaign) return <EmptyState />;",
+				"<EncounterPageRuntimeHost>",
+				"<EncounterPage />",
+				"</EncounterPageRuntimeHost>",
+			],
+			"Encounter Page route runtime scope",
+		);
+
+		const forbiddenEncounterPageStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/pages/encounter")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenEncounterPageStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenEncounterPageStoreImporters, []);
+
+		for (const source of [
+			'import { setActiveEncounterAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/pages/encounter/ui/EncounterPage.tsx",
+				FSD_ENCOUNTER_PAGE_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_ENCOUNTER_PAGE_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { setActiveEncounterAction } from "../../../shared/model/index.js";',
+			"SRC/PAGES/ENCOUNTER/ui/EncounterPage.tsx",
+			FSD_ENCOUNTER_PAGE_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_ENCOUNTER_PAGE_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { setActiveEncounterAction } from "../../../shared/model/index.js";',
+				"src/pages/campaign/ui/CampaignPage.tsx",
+				FSD_ENCOUNTER_PAGE_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/pages\/encounter\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/encounter-page-store-facade': 'error'/,
 		);
 	},
 );

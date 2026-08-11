@@ -780,6 +780,12 @@ export default [
     },
   },
   {
+    files: ['src/pages/encounter/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/encounter-page-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

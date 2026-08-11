@@ -7,14 +7,6 @@ import {
 	useState,
 } from "react";
 
-import {
-	alert,
-	prompt,
-	requestCampaignsReloadAction,
-	requestDiceRollAction,
-	setActiveEncounterAction,
-	setActiveSessionAction,
-} from "../../../shared/model/index.js";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
 import type { EncounterUpdateResult } from "../../../entities/session/index.js";
@@ -26,7 +18,6 @@ import {
 } from "../../../features/encounter-editor/index.js";
 
 const api = { ...campaignApi, ...sessionApi, ...bestiaryApi };
-import { navigateTo, useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	createEncounterMonsterInstance,
@@ -44,7 +35,6 @@ import {
 } from "../../../shared/lib/index.js";
 
 import type {
-	EncounterSyncEvent,
 	EncounterUpdateOptions,
 	EncounterViewModel,
 	EncounterViewParticipant,
@@ -53,6 +43,7 @@ import type {
 	InitiativeStats,
 	MonsterAiUpdateOptions,
 } from "./contracts.ts";
+import { useEncounterPageRuntime } from "./EncounterPageRuntime.tsx";
 import { calculateInitiativeStats } from "./encounterViewMetrics.ts";
 import {
 	executeEncounterDiceProcessing,
@@ -75,22 +66,6 @@ import {
 	replaceEncounterMonsterFromAi,
 	shouldReloadEncounterFromSync,
 } from "./encounterPagePresentation.ts";
-
-interface ActiveCampaign {
-	slug: string;
-}
-
-interface EncounterDiceResult {
-	resultId?: string | number;
-	result?: { total?: unknown };
-	context?: {
-		kind?: string;
-		campaignSlug?: string;
-		sessionId?: string;
-		encounterId?: string;
-		instanceId?: string;
-	};
-}
 
 function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
@@ -116,21 +91,26 @@ function getEncounterKeyboardInput(event: KeyboardEvent, showBestiary: boolean) 
 }
 
 export default function useEncounterView(): EncounterViewModel {
-	const dispatch = useAppDispatch();
-	const campaign = useAppSelector(
-		(state) => state.active.campaign,
-	) as ActiveCampaign;
-	const { activeSessionFileName, activeEncounterId } = useAppSelector(
-		(state) => state.navigation,
-	);
-	const syncEvent = useAppSelector(
-		(state) => state.sync.event,
-	) as EncounterSyncEvent | null;
+	const {
+		activeCampaign: campaign,
+		activeEncounterId,
+		activeSessionFileName,
+		diceRolledResult,
+		navigateToSession,
+		requestCampaignReload,
+		requestDiceRoll,
+		requestPrompt,
+		setActiveEncounter,
+		setActiveSession,
+		showMessage,
+		syncEvent,
+		theme: storeTheme,
+	} = useEncounterPageRuntime();
 	const sessionId = activeSessionFileName || "";
 	const encounterId = activeEncounterId ?? "";
 	const handleBack = useCallback(
-		() => navigateTo(campaign.slug, sessionId),
-		[campaign.slug, sessionId],
+		() => navigateToSession(campaign.slug, sessionId),
+		[campaign.slug, navigateToSession, sessionId],
 	);
 
 	const [encounter, setEncounter] = useState<EncounterViewState | null>(null);
@@ -141,11 +121,6 @@ export default function useEncounterView(): EncounterViewModel {
 	const [notification, setNotification] = useState<string | null>(null);
 	const [undoStack, setUndoStack] = useState<EncounterViewState[]>([]);
 	const [redoStack, setRedoStack] = useState<EncounterViewState[]>([]);
-	const diceRolledResult = useAppSelector(
-		(state) => state.dice.rolledResult,
-	) as EncounterDiceResult | null;
-	const storeTheme = useAppSelector((state) => state.ui.theme);
-
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const processedDiceResultIdRef = useRef<string | number | null>(null);
 	const encounterRef = useRef<EncounterViewState | null>(null);
@@ -153,10 +128,10 @@ export default function useEncounterView(): EncounterViewModel {
 	const reorderStartRef = useRef<EncounterViewState | null>(null);
 	const handleEncounterSaved = useCallback(
 		(result: EncounterUpdateResult) => {
-			dispatch(setActiveSessionAction(result.session));
-			dispatch(requestCampaignsReloadAction());
+			setActiveSession(result.session);
+			requestCampaignReload();
 		},
-		[dispatch],
+		[requestCampaignReload, setActiveSession],
 	);
 	const reportEncounterSaveError = useCallback((error: unknown) => {
 		console.error("Failed to save encounter updates", error);
@@ -178,8 +153,8 @@ export default function useEncounterView(): EncounterViewModel {
 	}, [encounter]);
 
 	useEffect(() => {
-		dispatch(setActiveEncounterAction(encounter));
-	}, [dispatch, encounter]);
+		setActiveEncounter(encounter);
+	}, [encounter, setActiveEncounter]);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -201,7 +176,7 @@ export default function useEncounterView(): EncounterViewModel {
 		async ({ retries = 3, resetHistory = true } = {}) => {
 			try {
 				const session = await api.getSession(campaign.slug, sessionId);
-				dispatch(setActiveSessionAction(session));
+				setActiveSession(session);
 				executeEncounterLoadPlan(
 					getEncounterLoadPlan(session, encounterId, retries, resetHistory),
 					{
@@ -212,10 +187,10 @@ export default function useEncounterView(): EncounterViewModel {
 							}), 300);
 						},
 						onNotFound: () => {
-							dispatch(alert({
+							showMessage({
 								title: lang.t("Error"),
 								message: lang.t("Encounter not found or data is still updating."),
-							}));
+							});
 							handleBack();
 						},
 						onLoaded: (found, selected, shouldResetHistory) => {
@@ -232,7 +207,14 @@ export default function useEncounterView(): EncounterViewModel {
 				console.error("Failed to load encounter", err);
 			}
 		},
-		[campaign.slug, dispatch, encounterId, handleBack, sessionId],
+		[
+			campaign.slug,
+			encounterId,
+			handleBack,
+			setActiveSession,
+			sessionId,
+			showMessage,
+		],
 	);
 
 	useEffect(() => {
@@ -380,9 +362,9 @@ export default function useEncounterView(): EncounterViewModel {
 			if (found) {
 				applyEncounterUpdate(found, { persist: false });
 			}
-			dispatch(requestCampaignsReloadAction());
+			requestCampaignReload();
 		},
-		[encounterId, dispatch, applyEncounterUpdate],
+		[encounterId, requestCampaignReload, applyEncounterUpdate],
 	);
 
 	const handleAddMonster = useCallback(
@@ -508,16 +490,14 @@ export default function useEncounterView(): EncounterViewModel {
 
 	const handleRename = useCallback(async () => {
 		if (!encounter) return;
-		const name = await dispatch(
-			prompt({
-				title: lang.t("Rename"),
-				message: lang.t("Enter a new encounter name:"),
-				defaultValue: encounter.name,
-			}),
-		);
+		const name = await requestPrompt({
+			title: lang.t("Rename"),
+			message: lang.t("Enter a new encounter name:"),
+			defaultValue: encounter.name,
+		});
 		const plan = getEncounterRenamePlan(encounter, name);
 		if (plan) applyEncounterUpdate(plan.encounter);
-	}, [encounter, applyEncounterUpdate, dispatch]);
+	}, [encounter, applyEncounterUpdate, requestPrompt]);
 
 	const handleExport = useCallback(() => {
 		if (!encounter) return;
@@ -558,15 +538,16 @@ export default function useEncounterView(): EncounterViewModel {
 					});
 					setNotification(lang.t("Encounter imported successfully."));
 				} catch (err) {
-					dispatch(
-						alert({ title: lang.t("Import error"), message: getErrorMessage(err) }),
-					);
+					showMessage({
+						title: lang.t("Import error"),
+						message: getErrorMessage(err),
+					});
 				}
 				e.target.value = "";
 			};
 			reader.readAsText(file);
 		},
-		[encounter, applyEncounterUpdate, dispatch],
+		[encounter, applyEncounterUpdate, showMessage],
 	);
 
 	const duplicateMonster = useCallback(
@@ -628,20 +609,18 @@ export default function useEncounterView(): EncounterViewModel {
 				);
 				return;
 			}
-			dispatch(
-				requestDiceRollAction({
-					formula: hpFormula,
-					context: {
-						kind: "encounter_hp",
-						campaignSlug: campaign.slug,
-						sessionId: String(sessionId),
-						encounterId: String(encounterId),
-						instanceId,
-					},
-				}),
-			);
+			requestDiceRoll({
+				formula: hpFormula,
+				context: {
+					kind: "encounter_hp",
+					campaignSlug: campaign.slug,
+					sessionId: String(sessionId),
+					encounterId: String(encounterId),
+					instanceId,
+				},
+			});
 		},
-		[dispatch, encounter, campaign.slug, sessionId, encounterId],
+		[requestDiceRoll, encounter, campaign.slug, sessionId, encounterId],
 	);
 
 	useEffect(() => {
