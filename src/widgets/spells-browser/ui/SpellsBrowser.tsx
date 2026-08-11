@@ -12,13 +12,6 @@ import { settingsApi } from "../../../features/settings/index.js";
 import { isAbortError } from "../../../shared/api/index.ts";
 import type { RichContentRenderOptions } from "../../../features/rich-content/index.js";
 import { lang, objectMatchesSearch, useDebounce } from "../../../shared/lib/index.js";
-import {
-	alert,
-	setCampaignsAction,
-	setUiSettingsAction,
-	useAppDispatch,
-	useAppSelector,
-} from "../../../shared/model/index.js";
 import "../../../assets/components/Spells.css";
 import {
 	filterSpells,
@@ -39,6 +32,7 @@ import {
 } from "../model/spellsBrowser.ts";
 import SpellsBrowserContent from "./SpellsBrowserContent.tsx";
 import SpellsBrowserControls from "./SpellsBrowserControls.tsx";
+import { useSpellsBrowserRuntime } from "./SpellsBrowserRuntime.tsx";
 
 export interface SpellsBrowserProps {
 	onActiveSpellChange?: ((spell: SpellRecord) => void) | null;
@@ -65,11 +59,15 @@ export default function SpellsBrowser({
 	hideSearchInput = false,
 	renderOptions = {},
 }: SpellsBrowserProps) {
-	const dispatch = useAppDispatch();
-	const useSearchDebounce = useAppSelector((state) => state.ui.useSearchDebounce !== false);
-	const activeCampaignSlug = useAppSelector((state) => state.navigation.activeCampaignSlug);
-	const activeCampaign = useAppSelector((state) => state.active.campaign);
-	const globalIgnoreSourcesList = useAppSelector((state) => state.ui.ignoreSourcesList);
+	const {
+		useSearchDebounce,
+		activeCampaignSlug,
+		activeCampaign,
+		globalIgnoreSourcesList,
+		replaceCampaigns,
+		setGlobalIgnoreSourcesList,
+		reportError,
+	} = useSpellsBrowserRuntime();
 	const [sources, setSources] = useState<string[]>([]);
 	const [sourceFilter, setSourceFilter] = useState("all");
 	const [allSpells, setAllSpells] = useState<SpellRecord[]>([]);
@@ -181,14 +179,14 @@ export default function SpellsBrowser({
 		try {
 			if (activeCampaignSlug) {
 				await campaignApi.updateCampaign(activeCampaignSlug, { ignoreSourcesList: nextIgnoreSourcesList });
-				dispatch(setCampaignsAction(await campaignApi.listCampaigns() ?? []));
+				replaceCampaigns(await campaignApi.listCampaigns() ?? []);
 				return;
 			}
 			const saved = await settingsApi.updateSettings({ ignoreSourcesList: nextIgnoreSourcesList });
-			dispatch(setUiSettingsAction({ ignoreSourcesList: getSettingsIgnoreSources(saved) }));
+			setGlobalIgnoreSourcesList(getSettingsIgnoreSources(saved));
 		} catch (error) {
 			console.error("Failed to save ignored sources", error);
-			dispatch(alert({ title: lang.t("Error"), message: getErrorMessage(error, lang.t("Unknown error")) }));
+			reportError({ title: lang.t("Error"), message: getErrorMessage(error, lang.t("Unknown error")) });
 		}
 	};
 

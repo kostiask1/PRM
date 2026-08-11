@@ -744,6 +744,12 @@ export default [
     },
   },
   {
+    files: ['src/widgets/spells-browser/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/spells-browser-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

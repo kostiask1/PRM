@@ -53,7 +53,11 @@ import {
 	type RulesReferenceModalRuntime,
 } from "./widgets/rules-reference-modal/index.js";
 import { MonsterStatBlock } from "./widgets/monster-stat-block/index.js";
-import { SpellsBrowser } from "./widgets/spells-browser/index.js";
+import {
+	SpellsBrowser,
+	SpellsBrowserRuntimeProvider,
+	type SpellsBrowserRuntime,
+} from "./widgets/spells-browser/index.js";
 import { lang } from "./shared/lib/index.js";
 import {
 	alert,
@@ -134,6 +138,15 @@ export default function App() {
 		(store) => store.ui.simplifiedNotes,
 	);
 	const syncEvent = useAppSelector((store) => store.sync.event);
+	const spellsBrowserUseSearchDebounce = useAppSelector(
+		(store) => store.ui.useSearchDebounce !== false,
+	);
+	const spellsBrowserActiveCampaign = useAppSelector(
+		(store) => store.active.campaign,
+	);
+	const spellsBrowserGlobalIgnoreSourcesList = useAppSelector(
+		(store) => store.ui.ignoreSourcesList,
+	);
 	const rulesReferenceModalNavigationRequest = useAppSelector(
 		(store) => store.rulesReference.navigationRequest,
 	);
@@ -188,6 +201,41 @@ export default function App() {
 			},
 		}),
 		[dispatch],
+	);
+	const spellsBrowserCommands = useMemo<
+		Pick<
+			SpellsBrowserRuntime,
+			"replaceCampaigns" | "setGlobalIgnoreSourcesList" | "reportError"
+		>
+	>(
+		() => ({
+			replaceCampaigns(nextCampaigns) {
+				dispatch(setCampaignsAction(nextCampaigns));
+			},
+			setGlobalIgnoreSourcesList(ignoreSourcesList) {
+				dispatch(setUiSettingsAction({ ignoreSourcesList }));
+			},
+			reportError(error) {
+				dispatch(alert(error));
+			},
+		}),
+		[dispatch],
+	);
+	const spellsBrowserRuntime = useMemo<SpellsBrowserRuntime>(
+		() => ({
+			useSearchDebounce: spellsBrowserUseSearchDebounce,
+			activeCampaignSlug,
+			activeCampaign: spellsBrowserActiveCampaign,
+			globalIgnoreSourcesList: spellsBrowserGlobalIgnoreSourcesList,
+			...spellsBrowserCommands,
+		}),
+		[
+			activeCampaignSlug,
+			spellsBrowserActiveCampaign,
+			spellsBrowserCommands,
+			spellsBrowserGlobalIgnoreSourcesList,
+			spellsBrowserUseSearchDebounce,
+		],
 	);
 	const rulesReferenceModalCommands = useMemo<
 		Pick<
@@ -534,6 +582,7 @@ export default function App() {
 					<RulesReferenceModalRuntimeProvider
 						runtime={rulesReferenceModalRuntime}
 					>
+					<SpellsBrowserRuntimeProvider runtime={spellsBrowserRuntime}>
 					<SimplifiedNotesProvider
 						simplifiedNotesEnabled={simplifiedNotesEnabled}
 				>
@@ -612,6 +661,7 @@ export default function App() {
 						</div>
 						</EditableFieldEntityLinkProvider>
 					</SimplifiedNotesProvider>
+					</SpellsBrowserRuntimeProvider>
 					</RulesReferenceModalRuntimeProvider>
 				</RulesReferenceRuntimeProvider>
 					</AiAttachmentAlertRuntimeProvider>
