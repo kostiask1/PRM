@@ -19,11 +19,6 @@ import {
 } from "../../../features/entity-link/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	confirm,
-	refreshEntitiesAction,
-	useAppDispatch,
-} from "../../../shared/model/index.js";
-import {
 	getCampaignEntityRenamePlan,
 	isCampaignModalEntity,
 	sanitizeCampaignModalEntity,
@@ -36,9 +31,22 @@ import type {
 	CampaignEntityModalLocationCardComponent,
 } from "./campaignEntityModalSlots.ts";
 
+export interface CampaignEntityModalConfirmation extends Record<string, unknown> {
+	message: string;
+	title: string;
+}
+
+export interface CampaignEntityModalRuntime {
+	requestConfirmation(
+		payload: CampaignEntityModalConfirmation,
+	): Promise<unknown>;
+	refreshEntities(): void;
+}
+
 interface CampaignEntityModalContentProps {
 	CharacterCard: CampaignEntityModalCharacterCardComponent;
 	LocationCard: CampaignEntityModalLocationCardComponent;
+	runtime: CampaignEntityModalRuntime;
 	initialEntity: CampaignEntity;
 	campaignSlug: string;
 	type: string;
@@ -48,12 +56,12 @@ interface CampaignEntityModalContentProps {
 function CampaignEntityModalContent({
 	CharacterCard,
 	LocationCard,
+	runtime,
 	initialEntity,
 	campaignSlug,
 	type,
 	onClose,
 }: CampaignEntityModalContentProps) {
-	const dispatch = useAppDispatch();
 	const [entity, setEntity] = useState<CampaignModalEntity | null>(
 		isCampaignModalEntity(initialEntity) ? initialEntity : null,
 	);
@@ -74,7 +82,7 @@ function CampaignEntityModalContent({
 			updated.slug,
 			sanitizeCampaignModalEntity(updated),
 		);
-		dispatch(refreshEntitiesAction());
+		runtime.refreshEntities();
 	};
 
 	const handleNameBlur = async (
@@ -86,14 +94,14 @@ function CampaignEntityModalContent({
 		const plan = getCampaignEntityRenamePlan(oldName, newName);
 		if (!plan.requiresConfirmation || !isCampaignModalEntity(updated)) return true;
 
-		const shouldUpdateMentions = await dispatch(
-			confirm({
+		const shouldUpdateMentions = await runtime.requestConfirmation(
+			{
 				title: lang.t("Update links?"),
 				message: lang.t(
 					'Update links in the project from "{oldName}" to "{newName}"?',
 					{ oldName, newName },
 				),
-			}),
+			},
 		);
 		if (!shouldUpdateMentions) return false;
 
@@ -103,14 +111,14 @@ function CampaignEntityModalContent({
 			_mentionOldName: oldName,
 		});
 		setEntity(isCampaignModalEntity(saved) ? saved : null);
-		dispatch(refreshEntitiesAction());
+		runtime.refreshEntities();
 		return true;
 	};
 
 	const handleDelete = async () => {
 		if (!entity) return;
 		await deleteCampaignEntity(campaignSlug, type, entity.slug);
-		dispatch(refreshEntitiesAction());
+		runtime.refreshEntities();
 		onClose?.();
 	};
 
@@ -132,6 +140,7 @@ function CampaignEntityModalContent({
 export interface CampaignEntityModalProviderProps {
 	CharacterCard: CampaignEntityModalCharacterCardComponent;
 	LocationCard: CampaignEntityModalLocationCardComponent;
+	runtime: CampaignEntityModalRuntime;
 	campaignSlug?: string | null;
 	children?: ReactNode;
 }
@@ -139,6 +148,7 @@ export interface CampaignEntityModalProviderProps {
 export default function CampaignEntityModalProvider({
 	CharacterCard,
 	LocationCard,
+	runtime,
 	campaignSlug,
 	children,
 }: CampaignEntityModalProviderProps) {
@@ -161,6 +171,7 @@ export default function CampaignEntityModalProvider({
 				<CampaignEntityModalContent
 					CharacterCard={CharacterCard}
 					LocationCard={LocationCard}
+					runtime={runtime}
 					initialEntity={modalState.entity}
 					campaignSlug={campaignSlug}
 					type={modalState.type}
@@ -168,7 +179,7 @@ export default function CampaignEntityModalProvider({
 				/>
 			);
 		},
-		[CharacterCard, LocationCard, campaignSlug, parentEntityLinks],
+		[CharacterCard, LocationCard, campaignSlug, parentEntityLinks, runtime],
 	);
 
 	const value = useMemo<EntityLinkResolver>(

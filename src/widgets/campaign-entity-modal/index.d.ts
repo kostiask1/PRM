@@ -1,5 +1,7 @@
 export {
 	default as CampaignEntityModalProvider,
+	type CampaignEntityModalConfirmation,
+	type CampaignEntityModalRuntime,
 	type CampaignEntityModalProviderProps,
 } from "./ui/CampaignEntityModalProvider.tsx";
 export type {

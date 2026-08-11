@@ -22,7 +22,10 @@ import {
 	CharacterCard,
 	LocationCard,
 } from "./widgets/campaign-entity-card/index.js";
-import { CampaignEntityModalProvider } from "./widgets/campaign-entity-modal/index.js";
+import {
+	CampaignEntityModalProvider,
+	type CampaignEntityModalRuntime,
+} from "./widgets/campaign-entity-modal/index.js";
 import { Icon, Modal } from "./shared/ui/index.js";
 import { Sidebar } from "./widgets/sidebar/index.js";
 import {
@@ -56,6 +59,7 @@ import {
 	requestDiceRollAction,
 	requestCampaignsReloadAction,
 	requestRulesReferenceNavigationAction,
+	refreshEntitiesAction,
 	setLanguageAction,
 	setCampaignsAction,
 	setUiSettingsAction,
@@ -154,6 +158,17 @@ export default function App() {
 		() => ({
 			requestRoll(payload) {
 				dispatch(requestDiceRollAction(payload));
+			},
+		}),
+		[dispatch],
+	);
+	const campaignEntityModalRuntime = useMemo<CampaignEntityModalRuntime>(
+		() => ({
+			requestConfirmation(payload) {
+				return dispatch(confirm(payload));
+			},
+			refreshEntities() {
+				dispatch(refreshEntitiesAction());
 			},
 		}),
 		[dispatch],
@@ -467,6 +482,7 @@ export default function App() {
 					<CampaignEntityModalProvider
 						CharacterCard={CharacterCard}
 						LocationCard={LocationCard}
+						runtime={campaignEntityModalRuntime}
 						campaignSlug={activeCampaignSlug}
 					>
 						<button

@@ -1500,6 +1500,8 @@ const FSD_CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/campaign-entity-card-store-facade";
 const FSD_CAMPAIGN_SEARCH_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/campaign-search-store-facade";
+const FSD_CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/campaign-entity-modal-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -2607,6 +2609,7 @@ await run(
 		assert.ok(appProviderTag);
 		assert.match(appProviderTag, /\bCharacterCard=\{CharacterCard\}/);
 		assert.match(appProviderTag, /\bLocationCard=\{LocationCard\}/);
+		assert.match(appProviderTag, /\bruntime=\{campaignEntityModalRuntime\}/);
 		assert.match(appProviderTag, /\bcampaignSlug=\{activeCampaignSlug\}/);
 
 		assert.deepEqual(readStaticFsdSpecifiers(slotSource), [
@@ -2677,6 +2680,7 @@ await run(
 		assert.ok(contentTag);
 		assert.match(contentTag, /\bCharacterCard=\{CharacterCard\}/);
 		assert.match(contentTag, /\bLocationCard=\{LocationCard\}/);
+		assert.match(contentTag, /\bruntime=\{runtime\}/);
 		assert.match(contentTag, /\binitialEntity=\{modalState\.entity\}/);
 		assert.match(contentTag, /\bcampaignSlug=\{campaignSlug\}/);
 		assert.match(contentTag, /\btype=\{modalState\.type\}/);
@@ -2701,7 +2705,7 @@ await run(
 		);
 		assert.match(
 			providerSource,
-			/\[CharacterCard, LocationCard, campaignSlug, parentEntityLinks\],\s*\);/,
+			/\[CharacterCard, LocationCard, campaignSlug, parentEntityLinks, runtime\],\s*\);/,
 		);
 
 		assert.match(
@@ -7622,6 +7626,205 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/widgets\/campaign-search\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/campaign-search-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 149 gives Campaign Entity Modal an injected mutation runtime",
+	async () => {
+		const [providerSource, widgetEntry, widgetTypeEntry, appSource, eslintSource] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/campaign-entity-modal/ui/CampaignEntityModalProvider.tsx",
+					"utf8",
+				),
+				fs.readFile("src/widgets/campaign-entity-modal/index.js", "utf8"),
+				fs.readFile("src/widgets/campaign-entity-modal/index.d.ts", "utf8"),
+				fs.readFile("src/App.tsx", "utf8"),
+				fs.readFile("eslint.config.js", "utf8"),
+			]);
+
+		assert.match(
+			providerSource,
+			/export interface CampaignEntityModalConfirmation extends Record<string, unknown> \{\s*message: string;\s*title: string;\s*\}/,
+		);
+		assert.match(
+			providerSource,
+			/export interface CampaignEntityModalRuntime \{\s*requestConfirmation\(\s*payload: CampaignEntityModalConfirmation,\s*\): Promise<unknown>;\s*refreshEntities\(\): void;\s*\}/,
+		);
+		assertExportedInterfaceFragments(
+			providerSource,
+			"CampaignEntityModalProviderProps",
+			[
+				"CharacterCard: CampaignEntityModalCharacterCardComponent;",
+				"LocationCard: CampaignEntityModalLocationCardComponent;",
+				"runtime: CampaignEntityModalRuntime;",
+				"campaignSlug?: string | null;",
+			],
+		);
+		assert.match(widgetEntry, /CampaignEntityModalProvider/);
+		assert.doesNotMatch(widgetEntry, /CampaignEntityModalRuntime/);
+		assertPublicTypeSurface(widgetTypeEntry, [
+			"CampaignEntityModalConfirmation",
+			"CampaignEntityModalRuntime",
+			"CampaignEntityModalProviderProps",
+		]);
+		assert.doesNotMatch(
+			providerSource,
+			/shared\/model|app\/model|useAppDispatch|refreshEntitiesAction|\bconfirm\(/,
+		);
+		assertSourceTokensInOrder(
+			providerSource,
+			[
+				"const handleUpdate = async (",
+				"if (!isCampaignModalEntity(updated)) return;",
+				"setEntity(updated);",
+				"await updateCampaignEntity(",
+				"sanitizeCampaignModalEntity(updated),",
+				"runtime.refreshEntities();",
+			],
+			"Campaign Entity Modal ordinary update runtime ordering",
+		);
+		assertSourceTokensInOrder(
+			providerSource,
+			[
+				"const handleNameBlur = async (",
+				"const plan = getCampaignEntityRenamePlan(oldName, newName);",
+				"if (!plan.requiresConfirmation || !isCampaignModalEntity(updated)) return true;",
+				"const shouldUpdateMentions = await runtime.requestConfirmation(",
+				'title: lang.t("Update links?")',
+				'\'Update links in the project from "{oldName}" to "{newName}"?\'',
+				"{ oldName, newName },",
+				"if (!shouldUpdateMentions) return false;",
+				"const saved = await updateCampaignEntity(campaignSlug, type, updated.slug, {",
+				"_updateMentionReferences: true,",
+				"_mentionOldName: oldName,",
+				"setEntity(isCampaignModalEntity(saved) ? saved : null);",
+				"runtime.refreshEntities();",
+				"return true;",
+			],
+			"Campaign Entity Modal localized confirmation and rename runtime ordering",
+		);
+		assertSourceTokensInOrder(
+			providerSource,
+			[
+				"const handleDelete = async () => {",
+				"if (!entity) return;",
+				"await deleteCampaignEntity(campaignSlug, type, entity.slug);",
+				"runtime.refreshEntities();",
+				"onClose?.();",
+			],
+			"Campaign Entity Modal deletion runtime ordering",
+		);
+		assertSourceTokensInOrder(
+			providerSource,
+			[
+				"const parentContent = parentEntityLinks?.renderModalContent?.(",
+				"if (parentContent) return parentContent;",
+				"!campaignSlug ||",
+				"!shouldRenderCampaignEntityModal(campaignSlug, modalState.scope)",
+				"<CampaignEntityModalContent",
+				"runtime={runtime}",
+			],
+			"Campaign Entity Modal parent resolver and scope guard",
+		);
+		assert.match(
+			providerSource,
+			/\[CharacterCard, LocationCard, campaignSlug, parentEntityLinks, runtime\],\s*\);/,
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const campaignEntityModalRuntime = useMemo<CampaignEntityModalRuntime>(",
+				"requestConfirmation(payload) {",
+				"return dispatch(confirm(payload));",
+				"refreshEntities() {",
+				"dispatch(refreshEntitiesAction());",
+				"<CampaignEntityModalProvider",
+				"runtime={campaignEntityModalRuntime}",
+			],
+			"App-owned Campaign Entity Modal runtime",
+		);
+		const campaignEntityModalRuntimeSource = appSource.match(
+			/const campaignEntityModalRuntime[\s\S]*?(?=^\tconst loadCampaigns)/m,
+		)?.[0];
+		assert.ok(campaignEntityModalRuntimeSource);
+		assert.doesNotMatch(
+			campaignEntityModalRuntimeSource,
+			/Update links\?|Update links in the project/,
+		);
+
+		const forbiddenCampaignEntityModalStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/campaign-entity-modal",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenCampaignEntityModalStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenCampaignEntityModalStoreImporters, []);
+
+		for (const source of [
+			'import { confirm } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/widgets/campaign-entity-modal/ui/CampaignEntityModalProvider.tsx",
+				FSD_CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { confirm } from "../../../shared/model/index.js";',
+			"SRC/WIDGETS/CAMPAIGN-ENTITY-MODAL/ui/CampaignEntityModalProvider.tsx",
+			FSD_CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { confirm } from "../../../shared/model/index.js";',
+				"src/widgets/campaign-search/ui/GlobalSearchModal.tsx",
+				FSD_CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/widgets\/campaign-entity-modal\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/campaign-entity-modal-store-facade': 'error'/,
 		);
 	},
 );
