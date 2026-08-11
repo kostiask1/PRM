@@ -114,6 +114,8 @@ const CAMPAIGN_ENTITY_CARD_WIDGET_PATH_PREFIX =
 const CAMPAIGN_SEARCH_WIDGET_PATH_PREFIX = "src/widgets/campaign-search/";
 const CAMPAIGN_ENTITY_MODAL_WIDGET_PATH_PREFIX =
 	"src/widgets/campaign-entity-modal/";
+const RULES_REFERENCE_MODAL_WIDGET_PATH_PREFIX =
+	"src/widgets/rules-reference-modal/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -692,6 +694,16 @@ const CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE =
 			"Campaign Entity Modal must receive app-global confirmation and refresh effects through its injected runtime and may not import shared/model or app/model directly.",
 	});
 
+const RULES_REFERENCE_MODAL_STORE_FACADE_RULE =
+	createInjectedRuntimeStoreFacadeRule({
+		featurePathPrefix: RULES_REFERENCE_MODAL_WIDGET_PATH_PREFIX,
+		description:
+			"Require Rules Reference Modal to receive app-global navigation, history, and modal effects through its injected runtime.",
+		messageId: "injectedRuntime",
+		message:
+			"Rules Reference Modal must receive app-global navigation, history, and modal effects through its injected runtime and may not import shared/model or app/model directly.",
+	});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -712,6 +724,8 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"campaign-search-store-facade": CAMPAIGN_SEARCH_STORE_FACADE_RULE,
 		"campaign-entity-modal-store-facade":
 			CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE,
+		"rules-reference-modal-store-facade":
+			RULES_REFERENCE_MODAL_STORE_FACADE_RULE,
 	}),
 });
 

@@ -47,7 +47,11 @@ import {
 	openEntityLinkModal,
 } from "./features/entity-link/index.js";
 import { CreateCampaignModalContent } from "./features/campaign-create/index.js";
-import { RulesReferenceModalHost } from "./widgets/rules-reference-modal/index.js";
+import {
+	RulesReferenceModalHost,
+	RulesReferenceModalRuntimeProvider,
+	type RulesReferenceModalRuntime,
+} from "./widgets/rules-reference-modal/index.js";
 import { MonsterStatBlock } from "./widgets/monster-stat-block/index.js";
 import { SpellsBrowser } from "./widgets/spells-browser/index.js";
 import { lang } from "./shared/lib/index.js";
@@ -56,10 +60,13 @@ import {
 	closeMentionPickerAction,
 	confirm,
 	openMentionPickerAction,
+	recordRulesReferenceHistoryEntryAction,
 	requestDiceRollAction,
 	requestCampaignsReloadAction,
 	requestRulesReferenceNavigationAction,
 	refreshEntitiesAction,
+	setRulesReferenceHistoryIndexAction,
+	setRulesReferenceModalOpenAction,
 	setLanguageAction,
 	setCampaignsAction,
 	setUiSettingsAction,
@@ -127,6 +134,15 @@ export default function App() {
 		(store) => store.ui.simplifiedNotes,
 	);
 	const syncEvent = useAppSelector((store) => store.sync.event);
+	const rulesReferenceModalNavigationRequest = useAppSelector(
+		(store) => store.rulesReference.navigationRequest,
+	);
+	const rulesReferenceModalNavigationHistory = useAppSelector(
+		(store) => store.rulesReference.history,
+	);
+	const rulesReferenceModalIsOpen = useAppSelector(
+		(store) => store.rulesReference.isOpen,
+	);
 	const rulesReferenceRuntime = useMemo<RulesReferenceRuntime>(
 		() => ({
 			navigate(tab, name) {
@@ -172,6 +188,49 @@ export default function App() {
 			},
 		}),
 		[dispatch],
+	);
+	const rulesReferenceModalCommands = useMemo<
+		Pick<
+			RulesReferenceModalRuntime,
+			| "openModal"
+			| "reportError"
+			| "setModalOpen"
+			| "recordHistoryEntry"
+			| "setHistoryIndex"
+		>
+	>(
+		() => ({
+			openModal(config) {
+				return openModalRequest(config);
+			},
+			reportError(error) {
+				dispatch(alert(error));
+			},
+			setModalOpen(isOpen) {
+				dispatch(setRulesReferenceModalOpenAction(isOpen));
+			},
+			recordHistoryEntry(tabId, name) {
+				dispatch(recordRulesReferenceHistoryEntryAction(tabId, name));
+			},
+			setHistoryIndex(index) {
+				dispatch(setRulesReferenceHistoryIndexAction(index));
+			},
+		}),
+		[dispatch],
+	);
+	const rulesReferenceModalRuntime = useMemo<RulesReferenceModalRuntime>(
+		() => ({
+			navigationRequest: rulesReferenceModalNavigationRequest,
+			navigationHistory: rulesReferenceModalNavigationHistory,
+			isOpen: rulesReferenceModalIsOpen,
+			...rulesReferenceModalCommands,
+		}),
+		[
+			rulesReferenceModalCommands,
+			rulesReferenceModalIsOpen,
+			rulesReferenceModalNavigationHistory,
+			rulesReferenceModalNavigationRequest,
+		],
 	);
 
 	const loadCampaigns = useCallback(async () => {
@@ -472,6 +531,9 @@ export default function App() {
 				<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>
 					<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
 				<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
+					<RulesReferenceModalRuntimeProvider
+						runtime={rulesReferenceModalRuntime}
+					>
 					<SimplifiedNotesProvider
 						simplifiedNotesEnabled={simplifiedNotesEnabled}
 				>
@@ -550,6 +612,7 @@ export default function App() {
 						</div>
 						</EditableFieldEntityLinkProvider>
 					</SimplifiedNotesProvider>
+					</RulesReferenceModalRuntimeProvider>
 				</RulesReferenceRuntimeProvider>
 					</AiAttachmentAlertRuntimeProvider>
 				</EditorMentionPickerRuntimeProvider>

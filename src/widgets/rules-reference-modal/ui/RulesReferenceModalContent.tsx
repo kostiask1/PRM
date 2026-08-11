@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type ReactList from "react-list";
 
 import { isAbortError } from "../../../shared/api/index.ts";
-import { alert } from "../../../shared/model/index.js";
 import {
 	bestiaryApi,
 	type BestiaryMonster,
@@ -11,13 +10,6 @@ import { spellApi, type SpellRecord } from "../../../entities/spell/index.js";
 import "../../../assets/components/Bestiary.css";
 import "../../../assets/components/RulesReferenceModalContent.css";
 import { lang } from "../../../shared/lib/index.js";
-import {
-	recordRulesReferenceHistoryEntry,
-	setRulesReferenceHistoryIndex,
-	setRulesReferenceModalOpen,
-	useAppDispatch,
-	useAppSelector,
-} from "../../../shared/model/index.js";
 import {
 	formatSourceLabel,
 	getSpellMeta as formatSpellMeta,
@@ -52,7 +44,6 @@ import {
 	type ReferenceTabId,
 	type ReferenceTabPolicy,
 } from "../model.js";
-import type { RulesReferenceHistoryEntry } from "../../../shared/model/index.js";
 import RulesReferenceListItem from "./RulesReferenceListItem.tsx";
 import RulesReferenceModalView from "./RulesReferenceModalView.tsx";
 import type {
@@ -60,6 +51,10 @@ import type {
 	RulesReferenceModalContentComponent,
 	RulesReferenceModalContentProps,
 } from "./rulesReferenceModalComposition.ts";
+import {
+	useRulesReferenceModalRuntime,
+	type RulesReferenceModalHistoryEntry,
+} from "./RulesReferenceModalRuntime.tsx";
 
 type UiReferenceItem = ReferenceItem &
 	Partial<BestiaryMonster> &
@@ -176,13 +171,14 @@ export default function RulesReferenceModalContent({
 	MonsterStatBlock,
 	SpellsBrowser,
 }: RulesReferenceModalContentInternalProps) {
-	const dispatch = useAppDispatch();
-	const navigationRequest = useAppSelector(
-		(state) => state.rulesReference.navigationRequest,
-	);
-	const navigationHistory = useAppSelector(
-		(state) => state.rulesReference.history,
-	);
+	const {
+		navigationRequest,
+		navigationHistory,
+		recordHistoryEntry,
+		reportError,
+		setHistoryIndex,
+		setModalOpen,
+	} = useRulesReferenceModalRuntime();
 	const listRef = useRef<ReactList | null>(null);
 	const isMountedRef = useRef(false);
 	const requestedTabsRef = useRef(new Set<ReferenceTabId>());
@@ -216,10 +212,10 @@ export default function RulesReferenceModalContent({
 
 	const recordNavigation = useCallback((tabId: ReferenceTabId, name: string) => {
 		if (!tabId || !name) return;
-		recordRulesReferenceHistoryEntry(tabId, name);
-	}, []);
+		recordHistoryEntry(tabId, name);
+	}, [recordHistoryEntry]);
 
-	const applyNavigationEntry = useCallback((entry: RulesReferenceHistoryEntry) => {
+	const applyNavigationEntry = useCallback((entry: RulesReferenceModalHistoryEntry) => {
 		if (!isReferenceTabId(entry.tabId)) return;
 		shouldScrollToActiveRef.current = true;
 		pendingNavigationTabRef.current = null;
@@ -236,10 +232,10 @@ export default function RulesReferenceModalContent({
 			const nextEntry = navigationHistory.entries[nextIndex];
 			if (!nextEntry) return;
 
-			setRulesReferenceHistoryIndex(nextIndex);
+			setHistoryIndex(nextIndex);
 			applyNavigationEntry(nextEntry);
 		},
-		[applyNavigationEntry, navigationHistory],
+		[applyNavigationEntry, navigationHistory, setHistoryIndex],
 	);
 
 	const navigateToReference = useCallback(
@@ -271,7 +267,7 @@ export default function RulesReferenceModalContent({
 		const requestControllers = requestControllersRef.current;
 		const requestedTabs = requestedTabsRef.current;
 		isMountedRef.current = true;
-		setRulesReferenceModalOpen(true);
+		setModalOpen(true);
 		return () => {
 			isMountedRef.current = false;
 			for (const [tabId, controller] of requestControllers) {
@@ -279,9 +275,9 @@ export default function RulesReferenceModalContent({
 				requestedTabs.delete(tabId);
 			}
 			requestControllers.clear();
-			setRulesReferenceModalOpen(false);
+			setModalOpen(false);
 		};
-	}, []);
+	}, [setModalOpen]);
 
 	useEffect(() => {
 		const plan = getReferenceNavigationRequestPlan(
@@ -308,7 +304,7 @@ export default function RulesReferenceModalContent({
 		executeReferenceInitialNavigationPlan(plan, {
 			onTabOnly: applyTabOnlyNavigation,
 			onReference: navigateToReference,
-			onHistory: (entry) => applyNavigationEntry(entry as RulesReferenceHistoryEntry),
+			onHistory: (entry) => applyNavigationEntry(entry as RulesReferenceModalHistoryEntry),
 			onTab: setActiveTabId,
 		});
 	}, [
@@ -381,12 +377,10 @@ export default function RulesReferenceModalContent({
 				}
 				requestedTabsRef.current.delete(tab.id);
 				runWhenMounted(isMountedRef, () => {
-					dispatch(
-						alert({
-							title: lang.t("Error"),
-							message: getReferenceLoadErrorMessage(error, lang.t("Unknown error")),
-						}),
-					);
+					reportError({
+						title: lang.t("Error"),
+						message: getReferenceLoadErrorMessage(error, lang.t("Unknown error")),
+					});
 				});
 			} finally {
 				const ownsRequest = isCurrentRequest();
@@ -409,7 +403,7 @@ export default function RulesReferenceModalContent({
 		tabsToLoad.forEach((tab) => {
 			loadItems(tab);
 		});
-	}, [activeTab, dispatch, isGlobalSearch, itemsByTab]);
+	}, [activeTab, isGlobalSearch, itemsByTab, reportError]);
 
 	const filteredItemsByTab = useMemo(() => {
 		return REFERENCE_TABS.reduce<Partial<Record<ReferenceTabId, UiReferenceItem[]>>>((result, tab) => {

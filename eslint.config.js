@@ -738,6 +738,12 @@ export default [
     },
   },
   {
+    files: ['src/widgets/rules-reference-modal/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/rules-reference-modal-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

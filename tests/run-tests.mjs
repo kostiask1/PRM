@@ -1502,6 +1502,8 @@ const FSD_CAMPAIGN_SEARCH_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/campaign-search-store-facade";
 const FSD_CAMPAIGN_ENTITY_MODAL_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/campaign-entity-modal-store-facade";
+const FSD_RULES_REFERENCE_MODAL_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/rules-reference-modal-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -7825,6 +7827,277 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/widgets\/campaign-entity-modal\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/campaign-entity-modal-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 150 gives Rules Reference Modal an injected runtime",
+	async () => {
+		const [
+			runtimeSource,
+			contentSource,
+			hostSource,
+			widgetEntry,
+			widgetTypeEntry,
+			appSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalHost.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/rules-reference-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/rules-reference-modal/index.d.ts", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"RulesReferenceModalNavigationRequest",
+			[
+				"requestId: number;",
+				"tabId: string;",
+				"name: string;",
+				"forceTab: boolean;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"RulesReferenceModalNavigationHistory",
+			[
+				"entries: RulesReferenceModalHistoryEntry[];",
+				"index: number;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"RulesReferenceModalRuntime",
+			[
+				"navigationRequest: RulesReferenceModalNavigationRequest | null;",
+				"navigationHistory: RulesReferenceModalNavigationHistory;",
+				"isOpen: boolean;",
+				"openModal(config: RulesReferenceModalOpenConfig): Promise<unknown>;",
+				"reportError(error: RulesReferenceModalErrorNotice): void;",
+				"setModalOpen(isOpen: boolean): void;",
+				"recordHistoryEntry(tabId: string, name: string): void;",
+				"setHistoryIndex(index: number): void;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"RulesReferenceModalRuntimeProviderProps",
+			[
+				"runtime: RulesReferenceModalRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<RulesReferenceModalRuntime | null>(null)",
+				"<RulesReferenceModalRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(RulesReferenceModalRuntimeContext);",
+				'"RulesReferenceModalRuntimeProvider is required to render rules-reference modal controls"',
+			],
+			"Rules Reference Modal runtime provider",
+		);
+		assert.match(widgetEntry, /RulesReferenceModalRuntimeProvider/);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${widgetTypeEntry}`,
+			/useRulesReferenceModalRuntime/,
+		);
+		assertPublicTypeSurface(widgetTypeEntry, [
+			"RulesReferenceModalErrorNotice",
+			"RulesReferenceModalHistoryEntry",
+			"RulesReferenceModalNavigationHistory",
+			"RulesReferenceModalNavigationRequest",
+			"RulesReferenceModalOpenConfig",
+			"RulesReferenceModalRuntime",
+			"RulesReferenceModalRuntimeProviderProps",
+		]);
+		for (const source of [runtimeSource, contentSource, hostSource]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|openModalRequest|\bdispatch\(|\balert\(/,
+			);
+		}
+		assertSourceTokensInOrder(
+			contentSource,
+			[
+				"const {",
+				"navigationRequest,",
+				"navigationHistory,",
+				"recordHistoryEntry,",
+				"reportError,",
+				"setHistoryIndex,",
+				"setModalOpen,",
+				"} = useRulesReferenceModalRuntime();",
+				"const recordNavigation = useCallback(",
+				"recordHistoryEntry(tabId, name);",
+				"const navigateHistory = useCallback(",
+				"setHistoryIndex(nextIndex);",
+				"applyNavigationEntry(nextEntry);",
+				"setModalOpen(true);",
+				"setModalOpen(false);",
+				"reportError({",
+				'title: lang.t("Error")',
+				"message: getReferenceLoadErrorMessage(error, lang.t(\"Unknown error\")),",
+			],
+			"Rules Reference Modal history, lifecycle, and load-error ordering",
+		);
+		assert.match(
+			contentSource,
+			/\[activeTab, isGlobalSearch, itemsByTab, reportError\]/,
+		);
+		assertSourceTokensInOrder(
+			hostSource,
+			[
+				"const { navigationRequest, isOpen, openModal } =",
+				"useRulesReferenceModalRuntime();",
+				"const plan = getReferenceModalHostPlan(",
+				"handledRequestIdRef.current = plan.requestId;",
+				"if (!plan.shouldOpen) return;",
+				"openRulesReferenceModalContent({",
+				"openModal,",
+			],
+			"Rules Reference Modal host runtime and request handling",
+		);
+		assertSourceTokensInOrder(
+			hostSource,
+			[
+				"openModal: RulesReferenceModalRuntime[\"openModal\"]",
+				"function openRulesReferenceModalContent({",
+				"openModal({",
+				'title: lang.t("Rules Reference")',
+				'type: "custom"',
+				"showFooter: false",
+				"<RulesReferenceModalContent",
+			],
+			"Rules Reference Modal opener contract",
+		);
+		assert.match(
+			hostSource,
+			/\[MonsterStatBlock, SpellsBrowser, isOpen, navigationRequest, openModal\]/,
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const rulesReferenceModalNavigationRequest = useAppSelector(",
+				"(store) => store.rulesReference.navigationRequest",
+				"const rulesReferenceModalNavigationHistory = useAppSelector(",
+				"(store) => store.rulesReference.history",
+				"const rulesReferenceModalIsOpen = useAppSelector(",
+				"(store) => store.rulesReference.isOpen",
+				"const rulesReferenceModalCommands = useMemo<",
+				"openModal(config) {",
+				"return openModalRequest(config);",
+				"reportError(error) {",
+				"dispatch(alert(error));",
+				"setModalOpen(isOpen) {",
+				"dispatch(setRulesReferenceModalOpenAction(isOpen));",
+				"recordHistoryEntry(tabId, name) {",
+				"dispatch(recordRulesReferenceHistoryEntryAction(tabId, name));",
+				"setHistoryIndex(index) {",
+				"dispatch(setRulesReferenceHistoryIndexAction(index));",
+				"const rulesReferenceModalRuntime = useMemo<RulesReferenceModalRuntime>(",
+				"navigationRequest: rulesReferenceModalNavigationRequest,",
+				"navigationHistory: rulesReferenceModalNavigationHistory,",
+				"isOpen: rulesReferenceModalIsOpen,",
+				"...rulesReferenceModalCommands,",
+				"<RulesReferenceModalRuntimeProvider",
+				"runtime={rulesReferenceModalRuntime}",
+				"<MainContent />",
+				"<RulesReferenceModalHost",
+				"</RulesReferenceModalRuntimeProvider>",
+			],
+			"App-owned Rules Reference Modal runtime",
+		);
+		const rulesReferenceModalCommandsSource = appSource.match(
+			/const rulesReferenceModalCommands[\s\S]*?(?=^\tconst rulesReferenceModalRuntime)/m,
+		)?.[0];
+		assert.ok(rulesReferenceModalCommandsSource);
+		assert.match(rulesReferenceModalCommandsSource, /\[dispatch\],\s*\);/);
+
+		const forbiddenRulesReferenceModalStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/rules-reference-modal",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenRulesReferenceModalStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenRulesReferenceModalStoreImporters, []);
+
+		for (const source of [
+			'import { openModalRequest } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+				FSD_RULES_REFERENCE_MODAL_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_RULES_REFERENCE_MODAL_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { openModalRequest } from "../../../shared/model/index.js";',
+			"SRC/WIDGETS/RULES-REFERENCE-MODAL/ui/RulesReferenceModalContent.tsx",
+			FSD_RULES_REFERENCE_MODAL_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_RULES_REFERENCE_MODAL_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { openModalRequest } from "../../../shared/model/index.js";',
+				"src/widgets/campaign-entity-modal/ui/CampaignEntityModalProvider.tsx",
+				FSD_RULES_REFERENCE_MODAL_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/widgets\/rules-reference-modal\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/rules-reference-modal-store-facade': 'error'/,
 		);
 	},
 );
@@ -37784,7 +38057,7 @@ await run(
 			"controller.signal.aborted",
 			"!isCurrentRequest()",
 			"requestedTabsRef.current.delete(tab.id)",
-			"dispatch(",
+			"reportError({",
 			"} finally {",
 			"const ownsRequest = isCurrentRequest()",
 			"if (ownsRequest)",
@@ -39329,8 +39602,8 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(rulesReferenceSource, /tabId === "spells"/);
 	assert.match(rulesReferenceSource, /recordEmbeddedReferenceSelection/);
 	assert.match(rulesReferenceSource, /recordNavigation\(tabId, name\)/);
-	assert.match(rulesReferenceSource, /recordRulesReferenceHistoryEntry/);
-	assert.match(rulesReferenceSource, /setRulesReferenceHistoryIndex/);
+	assert.match(rulesReferenceSource, /recordHistoryEntry/);
+	assert.match(rulesReferenceSource, /setHistoryIndex/);
 	assert.match(rulesReferenceSource, /applyTabOnlyNavigation/);
 	assert.match(rulesReferenceSource, /getReferenceNavigationRequestPlan/);
 	assert.match(rulesReferenceSource, /normalizedRequest\.forceTab/);
