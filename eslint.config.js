@@ -190,8 +190,8 @@ export default [
             message: 'Import rich-content through features/rich-content/index.js or its Node-safe model.js facade.',
           },
           {
-            group: ['**/shared/model/actions', '**/shared/model/actions.js', '**/shared/model/appStore', '**/shared/model/appStore.js', '**/shared/model/appStore.ts'],
-            message: 'Import global app state and actions through shared/model/index.js.',
+            group: ['**/shared/model/actions', '**/shared/model/actions.js'],
+            message: 'Import global action contracts through shared/model/index.js.',
           },
           {
             group: [
@@ -656,7 +656,6 @@ export default [
     },
     rules: {
       'fsd-boundaries/public-entry-imports': 'error',
-      'fsd-boundaries/app-store-runtime-owner': 'error',
     },
   },
   {

@@ -89,16 +89,6 @@ const FSD_PUBLIC_ENTRY_PATTERN =
 const FSD_PUBLIC_ENTRY_PATH_PATTERN = new RegExp(
 	`^${FSD_PUBLIC_ENTRY_PATTERN}$`,
 );
-const APP_STORE_RUNTIME_PATH = "src/shared/model/appStoreRuntime.ts";
-const APP_STORE_RUNTIME_OWNER_PATH = "src/app/model/appStore.ts";
-const APP_STORE_RUNTIME_FACADE_PATH = "src/shared/model/appStore.ts";
-const APP_STORE_RUNTIME_ALLOWED_IMPORTERS = new Set([
-	APP_STORE_RUNTIME_OWNER_PATH.toLowerCase(),
-	APP_STORE_RUNTIME_FACADE_PATH.toLowerCase(),
-]);
-const APP_STORE_RUNTIME_MODULE_PATH = normalizeModulePath(
-	APP_STORE_RUNTIME_PATH,
-);
 const SETTINGS_FEATURE_PATH_PREFIX = "src/features/settings/";
 const NOTES_FEATURE_PATH_PREFIX = "src/features/notes/";
 const PLAYER_QUESTIONS_FEATURE_PATH_PREFIX = "src/features/player-questions/";
@@ -489,49 +479,6 @@ export function createFsdSameLayerFileEdgeRule(
 
 const FSD_SAME_LAYER_FILE_EDGE_RULE = createFsdSameLayerFileEdgeRule();
 
-const APP_STORE_RUNTIME_OWNER_RULE = Object.freeze({
-	meta: {
-		type: "problem",
-		docs: {
-			description:
-				"Reserve the shared app-store runtime registration port for the app-owned composition root and its compatibility facade.",
-		},
-		schema: [],
-		messages: {
-			privateRuntime:
-				"Only src/app/model/appStore.ts and src/shared/model/appStore.ts may import the app-store runtime registration port.",
-		},
-	},
-	create(context) {
-		const importer = {
-			fileName: normalizeRepositoryFileName(context.getFilename()),
-		};
-		if (
-			APP_STORE_RUNTIME_ALLOWED_IMPORTERS.has(
-				importer.fileName.toLowerCase(),
-			)
-		) {
-			return {};
-		}
-
-		const inspectLiteralSource = (node, source) => {
-			const specifier = getStaticModuleSpecifier(source);
-			const resolvedModulePath = normalizeModulePath(
-				resolveModuleSpecifierPath(importer, specifier),
-			);
-			if (resolvedModulePath !== APP_STORE_RUNTIME_MODULE_PATH) {
-				return;
-			}
-			context.report({
-				node: source || node,
-				messageId: "privateRuntime",
-			});
-		};
-
-		return createModuleReferenceVisitors(inspectLiteralSource);
-	},
-});
-
 function isModulePathWithin(modulePath, rootPath) {
 	return (
 		modulePath === rootPath || modulePath.startsWith(`${rootPath}/`)
@@ -793,7 +740,6 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
 		"same-layer-file-edges": FSD_SAME_LAYER_FILE_EDGE_RULE,
-		"app-store-runtime-owner": APP_STORE_RUNTIME_OWNER_RULE,
 		"settings-store-facade": SETTINGS_STORE_FACADE_RULE,
 		"notes-store-facade": NOTES_STORE_FACADE_RULE,
 		"player-questions-store-facade": PLAYER_QUESTIONS_STORE_FACADE_RULE,

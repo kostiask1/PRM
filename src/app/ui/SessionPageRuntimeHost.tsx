@@ -7,13 +7,12 @@ import {
 import {
 	alert,
 	confirm,
-	navigateTo,
 	prompt,
 	refreshEntitiesAction,
 	requestCampaignsReloadAction,
 	setActiveSessionAction,
 } from "../../shared/model/index.js";
-import { useAppDispatch, useAppSelector } from "../model/index.js";
+import { navigateTo, useAppDispatch, useAppSelector } from "../model/index.js";
 
 export default function SessionPageRuntimeHost({
 	children,

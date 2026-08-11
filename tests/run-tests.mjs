@@ -1477,8 +1477,6 @@ await run(
 
 const FSD_PUBLIC_ENTRY_RULE_ID = "fsd-boundaries/public-entry-imports";
 const FSD_SAME_LAYER_RULE_ID = "fsd-boundaries/same-layer-file-edges";
-const FSD_APP_STORE_RUNTIME_RULE_ID =
-	"fsd-boundaries/app-store-runtime-owner";
 const FSD_SETTINGS_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/settings-store-facade";
 const FSD_NOTES_STORE_FACADE_RULE_ID =
@@ -4959,14 +4957,12 @@ await run(
 );
 
 await run(
-	"Phase 136 makes app store composition app-owned behind a typed shared compatibility port",
+	"Phase 136 keeps app store composition app-owned",
 	async () => {
 		const [
 			appStoreSource,
 			appRuntimeEntry,
 			appRuntimeTypes,
-			sharedStoreFacadeSource,
-			sharedRuntimePortSource,
 			appReducerSource,
 			sharedRuntimeEntry,
 			sharedRuntimeTypes,
@@ -4975,14 +4971,12 @@ await run(
 			realtimeSource,
 			mainContentSource,
 			messageBoxHostSource,
+			sessionPageRuntimeHostSource,
 			sidebarSource,
-			eslintSource,
 		] = await Promise.all([
 			fs.readFile("src/app/model/appStore.ts", "utf8"),
 			fs.readFile("src/app/model/index.js", "utf8"),
 			fs.readFile("src/app/model/index.d.ts", "utf8"),
-			fs.readFile("src/shared/model/appStore.ts", "utf8"),
-			fs.readFile("src/shared/model/appStoreRuntime.ts", "utf8"),
 			fs.readFile("src/app/model/appStateReducer.ts", "utf8"),
 			fs.readFile("src/shared/model/index.js", "utf8"),
 			fs.readFile("src/shared/model/index.d.ts", "utf8"),
@@ -4991,8 +4985,8 @@ await run(
 			fs.readFile("src/app/realtime/realtimeSync.ts", "utf8"),
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
 			fs.readFile("src/app/ui/MessageBoxHost.tsx", "utf8"),
+			fs.readFile("src/app/ui/SessionPageRuntimeHost.tsx", "utf8"),
 			fs.readFile("src/widgets/sidebar/ui/Sidebar.tsx", "utf8"),
-			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
 		assert.match(
@@ -5023,14 +5017,6 @@ await run(
 				new RegExp(`\\b${compatibilityOnlyName}\\b`),
 			);
 		}
-		assert.match(
-			sharedRuntimePortSource,
-			/export interface AppStoreRuntime \{[\s\S]*?store: AppStore;[\s\S]*?useAppSelector<TResult>\(selector: AppSelector<TResult>\): TResult;[\s\S]*?navigateTo\(/,
-		);
-		assert.match(
-			sharedRuntimePortSource,
-			/let configuredRuntime: AppStoreRuntime \| null = null;[\s\S]*?export function configureAppStoreRuntime[\s\S]*?export function getAppStoreRuntime/,
-		);
 		assertSourceTokensInOrder(
 			appReducerSource,
 			[
@@ -5044,7 +5030,6 @@ await run(
 			appStoreSource,
 			[
 				'from "./appStateReducer.ts"',
-				'from "../../shared/model/appStoreRuntime.ts"',
 				"const initialState: AppState = {",
 				"rulesReference: {",
 				"let modalRequestSeq: RequestId = 1;",
@@ -5053,28 +5038,47 @@ await run(
 				"payload: lang.setLanguage(action.payload)",
 				"state = reduceAppState(state, normalizedAction);",
 				"emitChange();",
-				"const APP_STORE_RUNTIME: AppStoreRuntime = {",
-				"configureAppStoreRuntime(APP_STORE_RUNTIME);",
+				"export const appStore: AppStore = {",
+				"export function openModalRequest(config: ModalConfig): Promise<unknown> {",
+				"export function navigateTo(",
 			],
 			"app-owned store composition",
 		);
 		assert.doesNotMatch(
-			sharedStoreFacadeSource,
-			/useSyncExternalStore|const initialState|const listeners|modalResolvers|reduceAppState|SET_LANGUAGE|buildNavigationUrl|parseUrl|lang\./,
+			appStoreSource,
+			/shared\/model\/appStoreRuntime|AppStoreRuntime|configureAppStoreRuntime|APP_STORE_RUNTIME|getAppStoreRuntime/,
 		);
-		assertSourceTokensInOrder(
-			sharedStoreFacadeSource,
-			[
-				"getAppStoreRuntime().store.dispatch(action)",
-				"getAppStoreRuntime().store.getState()",
-				"getAppStoreRuntime().useAppSelector(selector)",
-				"getAppStoreRuntime().openModalRequest(config)",
-				"getAppStoreRuntime().navigateTo(",
-			],
-			"shared store compatibility delegation",
-		);
-		assert.doesNotMatch(sharedRuntimeEntry, /appStateReducer/);
-		assert.doesNotMatch(sharedRuntimeTypes, /appStateReducer/);
+		for (const obsoleteWrapper of [
+			"recordRulesReferenceHistoryEntry",
+			"requestRulesReferenceNavigation",
+			"setRulesReferenceHistoryIndex",
+			"setRulesReferenceModalOpen",
+		]) {
+			assert.doesNotMatch(
+				appStoreSource,
+				new RegExp(`\\b${obsoleteWrapper}\\b`),
+			);
+		}
+		for (const runtimeFacadeExport of [
+			"appStore",
+			"closeActiveModal",
+			"navigateTo",
+			"openModalRequest",
+			"resolveModalRequest",
+			"setRouterNavigate",
+			"syncNavigationFromPath",
+			"useAppDispatch",
+			"useAppSelector",
+		]) {
+			assert.doesNotMatch(
+				sharedRuntimeEntry,
+				new RegExp(`\\b${runtimeFacadeExport}\\b`),
+			);
+			assert.doesNotMatch(
+				sharedRuntimeTypes,
+				new RegExp(`\\b${runtimeFacadeExport}\\b`),
+			);
+		}
 		for (const exportedType of [
 			"AppAction",
 			"AppDispatch",
@@ -5092,99 +5096,43 @@ await run(
 		assert.match(realtimeSource, /from "\.\.\/model\/index\.js";/);
 		assert.match(mainContentSource, /from "\.\.\/model\/index\.js";/);
 		assert.match(messageBoxHostSource, /from "\.\.\/model\/index\.js";/);
+		assert.match(
+			sessionPageRuntimeHostSource,
+			/import \{ navigateTo, useAppDispatch, useAppSelector \} from "\.\.\/model\/index\.js"/,
+		);
 		assert.doesNotMatch(sidebarSource, /shared\/model|app\/model/);
 
-		const [appRuntime, sharedCompatibility] = await Promise.all([
+		const [appRuntime, sharedContracts] = await Promise.all([
 			import("../src/app/model/index.js"),
 			import("../src/shared/model/index.js"),
 		]);
 		const wasRulesReferenceModalOpen =
 			appRuntime.appStore.getState().rulesReference.isOpen;
-		assert.strictEqual(
-			sharedCompatibility.appStore.getState(),
-			appRuntime.appStore.getState(),
-		);
-		sharedCompatibility.appStore.dispatch(
-			sharedCompatibility.setRulesReferenceModalOpenAction(
-				!wasRulesReferenceModalOpen,
-			),
+		appRuntime.appStore.dispatch(
+			setRulesReferenceModalOpenAction(!wasRulesReferenceModalOpen),
 		);
 		assert.equal(
 			appRuntime.appStore.getState().rulesReference.isOpen,
 			!wasRulesReferenceModalOpen,
 		);
-		sharedCompatibility.appStore.dispatch(
-			sharedCompatibility.setRulesReferenceModalOpenAction(
-				wasRulesReferenceModalOpen,
-			),
+		appRuntime.appStore.dispatch(
+			setRulesReferenceModalOpenAction(wasRulesReferenceModalOpen),
 		);
 
-		const runtimePortImporters = [];
-		const runtimePortModulePath = "src/shared/model/appStoreRuntime".toLowerCase();
-		for (const filePath of await collectFsdSourceFiles("src")) {
-			const source = await fs.readFile(filePath, "utf8");
-			if (
-				readStaticFsdSpecifiers(source).some(
-					(specifier) => {
-						const resolvedPath = resolveTestModuleSpecifierPath(
-							filePath,
-							specifier,
-						);
-						return (
-							resolvedPath
-								?.replace(/\.(?:[cm]?[jt]sx?)$/, "")
-								.toLowerCase() ===
-							runtimePortModulePath
-						);
-					},
-				)
-			) {
-				runtimePortImporters.push(filePath);
-			}
-		}
-		assert.deepEqual(runtimePortImporters, [
-			"src/app/model/appStore.ts",
-			"src/shared/model/appStore.ts",
-		]);
 
-		assert.deepEqual(
-			lintFsdBoundaryRule(
-				'import { getAppStoreRuntime } from "../../shared/model/appStoreRuntime.ts";',
-				"src/app/model/appStore.ts",
-				FSD_APP_STORE_RUNTIME_RULE_ID,
-			),
-			[],
-		);
-		assert.deepEqual(
-			lintFsdBoundaryRule(
-				'import { getAppStoreRuntime } from "./appStoreRuntime.ts";',
-				"src/shared/model/appStore.ts",
-				FSD_APP_STORE_RUNTIME_RULE_ID,
-			),
-			[],
-		);
-		for (const source of [
-			'import { getAppStoreRuntime } from "../../../shared/model/appStoreRuntime.ts";',
-			'import { getAppStoreRuntime } from "../../../shared/model/appStoreRuntime";',
-			'export { getAppStoreRuntime } from "../../../shared/model/appStoreRuntime.ts";',
-			'const runtime = import("../../../shared/model/appStoreRuntime.ts");',
-			'const runtime = require("../../../shared/model/appStoreRuntime.ts");',
-			'import { AppStoreRuntime } from "/src/shared/model/appStoreRuntime.ts";',
-			'import { AppStoreRuntime } from "/src/shared/model/appStoreRuntime";',
-			'import { AppStoreRuntime } from "/src/shared/model/AppStoreRuntime";',
+		for (const runtimeFacadeExport of [
+			"appStore",
+			"closeActiveModal",
+			"navigateTo",
+			"openModalRequest",
+			"resolveModalRequest",
+			"setRouterNavigate",
+			"syncNavigationFromPath",
+			"useAppDispatch",
+			"useAppSelector",
 		]) {
-			const reports = lintFsdBoundaryRule(
-				source,
-				"src/features/ai/ui/AiPromptComposer.tsx",
-				FSD_APP_STORE_RUNTIME_RULE_ID,
-			);
-			assert.equal(reports.length, 1);
-			assert.equal(reports[0].ruleId, FSD_APP_STORE_RUNTIME_RULE_ID);
+			assert.equal(runtimeFacadeExport in sharedContracts, false);
 		}
-		assert.match(
-			eslintSource,
-			/'fsd-boundaries\/app-store-runtime-owner': 'error'/,
-		);
 	},
 );
 
@@ -10194,6 +10142,195 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/pages\/campaign\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/campaign-page-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 159 retires the shared app-store compatibility facade",
+	async () => {
+		const retiredStorePaths = [
+			"src/shared/model/appStore.ts",
+			"src/shared/model/appStoreRuntime.ts",
+		];
+		for (const retiredStorePath of retiredStorePaths) {
+			await assert.rejects(
+				() => fs.access(retiredStorePath),
+				(error) => error?.code === "ENOENT",
+			);
+		}
+
+		const [
+			appStoreSource,
+			appRuntimeEntry,
+			appRuntimeTypes,
+			sharedRuntimeEntry,
+			sharedRuntimeTypes,
+			sessionPageRuntimeHostSource,
+			boundarySource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile("src/app/model/appStore.ts", "utf8"),
+			fs.readFile("src/app/model/index.js", "utf8"),
+			fs.readFile("src/app/model/index.d.ts", "utf8"),
+			fs.readFile("src/shared/model/index.js", "utf8"),
+			fs.readFile("src/shared/model/index.d.ts", "utf8"),
+			fs.readFile("src/app/ui/SessionPageRuntimeHost.tsx", "utf8"),
+			fs.readFile("scripts/eslint-import-boundaries.mjs", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		const retiredFacadeExports = [
+			"appStore",
+			"closeActiveModal",
+			"navigateTo",
+			"openModalRequest",
+			"recordRulesReferenceHistoryEntry",
+			"requestRulesReferenceNavigation",
+			"resolveModalRequest",
+			"setRouterNavigate",
+			"setRulesReferenceHistoryIndex",
+			"setRulesReferenceModalOpen",
+			"syncNavigationFromPath",
+			"useAppDispatch",
+			"useAppSelector",
+		];
+		for (const retiredFacadeExport of retiredFacadeExports) {
+			assert.doesNotMatch(
+				sharedRuntimeEntry,
+				new RegExp(`\\b${retiredFacadeExport}\\b`),
+			);
+			assert.doesNotMatch(
+				sharedRuntimeTypes,
+				new RegExp(`\\b${retiredFacadeExport}\\b`),
+			);
+		}
+		for (const appRuntimeExport of [
+			"appStore",
+			"closeActiveModal",
+			"navigateTo",
+			"openModalRequest",
+			"resolveModalRequest",
+			"setRouterNavigate",
+			"syncNavigationFromPath",
+			"useAppDispatch",
+			"useAppSelector",
+		]) {
+			assert.match(appRuntimeEntry, new RegExp(`\\b${appRuntimeExport}\\b`));
+			assert.match(appRuntimeTypes, new RegExp(`\\b${appRuntimeExport}\\b`));
+		}
+		assertSourceTokensInOrder(
+			appStoreSource,
+			[
+				"const initialState: AppState = {",
+				"let modalRequestSeq: RequestId = 1;",
+				"const modalResolvers = new Map<RequestId, (value: unknown) => void>();",
+				"export const appStore: AppStore = {",
+				"export function openModalRequest(config: ModalConfig): Promise<unknown> {",
+				"export function syncNavigationFromPath(pathname: string | null = null): void {",
+				"export function setRouterNavigate(navigate: RouterNavigate | null): void {",
+				"export function navigateTo(",
+			],
+			"app-owned store, modal, and navigation runtime",
+		);
+		assert.doesNotMatch(
+			appStoreSource,
+			/appStoreRuntime|AppStoreRuntime|configureAppStoreRuntime|APP_STORE_RUNTIME|getAppStoreRuntime/,
+		);
+		for (const obsoleteWrapper of [
+			"recordRulesReferenceHistoryEntry",
+			"requestRulesReferenceNavigation",
+			"setRulesReferenceHistoryIndex",
+			"setRulesReferenceModalOpen",
+		]) {
+			assert.doesNotMatch(
+				appStoreSource,
+				new RegExp(`\\b${obsoleteWrapper}\\b`),
+			);
+		}
+
+		const sessionSharedModelImport = sessionPageRuntimeHostSource.match(
+			/import\s*\{([\s\S]*?)\}\s*from\s*"\.\.\/\.\.\/shared\/model\/index\.js";/,
+		)?.[1];
+		assert.ok(sessionSharedModelImport);
+		assert.doesNotMatch(sessionSharedModelImport, /\bnavigateTo\b/);
+		assert.match(
+			sessionPageRuntimeHostSource,
+			/import \{ navigateTo, useAppDispatch, useAppSelector \} from "\.\.\/model\/index\.js"/,
+		);
+
+		const retiredStoreModulePaths = new Set(
+			retiredStorePaths.map((retiredStorePath) =>
+				retiredStorePath.replace(/\.(?:[cm]?[jt]sx?)$/, "").toLowerCase(),
+			),
+		);
+		const retiredStoreImporters = [];
+		const retiredStoreReferenceFiles = [];
+		const retiredStorePathPattern =
+			/shared[\\/]+model[\\/]+appStore(?:Runtime)?(?:\.(?:[cm]?[jt]sx?))?(?=$|[?#"'`*,\]\\s])/i;
+		for (const filePath of await collectFsdSourceFiles("src")) {
+			const source = await fs.readFile(filePath, "utf8");
+			if (retiredStorePathPattern.test(source)) {
+				retiredStoreReferenceFiles.push(filePath);
+			}
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (modulePath && retiredStoreModulePaths.has(modulePath)) {
+					retiredStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(retiredStoreImporters, []);
+		assert.deepEqual(retiredStoreReferenceFiles, []);
+
+		assert.equal(
+			"app-store-runtime-owner" in FSD_BOUNDARY_PLUGIN.rules,
+			false,
+		);
+		assert.doesNotMatch(
+			boundarySource,
+			/APP_STORE_RUNTIME|app-store-runtime-owner|appStoreRuntime/,
+		);
+		assert.doesNotMatch(
+			eslintSource,
+			/app-store-runtime-owner|shared\/model\/appStore/,
+		);
+		assert.match(
+			eslintSource,
+			/group: \['\*\*\/shared\/model\/actions', '\*\*\/shared\/model\/actions\.js'\],\s*message: 'Import global action contracts through shared\/model\/index\.js\.'/,
+		);
+
+		for (const source of [
+			'import { appStore } from "../../../shared/model/appStore.ts";',
+			'export { getAppStoreRuntime } from "../../../shared/model/appStoreRuntime.ts";',
+			'const store = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const runtime = require("..\\\\..\\\\..\\\\shared\\\\model\\\\appStoreRuntime.ts");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../shared/model/appStoreRuntime.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStoreRuntime.ts");',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/settings/ui/SettingsModalContent.tsx",
+				FSD_SETTINGS_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_SETTINGS_STORE_FACADE_RULE_ID);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { appStore } from "../../../shared/model/appStore.ts";',
+			"SRC/FEATURES/SETTINGS/ui/SettingsModalContent.tsx",
+			FSD_SETTINGS_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_SETTINGS_STORE_FACADE_RULE_ID,
 		);
 	},
 );

@@ -3,18 +3,9 @@ import {
 	SET_LANGUAGE,
 	closeModalAction,
 	openModalAction,
-	recordRulesReferenceHistoryEntryAction,
-	requestRulesReferenceNavigationAction,
 	setNavigationAction,
-	setRulesReferenceHistoryIndexAction,
-	setRulesReferenceModalOpenAction,
 } from "../../shared/model/index.js";
 import { reduceAppState } from "./appStateReducer.ts";
-import {
-	configureAppStoreRuntime,
-	type AppStoreRuntime,
-	type RouterNavigate,
-} from "../../shared/model/appStoreRuntime.ts";
 import { buildNavigationUrl, parseUrl } from "../../shared/lib/navigation.ts";
 import { lang } from "../../shared/lib/localization.js";
 import type {
@@ -27,13 +18,17 @@ import type {
 	EncounterId,
 	ModalConfig,
 	RequestId,
-	RulesReferenceNavigationOptions,
 	SessionFileName,
 	UiSettingsState,
 } from "../../shared/model/index.js";
 
 const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
 	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
+
+export type RouterNavigate = (
+	url: string,
+	options: { replace: boolean },
+) => void;
 
 function getInitialNavigation(): AppState["navigation"] {
 	if (typeof window === "undefined") {
@@ -189,31 +184,6 @@ export function closeActiveModal(value: unknown = null): void {
 	resolveModalRequest(requestId, value);
 }
 
-function requestRulesReferenceNavigation(
-	tabId: unknown,
-	name: unknown = "",
-	options: RulesReferenceNavigationOptions = {},
-): void {
-	appStore.dispatch(
-		requestRulesReferenceNavigationAction(tabId, name, options),
-	);
-}
-
-function setRulesReferenceModalOpen(isOpen: unknown): void {
-	appStore.dispatch(setRulesReferenceModalOpenAction(isOpen));
-}
-
-function recordRulesReferenceHistoryEntry(
-	tabId: unknown,
-	name: unknown,
-): void {
-	appStore.dispatch(recordRulesReferenceHistoryEntryAction(tabId, name));
-}
-
-function setRulesReferenceHistoryIndex(index: string | number): void {
-	appStore.dispatch(setRulesReferenceHistoryIndexAction(index));
-}
-
 export function syncNavigationFromPath(pathname: string | null = null): void {
 	const route = parseUrl(pathname);
 	appStore.dispatch(
@@ -256,21 +226,3 @@ export function navigateTo(
 		window.history.pushState({}, "", url);
 	}
 }
-
-const APP_STORE_RUNTIME: AppStoreRuntime = {
-	store: appStore,
-	useAppDispatch,
-	useAppSelector,
-	openModalRequest,
-	resolveModalRequest,
-	closeActiveModal,
-	requestRulesReferenceNavigation,
-	setRulesReferenceModalOpen,
-	recordRulesReferenceHistoryEntry,
-	setRulesReferenceHistoryIndex,
-	syncNavigationFromPath,
-	setRouterNavigate,
-	navigateTo,
-};
-
-configureAppStoreRuntime(APP_STORE_RUNTIME);
