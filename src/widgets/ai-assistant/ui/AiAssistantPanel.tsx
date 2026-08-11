@@ -60,17 +60,6 @@ import { useAiAssistantHistoryController } from "../model/useAiAssistantHistoryC
 import { useAiImagePromptController } from "../model/useAiImagePromptController.ts";
 import { useAiImagePromptState } from "../model/useAiImagePromptState.ts";
 import type { ImagePromptTarget } from "../model/imagePromptPicker.ts";
-import {
-	alert,
-	confirm,
-	dataSyncReceivedAction,
-	refreshEntitiesAction,
-	requestCampaignsReloadAction,
-	setActiveCampaignAction,
-	setActiveEncounterAction,
-	setActiveSessionAction,
-} from "../../../shared/model/index.js";
-import { useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
 import { formatBytes } from "../../../shared/lib/index.js";
@@ -79,6 +68,7 @@ import {
 	getLocalizedDiffResourceState,
 } from "../../../features/ai/index.js";
 import "../../../assets/components/AiAssistantPanel.css";
+import { useAiAssistantRuntime } from "./AiAssistantRuntime.tsx";
 
 const markdownTagsWithMentions = [
 	"p",
@@ -218,26 +208,25 @@ export default function AiAssistantPanel({
 	isBestiary = false,
 	onRegisterImagePromptAction,
 }: AiAssistantPanelProps) {
-	const dispatch = useAppDispatch();
-	const currentLanguage = useAppSelector(
-		(state) => state.localization.language,
-	);
-	const activeCampaign = useAppSelector((state) => state.active.campaign);
-	const activeSession = useAppSelector((state) => state.active.session);
-	const activeEncounter = useAppSelector((state) => state.active.encounter);
-	const imagePromptBasePrompt = useAppSelector(
-		(state) => state.ui.imagePromptBasePrompt || "",
-	);
-	const globalAiBasePrompt = useAppSelector(
-		(state) => state.ui.aiBasePrompt || "",
-	);
-	const campaignAiBasePrompts = useAppSelector(
-		(state) => state.ui.campaignAiBasePrompts || {},
-	);
-	const campaignImagePromptBasePrompts = useAppSelector(
-		(state) => state.ui.campaignImagePromptBasePrompts || {},
-	);
-	const navigation = useAppSelector((state) => state.navigation);
+	const {
+		activeCampaign,
+		activeEncounter,
+		activeSession,
+		campaignAiBasePrompts,
+		campaignImagePromptBasePrompts,
+		currentLanguage,
+		globalAiBasePrompt,
+		imagePromptBasePrompt,
+		navigation,
+		publishSyncEvent,
+		refreshEntities,
+		requestCampaignReload,
+		requestConfirmation,
+		setActiveCampaign,
+		setActiveEncounter,
+		setActiveSession,
+		showMessage,
+	} = useAiAssistantRuntime();
 	const routeState = useMemo(
 		() =>
 			getAiAssistantRouteState({
@@ -392,19 +381,17 @@ export default function AiAssistantPanel({
 
 	const publishAiSyncEvent = useCallback(
 		(extra: Record<string, unknown> = {}) => {
-			dispatch(
-				dataSyncReceivedAction({
-					resource: "ai",
-					campaignSlug:
-						initialRoute.campaign && initialRoute.campaign !== "bestiary"
-							? initialRoute.campaign
-							: undefined,
-					sessionFileName: initialRoute.session || undefined,
-					...extra,
-				}),
-			);
+			publishSyncEvent({
+				resource: "ai",
+				campaignSlug:
+					initialRoute.campaign && initialRoute.campaign !== "bestiary"
+						? initialRoute.campaign
+						: undefined,
+				sessionFileName: initialRoute.session || undefined,
+				...extra,
+			});
 		},
-		[dispatch, initialRoute.campaign, initialRoute.session],
+		[initialRoute.campaign, initialRoute.session, publishSyncEvent],
 	);
 
 	const applyUpdatedAiData = useCallback(
@@ -424,27 +411,27 @@ export default function AiAssistantPanel({
 			if (!plan) return false;
 			return executeAiUpdatedDataPlan({
 				plan,
-				onSetActiveCampaign: (campaign) =>
-					dispatch(setActiveCampaignAction(campaign)),
-				onSetActiveSession: (session) =>
-					dispatch(setActiveSessionAction(session)),
-				onSetActiveEncounter: (encounter) =>
-					dispatch(setActiveEncounterAction(encounter)),
-				onRequestCampaignReload: () =>
-					dispatch(requestCampaignsReloadAction()),
+				onSetActiveCampaign: setActiveCampaign,
+				onSetActiveSession: setActiveSession,
+				onSetActiveEncounter: setActiveEncounter,
+				onRequestCampaignReload: requestCampaignReload,
 				onPublishSyncEvent: publishAiSyncEvent,
-				onRefreshEntities: () => dispatch(refreshEntitiesAction()),
+				onRefreshEntities: refreshEntities,
 			});
 		},
 		[
 			activeCampaign,
-			dispatch,
 			initialRoute.encounter,
 			initialRoute.session,
 			isBestiary,
 			isCampaign,
 			isEncounter,
 			publishAiSyncEvent,
+			refreshEntities,
+			requestCampaignReload,
+			setActiveCampaign,
+			setActiveEncounter,
+			setActiveSession,
 		],
 	);
 
@@ -488,12 +475,12 @@ export default function AiAssistantPanel({
 		getResponseStats: api.getAiResponsesStats,
 		getDetails: (entry, language) =>
 			entry ? getHistoryDetailRows(entry, language) : [],
-		confirm: async (copy) => Boolean(await dispatch(confirm(copy))),
-		alert: (copy) => dispatch(alert(copy)),
+		confirm: async (copy) => Boolean(await requestConfirmation(copy)),
+		alert: showMessage,
 		applyUpdatedData: applyUpdatedAiData,
 		requestReload: (entityTypes) => {
-			dispatch(requestCampaignsReloadAction());
-			if (entityTypes.length > 0) dispatch(refreshEntitiesAction());
+			requestCampaignReload();
+			if (entityTypes.length > 0) refreshEntities();
 		},
 		notify: setNotification,
 		labels: historyLabels,
@@ -571,9 +558,9 @@ export default function AiAssistantPanel({
 					historyEntry: updatedPlan.historyEntry,
 				});
 			},
-			onCampaignReload: () => dispatch(requestCampaignsReloadAction()),
+			onCampaignReload: requestCampaignReload,
 			onClearPrompt: () => setUserInstructions(""),
-			onRefreshEntities: () => dispatch(refreshEntitiesAction()),
+			onRefreshEntities: refreshEntities,
 			onCloseAuxiliaryDialogs: () => {
 				setIsContextModalOpen(false);
 				setIsImagePromptPickerOpen(false);
@@ -657,15 +644,13 @@ export default function AiAssistantPanel({
 					setError(
 						failure.message || lang.t("Failed to connect to AI."),
 					);
-					dispatch(
-						alert({
-							title: lang.t("AI error"),
-							message: formatAiGenerationFailureAlert(
-								failure,
-								lang.t("Status"),
-							),
-						}),
-					);
+					showMessage({
+						title: lang.t("AI error"),
+						message: formatAiGenerationFailureAlert(
+							failure,
+							lang.t("Status"),
+						),
+					});
 				},
 			});
 		} finally {
@@ -728,12 +713,10 @@ export default function AiAssistantPanel({
 					setError(
 						failure.message || lang.t("Failed to connect to AI."),
 					);
-					dispatch(
-						alert({
-							title: lang.t("AI error"),
-							message: failure.alertMessage,
-						}),
-					);
+					showMessage({
+						title: lang.t("AI error"),
+						message: failure.alertMessage,
+					});
 				},
 			});
 		} finally {

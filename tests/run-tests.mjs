@@ -1512,6 +1512,8 @@ const FSD_SIDEBAR_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/sidebar-store-facade";
 const FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/bestiary-browser-store-facade";
+const FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/ai-assistant-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -9129,6 +9131,300 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/widgets\/bestiary-browser\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/bestiary-browser-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 155 gives AI Assistant an injected runtime",
+	async () => {
+		const [
+			runtimeSource,
+			panelSource,
+			widgetEntry,
+			widgetTypeEntry,
+			runtimeHostSource,
+			mainContentSource,
+			bestiaryCompositionSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-assistant/ui/AiAssistantRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-assistant/index.d.ts", "utf8"),
+			fs.readFile("src/app/ui/AiAssistantRuntimeHost.tsx", "utf8"),
+			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
+				"utf8",
+			),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(runtimeSource, "AiAssistantNavigation", [
+			"activeCampaignSlug: string | null;",
+			"activeEncounterId: string | number | null;",
+			"activeSessionFileName: string | null;",
+		]);
+		assertExportedInterfaceFragments(runtimeSource, "AiAssistantMessage", [
+			"message: string;",
+			"title: string;",
+		]);
+		assertExportedInterfaceFragments(runtimeSource, "AiAssistantRuntime", [
+			"activeCampaign: unknown | null;",
+			"activeEncounter: unknown | null;",
+			"activeSession: unknown | null;",
+			"campaignAiBasePrompts: Record<string, string>;",
+			"campaignImagePromptBasePrompts: Record<string, string>;",
+			"currentLanguage: string;",
+			"globalAiBasePrompt: string;",
+			"imagePromptBasePrompt: string;",
+			"navigation: AiAssistantNavigation;",
+			"publishSyncEvent(event: Record<string, unknown>): void;",
+			"refreshEntities(): void;",
+			"requestCampaignReload(): void;",
+			"requestConfirmation(copy: AiAssistantMessage): Promise<unknown>;",
+			"setActiveCampaign(campaign: unknown): void;",
+			"setActiveEncounter(encounter: unknown): void;",
+			"setActiveSession(session: unknown): void;",
+			"showMessage(message: AiAssistantMessage): void;",
+		]);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"AiAssistantRuntimeProviderProps",
+			[
+				"runtime: AiAssistantRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<AiAssistantRuntime | null>",
+				"<AiAssistantRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(AiAssistantRuntimeContext);",
+				'"AiAssistantRuntimeProvider is required to render AI assistant controls"',
+			],
+			"AI Assistant runtime provider",
+		);
+		assert.match(widgetEntry, /AiAssistantRuntimeProvider/);
+		assert.doesNotMatch(
+			widgetEntry + "\n" + widgetTypeEntry,
+			/useAiAssistantRuntime/,
+		);
+		assertPublicTypeSurface(widgetTypeEntry, [
+			"AiAssistantMessage",
+			"AiAssistantNavigation",
+			"AiAssistantRuntime",
+			"AiAssistantRuntimeProviderProps",
+		]);
+		for (const source of [runtimeSource, panelSource]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(|\balert\(|\bconfirm\(/,
+			);
+		}
+		const panelPropsSource = panelSource.match(
+			/export interface AiAssistantPanelProps \{[\s\S]*?^\}/m,
+		)?.[0];
+		assert.ok(panelPropsSource);
+		assert.doesNotMatch(panelPropsSource, /runtime/i);
+		const bestiaryAssistantSlotPropsSource = bestiaryCompositionSource.match(
+			/export interface BestiaryAssistantSlotProps \{[\s\S]*?^\}/m,
+		)?.[0];
+		assert.ok(bestiaryAssistantSlotPropsSource);
+		assert.doesNotMatch(bestiaryAssistantSlotPropsSource, /runtime/i);
+		assertSourceTokensInOrder(
+			panelSource,
+			[
+				"const {",
+				"activeCampaign,",
+				"activeEncounter,",
+				"activeSession,",
+				"campaignAiBasePrompts,",
+				"campaignImagePromptBasePrompts,",
+				"currentLanguage,",
+				"globalAiBasePrompt,",
+				"imagePromptBasePrompt,",
+				"navigation,",
+				"publishSyncEvent,",
+				"refreshEntities,",
+				"requestCampaignReload,",
+				"requestConfirmation,",
+				"setActiveCampaign,",
+				"setActiveEncounter,",
+				"setActiveSession,",
+				"showMessage,",
+				"} = useAiAssistantRuntime();",
+				"const publishAiSyncEvent = useCallback(",
+				"publishSyncEvent({",
+				'resource: "ai",',
+				"campaignSlug:",
+				"sessionFileName:",
+				"...extra,",
+				"const applyUpdatedAiData = useCallback(",
+				"onSetActiveCampaign: setActiveCampaign,",
+				"onSetActiveSession: setActiveSession,",
+				"onSetActiveEncounter: setActiveEncounter,",
+				"onRequestCampaignReload: requestCampaignReload,",
+				"onPublishSyncEvent: publishAiSyncEvent,",
+				"onRefreshEntities: refreshEntities,",
+				"confirm: async (copy) => Boolean(await requestConfirmation(copy)),",
+				"alert: showMessage,",
+				"requestReload: (entityTypes) => {",
+				"requestCampaignReload();",
+				"if (entityTypes.length > 0) refreshEntities();",
+				"const handleGeneratedAiData = ({",
+				"onCampaignReload: requestCampaignReload,",
+				"onRefreshEntities: refreshEntities,",
+				"onFailed: (failure) => {",
+				"showMessage({",
+				"onFailed: (error) => {",
+				"showMessage({",
+			],
+			"AI Assistant injected runtime and preserved generation/history flow",
+		);
+		assertSourceTokensInOrder(
+			runtimeHostSource,
+			[
+				"const dispatch = useAppDispatch();",
+				"state.localization.language",
+				"state.active.campaign",
+				"state.active.session",
+				"state.active.encounter",
+				"state.ui.imagePromptBasePrompt || \"\"",
+				"state.ui.aiBasePrompt || \"\"",
+				"state.ui.campaignAiBasePrompts || {}",
+				"state.ui.campaignImagePromptBasePrompts || {}",
+				"state.navigation,",
+				"const setActiveCampaign = useCallback<",
+				"dispatch(setActiveCampaignAction(campaign));",
+				"const setActiveSession = useCallback<",
+				"dispatch(setActiveSessionAction(session));",
+				"const setActiveEncounter = useCallback<",
+				"dispatch(setActiveEncounterAction(encounter));",
+				"const requestCampaignReload = useCallback<",
+				"dispatch(requestCampaignsReloadAction());",
+				"const refreshEntities = useCallback<",
+				"dispatch(refreshEntitiesAction());",
+				"const publishSyncEvent = useCallback<",
+				"dispatch(dataSyncReceivedAction(event));",
+				"const requestConfirmation = useCallback<",
+				"(copy) => dispatch(confirm(copy)),",
+				"const showMessage = useCallback<",
+				"dispatch(alert(message));",
+				"const runtime = useMemo<AiAssistantRuntime>",
+				"activeCampaign,",
+				"activeEncounter,",
+				"activeSession,",
+				"campaignAiBasePrompts,",
+				"campaignImagePromptBasePrompts,",
+				"currentLanguage,",
+				"globalAiBasePrompt,",
+				"imagePromptBasePrompt,",
+				"navigation,",
+				"publishSyncEvent,",
+				"refreshEntities,",
+				"requestCampaignReload,",
+				"requestConfirmation,",
+				"setActiveCampaign,",
+				"setActiveEncounter,",
+				"setActiveSession,",
+				"showMessage,",
+				"<AiAssistantRuntimeProvider runtime={runtime}>",
+			],
+			"app-local AI Assistant runtime host",
+		);
+		assertSourceTokensInOrder(
+			mainContentSource,
+			[
+				'import AiAssistantRuntimeHost from "../ui/AiAssistantRuntimeHost.tsx";',
+				"<AiAssistantRuntimeHost>",
+				"<BestiaryBrowserRuntimeHost>",
+				"<CampaignSearchRuntimeHost>",
+				"<Outlet />",
+				"</CampaignSearchRuntimeHost>",
+				"</BestiaryBrowserRuntimeHost>",
+				"{showAiAssistant && (",
+				"<AiAssistantPanel",
+				"</AiAssistantRuntimeHost>",
+			],
+			"AI Assistant runtime scope across routed panels and injected Bestiary content",
+		);
+
+		const forbiddenAiAssistantStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/ai-assistant",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenAiAssistantStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenAiAssistantStoreImporters, []);
+
+		for (const source of [
+			'import { dataSyncReceivedAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+				FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { dataSyncReceivedAction } from "../../../shared/model/index.js";',
+			"SRC/WIDGETS/AI-ASSISTANT/ui/AiAssistantPanel.tsx",
+			FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { dataSyncReceivedAction } from "../../../shared/model/index.js";',
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/widgets\/ai-assistant\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/ai-assistant-store-facade': 'error'/,
 		);
 	},
 );

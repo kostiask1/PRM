@@ -768,6 +768,12 @@ export default [
     },
   },
   {
+    files: ['src/widgets/ai-assistant/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/ai-assistant-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

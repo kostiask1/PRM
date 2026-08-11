@@ -14,6 +14,7 @@ import { SpellsBrowser } from "../../widgets/spells-browser/index.js";
 import { createRulesReferenceModalContentComponent } from "../../widgets/rules-reference-modal/index.js";
 import { Outlet, Route, Routes, useLocation } from "react-router";
 import { useAppSelector } from "../model/index.js";
+import AiAssistantRuntimeHost from "../ui/AiAssistantRuntimeHost.tsx";
 import BestiaryBrowserRuntimeHost from "../ui/BestiaryBrowserRuntimeHost.tsx";
 import CampaignSearchRuntimeHost from "../ui/CampaignSearchRuntimeHost.tsx";
 import { lang } from "../../shared/lib/index.js";
@@ -67,17 +68,19 @@ function MainContentLayout({
 
 	return (
 		<main className={classNames("MainContent", className)}>
-			<BestiaryBrowserRuntimeHost>
-				<CampaignSearchRuntimeHost>
-					<Outlet />
-				</CampaignSearchRuntimeHost>
-			</BestiaryBrowserRuntimeHost>
-			{showAiAssistant && (
-				<AiAssistantPanel
-					key={aiAssistantRouteKey}
-					ResponseModal={MainContentAiResponseModal}
-				/>
-			)}
+			<AiAssistantRuntimeHost>
+				<BestiaryBrowserRuntimeHost>
+					<CampaignSearchRuntimeHost>
+						<Outlet />
+					</CampaignSearchRuntimeHost>
+				</BestiaryBrowserRuntimeHost>
+				{showAiAssistant && (
+					<AiAssistantPanel
+						key={aiAssistantRouteKey}
+						ResponseModal={MainContentAiResponseModal}
+					/>
+				)}
+			</AiAssistantRuntimeHost>
 		</main>
 	);
 }
