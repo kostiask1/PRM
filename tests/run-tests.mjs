@@ -1514,6 +1514,8 @@ const FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/bestiary-browser-store-facade";
 const FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/ai-assistant-store-facade";
+const FSD_SESSION_PAGE_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/session-page-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -9425,6 +9427,302 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/widgets\/ai-assistant\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/ai-assistant-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 156 gives Session Page an injected runtime",
+	async () => {
+		const [
+			runtimeSource,
+			viewSource,
+			pageSource,
+			pageEntry,
+			pageTypeEntry,
+			runtimeHostSource,
+			mainContentSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/pages/session/model/SessionPageRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/session/model/useSessionView.ts", "utf8"),
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile("src/pages/session/index.js", "utf8"),
+			fs.readFile("src/pages/session/index.d.ts", "utf8"),
+			fs.readFile("src/app/ui/SessionPageRuntimeHost.tsx", "utf8"),
+			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"SessionPageActiveCampaign",
+			["slug: string;"],
+		);
+		assertExportedInterfaceFragments(runtimeSource, "SessionPageMessage", [
+			"message: string;",
+			"title: string;",
+		]);
+		assertExportedInterfaceFragments(runtimeSource, "SessionPagePrompt", [
+			"defaultValue?: unknown;",
+		]);
+		assertExportedInterfaceFragments(runtimeSource, "SessionPageRuntime", [
+			"activeCampaign: SessionPageActiveCampaign;",
+			"activeSessionFileName: string | null;",
+			"navigateToCampaign(campaignSlug: string): void;",
+			"refreshEntities(): void;",
+			"requestCampaignReload(): void;",
+			"requestConfirmation(copy: SessionPageMessage): Promise<unknown>;",
+			"requestPrompt(copy: SessionPagePrompt): Promise<unknown>;",
+			"setActiveSession(session: unknown): void;",
+			"showMessage(message: SessionPageMessage): void;",
+			"syncEvent: SessionSyncEvent | null;",
+		]);
+		assert.match(
+			runtimeSource,
+			/navigateToEncounter\(\s*campaignSlug: string,\s*sessionFileName: string \| null,\s*encounterId: string \| number,\s*openInNewTab: boolean,\s*\): void;/,
+		);
+		assert.match(
+			runtimeSource,
+			/navigateToSession\(\s*campaignSlug: string,\s*sessionFileName: string,\s*replace: boolean,\s*\): void;/,
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"SessionPageRuntimeProviderProps",
+			[
+				"runtime: SessionPageRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<SessionPageRuntime | null>",
+				"<SessionPageRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(SessionPageRuntimeContext);",
+				'"SessionPageRuntimeProvider is required to render session controls"',
+			],
+			"Session Page runtime provider",
+		);
+		assert.match(pageEntry, /SessionPageRuntimeProvider/);
+		assert.doesNotMatch(
+			pageEntry + "\n" + pageTypeEntry,
+			/useSessionPageRuntime/,
+		);
+		assertPublicTypeSurface(pageTypeEntry, [
+			"SessionPageActiveCampaign",
+			"SessionPageMessage",
+			"SessionPagePrompt",
+			"SessionPageRuntime",
+			"SessionPageRuntimeProviderProps",
+		]);
+		for (const source of [runtimeSource, viewSource, pageSource]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(|\balert\(|\bconfirm\(|\bprompt\(|\bnavigateTo\(/,
+			);
+		}
+		assertSourceTokensInOrder(
+			viewSource,
+			[
+				"const {",
+				"activeCampaign: campaign,",
+				"activeSessionFileName,",
+				"navigateToCampaign,",
+				"navigateToEncounter: navigateToEncounterRoute,",
+				"navigateToSession,",
+				"refreshEntities,",
+				"requestCampaignReload,",
+				"requestConfirmation,",
+				"requestPrompt,",
+				"setActiveSession,",
+				"showMessage,",
+				"syncEvent,",
+				"} = useSessionPageRuntime();",
+				"const sessionId = activeSessionFileName || \"\";",
+				"const handleBack = useCallback(() => {",
+				"navigateToCampaign(campaignSlug);",
+				"navigateToSession(campaignSlug, result.fileName, true);",
+				"requestCampaignReload();",
+				"const action = getSessionSyncAction(",
+				"syncEvent,",
+				"if (action === \"discard-and-reload\") {",
+				"discardPendingSessionSave();",
+				"loadSession({ force: true });",
+				"if (action === \"reload\") loadSession({ force: true });",
+				"setActiveSession(session);",
+				"return Boolean(await requestConfirmation({",
+				"const handleScopeMoveComplete = useCallback(() => {",
+				"refreshEntities();",
+				"requestCampaignReload();",
+				"showMessage({",
+				"const confirmSceneRemoval = useCallback(",
+				"Boolean(await requestConfirmation({",
+				"const requestEncounterName = useCallback(",
+				"const value = await requestPrompt({",
+				"return value === null",
+				"navigateToEncounterRoute(",
+				"campaignSlug,",
+				"fileName,",
+				"encounterId,",
+				"openInNewTab,",
+				"const reportEncounterCreationError = useCallback(",
+				"showMessage({",
+				"const handleRename = async () => {",
+				"const name = await requestPrompt({",
+				"executeSessionRenamePlan(",
+				"const handleDeleteSessionAndBack = async () => {",
+				"await requestConfirmation({",
+				"await api.deleteSession(campaignSlug, sessionId);",
+				"handleBack();",
+				"requestCampaignReload();",
+			],
+			"Session Page injected runtime, sync, modal, and navigation flow",
+		);
+		assertSourceTokensInOrder(
+			pageSource,
+			[
+				"function SessionView() {",
+				"const { activeSessionFileName: sessionId, navigateToEncounter } =",
+				"useSessionPageRuntime();",
+				"const view = useSessionView();",
+				"const openEncounterFromQuickAccess = (",
+				"navigateToEncounter(",
+				"view.campaignSlug,",
+				"sessionId,",
+				"encounterId,",
+				"shouldOpenInNewTabFromEvent(event),",
+			],
+			"Session Page quick encounter navigation",
+		);
+		assertSourceTokensInOrder(
+			runtimeHostSource,
+			[
+				"const dispatch = useAppDispatch();",
+				"state.active.campaign",
+				"state.navigation.activeSessionFileName",
+				"state.sync.event",
+				"const setActiveSession = useCallback<",
+				"dispatch(setActiveSessionAction(session));",
+				"const requestCampaignReload = useCallback<",
+				"dispatch(requestCampaignsReloadAction());",
+				"const refreshEntities = useCallback<",
+				"dispatch(refreshEntitiesAction());",
+				"const requestConfirmation = useCallback<",
+				"(copy) => dispatch(confirm(copy)),",
+				"const requestPrompt = useCallback<",
+				"(copy) => dispatch(prompt(copy)),",
+				"const showMessage = useCallback<",
+				"dispatch(alert(message));",
+				"const navigateToCampaign = useCallback<",
+				"navigateTo(campaignSlug, null);",
+				"const navigateToSession = useCallback<",
+				"navigateTo(campaignSlug, sessionFileName, replace);",
+				"const navigateToEncounter = useCallback<",
+				"navigateTo(",
+				"campaignSlug,",
+				"sessionFileName,",
+				"false,",
+				"encounterId,",
+				"openInNewTab,",
+				"const runtime = useMemo<SessionPageRuntime>",
+				"activeCampaign,",
+				"activeSessionFileName,",
+				"navigateToCampaign,",
+				"navigateToEncounter,",
+				"navigateToSession,",
+				"refreshEntities,",
+				"requestCampaignReload,",
+				"requestConfirmation,",
+				"requestPrompt,",
+				"setActiveSession,",
+				"showMessage,",
+				"syncEvent,",
+				"<SessionPageRuntimeProvider runtime={runtime}>",
+			],
+			"app-local Session Page runtime host",
+		);
+		assertSourceTokensInOrder(
+			mainContentSource,
+			[
+				'import SessionPageRuntimeHost from "../ui/SessionPageRuntimeHost.tsx";',
+				"function SessionRoute() {",
+				"if (!campaign) return <EmptyState />;",
+				"<SessionPageRuntimeHost>",
+				"<SessionPage />",
+				"</SessionPageRuntimeHost>",
+			],
+			"Session Page route runtime scope",
+		);
+
+		const forbiddenSessionPageStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/pages/session")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenSessionPageStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenSessionPageStoreImporters, []);
+
+		for (const source of [
+			'import { setActiveSessionAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/pages/session/ui/SessionPage.tsx",
+				FSD_SESSION_PAGE_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_SESSION_PAGE_STORE_FACADE_RULE_ID);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { setActiveSessionAction } from "../../../shared/model/index.js";',
+			"SRC/PAGES/SESSION/ui/SessionPage.tsx",
+			FSD_SESSION_PAGE_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_SESSION_PAGE_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { setActiveSessionAction } from "../../../shared/model/index.js";',
+				"src/pages/campaign/ui/CampaignPage.tsx",
+				FSD_SESSION_PAGE_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/pages\/session\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/session-page-store-facade': 'error'/,
 		);
 	},
 );

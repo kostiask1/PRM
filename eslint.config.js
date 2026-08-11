@@ -774,6 +774,12 @@ export default [
     },
   },
   {
+    files: ['src/pages/session/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/session-page-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

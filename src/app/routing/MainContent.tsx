@@ -17,6 +17,7 @@ import { useAppSelector } from "../model/index.js";
 import AiAssistantRuntimeHost from "../ui/AiAssistantRuntimeHost.tsx";
 import BestiaryBrowserRuntimeHost from "../ui/BestiaryBrowserRuntimeHost.tsx";
 import CampaignSearchRuntimeHost from "../ui/CampaignSearchRuntimeHost.tsx";
+import SessionPageRuntimeHost from "../ui/SessionPageRuntimeHost.tsx";
 import { lang } from "../../shared/lib/index.js";
 import { classNames } from "../../shared/lib/index.js";
 import "../../assets/components/MainContent.css";
@@ -100,7 +101,11 @@ function SessionRoute() {
 	);
 	if (!campaign) return <EmptyState />;
 
-	return <SessionPage />;
+	return (
+		<SessionPageRuntimeHost>
+			<SessionPage />
+		</SessionPageRuntimeHost>
+	);
 }
 
 function EncounterRoute() {

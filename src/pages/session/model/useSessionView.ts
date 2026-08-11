@@ -8,14 +8,6 @@ import {
 	useState,
 } from "react";
 
-import {
-	alert,
-	confirm,
-	prompt,
-	refreshEntitiesAction,
-	requestCampaignsReloadAction,
-	setActiveSessionAction,
-} from "../../../shared/model/index.js";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import type { CampaignEntityRecord } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
@@ -43,7 +35,6 @@ import {
 	isHistoryShortcutEvent,
 	shouldUseAppHistoryForEvent,
 } from "../../../shared/lib/index.js";
-import { navigateTo, useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	getSessionEntityDisplayName,
@@ -55,8 +46,8 @@ import type {
 	SessionChecklistItem,
 	SessionLoadOptions,
 	SessionPageSession,
-	SessionSyncEvent,
 } from "./contracts.ts";
+import { useSessionPageRuntime } from "./SessionPageRuntime.tsx";
 import {
 	executeSessionRenamePlan,
 	getSessionKeyboardAction,
@@ -65,10 +56,6 @@ import {
 	isSessionEditableTarget,
 	normalizeSessionPageSession,
 } from "./sessionPagePresentation.ts";
-
-interface ActiveCampaign {
-	slug: string;
-}
 
 type SessionUpdate = Partial<SessionPageSession>;
 type SessionEntityUpdater = (
@@ -88,30 +75,35 @@ function getKeyboardActionFromEvent(event: KeyboardEvent) {
 }
 
 export default function useSessionView() {
-	const dispatch = useAppDispatch();
-	const campaign = useAppSelector(
-		(state) => state.active.campaign,
-	) as ActiveCampaign;
-	const sessionId = useAppSelector(
-		(state) => state.navigation.activeSessionFileName,
-	) || "";
-	const syncEvent = useAppSelector(
-		(state) => state.sync.event,
-	) as SessionSyncEvent | null;
+	const {
+		activeCampaign: campaign,
+		activeSessionFileName,
+		navigateToCampaign,
+		navigateToEncounter: navigateToEncounterRoute,
+		navigateToSession,
+		refreshEntities,
+		requestCampaignReload,
+		requestConfirmation,
+		requestPrompt,
+		setActiveSession,
+		showMessage,
+		syncEvent,
+	} = useSessionPageRuntime();
+	const sessionId = activeSessionFileName || "";
 
 	const [session, setSession] = useState<SessionPageSession | null>(null);
 	const [isChecklistOpen, setIsChecklistOpen] = useState(false);
 
 	const campaignSlug = campaign.slug;
 	const handleBack = useCallback(() => {
-		navigateTo(campaignSlug, null);
-	}, [campaignSlug]);
+		navigateToCampaign(campaignSlug);
+	}, [campaignSlug, navigateToCampaign]);
 	const handleSessionRenamed = useCallback(
 		(result: SessionRecord) => {
-			navigateTo(campaignSlug, result.fileName, true);
-			dispatch(requestCampaignsReloadAction());
+			navigateToSession(campaignSlug, result.fileName, true);
+			requestCampaignReload();
 		},
-		[campaignSlug, dispatch],
+		[campaignSlug, navigateToSession, requestCampaignReload],
 	);
 	const reportSessionSaveError = useCallback((error: unknown) => {
 		console.error("Save failed", error);
@@ -210,8 +202,8 @@ export default function useSessionView() {
 	]);
 
 	useEffect(() => {
-		dispatch(setActiveSessionAction(session));
-	}, [dispatch, session]);
+		setActiveSession(session);
+	}, [session, setActiveSession]);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -335,37 +327,33 @@ export default function useSessionView() {
 				entity,
 				lang.t("Untitled"),
 			);
-			return Boolean(await dispatch(
-				confirm({
-					title:
-						targetScope === "session"
-							? lang.t("Move to session")
-							: lang.t("Move to campaign"),
-					message:
-						targetScope === "session"
-							? lang.t('Move "{name}" to this session?', { name })
-							: lang.t('Move "{name}" to campaign scope?', { name }),
-				}),
-			));
+			return Boolean(await requestConfirmation({
+				title:
+					targetScope === "session"
+						? lang.t("Move to session")
+						: lang.t("Move to campaign"),
+				message:
+					targetScope === "session"
+						? lang.t('Move "{name}" to this session?', { name })
+						: lang.t('Move "{name}" to campaign scope?', { name }),
+			}));
 		},
-		[dispatch],
+		[requestConfirmation],
 	);
 	const handleScopeMoveComplete = useCallback(() => {
-		dispatch(refreshEntitiesAction());
-		dispatch(requestCampaignsReloadAction());
-	}, [dispatch]);
+		refreshEntities();
+		requestCampaignReload();
+	}, [refreshEntities, requestCampaignReload]);
 	const handleScopeMoveError = useCallback(
 		(error: unknown, operation: string) => {
 			console.error(`Failed campaign entity scope operation: ${operation}`, error);
 			if (operation === "load") return;
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Failed to move entity."),
-				}),
-			);
+			showMessage({
+				title: lang.t("Error"),
+				message: lang.t("Failed to move entity."),
+			});
 		},
-		[dispatch],
+		[showMessage],
 	);
 	const {
 		closeScopeImportModal,
@@ -385,15 +373,13 @@ export default function useSessionView() {
 
 	const confirmSceneRemoval = useCallback(
 		async (): Promise<boolean> =>
-			Boolean(await dispatch(
-				confirm({
-					title: lang.t("Delete scene"),
-					message: lang.t(
-						"Are you sure? This will also delete the linked combat encounter.",
-					),
-				}),
-			)),
-		[dispatch],
+			Boolean(await requestConfirmation({
+				title: lang.t("Delete scene"),
+				message: lang.t(
+					"Are you sure? This will also delete the linked combat encounter.",
+				),
+			})),
+		[requestConfirmation],
 	);
 	const {
 		addScene,
@@ -416,46 +402,41 @@ export default function useSessionView() {
 			const fallbackName = lang.t("Encounter in scene {number}", {
 				number: sceneIndex + 1,
 			});
-			const value = await dispatch(
-				prompt({
-					title: lang.t("New encounter"),
-					message: lang.t("Enter encounter name:"),
-					defaultValue: fallbackName,
-				}),
-			);
+			const value = await requestPrompt({
+				title: lang.t("New encounter"),
+				message: lang.t("Enter encounter name:"),
+				defaultValue: fallbackName,
+			});
 			return value === null
 				? null
 				: typeof value === "string" && value
 					? value
 					: fallbackName;
 		},
-		[dispatch],
+		[requestPrompt],
 	);
 	const navigateToEncounter = useCallback(
 		(
 			encounterId: string | number,
 			{ fileName, openInNewTab }: { fileName: string; openInNewTab: boolean },
 		) =>
-			navigateTo(
+			navigateToEncounterRoute(
 				campaignSlug,
 				fileName,
-				false,
 				encounterId,
 				openInNewTab,
 			),
-		[campaignSlug],
+		[campaignSlug, navigateToEncounterRoute],
 	);
 	const reportEncounterCreationError = useCallback(
 		(error: unknown) => {
 			console.error("Failed to create encounter", error);
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Failed to update session."),
-				}),
-			);
+			showMessage({
+				title: lang.t("Error"),
+				message: lang.t("Failed to update session."),
+			});
 		},
-		[dispatch],
+		[showMessage],
 	);
 	const openEncounter = useEncounterCreation({
 		campaignSlug,
@@ -538,13 +519,11 @@ export default function useSessionView() {
 
 	const handleRename = async () => {
 		if (!session) return;
-		const name = await dispatch(
-			prompt({
-				title: lang.t("Rename"),
-				message: lang.t("Enter a new session name:"),
-				defaultValue: session.name,
-			}),
-		);
+		const name = await requestPrompt({
+			title: lang.t("Rename"),
+			message: lang.t("Enter a new session name:"),
+			defaultValue: session.name,
+		});
 		executeSessionRenamePlan(
 			getSessionRenamePlan(name, session.name),
 			(nextName) => updateSession({ name: nextName }, true),
@@ -554,18 +533,16 @@ export default function useSessionView() {
 	const handleDeleteSessionAndBack = async () => {
 		if (!session) return;
 		if (
-			await dispatch(
-				confirm({
-					title: lang.t("Delete session"),
-					message: lang.t('Delete session "{name}"?', {
-						name: session.name,
-					}),
+			await requestConfirmation({
+				title: lang.t("Delete session"),
+				message: lang.t('Delete session "{name}"?', {
+					name: session.name,
 				}),
-			)
+			})
 		) {
 			await api.deleteSession(campaignSlug, sessionId);
 			handleBack();
-			dispatch(requestCampaignsReloadAction());
+			requestCampaignReload();
 		}
 	};
 

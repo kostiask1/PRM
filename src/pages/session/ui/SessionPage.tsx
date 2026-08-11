@@ -50,7 +50,6 @@ import {
 	getNotesForRender,
 	sanitizeNotesForSave,
 } from "../../../shared/lib/index.js";
-import { navigateTo, useAppSelector } from "../../../shared/model/index.js";
 import {
 	makeDomId,
 	scrollToHashTarget,
@@ -87,6 +86,7 @@ import {
 	type SessionEntityType,
 	type SessionPageEntity,
 } from "../model/sessionEntityModel.ts";
+import { useSessionPageRuntime } from "../model/SessionPageRuntime.tsx";
 import type { SceneCardFieldDefinition } from "./components/SceneCardFields.tsx";
 
 const SessionNoteCard = createNoteCardComponent({
@@ -863,9 +863,8 @@ function useSessionHeaderActionsDismissal(
 }
 
 function SessionView() {
-	const sessionId = useAppSelector(
-		(state) => state.navigation.activeSessionFileName,
-	);
+	const { activeSessionFileName: sessionId, navigateToEncounter } =
+		useSessionPageRuntime();
 	const view = useSessionView();
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
@@ -925,10 +924,9 @@ function SessionView() {
 		encounterId: SessionDomainId,
 		event: MouseEvent<HTMLButtonElement>,
 	) => {
-		navigateTo(
+		navigateToEncounter(
 			view.campaignSlug,
 			sessionId,
-			false,
 			encounterId,
 			shouldOpenInNewTabFromEvent(event),
 		);

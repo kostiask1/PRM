@@ -122,6 +122,7 @@ const MONSTER_STAT_BLOCK_WIDGET_PATH_PREFIX =
 const SIDEBAR_WIDGET_PATH_PREFIX = "src/widgets/sidebar/";
 const BESTIARY_BROWSER_WIDGET_PATH_PREFIX = "src/widgets/bestiary-browser/";
 const AI_ASSISTANT_WIDGET_PATH_PREFIX = "src/widgets/ai-assistant/";
+const SESSION_PAGE_PATH_PREFIX = "src/pages/session/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -757,6 +758,15 @@ const AI_ASSISTANT_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
 		"AI Assistant must receive app-global state and effects through its injected runtime and may not import shared/model or app/model directly.",
 });
 
+const SESSION_PAGE_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
+	featurePathPrefix: SESSION_PAGE_PATH_PREFIX,
+	description:
+		"Require Session Page to receive app-global navigation, state, modal, and refresh effects through its injected runtime.",
+	messageId: "injectedRuntime",
+	message:
+		"Session Page must receive app-global navigation, state, modal, and refresh effects through its injected runtime and may not import shared/model or app/model directly.",
+});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -786,6 +796,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"bestiary-browser-store-facade":
 			BESTIARY_BROWSER_STORE_FACADE_RULE,
 		"ai-assistant-store-facade": AI_ASSISTANT_STORE_FACADE_RULE,
+		"session-page-store-facade": SESSION_PAGE_STORE_FACADE_RULE,
 	}),
 });
 
