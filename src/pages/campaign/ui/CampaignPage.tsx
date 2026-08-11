@@ -28,8 +28,8 @@ import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import { CollapseToggleButton } from "../../../shared/ui/index.js";
 import "../../../assets/components/CampaignView.css";
 import useCampaignView from "../model/useCampaignView.ts";
+import { useCampaignPageRuntime } from "../model/CampaignPageRuntime.tsx";
 import { CampaignViewModel } from "../../../entities/campaign/index.js";
-import { navigateTo, useAppSelector } from "../../../shared/model/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	classNames,
@@ -436,6 +436,7 @@ function CampaignPageDialogs({
 }
 
 function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
+	const { navigateToSession } = useCampaignPageRuntime();
 	const view = useCampaignView({ campaign });
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
@@ -602,7 +603,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 			key={session.fileName}
 			className="CampaignView__sessionCard"
 			href={viewModel.buildSessionHref(session.fileName)}
-			onClick={() => navigateTo(campaign.slug, session.fileName)}
+			onClick={() => navigateToSession(campaign.slug, session.fileName)}
 			actions={
 				<Button
 					className="CampaignView__sessionDelete"
@@ -837,8 +838,9 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 }
 
 export default function CampaignPage() {
+	const { activeCampaign } = useCampaignPageRuntime();
 	const campaign = getCampaignPageCampaign(
-		useAppSelector((state) => state.active.campaign),
+		activeCampaign,
 	);
 	return campaign ? <CampaignView campaign={campaign} /> : null;
 }

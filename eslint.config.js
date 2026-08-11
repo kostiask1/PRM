@@ -774,6 +774,12 @@ export default [
     },
   },
   {
+    files: ['src/pages/campaign/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/campaign-page-store-facade': 'error',
+    },
+  },
+  {
     files: ['src/pages/session/**/*.{js,jsx,ts,tsx}'],
     rules: {
       'fsd-boundaries/session-page-store-facade': 'error',

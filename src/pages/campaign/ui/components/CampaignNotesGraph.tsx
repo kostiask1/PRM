@@ -100,7 +100,7 @@ import type {
 import type { SessionRecord } from "../../../../entities/session/index.js";
 import type { SharedNote } from "../../../../shared/lib/index.js";
 import { lang } from "../../../../shared/lib/index.js";
-import { openModalRequest, useAppSelector } from "../../../../shared/model/index.js";
+import { useCampaignPageRuntime } from "../../model/CampaignPageRuntime.tsx";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
 
@@ -1002,10 +1002,11 @@ export default function CampaignNotesGraph({
 	const hasManualPositionsRef = useRef(false);
 	const shouldRelayoutForFilterRef = useRef(false);
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
-	const currentTheme = useAppSelector((state) => state.ui.theme);
-	const currentLanguage = useAppSelector(
-		(state) => state.localization.language,
-	);
+	const {
+		currentLanguage,
+		openModal,
+		theme: currentTheme,
+	} = useCampaignPageRuntime();
 
 	useEffect(() => {
 		void onLoadSessionDetails();
@@ -1064,7 +1065,7 @@ export default function CampaignNotesGraph({
 	const openGraphNote = useCallback(
 		(node: CampaignGraphNode, note: SharedNote) => {
 			if (typeof onSaveNote !== "function") return;
-			openModalRequest({
+			openModal({
 				title: lang.t("Note"),
 				type: "note",
 				showFooter: false,
@@ -1081,7 +1082,7 @@ export default function CampaignNotesGraph({
 				),
 			});
 		},
-		[campaign.slug, onSaveNote, simplifiedNotesEnabled],
+		[campaign.slug, onSaveNote, openModal, simplifiedNotesEnabled],
 	);
 
 	const openNode = useCallback(

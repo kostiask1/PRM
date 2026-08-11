@@ -5,12 +5,6 @@ import {
 	useState,
 } from "react";
 
-import {
-	alert,
-	confirm,
-	prompt,
-	requestCampaignsReloadAction,
-} from "../../../shared/model/index.js";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import type {
 	CampaignPartialArchiveSection,
@@ -24,7 +18,6 @@ import {
 } from "../../../features/campaign-entity/index.js";
 
 const api = { ...campaignApi, ...sessionApi };
-import { navigateTo, useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
 import { sanitizeNotesForSave, upsertNoteById } from "../../../shared/lib/index.js";
 import type { SharedNote } from "../../../shared/lib/index.js";
 import { downloadBlob } from "../../../shared/lib/index.js";
@@ -56,10 +49,10 @@ import type {
 	CampaignPageEntity,
 	CampaignSessionDetail,
 	CampaignSessionDetails,
-	CampaignSyncEvent,
 	DescriptionChangeEvent,
 	UseCampaignViewProps,
 } from "./contracts.ts";
+import { useCampaignPageRuntime } from "./CampaignPageRuntime.tsx";
 import {
 	getCampaignKeyboardAction,
 	isCampaignEditableTarget,
@@ -108,7 +101,17 @@ function getCampaignKeyboardActionFromEvent(
 
 export default function useCampaignView(props: UseCampaignViewProps) {
 	const { campaign } = props;
-	const dispatch = useAppDispatch();
+	const {
+		entityRefreshVersion,
+		navigateToCampaignList,
+		navigateToRenamedCampaign,
+		navigateToSession,
+		requestCampaignReload,
+		requestConfirmation,
+		requestPrompt,
+		showMessage,
+		syncEvent,
+	} = useCampaignPageRuntime();
 	const initialCampaignState = getCampaignViewStateProjection(campaign);
 
 	const [sessions, setSessions] = useState<SessionRecord[]>([]);
@@ -146,12 +149,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	const [redoStack, setRedoStack] = useState<CampaignHistoryState[]>([]);
 	const isUpdatingHistory = useRef(false);
 	const lastSlugRef = useRef(campaign.slug);
-	const entityRefreshVersion = useAppSelector(
-		(store) => store.entityRefreshVersion,
-	);
-	const syncEvent = useAppSelector(
-		(store) => store.sync.event,
-	) as CampaignSyncEvent | null;
 	const {
 		clearSave: clearEntitySaveTimer,
 		discardSaves: discardEntitySaveTimers,
@@ -375,12 +372,10 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 				await restoreHistoryState(transition.target);
 			} catch (err) {
 				console.error("Failed to restore campaign undo state", err);
-				dispatch(
-					alert({
-						title: lang.t("Error"),
-						message: lang.t("Failed to update entity."),
-					}),
-				);
+				showMessage({
+					title: lang.t("Error"),
+					message: lang.t("Failed to update entity."),
+				});
 				loadCharacters();
 				loadNpcs();
 				loadLocations();
@@ -393,10 +388,10 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		redoStack,
 		createHistoryState,
 		restoreHistoryState,
-		dispatch,
 		loadCharacters,
 		loadNpcs,
 		loadLocations,
+		showMessage,
 	]);
 
 	const handleRedo = useCallback(async () => {
@@ -419,12 +414,10 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 				await restoreHistoryState(transition.target);
 			} catch (err) {
 				console.error("Failed to restore campaign redo state", err);
-				dispatch(
-					alert({
-						title: lang.t("Error"),
-						message: lang.t("Failed to update entity."),
-					}),
-				);
+				showMessage({
+					title: lang.t("Error"),
+					message: lang.t("Failed to update entity."),
+				});
 				loadCharacters();
 				loadNpcs();
 				loadLocations();
@@ -437,10 +430,10 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		redoStack,
 		createHistoryState,
 		restoreHistoryState,
-		dispatch,
 		loadCharacters,
 		loadNpcs,
 		loadLocations,
+		showMessage,
 	]);
 
 	const pushToUndo = useCallback(() => {
@@ -468,22 +461,24 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		[saveToServer],
 	);
 
+	const applyMentionRenameToLocalState = useCallback(
+		(oldName: string, newName: string) => {
+			if (
+				!normalizeMentionName(oldName) ||
+				!String(newName || "").trim() ||
+				normalizeMentionName(oldName) === normalizeMentionName(newName)
+			) {
+				return;
+			}
 
-	const applyMentionRenameToLocalState = useCallback((oldName: string, newName: string) => {
-		if (
-			!normalizeMentionName(oldName) ||
-			!String(newName || "").trim() ||
-			normalizeMentionName(oldName) === normalizeMentionName(newName)
-		) {
-			return;
-		}
-
-		setDescription((prev) => replaceMentionsInValue(prev, oldName, newName));
-		setNotes((prev) => replaceMentionsInValue(prev, oldName, newName));
-		setCharacters((prev) => replaceMentionsInValue(prev, oldName, newName));
-		setNpcs((prev) => replaceMentionsInValue(prev, oldName, newName));
-		setLocations((prev) => replaceMentionsInValue(prev, oldName, newName));
-	}, []);
+			setDescription((prev) => replaceMentionsInValue(prev, oldName, newName));
+			setNotes((prev) => replaceMentionsInValue(prev, oldName, newName));
+			setCharacters((prev) => replaceMentionsInValue(prev, oldName, newName));
+			setNpcs((prev) => replaceMentionsInValue(prev, oldName, newName));
+			setLocations((prev) => replaceMentionsInValue(prev, oldName, newName));
+		},
+		[],
+	);
 
 	const confirmMentionReferenceUpdate = useCallback(
 		async (oldName: string, newName: string): Promise<boolean> => {
@@ -496,30 +491,26 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			}
 
 			return Boolean(
-				await dispatch(
-					confirm({
-						title: lang.t("Update links?"),
-						message: lang.t(
-							'Update links in the project from "{oldName}" to "{newName}"?',
-							{ oldName, newName },
-						),
-					}),
-				),
+				await requestConfirmation({
+					title: lang.t("Update links?"),
+					message: lang.t(
+						'Update links in the project from "{oldName}" to "{newName}"?',
+						{ oldName, newName },
+					),
+				}),
 			);
 		},
-		[dispatch],
+		[requestConfirmation],
 	);
 	const reportEntityWorkflowError = useCallback(
 		(message: string, error: unknown) => {
 			console.error(message, error);
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Failed to update entity."),
-				}),
-			);
+			showMessage({
+				title: lang.t("Error"),
+				message: lang.t("Failed to update entity."),
+			});
 		},
-		[dispatch],
+		[showMessage],
 	);
 	const characterWorkflow = useCampaignEntityCollection({
 		campaignSlug: campaign.slug,
@@ -590,26 +581,22 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	const reportReorderError = useCallback(
 		(error: unknown, type: string) => {
 			console.error(`Failed to reorder ${type}`, error);
-				dispatch(
-					alert({
-						title: lang.t("Error"),
-						message: lang.t("Failed to update entity."),
-					}),
-				);
+			showMessage({
+				title: lang.t("Error"),
+				message: lang.t("Failed to update entity."),
+			});
 		},
-		[dispatch],
+		[showMessage],
 	);
 	const reportMoveError = useCallback(
 		(error: unknown) => {
 			console.error("Failed to move character entity", error);
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Failed to move entity."),
-				}),
-			);
+			showMessage({
+				title: lang.t("Error"),
+				message: lang.t("Failed to move entity."),
+			});
 		},
-		[dispatch],
+		[showMessage],
 	);
 	const {
 		finishTrackedReorder,
@@ -754,27 +741,24 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	}, [campaign.slug, sessionDetails, sessions]);
 
 	const handleCreateSession = async () => {
-		const name = await dispatch(
-			prompt({
-				title: lang.t("New session"),
-				message: lang.t("Enter a name or leave empty to use current date:"),
-			}),
-		);
+		const name = await requestPrompt({
+			title: lang.t("New session"),
+			message: lang.t("Enter a name or leave empty to use current date:"),
+		});
 		await executeCampaignSessionCreation({
 			campaignSlug: campaign.slug,
 			plan: getCampaignSessionCreationPlan(name),
 			createSession: api.createSession,
 			onCreated: (newSession) => {
 				setSessions([...sessions, newSession]);
-				navigateTo(campaign.slug, newSession.fileName);
-				dispatch(requestCampaignsReloadAction());
+				navigateToSession(campaign.slug, newSession.fileName);
+				requestCampaignReload();
 			},
-			onError: (error) => dispatch(
-				alert({
+			onError: (error) =>
+				showMessage({
 					title: lang.t("Session creation error"),
 					message: getCampaignSessionCreationErrorMessage(error, lang.t),
 				}),
-			),
 		});
 	};
 
@@ -833,8 +817,8 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			hasCampaignImages,
 			lang.t,
 		);
-		const result = (await dispatch(
-			confirm(confirmationConfig),
+		const result = (await requestConfirmation(
+			confirmationConfig,
 		)) as CampaignDeleteConfirmation | null;
 		await executeCampaignDelete({
 			campaignSlug: campaign.slug,
@@ -842,42 +826,38 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			confirmation: result,
 			deleteCampaign: api.deleteCampaign,
 			onDeleted: () => {
-				navigateTo(null);
-				dispatch(requestCampaignsReloadAction());
+				navigateToCampaignList();
+				requestCampaignReload();
 			},
-			onError: (error) => dispatch(
-				alert({
+			onError: (error) =>
+				showMessage({
 					title: lang.t("Error"),
 					message: lang.t("Failed to delete campaign: {error}", {
 						error: getErrorMessage(error),
 					}),
 				}),
-			),
 		});
 	};
 
 	const handleRename = async () => {
-		const name = await dispatch(
-			prompt({
-				title: lang.t("Rename"),
-				message: lang.t("Enter a new campaign name:"),
-				defaultValue: campaign.name,
-			}),
-		);
+		const name = await requestPrompt({
+			title: lang.t("Rename"),
+			message: lang.t("Enter a new campaign name:"),
+			defaultValue: campaign.name,
+		});
 		await executeCampaignRename({
 			campaignSlug: campaign.slug,
 			plan: getCampaignRenamePlan(name, campaign.name),
 			renameCampaign: api.updateCampaign,
 			onRenamed: (updated) => {
-				dispatch(requestCampaignsReloadAction());
-				navigateTo(updated.slug, null, true);
+				requestCampaignReload();
+				navigateToRenamedCampaign(updated.slug);
 			},
-			onError: (error) => dispatch(
-				alert({
+			onError: (error) =>
+				showMessage({
 					title: lang.t("Error"),
 					message: getCampaignRenameErrorMessage(error, lang.t),
 				}),
-			),
 		});
 	};
 
@@ -885,14 +865,12 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		if (!session.fileName) return;
 		const fileName = session.fileName;
 		if (
-			!(await dispatch(
-				confirm({
-					title: lang.t("Delete session"),
-					message: lang.t('Do you really want to delete session "{name}"?', {
-						name: session.name,
-					}),
+			!(await requestConfirmation({
+				title: lang.t("Delete session"),
+				message: lang.t('Do you really want to delete session "{name}"?', {
+					name: session.name,
 				}),
-			))
+			}))
 		)
 			return;
 		try {
@@ -904,16 +882,14 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 				delete next[fileName];
 				return next;
 			});
-			dispatch(requestCampaignsReloadAction());
+			requestCampaignReload();
 		} catch (err) {
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Failed to delete session: {error}", {
-							error: getErrorMessage(err),
-					}),
+			showMessage({
+				title: lang.t("Error"),
+				message: lang.t("Failed to delete session: {error}", {
+					error: getErrorMessage(err),
 				}),
-			);
+			});
 		}
 	};
 
@@ -925,7 +901,10 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 				`campaign-${campaign.slug}-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 			);
 		} catch (err) {
-		dispatch(alert({ title: lang.t("Export error"), message: getErrorMessage(err) }));
+			showMessage({
+				title: lang.t("Export error"),
+				message: getErrorMessage(err),
+			});
 		}
 	};
 
@@ -942,7 +921,10 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 				`campaign-${campaign.slug}-partial-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 			);
 		} catch (err) {
-			dispatch(alert({ title: lang.t("Export error"), message: getErrorMessage(err) }));
+			showMessage({
+				title: lang.t("Export error"),
+				message: getErrorMessage(err),
+			});
 		}
 	};
 
@@ -957,14 +939,12 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			setSessions(sessionsData || []);
 			setSessionDetails({});
 			sessionDetailsRef.current = {};
-			dispatch(requestCampaignsReloadAction());
+			requestCampaignReload();
 		} catch (err) {
-			dispatch(
-				alert({
-					title: lang.t("Import error"),
-					message: getErrorMessage(err) || lang.t("Failed to import campaign"),
-				}),
-			);
+			showMessage({
+				title: lang.t("Import error"),
+				message: getErrorMessage(err) || lang.t("Failed to import campaign"),
+			});
 		}
 	};
 
@@ -1020,7 +1000,7 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			},
 			onError: (error) => console.error("Failed to reload AI-updated entities", error),
 		});
-		dispatch(requestCampaignsReloadAction());
+		requestCampaignReload();
 	};
 
 	return {

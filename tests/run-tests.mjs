@@ -1514,6 +1514,8 @@ const FSD_BESTIARY_BROWSER_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/bestiary-browser-store-facade";
 const FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/ai-assistant-store-facade";
+const FSD_CAMPAIGN_PAGE_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/campaign-page-store-facade";
 const FSD_SESSION_PAGE_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/session-page-store-facade";
 const FSD_ENCOUNTER_PAGE_STORE_FACADE_RULE_ID =
@@ -9947,6 +9949,251 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/pages\/encounter\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/encounter-page-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 158 gives Campaign Page an injected runtime",
+	async () => {
+		const [
+			runtimeSource,
+			viewSource,
+			pageSource,
+			notesSectionSource,
+			notesGraphSource,
+			pageEntry,
+			pageTypeEntry,
+			runtimeHostSource,
+			mainContentSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/pages/campaign/model/CampaignPageRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/campaign/model/useCampaignView.ts", "utf8"),
+			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/campaign/ui/components/CampaignNotesSection.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			fs.readFile("src/app/ui/CampaignPageRuntimeHost.tsx", "utf8"),
+			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"CampaignGraphNoteModalConfig",
+			[
+				"children: ReactNode;",
+				"showFooter: false;",
+				"title: string;",
+				'type: "note";',
+			],
+		);
+		assertExportedInterfaceFragments(runtimeSource, "CampaignPageRuntime", [
+			"activeCampaign: unknown;",
+			"currentLanguage: string;",
+			"entityRefreshVersion: number;",
+			"navigateToCampaignList(): void;",
+			"navigateToRenamedCampaign(campaignSlug: string): void;",
+			"navigateToSession(campaignSlug: string, sessionFileName: string): void;",
+			"requestCampaignReload(): void;",
+			"requestConfirmation(copy: CampaignPageMessage): Promise<unknown>;",
+			"requestPrompt(copy: CampaignPagePrompt): Promise<unknown>;",
+			"showMessage(message: CampaignPageMessage): void;",
+			"syncEvent: CampaignSyncEvent | null;",
+			'theme: "light" | "dark";',
+		]);
+		assert.match(
+			runtimeSource,
+			/openModal\(\s*config: CampaignGraphNoteModalConfig,?\s*\): Promise<unknown>;/,
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"CampaignPageRuntimeProviderProps",
+			[
+				"runtime: CampaignPageRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<CampaignPageRuntime | null>",
+				"<CampaignPageRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(CampaignPageRuntimeContext);",
+				'"CampaignPageRuntimeProvider is required to render campaign controls"',
+			],
+			"Campaign Page runtime provider",
+		);
+		assert.match(pageEntry, /CampaignPageRuntimeProvider/);
+		assert.doesNotMatch(
+			pageEntry + "\n" + pageTypeEntry,
+			/useCampaignPageRuntime/,
+		);
+		assertPublicTypeSurface(pageTypeEntry, [
+			"CampaignGraphNoteModalConfig",
+			"CampaignPageMessage",
+			"CampaignPagePrompt",
+			"CampaignPageRuntime",
+			"CampaignPageRuntimeProviderProps",
+		]);
+		for (const source of [
+			runtimeSource,
+			viewSource,
+			pageSource,
+			notesSectionSource,
+			notesGraphSource,
+		]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(|\balert\(|\bconfirm\(|\bprompt\(|\bnavigateTo\(|\bopenModalRequest\(/,
+			);
+		}
+		assert.match(viewSource, /\buseCampaignPageRuntime\(\)/);
+		for (const runtimeMember of [
+			"entityRefreshVersion",
+			"navigateToCampaignList",
+			"navigateToRenamedCampaign",
+			"navigateToSession",
+			"requestCampaignReload",
+			"requestConfirmation",
+			"requestPrompt",
+			"showMessage",
+			"syncEvent",
+		]) {
+			assert.match(viewSource, new RegExp(`\\b${runtimeMember}\\b`));
+		}
+		assert.match(pageSource, /\buseCampaignPageRuntime\(\)/);
+		for (const runtimeMember of [
+			"activeCampaign",
+			"navigateToSession",
+		]) {
+			assert.match(pageSource, new RegExp(`\\b${runtimeMember}\\b`));
+		}
+		assert.match(notesSectionSource, /\buseCampaignPageRuntime\(\)/);
+		assert.match(notesSectionSource, /\bnavigateToSession\b/);
+		assert.match(notesGraphSource, /\buseCampaignPageRuntime\(\)/);
+		for (const runtimeMember of [
+			"currentLanguage",
+			"openModal",
+			"theme",
+		]) {
+			assert.match(notesGraphSource, new RegExp(`\\b${runtimeMember}\\b`));
+		}
+		for (const hostToken of [
+			"const dispatch = useAppDispatch();",
+			"state.active.campaign",
+			"state.entityRefreshVersion",
+			"state.sync.event",
+			"state.ui.theme",
+			"state.localization.language",
+			"navigateTo(null);",
+			"navigateTo(campaignSlug, null, true);",
+			"navigateTo(campaignSlug, sessionFileName);",
+			"openModalRequest(config)",
+			"requestCampaignsReloadAction",
+			"dispatch(alert(message));",
+			"dispatch(confirm(copy))",
+			"dispatch(prompt(copy))",
+			"const runtime = useMemo<CampaignPageRuntime>",
+			"<CampaignPageRuntimeProvider runtime={runtime}>",
+		]) {
+			assert.ok(
+				runtimeHostSource.includes(hostToken),
+				`${hostToken} must remain in the app-local Campaign Page runtime host`,
+			);
+		}
+		assertSourceTokensInOrder(
+			mainContentSource,
+			[
+				'import CampaignPageRuntimeHost from "../ui/CampaignPageRuntimeHost.tsx";',
+				"function CampaignRoute() {",
+				"if (!campaign) return <EmptyState />;",
+				"<CampaignPageRuntimeHost>",
+				"<CampaignPage key={campaign.slug} />",
+				"</CampaignPageRuntimeHost>",
+			],
+			"Campaign Page route runtime scope",
+		);
+
+		const forbiddenCampaignPageStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/pages/campaign")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenCampaignPageStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenCampaignPageStoreImporters, []);
+
+		for (const source of [
+			'import { requestCampaignsReloadAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/pages/campaign/ui/CampaignPage.tsx",
+				FSD_CAMPAIGN_PAGE_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_CAMPAIGN_PAGE_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { requestCampaignsReloadAction } from "../../../shared/model/index.js";',
+			"SRC/PAGES/CAMPAIGN/ui/CampaignPage.tsx",
+			FSD_CAMPAIGN_PAGE_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_CAMPAIGN_PAGE_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { requestCampaignsReloadAction } from "../../../shared/model/index.js";',
+				"src/pages/session/ui/SessionPage.tsx",
+				FSD_CAMPAIGN_PAGE_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/pages\/campaign\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/campaign-page-store-facade': 'error'/,
 		);
 	},
 );

@@ -16,6 +16,7 @@ import { Outlet, Route, Routes, useLocation } from "react-router";
 import { useAppSelector } from "../model/index.js";
 import AiAssistantRuntimeHost from "../ui/AiAssistantRuntimeHost.tsx";
 import BestiaryBrowserRuntimeHost from "../ui/BestiaryBrowserRuntimeHost.tsx";
+import CampaignPageRuntimeHost from "../ui/CampaignPageRuntimeHost.tsx";
 import CampaignSearchRuntimeHost from "../ui/CampaignSearchRuntimeHost.tsx";
 import EncounterPageRuntimeHost from "../ui/EncounterPageRuntimeHost.tsx";
 import SessionPageRuntimeHost from "../ui/SessionPageRuntimeHost.tsx";
@@ -93,7 +94,11 @@ function CampaignRoute() {
 	);
 	if (!campaign) return <EmptyState />;
 
-	return <CampaignPage key={campaign.slug} />;
+	return (
+		<CampaignPageRuntimeHost>
+			<CampaignPage key={campaign.slug} />
+		</CampaignPageRuntimeHost>
+	);
 }
 
 function SessionRoute() {

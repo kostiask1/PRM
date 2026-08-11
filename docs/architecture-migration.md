@@ -708,6 +708,8 @@ Next:
 - Phase 156 adds scoped `fsd-boundaries/session-page-store-facade` enforcement for `src/pages/session/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. One added static regression plus source-inventory coverage lock the private Context hook, public type/provider surface, route-host scope, stable action mapping, active-session publication, sync discard/reload policy, rename and scope-move ordering, confirmation/prompt semantics, quick-access new-tab navigation, runtime-free page API, and bypass matrix. The expanded complete suite passes 442/442 tests. `MD-R02` remains in progress because the compatibility facade still has remaining page consumers.
 - Completed Phase 157 by removing Encounter Page's direct campaign/session/encounter/sync, dice, theme/language, and encounter-view settings selectors plus navigation, active-selection, reload/refresh, dice, prompt, UI-settings, and message facade access. The page-owned `EncounterPageRuntime` exposes only those live values and narrow commands; `app/ui/EncounterPageRuntimeHost.tsx` maps them inside `EncounterRoute` after its campaign guard while the page retains encounter load/save, active selection, sync/AI updates, participant editing/creation, HP roll/dedupe behavior, settings persistence, and localized error handling.
 - Phase 157 adds scoped `fsd-boundaries/encounter-page-store-facade` enforcement for `src/pages/encounter/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and static regression coverage lock the private Context hook, public type/provider surface, route-host scope, stable action mapping, active-session/encounter publication, raw sync and dice-result handling, UI-settings update-before-API ordering, page API stability, and bypass matrix. The expanded complete suite passes 443/443 tests; `MD-R02` remains in progress while the compatibility facade has remaining page consumers.
+- Completed Phase 158 by removing Campaign Page's direct active-campaign, entity-refresh/sync, theme/language selectors plus campaign-list/renamed-campaign/session navigation, graph-note modal, campaign reload, confirmation, prompt, and message facade access. The page-owned `CampaignPageRuntime` exposes only those live values and narrow commands; `app/ui/CampaignPageRuntimeHost.tsx` maps them inside `CampaignRoute` after its campaign guard while the page retains campaign/session/entity loading and persistence, history, sync/AI flows, graph layout/note editing, archive/import/export, and localized workflow copy.
+- Phase 158 adds scoped `fsd-boundaries/campaign-page-store-facade` enforcement for `src/pages/campaign/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and static regression coverage lock the private Context hook, public type/provider surface, route-host scope, stable selector/action/navigation/modal mapping, graph session navigation and note-modal behavior, runtime-free page API, and bypass matrix. The expanded complete suite passes 444/444 tests; architecture, performance, and Ukrainian encoding checks pass. `MD-R02` remains in progress pending explicit retirement or narrowing of the typed compatibility facade.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -812,7 +814,13 @@ session/encounter, sync/dice, theme/language, and encounter-settings state plus
 narrow navigation, active-selection, reload/refresh, dice, prompt, settings,
 and message commands; an `EncounterRoute` host scopes it after the existing
 campaign guard, preserves page-owned encounter workflows, and enforces the
-focused page store boundary, and passes 443/443 tests.
+focused page store boundary, and passes 443/443 tests. Phase 158 gives
+Campaign Page a page-owned runtime with live active-campaign,
+entity-refresh/sync, theme, and language state plus campaign-list,
+renamed-campaign/session navigation, graph-note modal, reload, confirmation,
+prompt, and message commands; a `CampaignRoute` host scopes it after the
+existing campaign guard, preserves page-owned campaign workflows, enforces the
+full page store boundary, and passes 444/444 tests.
 
 ### Provenance and transfer rule
 
@@ -846,6 +854,7 @@ tracked in `docs/migration-debt.md`.
 | AI Assistant facade migration | Phase 155 gives AI Assistant a widget-owned runtime supplied by one app-local host across both its ordinary route mount and its injected Bestiary mount. Keep route projection, generation/retry, history, and public composition contracts widget-owned while remaining page consumers migrate (`MD-R02`). |
 | Session Page facade migration | Phase 156 gives Session Page a page-owned runtime supplied by `app/ui/SessionPageRuntimeHost.tsx` only inside `SessionRoute` after the active-campaign guard. Keep session load/normalization, realtime sync, editing/history/persistence, scope movement, encounter creation, keyboard/hash behavior, and public `SessionPage` contracts page-owned while remaining page consumers migrate (`MD-R02`). |
 | Encounter Page facade migration | Phase 157 gives Encounter Page a page-owned runtime supplied by `app/ui/EncounterPageRuntimeHost.tsx` only inside `EncounterRoute` after the active-campaign guard. Keep encounter load/save, active selection, sync/AI handling, participant workflows, HP dice dedupe, UI-settings persistence, localized error behavior, and public `EncounterPage` contracts page-owned while remaining page consumers migrate (`MD-R02`). |
+| Campaign Page facade migration | Phase 158 gives Campaign Page a page-owned runtime supplied by `app/ui/CampaignPageRuntimeHost.tsx` only inside `CampaignRoute` after the active-campaign guard. Keep campaign/session/entity loading and persistence, history, sync/AI flows, graph layout/note editing, archive/import/export, localized workflow copy, and public `CampaignPage` contracts page-owned while the typed compatibility facade is explicitly retired or narrowed (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -1156,6 +1165,15 @@ Status: **In progress**
   `app/ui/EncounterPageRuntimeHost.tsx` inside `EncounterRoute` after its
   campaign guard; keep `EncounterPage` runtime-free and enforce that the page
   cannot regain direct app/shared-store facade access.
+- [x] Migrate Campaign Page in Phase 158: retain campaign/session/entity
+  loading and persistence, history, sync/AI flows, graph layout/note editing,
+  archive/import/export, and localized workflow copy; inject only live active
+  campaign, entity-refresh/sync, theme/language state plus campaign-list,
+  renamed-campaign/session navigation, graph-note modal, reload, confirmation,
+  prompt, and message commands through a private page provider supplied by
+  `app/ui/CampaignPageRuntimeHost.tsx` inside `CampaignRoute` after its
+  campaign guard; keep `CampaignPage` runtime-free and enforce that the entire
+  page cannot regain direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -1174,7 +1192,8 @@ Status: **In progress**
   148 passes 434/434 tests; Phase 149 passes 435/435 tests; Phase 150 passes
   436/436 tests; Phase 151 passes 437/437 tests; Phase 152 passes 438/438
   tests; Phase 153 passes 439/439 tests; Phase 154 passes 440/440 tests; Phase
-  155 passes 441/441 tests; Phase 156 passes 442/442 tests.
+  155 passes 441/441 tests; Phase 156 passes 442/442 tests; Phase 157 passes
+  443/443 tests; Phase 158 passes 444/444 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1650,6 +1669,35 @@ and de-duplication, participant refresh behavior, and the runtime-free
 `EncounterPage` API. One added static regression brings the complete suite to
 443/443 tests. Complete lint/typecheck remain tracked under `MD-R04`; the
 shared compatibility facade remains in progress under `MD-R02`.
+
+### Recovery R28 / Phase 158 - Campaign Page injected runtime
+
+Status: **Completed**
+
+- [x] Define the page-owned `CampaignPageRuntime` provider with live active
+  campaign, entity-refresh version, sync event, theme, and language state plus
+  narrow campaign-list, renamed-campaign, and session navigation; graph-note
+  modal; campaign reload; confirmation; prompt; and message commands. Expose
+  only provider/types through the page root and keep the Context hook private
+  to the slice.
+- [x] Let `app/ui/CampaignPageRuntimeHost.tsx` own the live selectors and
+  stable action/navigation/modal mapping, and scope the provider around
+  `<CampaignPage />` in `CampaignRoute` only after its active-campaign guard
+  without threading a runtime prop through the public page API.
+- [x] Keep campaign/session/entity loading and persistence, history, sync/AI
+  flows, graph layout and note editing, archive/import/export, and localized
+  workflow copy page-owned; prevent every Campaign Page file from importing
+  `app/model` or `shared/model` with the scoped full-form boundary rule.
+
+Phase 158 preserves campaign/session navigation argument order, rename reload
+before replace-navigation, deletion navigation then reload, session-creation
+append → navigation → reload, confirmation/prompt semantics, entity refresh
+and sync behavior, graph theme/language identity, graph-note modal behavior,
+and runtime-free `CampaignPage` contracts. One added static regression brings
+the complete suite to 444/444 tests; architecture, performance, and Ukrainian
+encoding checks pass. Complete lint/typecheck remain tracked under `MD-R04`;
+the typed compatibility facade remains in progress under `MD-R02` pending
+explicit retirement or narrowing.
 
 ## Validation required for every phase
 

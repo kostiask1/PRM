@@ -13,9 +13,9 @@ import {
 	lang,
 	makeDomId,
 } from "../../../../shared/lib/index.js";
-import { navigateTo } from "../../../../shared/model/index.js";
 import type { CampaignPageCampaign } from "../../model/contracts.ts";
 import type useCampaignView from "../../model/useCampaignView.ts";
+import { useCampaignPageRuntime } from "../../model/CampaignPageRuntime.tsx";
 import {
 	getCampaignNotesCollapsePatch,
 	getCampaignNotesSectionPresentation,
@@ -138,6 +138,7 @@ function CampaignNotesContent({
 	presentation,
 	onToggleIgnored,
 }: CampaignNotesContentProps) {
+	const { navigateToSession } = useCampaignPageRuntime();
 	return (
 		<>
 			{presentation.isListVisible && (
@@ -162,7 +163,9 @@ function CampaignNotesContent({
 					error={view.graphDataError}
 					onLoadSessionDetails={view.loadSessionDetailsForGraph}
 					onSaveNote={view.handleGraphNoteSave}
-					onOpenSession={(fileName) => navigateTo(campaign.slug, fileName)}
+					onOpenSession={(fileName) =>
+						navigateToSession(campaign.slug, fileName)
+					}
 				/>
 			)}
 		</>
