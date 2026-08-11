@@ -13,15 +13,6 @@ import {
 	type AddMonsterToEncounterModalRuntime,
 } from "../../../features/encounter-editor/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import {
-	alert,
-	closeActiveModal,
-	openModalRequest,
-	requestCampaignsReloadAction,
-	requestDiceRollAction,
-	useAppDispatch,
-	useAppSelector,
-} from "../../../shared/model/index.js";
 import { classNames } from "../../../shared/lib/index.js";
 import { highlightText } from "../../../shared/ui/index.js";
 import "../../../assets/components/MonsterStatBlock.css";
@@ -56,6 +47,7 @@ import {
 	parseMonsterStatBlockRollsAndSpells,
 	renderMonsterStatBlockContent,
 } from "./monsterStatBlockRichContent.ts";
+import { useMonsterStatBlockRuntime } from "./MonsterStatBlockRuntime.tsx";
 
 const SPELL_CACHE = new Map<string, LoadedMonsterSpell>();
 
@@ -119,8 +111,14 @@ export default function MonsterStatBlock({
 	searchHighlight = "",
 	highlightFields = null,
 }: MonsterStatBlockProps) {
-	const dispatch = useAppDispatch();
-	const campaigns = useAppSelector((store) => store.campaigns.items);
+	const {
+		campaigns,
+		closeModal: closeEncounterModal,
+		openModal,
+		reportError,
+		requestCampaignsReload: reloadCampaigns,
+		requestDiceRoll,
+	} = useMonsterStatBlockRuntime();
 	const [hasImageError, setHasImageError] = useState(false);
 	const [spells, setSpells] = useState<LoadedMonsterSpell[]>([]);
 	const [loadingSpells, setLoadingSpells] = useState(false);
@@ -132,16 +130,16 @@ export default function MonsterStatBlock({
 	const addMonsterToEncounterRuntime = useMemo<AddMonsterToEncounterModalRuntime>(
 		() => ({
 			notifyError(error) {
-				dispatch(alert(error));
+				reportError({ title: error.title, message: error.message });
 			},
 			requestCampaignsReload() {
-				dispatch(requestCampaignsReloadAction());
+				reloadCampaigns();
 			},
 			closeModal(value) {
-				closeActiveModal(value);
+				closeEncounterModal(value);
 			},
 		}),
-		[dispatch],
+		[closeEncounterModal, reloadCampaigns, reportError],
 	);
 	const effectiveName = model.effectiveName;
 	const source = getStringField(monster, "source");
@@ -203,7 +201,7 @@ export default function MonsterStatBlock({
 			onAddToEncounter(monster);
 			return;
 		}
-		openModalRequest({
+		openModal({
 			title: lang.t("Add to encounter"),
 			type: "confirm",
 			showFooter: false,
@@ -297,12 +295,12 @@ export default function MonsterStatBlock({
 					onAiAction={onAiAction}
 					onDelete={onDelete}
 					onFieldEdit={onFieldEdit}
-					onRoll={(formula) => dispatch(requestDiceRollAction(formula))}
+					onRoll={requestDiceRoll}
 					helpers={helpers}
 					renderSenses={renderSenses}
 				/>
 			</div>
-			{isGridLayout && <div className="MonsterStatBlock__abilities"><MonsterAbilities model={model} helpers={helpers} onRoll={(formula) => dispatch(requestDiceRollAction(formula))} /></div>}
+			{isGridLayout && <div className="MonsterStatBlock__abilities"><MonsterAbilities model={model} helpers={helpers} onRoll={requestDiceRoll} /></div>}
 			<LegacySpellcastingSection loading={loadingSpells} groups={spellGroups} helpers={helpers} />
 			<StructuredSpellcastingSection entries={spellcastingEntries} helpers={helpers} />
 			<MonsterActionList actions={getMonsterEntries(monster.trait)} title="Traits" field="trait" helpers={helpers} />

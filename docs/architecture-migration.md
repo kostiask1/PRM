@@ -696,6 +696,8 @@ Next:
 - Phase 150 adds scoped `fsd-boundaries/rules-reference-modal-store-facade` enforcement for `src/widgets/rules-reference-modal/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public type/provider surface, stable App commands, factory compatibility, host request behavior, content lifecycle, App scope, and bypass matrix. The expanded complete suite passes 436/436 tests. `MD-R02` remains in progress because the compatibility facade still has other page/widget consumers.
 - Completed Phase 151 by removing Spells Browser's direct debounce/campaign/source selectors plus campaign replacement, ignored-source patch, and error facade access. The widget-owned `SpellsBrowserRuntime` exposes only the live values and narrow commands; App maps current state and actions while the widget retains API loading, source derivation, persistence branching, localization, local selection, and abortable loader behavior.
 - Phase 151 adds scoped `fsd-boundaries/spells-browser-store-facade` enforcement for `src/widgets/spells-browser/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public type/provider surface, stable App commands, debounce/source/persistence ordering, factory-slot compatibility, App scope over route and modal rendering, and bypass matrix. The expanded complete suite passes 437/437 tests. `MD-R02` remains in progress because the compatibility facade still has other page/widget consumers.
+- Completed Phase 152 by removing Monster Stat Block's direct campaigns selector plus modal, error, reload, and dice facade access. The widget-owned `MonsterStatBlockRuntime` exposes only the live campaign snapshot and narrow commands; App maps current state and actions while the widget retains custom add override precedence, filtered campaign snapshot, localized modal config, feature runtime adapter, and all stat-block behavior.
+- Phase 152 adds scoped `fsd-boundaries/monster-stat-block-store-facade` enforcement for `src/widgets/monster-stat-block/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public type/provider surface, stable App commands, add-to-encounter ordering/filtering, both dice bindings, stable Bestiary/AI/Rules slots, App scope over route and modal rendering, and bypass matrix. The expanded complete suite passes 438/438 tests. `MD-R02` remains in progress because the compatibility facade still has other page/widget consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -773,7 +775,11 @@ store boundary, and passes 436/436 tests. Phase 151 gives Spells Browser a
 widget-owned runtime with live App-mapped source settings and persistence/error
 commands, preserves its factory slot and browser lifecycle, enforces the
 focused widget store boundary, and passes 437/437 tests. `MD-R02` remains in
-progress and the broader migration remains active.
+progress and the broader migration remains active. Phase 152 gives Monster Stat
+Block a widget-owned runtime with live App-mapped campaigns and
+modal/error/reload/dice commands, preserves its factory slots and encounter
+modal/roll behavior, enforces the focused widget store boundary, and passes
+438/438 tests.
 
 ### Provenance and transfer rule
 
@@ -803,7 +809,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime while Sidebar directly dispatches navigation; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime; Phase 145 gives Dice an App-provided request runtime plus an app-local live request host; Phase 146 gives Images a feature-owned gallery runtime supplied by a narrow app-local host; Phase 147 gives Campaign Entity Card a widget-owned creation runtime supplied by a narrow app-local host; Phase 148 gives Campaign Search a widget-owned runtime supplied by a narrow route-layout host; Phase 149 gives Campaign Entity Modal an App-supplied confirmation/refresh runtime while keeping localized copy widget-owned; Phase 150 gives Rules Reference Modal a widget-owned runtime supplied through the existing App root while keeping its stable content factories unchanged; Phase 151 gives Spells Browser a widget-owned runtime supplied through the same App-root scope while keeping its stable factory slot unchanged. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime while Sidebar directly dispatches navigation; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime; Phase 145 gives Dice an App-provided request runtime plus an app-local live request host; Phase 146 gives Images a feature-owned gallery runtime supplied by a narrow app-local host; Phase 147 gives Campaign Entity Card a widget-owned creation runtime supplied by a narrow app-local host; Phase 148 gives Campaign Search a widget-owned runtime supplied by a narrow route-layout host; Phase 149 gives Campaign Entity Modal an App-supplied confirmation/refresh runtime while keeping localized copy widget-owned; Phase 150 gives Rules Reference Modal a widget-owned runtime supplied through the existing App root while keeping its stable content factories unchanged; Phase 151 gives Spells Browser a widget-owned runtime supplied through the same App-root scope while keeping its stable factory slot unchanged; Phase 152 gives Monster Stat Block a widget-owned runtime supplied through that App-root scope while keeping its stable Bestiary, AI Response, and Rules Reference slots unchanged. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -1063,6 +1069,13 @@ Status: **In progress**
   through the App-root provider; keep the hook private and stable factory slot
   unchanged; and enforce that the widget cannot regain direct app/shared-store
   facade access.
+- [x] Migrate Monster Stat Block in Phase 152: retain custom add override
+  precedence, click-time campaign filtering, localized fallback modal config,
+  feature-owned add-to-encounter adapter, token/favorite/spell behavior, and
+  both raw formula roll bindings; inject only live campaigns plus modal/error/
+  reload/dice commands through the App-root provider; keep the hook private and
+  stable factory slots unchanged; and enforce that the widget cannot regain
+  direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -1079,7 +1092,8 @@ Status: **In progress**
   429/429 tests; Phase 144 passes 430/430 tests; Phase 145 passes 431/431
   tests; Phase 146 passes 432/432 tests; Phase 147 passes 433/433 tests; Phase
   148 passes 434/434 tests; Phase 149 passes 435/435 tests; Phase 150 passes
-  436/436 tests; Phase 151 passes 437/437 tests.
+  436/436 tests; Phase 151 passes 437/437 tests; Phase 152 passes 438/438
+  tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1406,6 +1420,28 @@ global settings update -> ignored-source patch ordering, and localized
 console-error -> alert behavior. It passes 437/437 tests. Complete
 lint/typecheck remain tracked under `MD-R04`; the shared compatibility facade
 remains in progress under `MD-R02`.
+
+### Recovery R22 / Phase 152 - Monster Stat Block injected runtime
+
+Status: **Completed**
+
+- [x] Define the narrow `MonsterStatBlockRuntime` provider in widget UI,
+  expose only its provider/types through the widget root, and keep the Context
+  hook private to the slice.
+- [x] Let App reuse its live campaign snapshot and map modal, error, reload,
+  close, and dice commands once with stable identities; scope the provider over
+  route, factory, and modal rendering.
+- [x] Keep custom add override precedence, click-time campaign filtering,
+  localized fallback modal config, feature-owned add-to-encounter adapter,
+  token/favorite/spell behavior, and both dice call sites widget-owned; prevent
+  all Monster Stat Block code from importing `app/model` or `shared/model` with
+  the scoped boundary rule.
+
+Phase 152 preserves the custom add early return, fallback modal config and
+filtered campaign snapshot, feature API success -> reload -> close(true) and
+failure -> notice -> unlock behavior, and both formula requests. It passes
+438/438 tests. Complete lint/typecheck remain tracked under `MD-R04`; the
+shared compatibility facade remains in progress under `MD-R02`.
 
 ## Validation required for every phase
 

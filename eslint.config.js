@@ -750,6 +750,12 @@ export default [
     },
   },
   {
+    files: ['src/widgets/monster-stat-block/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/monster-stat-block-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

@@ -1506,6 +1506,8 @@ const FSD_RULES_REFERENCE_MODAL_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/rules-reference-modal-store-facade";
 const FSD_SPELLS_BROWSER_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/spells-browser-store-facade";
+const FSD_MONSTER_STAT_BLOCK_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/monster-stat-block-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -6058,11 +6060,11 @@ await run(
 			[
 				"useMemo<AddMonsterToEncounterModalRuntime>(",
 				"notifyError(error) {",
-				"dispatch(alert(error));",
+				"reportError({ title: error.title, message: error.message });",
 				"requestCampaignsReload() {",
-				"dispatch(requestCampaignsReloadAction());",
+				"reloadCampaigns();",
 				"closeModal(value) {",
-				"closeActiveModal(value);",
+				"closeEncounterModal(value);",
 				"children: <AddMonsterToEncounterModalContent",
 				"runtime={addMonsterToEncounterRuntime}",
 			],
@@ -6074,7 +6076,7 @@ await run(
 				"if (onAddToEncounter) {",
 				"onAddToEncounter(monster);",
 				"return;",
-				"openModalRequest({",
+				"openModal({",
 			],
 			"Monster Stat Block custom add-to-encounter override",
 		);
@@ -8322,6 +8324,273 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/widgets\/spells-browser\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/spells-browser-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 152 gives Monster Stat Block an injected runtime",
+	async () => {
+		const [
+			runtimeSource,
+			monsterStatBlockSource,
+			widgetEntry,
+			widgetTypeEntry,
+			rulesReferenceCompositionSource,
+			aiResponseCompositionSource,
+			bestiaryCompositionSource,
+			appSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/monster-stat-block/ui/MonsterStatBlockRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/monster-stat-block/ui/MonsterStatBlock.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/monster-stat-block/index.js", "utf8"),
+			fs.readFile("src/widgets/monster-stat-block/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/rulesReferenceModalComposition.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/aiResponseModalComposition.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"MonsterStatBlockModalConfig",
+			[
+				"children: ReactNode;",
+				"showFooter: false;",
+				"title: string;",
+				'type: "confirm";',
+			],
+		);
+		assertExportedInterfaceFragments(runtimeSource, "MonsterStatBlockErrorNotice", [
+			"message: string;",
+			"title: string;",
+		]);
+		assertExportedInterfaceFragments(runtimeSource, "MonsterStatBlockRuntime", [
+			"campaigns: unknown[];",
+			"openModal(config: MonsterStatBlockModalConfig): Promise<unknown>;",
+			"reportError(error: MonsterStatBlockErrorNotice): void;",
+			"requestCampaignsReload(): void;",
+			"closeModal(value: boolean): void;",
+			"requestDiceRoll(formula: string): void;",
+		]);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"MonsterStatBlockRuntimeProviderProps",
+			[
+				"runtime: MonsterStatBlockRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<MonsterStatBlockRuntime | null>(null)",
+				"<MonsterStatBlockRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(MonsterStatBlockRuntimeContext);",
+				'"MonsterStatBlockRuntimeProvider is required to render monster stat block controls"',
+			],
+			"Monster Stat Block runtime provider",
+		);
+		assert.match(widgetEntry, /MonsterStatBlockRuntimeProvider/);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${widgetTypeEntry}`,
+			/useMonsterStatBlockRuntime/,
+		);
+		assertPublicTypeSurface(widgetTypeEntry, [
+			"MonsterStatBlockErrorNotice",
+			"MonsterStatBlockModalConfig",
+			"MonsterStatBlockRuntime",
+			"MonsterStatBlockRuntimeProviderProps",
+		]);
+		for (const source of [runtimeSource, monsterStatBlockSource]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|openModalRequest|closeActiveModal|requestCampaignsReloadAction|requestDiceRollAction|\bdispatch\(|\balert\(/,
+			);
+		}
+		assertSourceTokensInOrder(
+			monsterStatBlockSource,
+			[
+				"const {",
+				"campaigns,",
+				"closeModal: closeEncounterModal,",
+				"openModal,",
+				"reportError,",
+				"requestCampaignsReload: reloadCampaigns,",
+				"requestDiceRoll,",
+				"} = useMonsterStatBlockRuntime();",
+				"const addMonsterToEncounterRuntime = useMemo<AddMonsterToEncounterModalRuntime>(",
+				"notifyError(error) {",
+				"reportError({ title: error.title, message: error.message });",
+				"requestCampaignsReload() {",
+				"reloadCampaigns();",
+				"closeModal(value) {",
+				"closeEncounterModal(value);",
+				"[closeEncounterModal, reloadCampaigns, reportError]",
+				"if (onAddToEncounter) {",
+				"onAddToEncounter(monster);",
+				"return;",
+				"openModal({",
+				'title: lang.t("Add to encounter")',
+				'type: "confirm"',
+				"showFooter: false",
+				"campaigns={campaigns.filter(isCampaignRecord)}",
+				"runtime={addMonsterToEncounterRuntime}",
+				"onRoll={requestDiceRoll}",
+			],
+			"Monster Stat Block runtime, encounter modal, and dice ordering",
+		);
+		assert.equal(
+			monsterStatBlockSource.match(/onRoll=\{requestDiceRoll\}/g)?.length,
+			2,
+		);
+		const monsterStatBlockPropsSource = monsterStatBlockSource.match(
+			/export interface MonsterStatBlockProps \{[\s\S]*?^\}/m,
+		)?.[0];
+		assert.ok(monsterStatBlockPropsSource);
+		assert.doesNotMatch(monsterStatBlockPropsSource, /runtime/i);
+		for (const [source, interfaceName] of [
+			[
+				rulesReferenceCompositionSource,
+				"RulesReferenceMonsterStatBlockSlotProps",
+			],
+			[
+				aiResponseCompositionSource,
+				"AiResponseModalMonsterStatBlockSlotProps",
+			],
+			[
+				bestiaryCompositionSource,
+				"BestiaryMonsterStatBlockSlotProps",
+			],
+		]) {
+			const slotSource = source.match(
+				new RegExp(`export interface ${interfaceName} \\{[\\s\\S]*?^\\}`, "m"),
+			)?.[0];
+			assert.ok(slotSource);
+			assert.doesNotMatch(slotSource, /runtime/i);
+		}
+
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const campaigns = useAppSelector(",
+				"(store) => store.campaigns.items as AppCampaign[]",
+				"const monsterStatBlockCommands = useMemo<",
+				"openModal(config) {",
+				"return openModalRequest(config);",
+				"reportError(error) {",
+				"dispatch(alert(error));",
+				"requestCampaignsReload() {",
+				"dispatch(requestCampaignsReloadAction());",
+				"closeModal(value) {",
+				"closeActiveModal(value);",
+				"requestDiceRoll(formula) {",
+				"dispatch(requestDiceRollAction(formula));",
+				"const monsterStatBlockRuntime = useMemo<MonsterStatBlockRuntime>(",
+				"campaigns,",
+				"...monsterStatBlockCommands,",
+				"<MonsterStatBlockRuntimeProvider",
+				"runtime={monsterStatBlockRuntime}",
+				"<MainContent />",
+				"<Modal",
+				"<RulesReferenceModalHost",
+				"</MonsterStatBlockRuntimeProvider>",
+			],
+			"App-owned Monster Stat Block runtime",
+		);
+		const monsterStatBlockCommandsSource = appSource.match(
+			/const monsterStatBlockCommands[\s\S]*?(?=^\tconst monsterStatBlockRuntime)/m,
+		)?.[0];
+		assert.ok(monsterStatBlockCommandsSource);
+		assert.match(monsterStatBlockCommandsSource, /\[dispatch\],\s*\);/);
+
+		const forbiddenMonsterStatBlockStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/monster-stat-block",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenMonsterStatBlockStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenMonsterStatBlockStoreImporters, []);
+
+		for (const source of [
+			'import { requestDiceRollAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/widgets/monster-stat-block/ui/MonsterStatBlock.tsx",
+				FSD_MONSTER_STAT_BLOCK_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_MONSTER_STAT_BLOCK_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { requestDiceRollAction } from "../../../shared/model/index.js";',
+			"SRC/WIDGETS/MONSTER-STAT-BLOCK/ui/MonsterStatBlock.tsx",
+			FSD_MONSTER_STAT_BLOCK_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_MONSTER_STAT_BLOCK_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { requestDiceRollAction } from "../../../shared/model/index.js";',
+				"src/widgets/spells-browser/ui/SpellsBrowser.tsx",
+				FSD_MONSTER_STAT_BLOCK_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/widgets\/monster-stat-block\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/monster-stat-block-store-facade': 'error'/,
 		);
 	},
 );

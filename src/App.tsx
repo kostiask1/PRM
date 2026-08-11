@@ -52,7 +52,11 @@ import {
 	RulesReferenceModalRuntimeProvider,
 	type RulesReferenceModalRuntime,
 } from "./widgets/rules-reference-modal/index.js";
-import { MonsterStatBlock } from "./widgets/monster-stat-block/index.js";
+import {
+	MonsterStatBlock,
+	MonsterStatBlockRuntimeProvider,
+	type MonsterStatBlockRuntime,
+} from "./widgets/monster-stat-block/index.js";
 import {
 	SpellsBrowser,
 	SpellsBrowserRuntimeProvider,
@@ -201,6 +205,42 @@ export default function App() {
 			},
 		}),
 		[dispatch],
+	);
+	const monsterStatBlockCommands = useMemo<
+		Pick<
+			MonsterStatBlockRuntime,
+			| "openModal"
+			| "reportError"
+			| "requestCampaignsReload"
+			| "closeModal"
+			| "requestDiceRoll"
+		>
+	>(
+		() => ({
+			openModal(config) {
+				return openModalRequest(config);
+			},
+			reportError(error) {
+				dispatch(alert(error));
+			},
+			requestCampaignsReload() {
+				dispatch(requestCampaignsReloadAction());
+			},
+			closeModal(value) {
+				closeActiveModal(value);
+			},
+			requestDiceRoll(formula) {
+				dispatch(requestDiceRollAction(formula));
+			},
+		}),
+		[dispatch],
+	);
+	const monsterStatBlockRuntime = useMemo<MonsterStatBlockRuntime>(
+		() => ({
+			campaigns,
+			...monsterStatBlockCommands,
+		}),
+		[campaigns, monsterStatBlockCommands],
 	);
 	const spellsBrowserCommands = useMemo<
 		Pick<
@@ -582,6 +622,7 @@ export default function App() {
 					<RulesReferenceModalRuntimeProvider
 						runtime={rulesReferenceModalRuntime}
 					>
+					<MonsterStatBlockRuntimeProvider runtime={monsterStatBlockRuntime}>
 					<SpellsBrowserRuntimeProvider runtime={spellsBrowserRuntime}>
 					<SimplifiedNotesProvider
 						simplifiedNotesEnabled={simplifiedNotesEnabled}
@@ -662,6 +703,7 @@ export default function App() {
 						</EditableFieldEntityLinkProvider>
 					</SimplifiedNotesProvider>
 					</SpellsBrowserRuntimeProvider>
+					</MonsterStatBlockRuntimeProvider>
 					</RulesReferenceModalRuntimeProvider>
 				</RulesReferenceRuntimeProvider>
 					</AiAttachmentAlertRuntimeProvider>
