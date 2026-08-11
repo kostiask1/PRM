@@ -12,6 +12,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 157 | Completed slice | Encounter Page no longer imports the compatibility facade: its page-owned `EncounterPageRuntime` receives live campaign/session/encounter/sync, dice, theme/language, and encounter-view settings state plus narrow session navigation, active selection, campaign reload, entity refresh, dice, prompt, UI-settings patch, and message commands from `app/ui/EncounterPageRuntimeHost.tsx`. The existing `EncounterRoute` campaign guard scopes the provider only around the page while encounter load/save, active publication, sync/AI handling, participant workflows, HP-roll de-duplication, settings persistence, and localized error/finally behavior remain page-owned. | Keep the runtime hook private, expose only provider/types through the page entry, preserve runtime-free `EncounterPage`, and keep the scoped full facade boundary in force while remaining page consumers migrate. | Phase 158+ |
 | MD-R02 / Phase 158 | Completed slice | Campaign Page no longer imports the compatibility facade: its page-owned `CampaignPageRuntime` receives live active-campaign, entity-refresh/sync, theme, and language state plus narrow campaign-list/renamed-campaign/session navigation, graph-note modal, campaign reload, confirmation, prompt, and message commands from `app/ui/CampaignPageRuntimeHost.tsx`. The existing `CampaignRoute` campaign guard scopes the provider only around the page while campaign/session/entity loading and persistence, history, sync/AI flows, graph layout/note editing, archive/import/export, and localized workflow copy remain page-owned. | Keep the runtime hook private, expose only provider/types through the page entry, preserve runtime-free `CampaignPage`, and keep the scoped full facade boundary in force. Phase 159 completes the planned facade retirement. | Phase 159 |
 | MD-R02 / Phase 159 | Completed closure | Deleted the former shared app-store facade/runtime, moved the Session Page host's navigation import to `app/model`, and removed the obsolete private-port checker. The current source/import inventory leaves the app-owned runtime hosts on `app/model` and lower layers behind injected runtimes. | Preserve `app/model` as the sole stateful store/selector/modal/navigation owner, `shared/model` as action/type/reducer policy only, and the scoped lower-layer facade boundaries. | Closed |
+| MD-R02 / Phase 160 | Completed app-shell consolidation | Moved the app-wide mention-picker request subscription, active-campaign entity reads, callback validation/options projection, and modal lifecycle from root `App` into `app/ui/MentionPickerModalHost.tsx`. The Editor remains behind its injected `EditorMentionPickerRuntime`; its promise/selection policy and UI stay feature-owned. | Keep the host inside the editor runtime provider, retain `App`'s narrow `openMentionPickerAction` adapter, and do not reintroduce feature store access or a shared store facade. | 446/446 tests; architecture maintained |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -81,6 +82,14 @@ Phase 159 deletes the temporary `shared/model/appStore.ts` facade and
 verification-blocked until the declared local lint/typecheck tooling is
 available. The expanded suite passes 445/445 tests; architecture, performance,
 and Ukrainian encoding checks pass.
+Phase 160 moves the app-wide mention-picker request/entity/modal workflow from
+root `App` to `app/ui/MentionPickerModalHost.tsx`, while the Editor keeps its
+injected runtime plus feature-owned promise and selection policy. This is
+app-shell consolidation after the `MD-R02` closure, not a return to a shared
+store facade. The expanded suite passes 446/446 tests; architecture,
+performance, and Ukrainian encoding checks pass. `MD-R04` remains
+verification-blocked until the declared local lint/typecheck tooling is
+available.
 
 ## Closed recovery items
 

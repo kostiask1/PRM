@@ -18,6 +18,7 @@ import CampaignEntityCreationRuntimeHost from "./app/ui/CampaignEntityCreationRu
 import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
 import ImageGalleryRuntimeHost from "./app/ui/ImageGalleryRuntimeHost.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
+import MentionPickerModalHost from "./app/ui/MentionPickerModalHost.tsx";
 import SidebarRuntimeHost from "./app/ui/SidebarRuntimeHost.tsx";
 import {
 	CharacterCard,
@@ -32,7 +33,6 @@ import { Sidebar } from "./widgets/sidebar/index.js";
 import {
 	EditableFieldEntityLinkProvider,
 	EditorMentionPickerRuntimeProvider,
-	MentionPickerModalContent,
 	type EditableFieldEntityLinkRuntime,
 	type EditorMentionPickerRuntime,
 } from "./features/editor/ui/index.js";
@@ -66,7 +66,6 @@ import {
 import { lang } from "./shared/lib/index.js";
 import {
 	alert,
-	closeMentionPickerAction,
 	confirm,
 	openMentionPickerAction,
 	recordRulesReferenceHistoryEntryAction,
@@ -83,11 +82,9 @@ import {
 import type { CampaignRecord } from "./entities/campaign/index.js";
 import type { SettingsPayload } from "./features/settings/index.js";
 import {
-	buildAppMentionOptions,
 	getAppErrorMessage,
 	getAppSettingsProjection,
 	getCampaignCompletionPlan,
-	hasValidMentionPickerCallbacks,
 	isEditableAppTarget,
 	isSettingsSyncEvent,
 } from "./app/model/appShellPresentation.ts";
@@ -125,9 +122,6 @@ export default function App() {
 	const [isCTRLPressed, setCTRLPressed] = useState(false);
 	const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 	const modalState = useAppSelector((store) => store.modal);
-	const mentionPickerRequest = useAppSelector(
-		(store) => store.mentionPickerRequest,
-	);
 	const campaigns = useAppSelector(
 		(store) => store.campaigns.items as AppCampaign[],
 	);
@@ -456,78 +450,6 @@ export default function App() {
 		};
 	}, [loadSettings, syncEvent]);
 
-	useEffect(() => {
-		const handleMentionPicker = async () => {
-			if (!mentionPickerRequest) return;
-			const { select, cancel } = mentionPickerRequest;
-
-			if (!hasValidMentionPickerCallbacks(mentionPickerRequest)) {
-				dispatch(closeMentionPickerAction());
-				return;
-			}
-
-			if (!activeCampaignSlug) {
-				cancel();
-				dispatch(closeMentionPickerAction());
-				return;
-			}
-
-			try {
-				const [characters, npcs, locations] = await Promise.all([
-					api.getEntities(activeCampaignSlug, "characters"),
-					api.getEntities(activeCampaignSlug, "npc").catch(() => []),
-					api.getEntities(activeCampaignSlug, "locations").catch(() => []),
-				]);
-				const entities = buildAppMentionOptions(
-					{
-						characters: characters || [],
-						npc: npcs || [],
-						locations: locations || [],
-					},
-					currentLanguage,
-				);
-
-				if (entities.length === 0) {
-					cancel();
-					dispatch(closeMentionPickerAction());
-					return;
-				}
-
-				openModalRequest({
-					title: lang.t("Choose mention"),
-					type: "confirm",
-					className: "MentionPickerModal",
-					showFooter: false,
-					onCancelAction: () => {
-						cancel();
-						dispatch(closeMentionPickerAction());
-					},
-					children: (
-						<MentionPickerModalContent
-							entities={entities}
-							onSelect={(name) => {
-								select(name);
-								dispatch(closeMentionPickerAction());
-								closeActiveModal();
-							}}
-							onCancel={() => {
-								cancel();
-								dispatch(closeMentionPickerAction());
-								closeActiveModal();
-							}}
-						/>
-					),
-				});
-			} catch (err) {
-				console.error("Error opening mention picker:", err);
-				cancel();
-				dispatch(closeMentionPickerAction());
-			}
-		};
-
-		handleMentionPicker();
-	}, [activeCampaignSlug, currentLanguage, dispatch, mentionPickerRequest]);
-
 	const handleToggleCampaignStatus = async (campaign: AppCampaign) => {
 		const completion = getCampaignCompletionPlan(
 			campaign,
@@ -696,6 +618,7 @@ export default function App() {
 						)}
 						<MessageBoxHost />
 						<DiceCalculatorHost />
+						<MentionPickerModalHost />
 						<RulesReferenceModalHost
 							MonsterStatBlock={MonsterStatBlock}
 							SpellsBrowser={SpellsBrowser}

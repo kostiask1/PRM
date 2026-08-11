@@ -6641,10 +6641,15 @@ await run(
 				"<MainContent />",
 				"<MessageBoxHost />",
 				"<DiceCalculatorHost />",
+				"<MentionPickerModalHost />",
 			],
 			"App-owned Editor mention picker runtime",
 		);
 		assert.doesNotMatch(appSource, /requestMentionSelection/);
+		assert.doesNotMatch(
+			appSource,
+			/mentionPickerRequest|MentionPickerModalContent|buildAppMentionOptions|hasValidMentionPickerCallbacks|closeMentionPickerAction|Choose mention/,
+		);
 
 		const forbiddenEditorStoreImporters = [];
 		for (const filePath of await collectFsdSourceFiles("src/features/editor")) {
@@ -6711,6 +6716,195 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/features\/editor\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/editor-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 160 gives App an owned mention-picker modal host",
+	async () => {
+		const [hostSource, appSource] = await Promise.all([
+			fs.readFile("src/app/ui/MentionPickerModalHost.tsx", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+		]);
+
+		assert.match(hostSource, /export default function MentionPickerModalHost\(\)/);
+		assertSourceTokensInOrder(
+			hostSource,
+			[
+				"const dispatch = useAppDispatch();",
+				"const mentionPickerRequest = useAppSelector(",
+				"(state) => state.mentionPickerRequest",
+				"const { activeCampaignSlug } = useAppSelector((state) => state.navigation);",
+				"const currentLanguage = useAppSelector(",
+				"useEffect(() => {",
+				"void runMentionPickerModalRequest(",
+				"mentionPickerRequest,",
+				"activeCampaignSlug,",
+				"currentLanguage,",
+				"dispatch,",
+				"}, [activeCampaignSlug, currentLanguage, dispatch, mentionPickerRequest]);",
+				"return null;",
+			],
+			"app-owned mention picker host lifecycle",
+		);
+		const requestSource = getRequiredSourceSlice(
+			hostSource,
+			"async function runMentionPickerModalRequest(",
+			"function prepareMentionPickerModal(",
+		);
+		assertSourceTokensInOrder(
+			requestSource,
+			[
+				"const context = prepareMentionPickerModal(request, campaignSlug, dispatch);",
+				"if (!context) return;",
+				"return runMentionPickerModalWorkflow(context, currentLanguage, dispatch);",
+			],
+			"async mention picker request boundary",
+		);
+		const preparationSource = getRequiredSourceSlice(
+			hostSource,
+			"function prepareMentionPickerModal(",
+			"function getMentionPickerCallbacks(",
+		);
+		assertSourceTokensInOrder(
+			preparationSource,
+			[
+				"if (!request) return null;",
+				"const callbacks = getMentionPickerCallbacks(request);",
+				"if (!callbacks) {",
+				"closeMentionPicker(dispatch);",
+				"if (!campaignSlug) {",
+				"cancelMentionPicker(callbacks, dispatch);",
+				"return { campaignSlug, callbacks };",
+			],
+			"mention picker request preparation",
+		);
+		const callbacksSource = getRequiredSourceSlice(
+			hostSource,
+			"function getMentionPickerCallbacks(",
+			"function closeMentionPicker(",
+		);
+		assertSourceTokensInOrder(
+			callbacksSource,
+			[
+				"const { select, cancel } = request as AppMentionPickerCallbacks;",
+				"if (!hasValidMentionPickerCallbacks(request)) return null;",
+				"return { select, cancel };",
+			],
+			"mention picker callback validation",
+		);
+		const closeSource = getRequiredSourceSlice(
+			hostSource,
+			"function closeMentionPicker(",
+			"function cancelMentionPicker(",
+		);
+		assertSourceTokensInOrder(
+			closeSource,
+			["dispatch(closeMentionPickerAction());"],
+			"mention picker close action",
+		);
+		const cancelSource = getRequiredSourceSlice(
+			hostSource,
+			"function cancelMentionPicker(",
+			"async function runMentionPickerModalWorkflow(",
+		);
+		assertSourceTokensInOrder(
+			cancelSource,
+			[
+				"const { cancel } = callbacks;",
+				"cancel();",
+				"closeMentionPicker(dispatch);",
+			],
+			"mention picker cancellation",
+		);
+		const workflowSource = getRequiredSourceSlice(
+			hostSource,
+			"async function runMentionPickerModalWorkflow(",
+			"async function loadMentionPickerEntities(",
+		);
+		assertSourceTokensInOrder(
+			workflowSource,
+			[
+				"try {",
+				"const entities = await loadMentionPickerEntities(",
+				"context.campaignSlug,",
+				"currentLanguage,",
+				"if (entities.length === 0) {",
+				"cancelMentionPicker(context.callbacks, dispatch);",
+				"return;",
+				"openMentionPickerModal(entities, context.callbacks, dispatch);",
+				"} catch (err) {",
+				'console.error("Error opening mention picker:", err);',
+				"cancelMentionPicker(context.callbacks, dispatch);",
+			],
+			"mention picker entity workflow",
+		);
+		const loaderSource = getRequiredSourceSlice(
+			hostSource,
+			"async function loadMentionPickerEntities(",
+			"function openMentionPickerModal(",
+		);
+		assertSourceTokensInOrder(
+			loaderSource,
+			[
+				"const [characters, npcs, locations] = await Promise.all([",
+				'campaignApi.getEntities(campaignSlug, "characters"),',
+				'campaignApi.getEntities(campaignSlug, "npc").catch(() => []),',
+				'campaignApi.getEntities(campaignSlug, "locations").catch(() => []),',
+				"return buildAppMentionOptions(",
+				"characters: characters || [],",
+				"npc: npcs || [],",
+				"locations: locations || [],",
+				"currentLanguage,",
+			],
+			"mention picker entity loading",
+		);
+		const modalSource = hostSource.slice(
+			hostSource.indexOf("function openMentionPickerModal("),
+		);
+		assertSourceTokensInOrder(
+			modalSource,
+			[
+				"const { select } = callbacks;",
+				"openModalRequest({",
+				'title: lang.t("Choose mention"),',
+				'type: "confirm",',
+				'className: "MentionPickerModal",',
+				"showFooter: false,",
+				"onCancelAction: () => {",
+				"cancelMentionPicker(callbacks, dispatch);",
+				"<MentionPickerModalContent",
+				"onSelect={(name) => {",
+				"select(name);",
+				"closeMentionPicker(dispatch);",
+				"closeActiveModal();",
+				"onCancel={() => {",
+				"cancelMentionPicker(callbacks, dispatch);",
+				"closeActiveModal();",
+			],
+			"mention picker modal callbacks",
+		);
+		assert.doesNotMatch(
+			hostSource,
+			/EditorMentionPickerRuntimeProvider|EditorMentionPickerRuntime|openMentionPickerAction|requestMentionSelection/,
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				'import MentionPickerModalHost from "./app/ui/MentionPickerModalHost.tsx";',
+				"<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>",
+				"<AiAttachmentAlertRuntimeProvider",
+				"<MainContent />",
+				"<MessageBoxHost />",
+				"<DiceCalculatorHost />",
+				"<MentionPickerModalHost />",
+			],
+			"App mention picker host scope",
+		);
+		assert.doesNotMatch(
+			appSource,
+			/mentionPickerRequest|MentionPickerModalContent|buildAppMentionOptions|hasValidMentionPickerCallbacks|closeMentionPickerAction|Choose mention/,
 		);
 	},
 );

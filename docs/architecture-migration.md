@@ -712,6 +712,8 @@ Next:
 - Phase 158 adds scoped `fsd-boundaries/campaign-page-store-facade` enforcement for `src/pages/campaign/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and static regression coverage lock the private Context hook, public type/provider surface, route-host scope, stable selector/action/navigation/modal mapping, graph session navigation and note-modal behavior, runtime-free page API, and bypass matrix. The expanded complete suite passes 444/444 tests; architecture, performance, and Ukrainian encoding checks pass. Phase 159 then performs the planned retirement of the typed compatibility facade and closes `MD-R02`.
 - Completed Phase 159 by deleting the former transitional `shared/model/appStore.ts` facade and `shared/model/appStoreRuntime.ts` port. `app/model` is now the sole stateful store, selector, modal, and navigation owner; `shared/model` contains global action contracts/creators, action/state types, and lower-level reducer policies only. `SessionPageRuntimeHost` now imports navigation from `app/model`.
 - Phase 159 removes the obsolete app-store-runtime-owner enforcement together with its retired target. Existing scoped page/widget facade rules continue to block lower-layer `app/model` and `shared/model` store access; the completed source/import inventory supports closing `MD-R02`. One added static regression brings the complete suite to 445/445 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 160 by moving the global mention-picker request subscription, active-campaign entity reads, callback validation, option projection, and modal lifecycle from root `App` to `app/ui/MentionPickerModalHost.tsx`. `App` retains only the narrow `EditorMentionPickerRuntime` action adapter, and the host is mounted within that provider so the existing editor modal content keeps its injected runtime.
+- Phase 160 keeps editor-owned promise/selection behavior, `Input` and `EditableField` interactions, and the public editor UI boundary intact while concentrating app-wide store/API/modal orchestration in an app host. One added static regression brings the full suite to 446/446 tests; architecture, performance, and Ukrainian encoding checks pass. `MD-R02` remains closed and complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -824,6 +826,12 @@ renamed-campaign/session navigation, graph-note modal, reload, confirmation,
 prompt, and message commands; a `CampaignRoute` host scopes it after the
 existing campaign guard, preserves page-owned campaign workflows, enforces the
 full page store boundary, and passes 444/444 tests.
+Phase 159 then deletes the temporary shared facade/runtime, makes `app/model`
+the sole stateful store/selector/modal/navigation owner, and closes `MD-R02`
+at 445/445 tests. Phase 160 moves global mention-picker request/entity/modal
+orchestration out of root `App` into `app/ui/MentionPickerModalHost.tsx` while
+retaining the Editor's injected runtime and feature-owned selection policy at
+446/446 tests.
 
 ### Provenance and transfer rule
 
@@ -853,7 +861,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime; Phase 145 gives Dice an App-provided request runtime plus an app-local live request host; Phase 146 gives Images a feature-owned gallery runtime supplied by a narrow app-local host; Phase 147 gives Campaign Entity Card a widget-owned creation runtime supplied by a narrow app-local host; Phase 148 gives Campaign Search a widget-owned runtime supplied by a narrow route-layout host; Phase 149 gives Campaign Entity Modal an App-supplied confirmation/refresh runtime while keeping localized copy widget-owned; Phase 150 gives Rules Reference Modal a widget-owned runtime supplied through the existing App root while keeping its stable content factories unchanged; Phase 151 gives Spells Browser a widget-owned runtime supplied through the same App-root scope while keeping its stable factory slot unchanged; Phase 152 gives Monster Stat Block a widget-owned runtime supplied through that App-root scope while keeping its stable Bestiary, AI Response, and Rules Reference slots unchanged; Phase 153 gives Sidebar a widget-owned runtime supplied by an app-local host that covers delayed root-modal children while keeping `SidebarProps` unchanged; Phase 154 gives Bestiary Browser a widget-owned runtime supplied by a narrow route-layout host while keeping raw sync parsing and public composition slots unchanged. Phase 159 retires the shared facade/runtime: `app/model` alone owns stateful store/selectors/modal/navigation, `shared/model` retains action/type/reducer policy, and `MD-R02` is closed. |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime; Phase 145 gives Dice an App-provided request runtime plus an app-local live request host; Phase 146 gives Images a feature-owned gallery runtime supplied by a narrow app-local host; Phase 147 gives Campaign Entity Card a widget-owned creation runtime supplied by a narrow app-local host; Phase 148 gives Campaign Search a widget-owned runtime supplied by a narrow route-layout host; Phase 149 gives Campaign Entity Modal an App-supplied confirmation/refresh runtime while keeping localized copy widget-owned; Phase 150 gives Rules Reference Modal a widget-owned runtime supplied through the existing App root while keeping its stable content factories unchanged; Phase 151 gives Spells Browser a widget-owned runtime supplied through the same App-root scope while keeping its stable factory slot unchanged; Phase 152 gives Monster Stat Block a widget-owned runtime supplied through that App-root scope while keeping its stable Bestiary, AI Response, and Rules Reference slots unchanged; Phase 153 gives Sidebar a widget-owned runtime supplied by an app-local host that covers delayed root-modal children while keeping `SidebarProps` unchanged; Phase 154 gives Bestiary Browser a widget-owned runtime supplied by a narrow route-layout host while keeping raw sync parsing and public composition slots unchanged. Phase 159 retires the shared facade/runtime: `app/model` alone owns stateful store/selectors/modal/navigation, `shared/model` retains action/type/reducer policy, and `MD-R02` is closed. Phase 160 moves app-wide mention-picker request/entity/modal orchestration from root `App` into an app-local host while preserving the Editor's injected runtime and feature-owned selection policy. |
 | AI Assistant facade migration | Phase 155 gives AI Assistant a widget-owned runtime supplied by one app-local host across both its ordinary route mount and its injected Bestiary mount. Keep route projection, generation/retry, history, and public composition contracts widget-owned until Phase 159 retires the facade/runtime (`MD-R02` closed). |
 | Session Page facade migration | Phase 156 gives Session Page a page-owned runtime supplied by `app/ui/SessionPageRuntimeHost.tsx` only inside `SessionRoute` after the active-campaign guard. Keep session load/normalization, realtime sync, editing/history/persistence, scope movement, encounter creation, keyboard/hash behavior, and public `SessionPage` contracts page-owned until Phase 159 retires the facade/runtime (`MD-R02` closed). |
 | Encounter Page facade migration | Phase 157 gives Encounter Page a page-owned runtime supplied by `app/ui/EncounterPageRuntimeHost.tsx` only inside `EncounterRoute` after the active-campaign guard. Keep encounter load/save, active selection, sync/AI handling, participant workflows, HP dice dedupe, UI-settings persistence, localized error behavior, and public `EncounterPage` contracts page-owned until Phase 159 retires the facade/runtime (`MD-R02` closed). |
@@ -1198,7 +1206,7 @@ Status: **In progress**
   tests; Phase 153 passes 439/439 tests; Phase 154 passes 440/440 tests; Phase
   155 passes 441/441 tests; Phase 156 passes 442/442 tests; Phase 157 passes
   443/443 tests; Phase 158 passes 444/444 tests; Phase 159 passes 445/445
-  tests.
+  tests; Phase 160 passes 446/446 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1729,6 +1737,33 @@ lower layers have no direct global-store access. Do not recreate the facade,
 runtime port, or retired checker. One added static regression brings the full
 suite to 445/445 tests; architecture, performance, and Ukrainian encoding
 checks pass. `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R30 / Phase 160 - App-owned mention-picker modal host
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move the global mention-picker request subscription, active-campaign
+  entity reads, callback validation, option projection, and modal
+  open/close/cancel/error lifecycle out of `App.tsx` into
+  `app/ui/MentionPickerModalHost.tsx`.
+- [x] Keep `App` as the narrow adapter that maps
+  `EditorMentionPickerRuntime.openMentionPicker(request)` to the existing
+  `openMentionPickerAction(request)`, and mount the modal host inside that
+  provider so editor UI continues to receive its injected runtime.
+- [x] Keep `requestMentionSelection`, `Input`, `EditableField`, and
+  `MentionPickerModalContent` feature-owned. The host may coordinate app state,
+  entity reads, and modal effects but must not move editor promise or selection
+  policy upward or give the feature direct store access.
+
+Phase 160 continues app-shell consolidation after the Phase 159 closure of
+`MD-R02`. It removes a bounded global workflow from root composition without
+recreating a shared store facade: `app/model` remains the sole stateful
+store/selector/modal/navigation owner and `shared/model` remains
+action/type/reducer policy only. Static source-inventory coverage protects the
+host/provider placement and preserved editor boundary. One added static
+regression brings the full suite to 446/446 tests; architecture, performance,
+and Ukrainian encoding checks pass. `MD-R04` remains open for complete
+lint/typecheck.
 
 ## Validation required for every phase
 
