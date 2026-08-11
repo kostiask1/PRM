@@ -119,6 +119,7 @@ const RULES_REFERENCE_MODAL_WIDGET_PATH_PREFIX =
 const SPELLS_BROWSER_WIDGET_PATH_PREFIX = "src/widgets/spells-browser/";
 const MONSTER_STAT_BLOCK_WIDGET_PATH_PREFIX =
 	"src/widgets/monster-stat-block/";
+const SIDEBAR_WIDGET_PATH_PREFIX = "src/widgets/sidebar/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -726,6 +727,15 @@ const MONSTER_STAT_BLOCK_STORE_FACADE_RULE =
 			"Monster Stat Block must receive app-global campaigns, modal, error, reload, and dice effects through its injected runtime and may not import shared/model or app/model directly.",
 	});
 
+const SIDEBAR_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
+	featurePathPrefix: SIDEBAR_WIDGET_PATH_PREFIX,
+	description:
+		"Require Sidebar to receive app-global navigation, modal, error, settings, and dice effects through its injected runtime.",
+	messageId: "injectedRuntime",
+	message:
+		"Sidebar must receive app-global navigation, modal, error, settings, and dice effects through its injected runtime and may not import shared/model or app/model directly.",
+});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -751,6 +761,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"spells-browser-store-facade": SPELLS_BROWSER_STORE_FACADE_RULE,
 		"monster-stat-block-store-facade":
 			MONSTER_STAT_BLOCK_STORE_FACADE_RULE,
+		"sidebar-store-facade": SIDEBAR_STORE_FACADE_RULE,
 	}),
 });
 

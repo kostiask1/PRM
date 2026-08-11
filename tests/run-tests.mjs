@@ -1508,6 +1508,8 @@ const FSD_SPELLS_BROWSER_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/spells-browser-store-facade";
 const FSD_MONSTER_STAT_BLOCK_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/monster-stat-block-store-facade";
+const FSD_SIDEBAR_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/sidebar-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -4936,7 +4938,7 @@ await run(
 			);
 			assert.match(
 				sidebarSource,
-				/<SidebarSettingsModalContent\s+onCancel=\{\(\) => closeActiveModal\(\)\}/,
+				/<SidebarSettingsModalContent\s+onCancel=\{\(\) => closeModal\(\)\}/,
 			);
 		})();
 
@@ -5079,7 +5081,7 @@ await run(
 		assert.match(realtimeSource, /from "\.\.\/model\/index\.js";/);
 		assert.match(mainContentSource, /from "\.\.\/model\/index\.js";/);
 		assert.match(messageBoxHostSource, /from "\.\.\/model\/index\.js";/);
-		assert.match(sidebarSource, /from "\.\.\/\.\.\/\.\.\/shared\/model\/index\.js";/);
+		assert.doesNotMatch(sidebarSource, /shared\/model|app\/model/);
 
 		const [appRuntime, sharedCompatibility] = await Promise.all([
 			import("../src/app/model/index.js"),
@@ -5309,13 +5311,24 @@ await run(
 				"const SidebarConfiguredSettingsModalContent =",
 				"createSettingsModalContentComponent({ EditableField });",
 				"function useSidebarSettingsModalRuntime(): SettingsModalRuntime",
+				"const {",
+				"activeCampaignSlug,",
+				"autoApplyAiChanges,",
+				"availableLanguages,",
+				"currentLanguage,",
+				"currentTheme,",
+				"patchUiSettings,",
+				"setCampaigns,",
+				"setLanguage,",
+				"simplifiedNotesEnabled,",
+				"storedAiBasePrompt,",
+				"storedCampaigns,",
+				"useSearchDebounce,",
+				"} = useSidebarRuntime();",
 				"return useMemo<SettingsModalRuntime>",
-				"setLanguage(language) {",
-				"dispatch(setLanguageAction(language));",
-				"patchUiSettings(patch) {",
-				"dispatch(setUiSettingsAction(patch));",
-				"setCampaigns(campaigns) {",
-				"dispatch(setCampaignsAction(campaigns));",
+				"setLanguage,",
+				"patchUiSettings,",
+				"setCampaigns,",
 				"export function SidebarSettingsModalContent({",
 				"const runtime = useSidebarSettingsModalRuntime();",
 				"return createElement(SidebarConfiguredSettingsModalContent, {",
@@ -5323,29 +5336,13 @@ await run(
 			],
 			"live Sidebar Settings runtime composition",
 		);
-		for (const selectorField of [
-			"state.localization.language",
-			"state.localization.availableLanguages",
-			"state.ui.theme",
-			"state.ui.simplifiedNotes",
-			"state.campaigns.items",
-			"state.navigation.activeCampaignSlug",
-			"state.ui.aiBasePrompt",
-			"state.ui.imagePromptBasePrompt",
-			"state.ui.campaignAiBasePrompts",
-			"state.ui.campaignImagePromptBasePrompts",
-			"state.ui.ignoreSourcesList",
-			"state.ui.autoApplyAiChanges",
-			"state.ui.useSearchDebounce",
-		]) {
-			assert.ok(
-				sidebarCompositionSource.includes(selectorField),
-				`Sidebar Settings runtime must select ${selectorField}`,
-			);
-		}
+		assert.doesNotMatch(
+			sidebarCompositionSource,
+			/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(/,
+		);
 		assert.match(
 			sidebarSource,
-			/<SidebarSettingsModalContent\s+onCancel=\{\(\) => closeActiveModal\(\)\}/,
+			/<SidebarSettingsModalContent\s+onCancel=\{\(\) => closeModal\(\)\}/,
 		);
 
 		const forbiddenSettingsStoreImporters = [];
@@ -5704,17 +5701,20 @@ await run(
 			sidebarCompositionSource,
 			[
 				"function useSidebarPlayerQuestionsRuntime(): PlayerQuestionsRuntime",
-				"const dispatch = useAppDispatch();",
-				"state.dice.rolledResult",
-				"state.ui.useSearchDebounce !== false",
+				"const { rolledResult, requestDiceRoll, useSearchDebounce } =",
+				"useSidebarRuntime();",
 				"return useMemo<PlayerQuestionsRuntime>",
-				"requestDiceRoll(request) {",
-				"dispatch(requestDiceRollAction(request));",
+				"useSearchDebounce: useSearchDebounce !== false,",
+				"requestDiceRoll,",
 				"export function SidebarPlayerQuestionsModalContent()",
 				"const runtime = useSidebarPlayerQuestionsRuntime();",
 				"<PlayerQuestionsModalContent runtime={runtime} />",
 			],
 			"live Sidebar Player Questions runtime composition",
+		);
+		assert.doesNotMatch(
+			sidebarCompositionSource,
+			/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(/,
 		);
 		assert.match(
 			sidebarSource,
@@ -6265,13 +6265,13 @@ await run(
 			sidebarRulesHandler,
 			[
 				"onClose?.();",
-				"dispatch(requestRulesReferenceNavigationAction(initialTab, \"\", options));",
+				"requestRulesReferenceNavigation(initialTab, \"\", options);",
 			],
-			"Sidebar direct rules-navigation request",
+			"Sidebar injected rules-navigation request",
 		);
-		assert.match(
+		assert.doesNotMatch(
 			sidebarSource,
-			/requestRulesReferenceNavigationAction,\s*useAppDispatch/,
+			/requestRulesReferenceNavigationAction|useAppDispatch|shared\/model|app\/model/,
 		);
 
 		const forbiddenRulesReferenceStoreImporters = [];
@@ -8591,6 +8591,309 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/widgets\/monster-stat-block\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/monster-stat-block-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 153 gives Sidebar an injected runtime",
+	async () => {
+		const [
+			runtimeSource,
+			sidebarSource,
+			settingsCompositionSource,
+			playerQuestionsCompositionSource,
+			widgetEntry,
+			widgetTypeEntry,
+			runtimeHostSource,
+			appSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/sidebar/ui/SidebarRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/sidebar/ui/Sidebar.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/sidebar/ui/sidebarSettingsComposition.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/sidebar/ui/sidebarPlayerQuestionsComposition.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/sidebar/index.js", "utf8"),
+			fs.readFile("src/widgets/sidebar/index.d.ts", "utf8"),
+			fs.readFile("src/app/ui/SidebarRuntimeHost.tsx", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(runtimeSource, "SidebarModalConfig", [
+			"children: ReactNode;",
+			"className?: string;",
+			"showFooter: false;",
+			"title: string;",
+			'type: "confirm";',
+		]);
+		assertExportedInterfaceFragments(runtimeSource, "SidebarErrorNotice", [
+			"message: string;",
+			"title: string;",
+		]);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"SidebarRulesReferenceNavigationOptions",
+			["forceTab?: boolean;"],
+		);
+		assert.match(
+			runtimeSource,
+			/export interface SidebarRuntime extends Pick<[\s\S]*?SettingsModalRuntime,[\s\S]*?"storedImagePromptBasePrompt"[\s\S]*?"useSearchDebounce"/,
+		);
+		assertExportedInterfaceFragments(runtimeSource, "SidebarRuntime", [
+			"activeEncounterId: string | number | null;",
+			"activeSessionFileName: string | null;",
+			"closeModal(value?: unknown): void;",
+			"openModal(config: SidebarModalConfig): Promise<unknown>;",
+			"reportError(error: SidebarErrorNotice): void;",
+			"requestDiceRoll(request: PlayerQuestionsDiceRollRequest): void;",
+			"rolledResult: unknown;",
+		]);
+		assert.match(
+			runtimeSource,
+			/requestRulesReferenceNavigation\(\s*tab: string,\s*name: string,\s*options: SidebarRulesReferenceNavigationOptions,\s*\): void;/,
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"SidebarRuntimeProviderProps",
+			[
+				"runtime: SidebarRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<SidebarRuntime | null>(null)",
+				"<SidebarRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(SidebarRuntimeContext);",
+				'"SidebarRuntimeProvider is required to render sidebar controls"',
+			],
+			"Sidebar runtime provider",
+		);
+		assert.match(widgetEntry, /SidebarRuntimeProvider/);
+		assert.doesNotMatch(
+			widgetEntry + "\n" + widgetTypeEntry,
+			/useSidebarRuntime/,
+		);
+		assertPublicTypeSurface(widgetTypeEntry, [
+			"SidebarErrorNotice",
+			"SidebarModalConfig",
+			"SidebarRulesReferenceNavigationOptions",
+			"SidebarRuntime",
+			"SidebarRuntimeProviderProps",
+		]);
+		for (const source of [
+			runtimeSource,
+			sidebarSource,
+			settingsCompositionSource,
+			playerQuestionsCompositionSource,
+		]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|openModalRequest|closeActiveModal|requestRulesReferenceNavigationAction|\bdispatch\(/,
+			);
+		}
+		const sidebarPropsSource = sidebarSource.match(
+			/export interface SidebarProps \{[\s\S]*?^\}/m,
+		)?.[0];
+		assert.ok(sidebarPropsSource);
+		assert.doesNotMatch(sidebarPropsSource, /runtime/i);
+		assertSourceTokensInOrder(
+			sidebarSource,
+			[
+				"const {",
+				"activeCampaignSlug: activeNavigationSlug,",
+				"activeEncounterId,",
+				"activeSessionFileName,",
+				"closeModal,",
+				"openModal,",
+				"reportError,",
+				"requestRulesReferenceNavigation,",
+				"} = useSidebarRuntime();",
+				"const handleFileChange = async",
+				'await backupApi.importArchive(file, "all", dbImportStrategy);',
+				"window.location.reload();",
+				"reportError({",
+				"finally {",
+				'event.target.value = "";',
+				"const handleSelectImportStrategy",
+				"setDbImportStrategy(strategy);",
+				"closeModal();",
+				"setTimeout(() => fileInputRef.current?.click(), 0);",
+				"const handleOpenImportDb",
+				"onClose?.();",
+				"void openModal({",
+				"const handleOpenRulesReference",
+				"onClose?.();",
+				'requestRulesReferenceNavigation(initialTab, "", options);',
+				"const handleOpenPlayerQuestions",
+				"children: <SidebarPlayerQuestionsModalContent />",
+				"const handleOpenSettings",
+				"<SidebarSettingsModalContent",
+				"onCancel={() => closeModal()}",
+				"const handleCampaignClick",
+				"activeSessionFileName,",
+				"activeEncounterId,",
+				"const handleExport = async",
+				"await backupApi.exportAllArchive();",
+				"downloadBlob(",
+				"reportError({",
+			],
+			"Sidebar injected runtime and preserved interaction ordering",
+		);
+		assertSourceTokensInOrder(
+			settingsCompositionSource,
+			[
+				"function useSidebarSettingsModalRuntime(): SettingsModalRuntime",
+				"const {",
+				"activeCampaignSlug,",
+				"currentLanguage,",
+				"patchUiSettings,",
+				"setCampaigns,",
+				"setLanguage,",
+				"useSearchDebounce,",
+				"} = useSidebarRuntime();",
+				"return useMemo<SettingsModalRuntime>",
+				"setLanguage,",
+				"patchUiSettings,",
+				"setCampaigns,",
+				"createElement(SidebarConfiguredSettingsModalContent, {",
+				"runtime,",
+			],
+			"Sidebar Settings runtime adapter",
+		);
+		assertSourceTokensInOrder(
+			playerQuestionsCompositionSource,
+			[
+				"function useSidebarPlayerQuestionsRuntime(): PlayerQuestionsRuntime",
+				"const { rolledResult, requestDiceRoll, useSearchDebounce } =",
+				"useSidebarRuntime();",
+				"return useMemo<PlayerQuestionsRuntime>",
+				"useSearchDebounce: useSearchDebounce !== false,",
+				"requestDiceRoll,",
+				"<PlayerQuestionsModalContent runtime={runtime} />",
+			],
+			"Sidebar Player Questions runtime adapter",
+		);
+		assertSourceTokensInOrder(
+			runtimeHostSource,
+			[
+				"const dispatch = useAppDispatch();",
+				"state.navigation",
+				"state.campaigns.items",
+				"state.localization",
+				"state.ui",
+				"state.dice.rolledResult",
+				'const closeModal = useCallback<SidebarRuntime["closeModal"]>',
+				"closeActiveModal(value);",
+				'const openModal = useCallback<SidebarRuntime["openModal"]>',
+				"return openModalRequest(config);",
+				'const reportError = useCallback<SidebarRuntime["reportError"]>',
+				"dispatch(alert(error));",
+				'const requestDiceRoll = useCallback<SidebarRuntime["requestDiceRoll"]>',
+				"dispatch(requestDiceRollAction(request));",
+				"const requestRulesReferenceNavigation = useCallback<",
+				"dispatch(requestRulesReferenceNavigationAction(tab, name, options));",
+				'const setCampaigns = useCallback<SidebarRuntime["setCampaigns"]>',
+				"dispatch(setCampaignsAction(nextCampaigns));",
+				'const setLanguage = useCallback<SidebarRuntime["setLanguage"]>',
+				"dispatch(setLanguageAction(language));",
+				'const patchUiSettings = useCallback<SidebarRuntime["patchUiSettings"]>',
+				"dispatch(setUiSettingsAction(patch));",
+				"const runtime = useMemo<SidebarRuntime>",
+				"storedCampaigns: campaigns,",
+				"<SidebarRuntimeProvider runtime={runtime}>",
+			],
+			"app-local Sidebar runtime host",
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				'import SidebarRuntimeHost from "./app/ui/SidebarRuntimeHost.tsx";',
+				"<ImageGalleryRuntimeHost>",
+				"<SidebarRuntimeHost>",
+				"<Sidebar\n",
+				"<Modal",
+				"</SidebarRuntimeHost>",
+			],
+			"Sidebar runtime scope across the delayed modal tree",
+		);
+
+		const forbiddenSidebarStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/widgets/sidebar")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenSidebarStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenSidebarStoreImporters, []);
+
+		for (const source of [
+			'import { requestRulesReferenceNavigationAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/widgets/sidebar/ui/Sidebar.tsx",
+				FSD_SIDEBAR_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_SIDEBAR_STORE_FACADE_RULE_ID);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { requestRulesReferenceNavigationAction } from "../../../shared/model/index.js";',
+			"SRC/WIDGETS/SIDEBAR/ui/Sidebar.tsx",
+			FSD_SIDEBAR_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_SIDEBAR_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { requestRulesReferenceNavigationAction } from "../../../shared/model/index.js";',
+				"src/widgets/monster-stat-block/ui/MonsterStatBlock.tsx",
+				FSD_SIDEBAR_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/widgets\/sidebar\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/sidebar-store-facade': 'error'/,
 		);
 	},
 );

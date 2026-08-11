@@ -14,14 +14,6 @@ import {
 } from "../../../features/backup/index.js";
 import { ImageGallery } from "../../../features/images/index.js";
 import { downloadBlob, lang } from "../../../shared/lib/index.js";
-import {
-	alert,
-	closeActiveModal,
-	openModalRequest,
-	requestRulesReferenceNavigationAction,
-	useAppDispatch,
-	useAppSelector,
-} from "../../../shared/model/index.js";
 import { Button } from "../../../shared/ui/index.js";
 import {
 	buildSidebarCampaignOrder,
@@ -38,6 +30,10 @@ import SidebarCampaignSection from "./SidebarCampaignSection.tsx";
 import SidebarLinks from "./SidebarLinks.tsx";
 import SidebarResources from "./SidebarResources.tsx";
 import { SidebarPlayerQuestionsModalContent } from "./sidebarPlayerQuestionsComposition.tsx";
+import {
+	type SidebarRulesReferenceNavigationOptions,
+	useSidebarRuntime,
+} from "./SidebarRuntime.tsx";
 import { SidebarSettingsModalContent } from "./sidebarSettingsComposition.ts";
 import "../../../assets/components/Sidebar.css";
 
@@ -69,7 +65,15 @@ export default function Sidebar({
 	onCreateCampaign,
 	onToggleCampaignStatus,
 }: SidebarProps) {
-	const dispatch = useAppDispatch();
+	const {
+		activeCampaignSlug: activeNavigationSlug,
+		activeEncounterId,
+		activeSessionFileName,
+		closeModal,
+		openModal,
+		reportError,
+		requestRulesReferenceNavigation,
+	} = useSidebarRuntime();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [dbImportStrategy, setDbImportStrategy] =
 		useState<BackupImportStrategy | null>(null);
@@ -80,15 +84,6 @@ export default function Sidebar({
 	const [isSidebarPinnedOpen, setIsSidebarPinnedOpen] = useState(false);
 	const [isCompletedCampaignsCollapsed, setIsCompletedCampaignsCollapsed] =
 		useState(true);
-	const activeNavigationSlug = useAppSelector(
-		(store) => store.navigation.activeCampaignSlug,
-	);
-	const activeSessionFileName = useAppSelector(
-		(store) => store.navigation.activeSessionFileName,
-	);
-	const activeEncounterId = useAppSelector(
-		(store) => store.navigation.activeEncounterId,
-	);
 	const effectiveActiveSlug = activeCampaignId || activeNavigationSlug;
 
 	useEffect(() => {
@@ -108,12 +103,10 @@ export default function Sidebar({
 			await backupApi.importArchive(file, "all", dbImportStrategy);
 			window.location.reload();
 		} catch (error) {
-			dispatch(
-				alert({
-					title: lang.t("Import data"),
-					message: getSidebarErrorMessage(error, lang.t("Unknown error")),
-				}),
-			);
+			reportError({
+				title: lang.t("Import data"),
+				message: getSidebarErrorMessage(error, lang.t("Unknown error")),
+			});
 		} finally {
 			event.target.value = "";
 		}
@@ -141,13 +134,13 @@ export default function Sidebar({
 
 	const handleSelectImportStrategy = (strategy: BackupImportStrategy) => {
 		setDbImportStrategy(strategy);
-		closeActiveModal();
+		closeModal();
 		setTimeout(() => fileInputRef.current?.click(), 0);
 	};
 
 	const handleOpenImportDb = () => {
 		onClose?.();
-		void openModalRequest({
+		void openModal({
 			title: lang.t("Import data"),
 			type: "confirm",
 			showFooter: false,
@@ -169,7 +162,7 @@ export default function Sidebar({
 						))}
 					</div>
 					<div className="Sidebar__importStrategyActions">
-						<Button variant="ghost" onClick={() => closeActiveModal()}>
+						<Button variant="ghost" onClick={() => closeModal()}>
 							{lang.t("Cancel")}
 						</Button>
 					</div>
@@ -180,15 +173,15 @@ export default function Sidebar({
 
 	const handleOpenRulesReference = (
 		initialTab = "conditions",
-		options: Record<string, unknown> = {},
+		options: SidebarRulesReferenceNavigationOptions = {},
 	) => {
 		onClose?.();
-		dispatch(requestRulesReferenceNavigationAction(initialTab, "", options));
+		requestRulesReferenceNavigation(initialTab, "", options);
 	};
 
 	const handleOpenPlayerQuestions = () => {
 		onClose?.();
-		void openModalRequest({
+		void openModal({
 			title: lang.t("Player questions"),
 			type: "confirm",
 			className: "PlayerQuestionsModal",
@@ -199,13 +192,13 @@ export default function Sidebar({
 
 	const handleOpenSettings = () => {
 		onClose?.();
-		void openModalRequest({
+		void openModal({
 			title: lang.t("Settings"),
 			type: "confirm",
 			showFooter: false,
 			children: (
 				<SidebarSettingsModalContent
-					onCancel={() => closeActiveModal()}
+					onCancel={() => closeModal()}
 				/>
 			),
 		});
@@ -251,12 +244,10 @@ export default function Sidebar({
 				`prm-full-backup-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 			);
 		} catch (error) {
-			dispatch(
-				alert({
-					title: lang.t("Backup error"),
-					message: getSidebarErrorMessage(error, lang.t("Unknown error")),
-				}),
-			);
+			reportError({
+				title: lang.t("Backup error"),
+				message: getSidebarErrorMessage(error, lang.t("Unknown error")),
+			});
 		}
 	};
 

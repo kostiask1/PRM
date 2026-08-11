@@ -18,6 +18,7 @@ import CampaignEntityCreationRuntimeHost from "./app/ui/CampaignEntityCreationRu
 import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
 import ImageGalleryRuntimeHost from "./app/ui/ImageGalleryRuntimeHost.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
+import SidebarRuntimeHost from "./app/ui/SidebarRuntimeHost.tsx";
 import {
 	CharacterCard,
 	LocationCard,
@@ -614,6 +615,7 @@ export default function App() {
 
 	return (
 		<ImageGalleryRuntimeHost>
+			<SidebarRuntimeHost>
 			<CampaignEntityCreationRuntimeHost>
 				<DiceRequestRuntimeProvider runtime={diceRequestRuntime}>
 				<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>
@@ -710,6 +712,7 @@ export default function App() {
 				</EditorMentionPickerRuntimeProvider>
 				</DiceRequestRuntimeProvider>
 			</CampaignEntityCreationRuntimeHost>
+			</SidebarRuntimeHost>
 		</ImageGalleryRuntimeHost>
 	);
 }

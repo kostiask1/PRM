@@ -4,28 +4,19 @@ import {
 	PlayerQuestionsModalContent,
 	type PlayerQuestionsRuntime,
 } from "../../../features/player-questions/index.js";
-import {
-	requestDiceRollAction,
-	useAppDispatch,
-	useAppSelector,
-} from "../../../shared/model/index.js";
+import { useSidebarRuntime } from "./SidebarRuntime.tsx";
 
 function useSidebarPlayerQuestionsRuntime(): PlayerQuestionsRuntime {
-	const dispatch = useAppDispatch();
-	const rolledResult = useAppSelector((state) => state.dice.rolledResult);
-	const useSearchDebounce = useAppSelector(
-		(state) => state.ui.useSearchDebounce !== false,
-	);
+	const { rolledResult, requestDiceRoll, useSearchDebounce } =
+		useSidebarRuntime();
 
 	return useMemo<PlayerQuestionsRuntime>(
 		() => ({
 			rolledResult,
-			useSearchDebounce,
-			requestDiceRoll(request) {
-				dispatch(requestDiceRollAction(request));
-			},
+			useSearchDebounce: useSearchDebounce !== false,
+			requestDiceRoll,
 		}),
-		[dispatch, rolledResult, useSearchDebounce],
+		[requestDiceRoll, rolledResult, useSearchDebounce],
 	);
 }
 
