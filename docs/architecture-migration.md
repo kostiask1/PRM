@@ -714,6 +714,8 @@ Next:
 - Phase 159 removes the obsolete app-store-runtime-owner enforcement together with its retired target. Existing scoped page/widget facade rules continue to block lower-layer `app/model` and `shared/model` store access; the completed source/import inventory supports closing `MD-R02`. One added static regression brings the complete suite to 445/445 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 160 by moving the global mention-picker request subscription, active-campaign entity reads, callback validation, option projection, and modal lifecycle from root `App` to `app/ui/MentionPickerModalHost.tsx`. `App` retains only the narrow `EditorMentionPickerRuntime` action adapter, and the host is mounted within that provider so the existing editor modal content keeps its injected runtime.
 - Phase 160 keeps editor-owned promise/selection behavior, `Input` and `EditableField` interactions, and the public editor UI boundary intact while concentrating app-wide store/API/modal orchestration in an app host. One added static regression brings the full suite to 446/446 tests; architecture, performance, and Ukrainian encoding checks pass. `MD-R02` remains closed and complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 161 by extracting the Rules Reference Modal's mounted/controller/requested-tab/loading/error lifecycle from `RulesReferenceModalContent.tsx` into private `ui/useReferenceTabLoading.ts`. The widget retains seven-tab API aggregation and `AbortController` effects while content retains navigation/history, search, selection, scrolling, and rendering.
+- Phase 161 keeps the Node-safe `widgets/rules-reference-modal/model.js`, public widget entry, injected runtime, and stable content factory unchanged. Active-request identity, abort cleanup, retry release, mounted result/error/finalization guards, localized errors, custom-Bestiary abort propagation, and existing selection defaults remain private UI behavior. One added static regression brings the full suite to 447/447 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -831,7 +833,9 @@ the sole stateful store/selector/modal/navigation owner, and closes `MD-R02`
 at 445/445 tests. Phase 160 moves global mention-picker request/entity/modal
 orchestration out of root `App` into `app/ui/MentionPickerModalHost.tsx` while
 retaining the Editor's injected runtime and feature-owned selection policy at
-446/446 tests.
+446/446 tests. Phase 161 extracts the private Rules Reference Modal tab loader
+without widening its Node-safe model, public widget entry, runtime, or stable
+content-factory contracts, at 447/447 tests.
 
 ### Provenance and transfer rule
 
@@ -1206,7 +1210,7 @@ Status: **In progress**
   tests; Phase 153 passes 439/439 tests; Phase 154 passes 440/440 tests; Phase
   155 passes 441/441 tests; Phase 156 passes 442/442 tests; Phase 157 passes
   443/443 tests; Phase 158 passes 444/444 tests; Phase 159 passes 445/445
-  tests; Phase 160 passes 446/446 tests.
+  tests; Phase 160 passes 446/446 tests; Phase 161 passes 447/447 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1764,6 +1768,32 @@ host/provider placement and preserved editor boundary. One added static
 regression brings the full suite to 446/446 tests; architecture, performance,
 and Ukrainian encoding checks pass. `MD-R04` remains open for complete
 lint/typecheck.
+
+### Recovery R31 / Phase 161 - Private Rules Reference tab loader
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move the modal's mounted state, requested-tab/controller refs, tab-load
+  effect, API/`AbortController` lifecycle, loaded-selection application,
+  localized failure reporting, retry release, and loading finalization into
+  private `widgets/rules-reference-modal/ui/useReferenceTabLoading.ts`.
+- [x] Keep `RulesReferenceModalContent.tsx` responsible for local
+  navigation/history, search, selection, scroll, and view composition, passing
+  only its setters and injected runtime commands to the private hook.
+- [x] Preserve active-request identity, abort cleanup and silence, custom
+  Bestiary abort propagation, mounted result/error/finalization guards,
+  selection defaults, and the existing error-before-loading-finalization
+  sequence.
+- [x] Keep API/abort effects out of the Node-safe modal model and keep the
+  hook outside the public widget entry; the runtime provider and stable content
+  factory remain unchanged.
+
+Phase 161 is a widget-local complexity split, not a new shared loader or a
+public API expansion. The Rules Reference Modal remains the sole owner of its
+seven-tab aggregation and browser lifecycle, while `model.js` retains pure
+policy only. `MD-R02` remains closed and `MD-R04` remains open for complete
+lint/typecheck. The full `npm test` gate passes 447/447 tests; architecture,
+performance, and Ukrainian encoding checks also pass.
 
 ## Validation required for every phase
 

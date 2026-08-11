@@ -17,7 +17,6 @@ import {
 } from "../../../entities/reference/index.js";
 import {
 	REFERENCE_TAB_POLICIES,
-	applyLoadedReferenceSelection,
 	applyReferenceTabOnlySelection,
 	applyReferenceSelectionReconciliationPlan,
 	combineBestiaryLists,
@@ -27,7 +26,6 @@ import {
 	executeReferenceInitialNavigationPlan,
 	executeReferenceTabSelectionPlan,
 	getReferenceInitialNavigationPlan,
-	getReferenceLoadErrorMessage,
 	getReferenceNavigationRequestPlan,
 	getReferenceHistoryAvailability,
 	getReferenceKeyboardPlan,
@@ -36,16 +34,19 @@ import {
 	getReferenceSelectionName,
 	getReferenceSelectionReconciliationPlan,
 	getReferenceTabSelectionPlan,
-	getReferenceTabsToLoad,
 	isReferenceTabId,
 	itemMatchesQuery,
-	normalizeReferenceList,
 	type ReferenceItem,
 	type ReferenceTabId,
 	type ReferenceTabPolicy,
 } from "../model.js";
 import RulesReferenceListItem from "./RulesReferenceListItem.tsx";
 import RulesReferenceModalView from "./RulesReferenceModalView.tsx";
+import {
+	useReferenceTabLoadLifecycle,
+	useReferenceTabLoadRuntime,
+	useReferenceTabLoading,
+} from "./useReferenceTabLoading.ts";
 import type {
 	RulesReferenceModalCompositionSlots,
 	RulesReferenceModalContentComponent,
@@ -156,10 +157,6 @@ function getEnabledHandler<THandler>(enabled: unknown, handler: THandler): THand
 	return enabled ? handler : null;
 }
 
-function runWhenMounted(mountedRef: { current: boolean }, effect: () => void): void {
-	if (mountedRef.current) effect();
-}
-
 export type RulesReferenceModalContentInternalProps =
 	RulesReferenceModalContentProps & RulesReferenceModalCompositionSlots;
 
@@ -180,11 +177,7 @@ export default function RulesReferenceModalContent({
 		setModalOpen,
 	} = useRulesReferenceModalRuntime();
 	const listRef = useRef<ReactList | null>(null);
-	const isMountedRef = useRef(false);
-	const requestedTabsRef = useRef(new Set<ReferenceTabId>());
-	const requestControllersRef = useRef(
-		new Map<ReferenceTabId, AbortController>(),
-	);
+	const referenceTabLoadRefs = useReferenceTabLoadRuntime();
 	const handledNavigationRequestIdRef = useRef<number | null>(null);
 	const hasInitializedNavigationRef = useRef(false);
 	const shouldScrollToActiveRef = useRef(false);
@@ -195,6 +188,13 @@ export default function RulesReferenceModalContent({
 	const [itemsByTab, setItemsByTab] = useState<Partial<Record<ReferenceTabId, UiReferenceItem[]>>>({});
 	const [selectedByTab, setSelectedByTab] = useState<Partial<Record<ReferenceTabId, string>>>({});
 	const [loadingByTab, setLoadingByTab] = useState<Partial<Record<ReferenceTabId, boolean>>>({});
+	const referenceTabLoadRuntime = {
+		...referenceTabLoadRefs,
+		reportError,
+		setItemsByTab,
+		setLoadingByTab,
+		setSelectedByTab,
+	};
 
 	const {
 		activeTab,
@@ -263,21 +263,7 @@ export default function RulesReferenceModalContent({
 		setSelectedByTab((current) => applyReferenceTabOnlySelection(current, tabId));
 	}, []);
 
-	useEffect(() => {
-		const requestControllers = requestControllersRef.current;
-		const requestedTabs = requestedTabsRef.current;
-		isMountedRef.current = true;
-		setModalOpen(true);
-		return () => {
-			isMountedRef.current = false;
-			for (const [tabId, controller] of requestControllers) {
-				controller.abort();
-				requestedTabs.delete(tabId);
-			}
-			requestControllers.clear();
-			setModalOpen(false);
-		};
-	}, [setModalOpen]);
+	useReferenceTabLoadLifecycle(referenceTabLoadRuntime, setModalOpen);
 
 	useEffect(() => {
 		const plan = getReferenceNavigationRequestPlan(
@@ -329,81 +315,13 @@ export default function RulesReferenceModalContent({
 		recordNavigation,
 	]);
 
-	useEffect(() => {
-		const tabsToLoad = getReferenceTabsToLoad(
-			isGlobalSearch,
-			REFERENCE_TAB_POLICIES.map((tab) => tab.id),
-			activeTab.id,
-			itemsByTab,
-			requestedTabsRef.current,
-		).map((tabId) => TAB_BY_ID.get(tabId) as ReferenceTab);
-
-		if (!tabsToLoad.length) return undefined;
-
-		const loadItems = async (tab: ReferenceTab) => {
-			const controller = new AbortController();
-			const isCurrentRequest = () =>
-				requestControllersRef.current.get(tab.id) === controller;
-			requestControllersRef.current.set(tab.id, controller);
-			requestedTabsRef.current.add(tab.id);
-			setLoadingByTab((current) => ({ ...current, [tab.id]: true }));
-			try {
-				const list = await tab.load({ signal: controller.signal });
-				if (
-					!isMountedRef.current ||
-					controller.signal.aborted ||
-					!isCurrentRequest()
-				) {
-					return;
-				}
-				runWhenMounted(isMountedRef, () => {
-					const normalizedList = normalizeReferenceList(list) as UiReferenceItem[];
-					setItemsByTab((current) => ({
-						...current,
-						[tab.id]: normalizedList,
-					}));
-					setSelectedByTab((current) =>
-						applyLoadedReferenceSelection(current, tab.id, normalizedList),
-					);
-				});
-			} catch (error: unknown) {
-				if (isAbortError(error)) return;
-				if (
-					!isMountedRef.current ||
-					controller.signal.aborted ||
-					!isCurrentRequest()
-				) {
-					return;
-				}
-				requestedTabsRef.current.delete(tab.id);
-				runWhenMounted(isMountedRef, () => {
-					reportError({
-						title: lang.t("Error"),
-						message: getReferenceLoadErrorMessage(error, lang.t("Unknown error")),
-					});
-				});
-			} finally {
-				const ownsRequest = isCurrentRequest();
-				if (ownsRequest) {
-					requestControllersRef.current.delete(tab.id);
-				}
-				if (
-					ownsRequest &&
-					isMountedRef.current &&
-					!controller.signal.aborted
-				) {
-					setLoadingByTab((current) => ({
-						...current,
-						[tab.id]: false,
-					}));
-				}
-			}
-		};
-
-		tabsToLoad.forEach((tab) => {
-			loadItems(tab);
-		});
-	}, [activeTab, isGlobalSearch, itemsByTab, reportError]);
+	useReferenceTabLoading({
+		activeTab,
+		isGlobalSearch,
+		itemsByTab,
+		runtime: referenceTabLoadRuntime,
+		tabById: TAB_BY_ID,
+	});
 
 	const filteredItemsByTab = useMemo(() => {
 		return REFERENCE_TABS.reduce<Partial<Record<ReferenceTabId, UiReferenceItem[]>>>((result, tab) => {

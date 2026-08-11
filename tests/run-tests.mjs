@@ -7994,6 +7994,7 @@ await run(
 		const [
 			runtimeSource,
 			contentSource,
+			tabLoadingSource,
 			hostSource,
 			widgetEntry,
 			widgetTypeEntry,
@@ -8006,6 +8007,10 @@ await run(
 			),
 			fs.readFile(
 				"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/useReferenceTabLoading.ts",
 				"utf8",
 			),
 			fs.readFile(
@@ -8071,7 +8076,7 @@ await run(
 		assert.match(widgetEntry, /RulesReferenceModalRuntimeProvider/);
 		assert.doesNotMatch(
 			`${widgetEntry}\n${widgetTypeEntry}`,
-			/useRulesReferenceModalRuntime/,
+			/useRulesReferenceModalRuntime|useReferenceTabLoad(?:Runtime|Lifecycle|ing)/,
 		);
 		assertPublicTypeSurface(widgetTypeEntry, [
 			"RulesReferenceModalErrorNotice",
@@ -8082,7 +8087,12 @@ await run(
 			"RulesReferenceModalRuntime",
 			"RulesReferenceModalRuntimeProviderProps",
 		]);
-		for (const source of [runtimeSource, contentSource, hostSource]) {
+		for (const source of [
+			runtimeSource,
+			contentSource,
+			tabLoadingSource,
+			hostSource,
+		]) {
 			assert.doesNotMatch(
 				source,
 				/shared\/model|app\/model|useAppDispatch|useAppSelector|openModalRequest|\bdispatch\(|\balert\(/,
@@ -8099,21 +8109,35 @@ await run(
 				"setHistoryIndex,",
 				"setModalOpen,",
 				"} = useRulesReferenceModalRuntime();",
+				"const referenceTabLoadRefs = useReferenceTabLoadRuntime();",
+				"const referenceTabLoadRuntime = {",
+				"...referenceTabLoadRefs,",
+				"reportError,",
+				"setItemsByTab,",
+				"setLoadingByTab,",
+				"setSelectedByTab,",
 				"const recordNavigation = useCallback(",
 				"recordHistoryEntry(tabId, name);",
 				"const navigateHistory = useCallback(",
 				"setHistoryIndex(nextIndex);",
 				"applyNavigationEntry(nextEntry);",
-				"setModalOpen(true);",
-				"setModalOpen(false);",
-				"reportError({",
-				'title: lang.t("Error")',
-				"message: getReferenceLoadErrorMessage(error, lang.t(\"Unknown error\")),",
+				"useReferenceTabLoadLifecycle(referenceTabLoadRuntime, setModalOpen);",
+				"const plan = getReferenceNavigationRequestPlan(",
+				"handledNavigationRequestIdRef.current = plan.requestId;",
+				'if (plan.type === "tab-only") applyTabOnlyNavigation(plan.tabId);',
+				"else navigateToReference(plan.tabId, plan.name);",
+				"useReferenceTabLoading({",
+				"runtime: referenceTabLoadRuntime,",
+				"tabById: TAB_BY_ID,",
 			],
-			"Rules Reference Modal history, lifecycle, and load-error ordering",
+			"Rules Reference Modal history, request, and tab-load hook wiring",
+		);
+		assert.doesNotMatch(
+			contentSource,
+			/\b(?:isMountedRef|requestedTabsRef|requestControllersRef|AbortController|runWhenMounted)\b/,
 		);
 		assert.match(
-			contentSource,
+			tabLoadingSource,
 			/\[activeTab, isGlobalSearch, itemsByTab, reportError\]/,
 		);
 		assertSourceTokensInOrder(
@@ -37336,6 +37360,7 @@ await run("parser renders dice and creature tags as interactive components", asy
 	const rulesReferenceSource = (
 		await Promise.all([
 			"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+			"src/widgets/rules-reference-modal/ui/useReferenceTabLoading.ts",
 			"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx",
 			"src/widgets/rules-reference-modal/ui/RulesReferenceListItem.tsx",
 			"src/widgets/rules-reference-modal/model/rulesReferenceModal.ts",
@@ -40448,86 +40473,229 @@ await run("rules reference modal orchestration plans preserve request, load, and
 });
 
 await run(
-	"rules reference modal load effects require active request identity",
+	"rules reference modal tab loads preserve active request identity",
 	async () => {
 		const source = await fs.readFile(
-			"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+			"src/widgets/rules-reference-modal/ui/useReferenceTabLoading.ts",
 			"utf8",
 		);
-		const loadStart = source.indexOf(
-			"const loadItems = async (tab: ReferenceTab) =>",
+		const loadingEffectSource = getRequiredSourceSlice(
+			source,
+			"export function useReferenceTabLoading",
+			"function startReferenceTabLoad",
 		);
-		const loadEnd = source.indexOf(
-			"tabsToLoad.forEach((tab) =>",
-			loadStart,
+		const startSource = getRequiredSourceSlice(
+			source,
+			"function startReferenceTabLoad",
+			"function shouldIgnoreReferenceTabLoad",
 		);
-		assert.notEqual(loadStart, -1);
-		assert.notEqual(loadEnd, -1);
-		const loadItems = source.slice(loadStart, loadEnd);
-		const lifecycleTokens = [
-			"const controller = new AbortController()",
-			"const isCurrentRequest = () =>",
-			"requestControllersRef.current.get(tab.id) === controller",
-			"requestControllersRef.current.set(tab.id, controller)",
-			"requestedTabsRef.current.add(tab.id)",
-			"setLoadingByTab((current) =>",
-			"const list = await tab.load({ signal: controller.signal })",
-			"!isMountedRef.current",
-			"controller.signal.aborted",
-			"!isCurrentRequest()",
-			"runWhenMounted(isMountedRef, () =>",
-			"} catch (error: unknown)",
-			"if (isAbortError(error)) return",
-			"!isMountedRef.current",
-			"controller.signal.aborted",
-			"!isCurrentRequest()",
-			"requestedTabsRef.current.delete(tab.id)",
-			"reportError({",
-			"} finally {",
-			"const ownsRequest = isCurrentRequest()",
-			"if (ownsRequest)",
-			"requestControllersRef.current.delete(tab.id)",
-			"ownsRequest &&",
-			"isMountedRef.current &&",
-			"!controller.signal.aborted",
-			"setLoadingByTab((current) =>",
-			"[tab.id]: false",
-		];
-		let previousIndex = -1;
-		for (const token of lifecycleTokens) {
-			const index = loadItems.indexOf(token, previousIndex + 1);
-			assert.ok(
-				index > previousIndex,
-				`${token} must retain active reference-request order`,
-			);
-			previousIndex = index;
-		}
+		const ignoreSource = getRequiredSourceSlice(
+			source,
+			"function shouldIgnoreReferenceTabLoad",
+			"function applyLoadedReferenceTab",
+		);
+		const successSource = getRequiredSourceSlice(
+			source,
+			"function applyLoadedReferenceTab",
+			"function reportReferenceTabLoadFailure",
+		);
+		const failureSource = getRequiredSourceSlice(
+			source,
+			"function reportReferenceTabLoadFailure",
+			"function finalizeReferenceTabLoad",
+		);
+		const finalizerSource = getRequiredSourceSlice(
+			source,
+			"function finalizeReferenceTabLoad",
+			"function removeOwnedReferenceTabRequest",
+		);
+		const requestRemovalSource = getRequiredSourceSlice(
+			source,
+			"function removeOwnedReferenceTabRequest",
+			"function resetOwnedReferenceTabLoading",
+		);
+		const loadingResetSource = getRequiredSourceSlice(
+			source,
+			"function resetOwnedReferenceTabLoading",
+			"async function loadReferenceTab",
+		);
+		const requestSource = getRequiredSourceSlice(
+			source,
+			"async function loadReferenceTab",
+			"function runWhenMounted",
+		);
+
+		assertSourceTokensInOrder(
+			loadingEffectSource,
+			[
+				"const { reportError, requestedTabsRef } = runtime;",
+				"useEffect(() => {",
+				"const tabsToLoad = getReferenceTabsToLoad(",
+				"isGlobalSearch,",
+				"REFERENCE_TAB_POLICIES.map((tab) => tab.id),",
+				"activeTab.id,",
+				"itemsByTab,",
+				"requestedTabsRef.current,",
+				").map((tabId) => tabById.get(tabId) as ReferenceTabLoadTarget);",
+				"if (!tabsToLoad.length) return undefined;",
+				"tabsToLoad.forEach((tab) => {",
+				"loadReferenceTab(tab, runtime);",
+				"}, [activeTab, isGlobalSearch, itemsByTab, reportError]);",
+			],
+			"reference tab-load scheduling",
+		);
+		assertSourceTokensInOrder(
+			startSource,
+			[
+				"const controller = new AbortController()",
+				"const isCurrentRequest = () =>",
+				"runtime.requestControllersRef.current.get(tab.id) === controller;",
+				"runtime.requestControllersRef.current.set(tab.id, controller);",
+				"runtime.requestedTabsRef.current.add(tab.id);",
+				"runtime.setLoadingByTab((current) =>",
+				"[tab.id]: true",
+			],
+			"reference tab-load request registration",
+		);
+		assertSourceTokensInOrder(
+			ignoreSource,
+			[
+				"!request.runtime.isMountedRef.current",
+				"request.controller.signal.aborted",
+				"!request.isCurrentRequest()",
+			],
+			"reference tab-load stale-result guard",
+		);
+		assertSourceTokensInOrder(
+			successSource,
+			[
+				"if (shouldIgnoreReferenceTabLoad(request)) return;",
+				"runWhenMounted(request.runtime.isMountedRef, () => {",
+				"const normalizedList = normalizeReferenceList(list) as TItem[];",
+				"request.runtime.setItemsByTab((current) =>",
+				"request.runtime.setSelectedByTab((current) =>",
+				"applyLoadedReferenceSelection(current, request.tab.id, normalizedList),",
+			],
+			"reference tab-load success application",
+		);
+		assertSourceTokensInOrder(
+			failureSource,
+			[
+				"if (isAbortError(error)) return;",
+				"if (shouldIgnoreReferenceTabLoad(request)) return;",
+				"request.runtime.requestedTabsRef.current.delete(request.tab.id);",
+				"runWhenMounted(request.runtime.isMountedRef, () => {",
+				"request.runtime.reportError({",
+				'title: lang.t("Error"),',
+				"message: getReferenceLoadErrorMessage(error, lang.t(\"Unknown error\")),",
+			],
+			"reference tab-load error handling",
+		);
+		assertSourceTokensInOrder(
+			finalizerSource,
+			[
+				"const ownsRequest = request.isCurrentRequest();",
+				"removeOwnedReferenceTabRequest(request, ownsRequest);",
+				"resetOwnedReferenceTabLoading(request, ownsRequest);",
+			],
+			"reference tab-load owner cleanup",
+		);
+		assertSourceTokensInOrder(
+			requestRemovalSource,
+			[
+				"if (!ownsRequest) return;",
+				"request.runtime.requestControllersRef.current.delete(request.tab.id);",
+			],
+			"reference tab-load request-owner cleanup",
+		);
+		assertSourceTokensInOrder(
+			loadingResetSource,
+			[
+				"if (!ownsRequest) return;",
+				"if (!request.runtime.isMountedRef.current) return;",
+				"if (request.controller.signal.aborted) return;",
+				"request.runtime.setLoadingByTab((current) =>",
+				"[request.tab.id]: false",
+			],
+			"reference tab-load loading-reset guard",
+		);
+		assertSourceTokensInOrder(
+			requestSource,
+			[
+				"const request = startReferenceTabLoad(tab, runtime);",
+				"try {",
+				"const list = await tab.load({ signal: request.controller.signal });",
+				"applyLoadedReferenceTab(request, list);",
+				"} catch (error: unknown) {",
+				"reportReferenceTabLoadFailure(request, error);",
+				"} finally {",
+				"finalizeReferenceTabLoad(request);",
+			],
+			"reference tab-load request lifecycle",
+		);
+		assert.equal(
+			(startSource.match(/runtime\.requestControllersRef\.current\.get\(tab\.id\)/g) ?? [])
+				.length,
+			1,
+		);
+		assert.equal(
+			(source.match(/shouldIgnoreReferenceTabLoad\(request\)/g) ?? []).length,
+			2,
+		);
 		assert.equal(
 			(
-				loadItems.match(
-					/requestControllersRef\.current\.get\(tab\.id\)/g,
+				source.match(
+					/request\.runtime\.requestedTabsRef\.current\.delete\(request\.tab\.id\)/g,
 				) ?? []
 			).length,
 			1,
 		);
 		assert.equal(
-			(loadItems.match(/isCurrentRequest\(\)/g) ?? []).length,
-			3,
-		);
-		assert.equal(
 			(
-				loadItems.match(
-					/requestedTabsRef\.current\.delete\(tab\.id\)/g,
+				source.match(
+					/request\.runtime\.requestControllersRef\.current\.delete\(request\.tab\.id\)/g,
 				) ?? []
 			).length,
 			1,
 		);
+	},
+);
+
+await run(
+	"rules reference modal tab-load lifecycle aborts pending requests on cleanup",
+	async () => {
+		const source = await fs.readFile(
+			"src/widgets/rules-reference-modal/ui/useReferenceTabLoading.ts",
+			"utf8",
+		);
+		const lifecycleSource = getRequiredSourceSlice(
+			source,
+			"export function useReferenceTabLoadLifecycle",
+			"export function useReferenceTabLoading",
+		);
+		assertSourceTokensInOrder(
+			lifecycleSource,
+			[
+				"const { isMountedRef, requestedTabsRef, requestControllersRef } = runtime;",
+				"useEffect(() => {",
+				"const requestControllers = requestControllersRef.current;",
+				"const requestedTabs = requestedTabsRef.current;",
+				"isMountedRef.current = true;",
+				"setModalOpen(true);",
+				"return () => {",
+				"isMountedRef.current = false;",
+				"for (const [tabId, controller] of requestControllers) {",
+				"controller.abort();",
+				"requestedTabs.delete(tabId);",
+				"requestControllers.clear();",
+				"setModalOpen(false);",
+				"}, [setModalOpen]);",
+			],
+			"reference tab-load lifecycle cleanup",
+		);
+		assert.equal((lifecycleSource.match(/controller\.abort\(\)/g) ?? []).length, 1);
 		assert.equal(
-			(
-				loadItems.match(
-					/requestControllersRef\.current\.delete\(tab\.id\)/g,
-				) ?? []
-			).length,
+			(lifecycleSource.match(/requestedTabs\.delete\(tabId\)/g) ?? []).length,
 			1,
 		);
 	},
@@ -41948,6 +42116,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	const rulesReferenceSource = (
 		await Promise.all([
 			"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+			"src/widgets/rules-reference-modal/ui/useReferenceTabLoading.ts",
 			"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx",
 			"src/widgets/rules-reference-modal/model/rulesReferenceModal.ts",
 		].map((file) => fs.readFile(file, "utf8")))

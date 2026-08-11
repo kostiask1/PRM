@@ -13,6 +13,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 158 | Completed slice | Campaign Page no longer imports the compatibility facade: its page-owned `CampaignPageRuntime` receives live active-campaign, entity-refresh/sync, theme, and language state plus narrow campaign-list/renamed-campaign/session navigation, graph-note modal, campaign reload, confirmation, prompt, and message commands from `app/ui/CampaignPageRuntimeHost.tsx`. The existing `CampaignRoute` campaign guard scopes the provider only around the page while campaign/session/entity loading and persistence, history, sync/AI flows, graph layout/note editing, archive/import/export, and localized workflow copy remain page-owned. | Keep the runtime hook private, expose only provider/types through the page entry, preserve runtime-free `CampaignPage`, and keep the scoped full facade boundary in force. Phase 159 completes the planned facade retirement. | Phase 159 |
 | MD-R02 / Phase 159 | Completed closure | Deleted the former shared app-store facade/runtime, moved the Session Page host's navigation import to `app/model`, and removed the obsolete private-port checker. The current source/import inventory leaves the app-owned runtime hosts on `app/model` and lower layers behind injected runtimes. | Preserve `app/model` as the sole stateful store/selector/modal/navigation owner, `shared/model` as action/type/reducer policy only, and the scoped lower-layer facade boundaries. | Closed |
 | MD-R02 / Phase 160 | Completed app-shell consolidation | Moved the app-wide mention-picker request subscription, active-campaign entity reads, callback validation/options projection, and modal lifecycle from root `App` into `app/ui/MentionPickerModalHost.tsx`. The Editor remains behind its injected `EditorMentionPickerRuntime`; its promise/selection policy and UI stay feature-owned. | Keep the host inside the editor runtime provider, retain `App`'s narrow `openMentionPickerAction` adapter, and do not reintroduce feature store access or a shared store facade. | 446/446 tests; architecture maintained |
+| MD-R02 / Phase 161 | Completed widget-local consolidation | Moved Rules Reference Modal mounted/controller/requested-tab/loading/error lifecycle into private `widgets/rules-reference-modal/ui/useReferenceTabLoading.ts`. The widget retains its seven-tab API aggregation and browser/abort effects; `RulesReferenceModalContent` retains navigation/history, search, selection, scrolling, and rendering. | Keep the hook private to widget UI, preserve active-request/abort/mounted/retry/error ordering, and do not widen `model.js`, the public widget entry, runtime provider, or stable content factory. | 447/447 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -90,6 +91,14 @@ store facade. The expanded suite passes 446/446 tests; architecture,
 performance, and Ukrainian encoding checks pass. `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
+Phase 161 moves the Rules Reference Modal's mounted/controller/requested-tab/
+loading/error lifecycle into private `ui/useReferenceTabLoading.ts`, keeping
+the seven-tab API and `AbortController` effects widget-owned. It preserves the
+Node-safe model, public widget entry, injected runtime, and stable content
+factory without creating a shared loader or public API expansion. The expanded
+suite passes 447/447 tests; architecture, performance, and Ukrainian encoding
+checks pass. `MD-R02` remains closed; `MD-R04` remains verification-blocked
+until the declared local lint/typecheck tooling is available.
 
 ## Closed recovery items
 
