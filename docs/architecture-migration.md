@@ -734,6 +734,8 @@ Next:
 - Phase 169 keeps single new/deleted and changed Before/After routing, snapshot selection, note-surface classes, localized labels, draft/apply edit eligibility, highlight construction, outer resource key/header, and callback argument order widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 455/455 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 170 by moving Campaign Page header-action presentation, menu-local state/ref, and shared pointer-dismissal composition from `CampaignPage.tsx` to private `ui/components/CampaignHeaderActions.tsx`. `CampaignHeader` retains campaign title/rename/created metadata and supplies only narrow search, partial-archive, undo/redo, export, and deletion callbacks. The Fallow-detected duplicate undo-redo pair is now public shared `ui/UndoRedoButtons.tsx`, used by Campaign and Session headers.
 - Phase 170 keeps the always-mounted menu, classes/titles/icons/localized copy, open-only `pointerdown` containment lifecycle, functional toggle, direct search/undo/redo behavior, capability/saving-disabled flags, and close-before-export/partial-archive/delete order intact. `UndoRedoButtons` remains a fragment-only button pair with an optional disabled gate, not a menu/workflow owner. Page public/runtime entries remain unchanged. One added static regression brings the full suite to 456/456 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 171 by moving AI Response Modal encounter monster-change presentation from `AiResponseModal.tsx` to private `ui/AiResponseEncounterMonsterChange.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, `renderEncounterMonsterCard` MonsterStatBlock/field-edit slot, participant entry/map/change detection, draft/apply eligibility, highlight construction, localized labels, resource keys, and encounter composition.
+- Phase 171 keeps precomputed card/label slot evaluation in the raw renderer while the private component preserves single/paired stack/column/frame/title markup and ordering. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 457/457 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -868,7 +870,9 @@ presentation in private widget UI while retaining raw resource, draft, and
 editor composition at 455/455 tests. Phase 170 isolates Campaign Page
 header-action presentation and menu-local lifecycle in private page UI while
 consolidating its duplicated Campaign/Session undo-redo controls in shared UI,
-at 456/456 tests.
+at 456/456 tests. Phase 171 isolates AI Response Modal encounter monster-change
+presentation in private widget UI while retaining raw participant mapping,
+change detection, card/editor, and draft composition at 457/457 tests.
 
 ### Provenance and transfer rule
 
@@ -1247,7 +1251,8 @@ Status: **In progress**
   162 passes 448/448 tests; Phase 163 passes 449/449 tests; Phase 164 passes
   450/450 tests; Phase 165 passes 451/451 tests; Phase 166 passes 452/452
   tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests; Phase
-  169 passes 455/455 tests; Phase 170 passes 456/456 tests.
+  169 passes 455/455 tests; Phase 170 passes 456/456 tests; Phase 171 passes
+  457/457 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2022,6 +2027,27 @@ shared button reuse, not a new public campaign workflow. The full `npm test`
 gate passes 456/456 tests; architecture, performance, and Ukrainian encoding
 checks also pass. `MD-R02` remains closed and `MD-R04` remains open for complete
 lint/typecheck.
+
+### Recovery R41 / Phase 171 - Private AI response encounter monster-change presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move AI Response Modal encounter monster-change presentation into private
+  `widgets/ai-response-modal/ui/AiResponseEncounterMonsterChange.tsx`.
+- [x] Keep the configured raw renderer, state/controller/guard order,
+  `renderEncounterMonsterCard` MonsterStatBlock/field-edit slot, participant
+  entries/maps/change detection, single/paired routing, draft/apply eligibility,
+  highlight construction, localized labels, resource keys, and encounter
+  composition in `AiResponseModal`.
+- [x] Pass only precomputed card/label slots to the private component while
+  preserving single/paired stack/column/frame/title markup and render order.
+- [x] Keep the component outside widget public runtime/type/model entries and
+  retain its internal-only import from the raw modal.
+
+Phase 171 is private encounter monster-change presentation only, not a new
+public AI Response workflow. The full `npm test` gate passes 457/457 tests;
+architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
+remains closed and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

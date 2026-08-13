@@ -23,6 +23,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 168 | Completed shared UI consolidation | Extracted duplicate open-only header-action pointer dismissal from Campaign Page, Session Page, and private Bestiary Header Actions to public `shared/ui/usePointerDownOutsideDismissal.ts`; each consumer retains state, ref, menu presentation, and commands. | Keep the hook limited to conditional `pointerdown` cleanup/root containment; retain guards/toggle/close-before-action order; do not alter Encounter/Dice behavior, Select/MultiSelect portal lifecycle, or widen Bestiary API. | 454/454 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 169 | Completed widget-local consolidation | Moved AI Response Modal note-diff presentation into private `widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, injected slots, `AiResponseNoteCard` factory, `renderNoteCard` draft callback, twice-resolved resource flow, nested note-array identity synthesis, preview classification, and editor placement. | Keep the renderer private; preserve new/deleted/changed snapshot routing, labels/classes, draft/apply eligibility, note highlight construction, resource key/header, and callback argument order without widening widget public entries. | 455/455 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 170 | Completed page/shared UI consolidation | Moved Campaign Page header-action presentation, menu-local state/refs, and shared dismissal composition into private `pages/campaign/ui/components/CampaignHeaderActions.tsx`; `CampaignHeader` retains title/rename/created metadata and passes narrow workflow commands. Consolidated the duplicate Campaign/Session undo-redo pair in public `shared/ui/UndoRedoButtons.tsx`. | Keep page menu ownership private and the shared component limited to the fragment-only pair plus optional disabled gate; preserve menu lifecycle, direct search/undo/redo behavior, capability/saving flags, classes/copy, and close-before-action order without public page/runtime/store expansion. | 456/456 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 171 | Completed widget-local consolidation | Moved AI Response Modal encounter monster-change presentation into private `widgets/ai-response-modal/ui/AiResponseEncounterMonsterChange.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, `renderEncounterMonsterCard` MonsterStatBlock/edit slot, participant entries/maps/change detection, draft/apply eligibility, highlights, labels, keys, and encounter composition. | Keep the renderer private; pass only prepared card/label slots and preserve single/paired stack/column/frame/title markup and render/evaluation order without widening widget public entries. | 457/457 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -201,6 +202,16 @@ order. The expanded suite passes 456/456 tests; architecture, performance, and
 Ukrainian encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
+
+Phase 171 moves AI Response Modal encounter monster-change presentation into
+private `ui/AiResponseEncounterMonsterChange.tsx`. The raw renderer retains
+participant mapping/change detection, MonsterStatBlock field-edit composition,
+draft/apply guards, highlights, localized labels, keys, and encounter rendering;
+the private component receives prepared slots only and preserves the existing
+single/paired layout markup and order. The expanded suite passes 457/457 tests;
+architecture, performance, and Ukrainian encoding checks pass. `MD-R02` remains
+closed; `MD-R04` remains verification-blocked until the declared local
+lint/typecheck tooling is available.
 
 ## Closed recovery items
 

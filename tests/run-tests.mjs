@@ -3936,6 +3936,128 @@ await run(
 );
 
 await run(
+	"Phase 171 isolates AI response encounter monster-change presentation",
+	async () => {
+		const [
+			responseModalSource,
+			monsterChangeSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseEncounterMonsterChange.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			responseModalSource,
+			/import AiResponseEncounterMonsterChange from "\.\/AiResponseEncounterMonsterChange\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			responseModalSource,
+			[
+				"const renderEncounterMonsterCard = (",
+				"<MonsterStatBlock",
+				"openCreatureFieldEdit(editOptions.resource, monster, {",
+				'participantKey: editOptions.participantKey,',
+				"const renderSingleEncounterMonsterChange = (",
+				"const participant = before || after;",
+				"const isAdded = !before;",
+				"isAdded && isDraft && !isResourceApplied(resource)",
+				"buildCardHighlightFields({ before: {}, after })",
+				"const label = getEncounterParticipantName(participant || {});",
+				'const statusLabel = isAdded ? lang.t("New") : lang.t("Deleted");',
+				"const singleCard = renderEncounterMonsterCard(",
+				'isAdded ? "is_added" : "is_removed"',
+				"<AiResponseEncounterMonsterChange",
+				"key={`${resource.id}-${key}`}",
+				"isPaired={false}",
+				"label={label}",
+				"singleCard={singleCard}",
+				"statusLabel={statusLabel}",
+				"const renderPairedEncounterMonsterChange = (",
+				"const label = getEncounterParticipantName(after);",
+				"const highlightFields = buildCardHighlightFields({ before, after });",
+				"isDraft && !isResourceApplied(resource)",
+				'const beforeLabel = lang.t("Before");',
+				"const beforeCard = renderEncounterMonsterCard(",
+				'"is_before"',
+				'const afterLabel = lang.t("After");',
+				"const afterCard = renderEncounterMonsterCard(",
+				'"is_after"',
+				"<AiResponseEncounterMonsterChange",
+				"key={`${resource.id}-${key}`}",
+				"isPaired",
+				"label={label}",
+				"beforeCard={beforeCard}",
+				"beforeLabel={beforeLabel}",
+				"afterCard={afterCard}",
+				"afterLabel={afterLabel}",
+				"const renderEncounterMonsterChanges = (resource: PreviewResource) => {",
+				"getEncounterParticipants(resource.before)",
+				"getEncounterParticipants(resource.after)",
+				"const changedKeys = [",
+				"isChangedEncounterMonster(",
+				"if (changedKeys.length === 0) return null;",
+				"changedKeys.map((key) =>",
+				"renderEncounterMonsterChange(",
+				"const renderEncounterDiff = (resource: PreviewResource) => {",
+				"{renderEncounterMonsterChanges(resource)}",
+			],
+			"AI response encounter monster-change composition",
+		);
+		assert.doesNotMatch(responseModalSource, /AiAssistant__preview_card_stack/);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/AiResponseEncounterMonsterChange/,
+		);
+		assertSourceTokensInOrder(
+			monsterChangeSource,
+			[
+				'import type { ReactNode } from "react";',
+				"interface AiResponseEncounterMonsterChangeProps {",
+				"afterCard?: ReactNode;",
+				"afterLabel?: ReactNode;",
+				"beforeCard?: ReactNode;",
+				"beforeLabel?: ReactNode;",
+				"isPaired: boolean;",
+				"label: ReactNode;",
+				"singleCard?: ReactNode;",
+				"statusLabel?: ReactNode;",
+				"export default function AiResponseEncounterMonsterChange({",
+				"return isPaired ? (",
+				'"AiAssistant__preview_card_columns"',
+				'"AiAssistant__preview_card_frame"',
+				'"AiAssistant__preview_column_title"',
+				"{label} / {beforeLabel}",
+				"{beforeCard}",
+				"{label} / {afterLabel}",
+				"{afterCard}",
+				'"AiAssistant__preview_card_stack"',
+				"{label} / {statusLabel}",
+				"{singleCard}",
+			],
+			"AI response encounter monster-change presentation",
+		);
+		assert.doesNotMatch(
+			monsterChangeSource,
+			/MonsterStatBlock|openCreatureFieldEdit|getEditedPreviewResource|isResourceApplied|buildCardHighlightFields|getEncounterParticipantEntries|getEncounterParticipants|encounterMonsterStatsChanged/,
+		);
+	},
+);
+
+await run(
 	"Phase 170 isolates Campaign header action presentation",
 	async () => {
 		const [

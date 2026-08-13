@@ -38,6 +38,7 @@ import {
 import { useAiResponseDraftController } from "../model/useAiResponseDraftController.ts";
 import AiResponseCardDiff from "./AiResponseCardDiff.tsx";
 import AiResponseEncounterParticipantList from "./AiResponseEncounterParticipantList.tsx";
+import AiResponseEncounterMonsterChange from "./AiResponseEncounterMonsterChange.tsx";
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
 import AiResponseGenericDiff from "./AiResponseGenericDiff.tsx";
 import AiResponseJsonDiff from "./AiResponseJsonDiff.tsx";
@@ -348,22 +349,22 @@ function AiResponseModal({
 		const highlightFields = isAdded
 			? buildCardHighlightFields({ before: {}, after })
 			: null;
+		const label = getEncounterParticipantName(participant || {});
+		const statusLabel = isAdded ? lang.t("New") : lang.t("Deleted");
+		const singleCard = renderEncounterMonsterCard(
+			participant,
+			isAdded ? "is_added" : "is_removed",
+			highlightFields,
+			editOptions,
+		);
 		return (
-			<div key={`${resource.id}-${key}`} className="AiAssistant__preview_card_stack">
-				<div className="AiAssistant__preview_card_frame">
-					<div className="AiAssistant__preview_column_title">
-						{getEncounterParticipantName(participant || {})} /{
-						isAdded ? lang.t("New") : lang.t("Deleted")
-					}
-					</div>
-					{renderEncounterMonsterCard(
-						participant,
-						isAdded ? "is_added" : "is_removed",
-						highlightFields,
-						editOptions,
-					)}
-				</div>
-			</div>
+			<AiResponseEncounterMonsterChange
+				key={`${resource.id}-${key}`}
+				isPaired={false}
+				label={label}
+				singleCard={singleCard}
+				statusLabel={statusLabel}
+			/>
 		);
 	};
 
@@ -379,21 +380,29 @@ function AiResponseModal({
 			isDraft && !isResourceApplied(resource)
 				? { resource, participantKey: key }
 				: null;
+		const beforeLabel = lang.t("Before");
+		const beforeCard = renderEncounterMonsterCard(
+			before,
+			"is_before",
+			highlightFields,
+		);
+		const afterLabel = lang.t("After");
+		const afterCard = renderEncounterMonsterCard(
+			after,
+			"is_after",
+			highlightFields,
+			editOptions,
+		);
 		return (
-			<div key={`${resource.id}-${key}`} className="AiAssistant__preview_card_columns">
-				<div className="AiAssistant__preview_card_frame">
-					<div className="AiAssistant__preview_column_title">
-						{label} / {lang.t("Before")}
-					</div>
-					{renderEncounterMonsterCard(before, "is_before", highlightFields)}
-				</div>
-				<div className="AiAssistant__preview_card_frame">
-					<div className="AiAssistant__preview_column_title">
-						{label} / {lang.t("After")}
-					</div>
-					{renderEncounterMonsterCard(after, "is_after", highlightFields, editOptions)}
-				</div>
-			</div>
+			<AiResponseEncounterMonsterChange
+				key={`${resource.id}-${key}`}
+				isPaired
+				label={label}
+				beforeCard={beforeCard}
+				beforeLabel={beforeLabel}
+				afterCard={afterCard}
+				afterLabel={afterLabel}
+			/>
 		);
 	};
 
