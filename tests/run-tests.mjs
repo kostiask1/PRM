@@ -3632,6 +3632,99 @@ await run(
 );
 
 await run(
+	"Phase 165 isolates AI response card-diff presentation",
+	async () => {
+		const [
+			responseModalSource,
+			cardDiffSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseCardDiff.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			responseModalSource,
+			/import AiResponseCardDiff from "\.\/AiResponseCardDiff\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			responseModalSource,
+			[
+				"if (cardType) {",
+				"key={resource.id}",
+				'"AiAssistant__preview_resource_cards"',
+				"{renderPreviewResourceHeader(resource)}",
+				"<AiResponseCardDiff",
+				"resource={resource}",
+				"isDraft={isDraft}",
+				"renderEntityCard={renderEntityCard}",
+			],
+			"AI response card-diff composition",
+		);
+		assert.doesNotMatch(
+			responseModalSource,
+			/renderSingleCardResourceDiff|renderChangedCardResourceDiff|renderCardResourceDiff/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/AiResponseCardDiff/,
+		);
+		assertSourceTokensInOrder(
+			cardDiffSource,
+			[
+				'import type { ReactNode } from "react";',
+				'import { classNames, lang } from "../../../shared/lib/index.js";',
+				"type CardHighlightFields",
+				"type RenderEntityCard = (",
+				"function getSingleCardSurfaceClassName(",
+				'"AiAssistant__preview_card_surface"',
+				'isDraft && isNew && "is_editable"',
+				"function isSingleCardEditable(",
+				"isDraft && isNew && !isResourceApplied(resource)",
+				"function getSingleCardHighlightFields(",
+				"buildCardHighlightFields({ before: {}, after: snapshot })",
+				"function AiResponseSingleCardDiff({",
+				"const snapshot = isNew ? resource.after : resource.before;",
+				'{isNew ? lang.t("New") : lang.t("Deleted")}',
+				"className={getSingleCardSurfaceClassName(isDraft, isNew)}",
+				"isSingleCardEditable(isDraft, isNew, resource)",
+				"getSingleCardHighlightFields(isNew, snapshot)",
+				"function AiResponseChangedCardDiff({",
+				"const highlightFields = buildCardHighlightFields(resource);",
+				'{lang.t("Before")}',
+				"renderEntityCard(resource, resource.before, false, highlightFields)",
+				'{lang.t("After")}',
+				'"AiAssistant__preview_card_surface is_after"',
+				'isDraft && "is_editable"',
+				"resource.after,",
+				"isDraft && !isResourceApplied(resource)",
+				"highlightFields,",
+				"export default function AiResponseCardDiff({",
+				"const isNew = resource.before === null;",
+				"return isNew || resource.after === null ? (",
+				"<AiResponseSingleCardDiff",
+				"isNew={isNew}",
+				"<AiResponseChangedCardDiff",
+			],
+			"AI response card-diff presentation",
+		);
+	},
+);
+
+await run(
 	"Phase 131 composes rules reference and monster editor widgets at stable owners",
 	async () => {
 		const [

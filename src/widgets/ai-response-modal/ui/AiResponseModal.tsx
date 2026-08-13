@@ -37,6 +37,7 @@ import {
 	type SnapshotRecord,
 } from "../model/aiResponseModal.ts";
 import { useAiResponseDraftController } from "../model/useAiResponseDraftController.ts";
+import AiResponseCardDiff from "./AiResponseCardDiff.tsx";
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
 import AiResponseGenericDiff from "./AiResponseGenericDiff.tsx";
 import AiResponseJsonDiff from "./AiResponseJsonDiff.tsx";
@@ -665,72 +666,6 @@ function AiResponseModal({
 		);
 	};
 
-	const renderSingleCardResourceDiff = (
-		resource: PreviewResource,
-		isNew: boolean,
-	) => {
-		const snapshot = isNew ? resource.after : resource.before;
-		return (
-				<div className="AiAssistant__preview_card_stack">
-					<div className="AiAssistant__preview_card_frame">
-						<div className="AiAssistant__preview_column_title">
-							{isNew ? lang.t("New") : lang.t("Deleted")}
-						</div>
-						<div
-							className={classNames(
-								"AiAssistant__preview_card_surface",
-								isDraft && isNew && "is_editable",
-							)}
-						>
-							{renderEntityCard(
-								resource,
-								snapshot,
-								isDraft && isNew && !isResourceApplied(resource),
-								isNew ? buildCardHighlightFields({ before: {}, after: snapshot }) : null,
-							)}
-						</div>
-					</div>
-				</div>
-			);
-	};
-
-	const renderChangedCardResourceDiff = (resource: PreviewResource) => {
-		const highlightFields = buildCardHighlightFields(resource);
-		return (
-			<div className="AiAssistant__preview_card_columns">
-				<div className="AiAssistant__preview_card_frame">
-					<div className="AiAssistant__preview_column_title">{lang.t("Before")}</div>
-					<div className="AiAssistant__preview_card_surface is_before">
-						{renderEntityCard(resource, resource.before, false, highlightFields)}
-					</div>
-				</div>
-				<div className="AiAssistant__preview_card_frame">
-					<div className="AiAssistant__preview_column_title">{lang.t("After")}</div>
-					<div
-						className={classNames(
-							"AiAssistant__preview_card_surface is_after",
-							isDraft && "is_editable",
-						)}
-					>
-						{renderEntityCard(
-							resource,
-							resource.after,
-							isDraft && !isResourceApplied(resource),
-							highlightFields,
-						)}
-					</div>
-				</div>
-			</div>
-		);
-	};
-
-	const renderCardResourceDiff = (resource: PreviewResource) => {
-		const isNew = resource.before === null;
-		return isNew || resource.after === null
-			? renderSingleCardResourceDiff(resource, isNew)
-			: renderChangedCardResourceDiff(resource);
-	};
-
 	const renderPreviewResource = (resource: PreviewResource) => {
 		resource = getEditedPreviewResource(resource);
 		const cardType = getPreviewCardType(resource);
@@ -746,7 +681,11 @@ function AiResponseModal({
 					)}
 				>
 					{renderPreviewResourceHeader(resource)}
-					{renderCardResourceDiff(resource)}
+					<AiResponseCardDiff
+						resource={resource}
+						isDraft={isDraft}
+						renderEntityCard={renderEntityCard}
+					/>
 				</div>
 			);
 		}

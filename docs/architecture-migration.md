@@ -722,6 +722,8 @@ Next:
 - Phase 163 keeps resource/field/line keys, localized labels, resource-state lookup, diff-line classes and markers, and number/text fallbacks widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 449/449 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 164 by moving AI Response Modal generic snapshot-diff presentation from `AiResponseModal.tsx` to private `ui/AiResponseGenericDiff.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, injected card/editor slots, preview tree, and the `AiResponseModalView` boundary.
 - Phase 164 keeps single-snapshot selection, metadata exclusion, value fallback, ordered field projection, note-array delegation, resource/field keys, localized Before/After labels, formatted values, and CSS classes widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 450/450 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 165 by moving AI Response Modal card-diff presentation from `AiResponseModal.tsx` to private `ui/AiResponseCardDiff.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, every injected card/editor slot tag, preview tree, and the `AiResponseModalView` boundary.
+- Phase 165 keeps new/deleted/changed routing, snapshot selection, localized labels, card-surface classes, draft/apply edit eligibility, highlight construction, callback argument order, and the outer resource wrapper/header/key widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 451/451 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -845,7 +847,8 @@ content-factory contracts, at 447/447 tests. Phase 162 isolates AI Response
 Modal creature-field draft editing in a private widget controller at 448/448
 tests. Phase 163 isolates JSON-diff presentation in the same widget at 449/449
 tests. Phase 164 isolates generic snapshot-diff presentation in that widget at
-450/450 tests.
+450/450 tests. Phase 165 isolates card-diff presentation in that widget at
+451/451 tests.
 
 ### Provenance and transfer rule
 
@@ -1222,7 +1225,7 @@ Status: **In progress**
   443/443 tests; Phase 158 passes 444/444 tests; Phase 159 passes 445/445
   tests; Phase 160 passes 446/446 tests; Phase 161 passes 447/447 tests; Phase
   162 passes 448/448 tests; Phase 163 passes 449/449 tests; Phase 164 passes
-  450/450 tests.
+  450/450 tests; Phase 165 passes 451/451 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1865,6 +1868,27 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 164 is private presentation ownership only, not a new public response
 format or a shared diff renderer. The full `npm test` gate passes 450/450
+tests; architecture, performance, and Ukrainian encoding checks also pass.
+`MD-R02` remains closed and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R35 / Phase 165 - Private AI response card-diff presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move generic card new/deleted/changed presentation into private
+  `widgets/ai-response-modal/ui/AiResponseCardDiff.tsx`.
+- [x] Preserve branch routing, snapshot selection, localized labels,
+  card-surface classes, draft/apply edit eligibility, highlight construction,
+  and callback argument order.
+- [x] Keep the raw renderer's configured factory, state/controller/guard
+  ordering, all injected card/editor JSX slots, outer resource wrapper/header/
+  key, preview tree, editor placement, and the View's modal/diff-switch/
+  draft-editor composition unchanged.
+- [x] Keep the component outside widget public runtime/type/model entries and
+  retain its internal-only import from the raw renderer.
+
+Phase 165 is private presentation ownership only, not a new public response
+format or a shared card renderer. The full `npm test` gate passes 451/451
 tests; architecture, performance, and Ukrainian encoding checks also pass.
 `MD-R02` remains closed and `MD-R04` remains open for complete lint/typecheck.
 
