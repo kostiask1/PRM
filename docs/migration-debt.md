@@ -30,6 +30,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 175 | Completed widget-local consolidation | Moved AI Response Modal preview-resource header markup into private `widgets/ai-response-modal/ui/AiResponsePreviewResourceHeader.tsx`. `AiResponseModal` retains default/fallback resource-label reads plus resource-state/action evaluation and policy. | Keep the leaf private and DOM-only; precompute label, state, and actions in raw order, preserve root/span/action hierarchy and CSS classes, and do not widen widget public entries. | 461/461 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 176 | Completed page-local consolidation | Moved Session Page scene-note presentation into private `pages/session/ui/components/SceneNotes.tsx`. `SessionPage` retains its single configured `SessionNoteCard` identity and `SceneCard` mutation/card composition; the presenter receives only a note-render slot plus narrow note commands. | Keep the presenter private; preserve notes presentation/bulk-collapse/reorder order, virtual-note and isolated drag-control behavior, root/header/list DOM/classes, note order/last flag, and `enableHistory={false}` without public page/runtime/store expansion. | 462/462 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 177 | Completed page-local consolidation | Moved Encounter Page header-action presentation into private `pages/encounter/ui/components/EncounterHeaderActions.tsx`. `EncounterView` retains state/ref, distinct pointer-dismissal, toggle, and settings persistence; `EncounterHeader` retains identity/metrics composition. | Keep the leaf private with a narrow view projection; preserve root/classes/count, menu/input/action order, grid/display and saving gates, direct actions, and the distinct dismissal policy without public page/runtime/store/API expansion. | 463/463 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 178 | Completed page-local consolidation | Moved Campaign Page session-list presentation into private `pages/campaign/ui/components/CampaignSessionsSection.tsx`. `CampaignView` retains session-search/filter/reorder policy, runtime navigation, and configured session-card/delete workflow. | Keep the leaf private with controlled list/search inputs, explicit create/reorder/drop commands, and the card slot; preserve pane DOM, filtered drag/static branches, identity, callbacks, empty state, and raw navigation/delete behavior without public page/runtime/store/API expansion. | 464/464 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -283,6 +284,17 @@ display/grid and saving gates, and direct callbacks. The expanded suite passes
 463/463 tests; architecture, performance, and Ukrainian encoding checks pass.
 `MD-R02` remains closed; `MD-R04` remains verification-blocked until the
 declared local lint/typecheck tooling is available.
+
+Phase 178 moves Campaign Page session-list presentation into private
+`ui/components/CampaignSessionsSection.tsx`. The raw page retains session
+search/filter/reorder policy, runtime navigation, and the configured
+session-card/delete workflow. The private leaf receives controlled list/search
+inputs, explicit create/reorder/drop commands, and the card slot while
+preserving pane DOM/classes, drag/static branches, `fileName` identity,
+callbacks, and empty state. The expanded suite passes 464/464 tests;
+architecture, performance, and Ukrainian encoding checks pass. `MD-R02`
+remains closed; `MD-R04` remains verification-blocked until the declared local
+lint/typecheck tooling is available.
 
 ## Closed recovery items
 

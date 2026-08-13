@@ -26,6 +26,7 @@ import {
 } from "../../../widgets/campaign-entity-card/index.js";
 import CampaignHeaderActions from "./components/CampaignHeaderActions.tsx";
 import CampaignNotesSection from "./components/CampaignNotesSection.tsx";
+import CampaignSessionsSection from "./components/CampaignSessionsSection.tsx";
 import PartialArchiveModal from "./components/PartialArchiveModal.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import { CollapseToggleButton } from "../../../shared/ui/index.js";
@@ -99,68 +100,6 @@ function CampaignHeader({
 				onUndo={view.handleUndo}
 			/>
 		</div>
-	);
-}
-
-interface CampaignSessionsSectionProps {
-	view: CampaignViewController;
-	sessionSearch: string;
-	setSessionSearch: Dispatch<SetStateAction<string>>;
-	filteredSessions: CampaignSessionItem[];
-	canReorderSessions: boolean;
-	renderSessionCard: (session: CampaignSessionItem) => ReactNode;
-}
-
-function CampaignSessionsSection({
-	view,
-	sessionSearch,
-	setSessionSearch,
-	filteredSessions,
-	canReorderSessions,
-	renderSessionCard,
-}: CampaignSessionsSectionProps) {
-	return (
-		<aside className="CampaignView__sessionsPane" id="campaign-sessions">
-			<div className="CampaignView__sessionsPaneHeader">
-				<h3>{lang.t("Sessions")}</h3>
-				<Button
-					variant="create"
-					onClick={view.handleCreateSession}
-					icon="plus"
-					size={Button.SIZES.SMALL}
-				>
-					{lang.t("New session")}
-				</Button>
-			</div>
-			<div className="CampaignView__sessionsPaneControls">
-				<input
-					className="CampaignView__sessionSearch"
-					placeholder={lang.t("Search sessions...")}
-					value={sessionSearch}
-					onChange={(event) => setSessionSearch(event.target.value)}
-				/>
-			</div>
-			<div className="CampaignView__sessionsPaneList">
-				{canReorderSessions ? (
-					<DraggableList
-						items={filteredSessions}
-						onReorder={view.setSessions}
-						onDrop={view.handleSessionReorderDrop}
-						keyExtractor={(session) => session.fileName}
-						renderItem={renderSessionCard}
-					/>
-				) : (
-					<div className="CampaignView__sessions">
-						{filteredSessions.map(renderSessionCard)}
-					</div>
-				)}
-				{filteredSessions.length === 0 && (
-					<div className="muted CampaignView__emptySessions">
-						{lang.t("No sessions found.")}
-					</div>
-				)}
-			</div>
-		</aside>
 	);
 }
 
@@ -540,12 +479,14 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 			<div className="Panel__body">
 				<div className="CampaignView__layout">
 					<CampaignSessionsSection
-						view={view}
-						sessionSearch={sessionSearch}
-						setSessionSearch={setSessionSearch}
-						filteredSessions={filteredSessions}
 						canReorderSessions={canReorderSessions}
+						filteredSessions={filteredSessions}
+						onCreateSession={view.handleCreateSession}
+						onReorder={view.setSessions}
+						onReorderDrop={view.handleSessionReorderDrop}
+						onSessionSearchChange={setSessionSearch}
 						renderSessionCard={renderSessionCard}
+						sessionSearch={sessionSearch}
 					/>
 
 					<div className="CampaignView__contentPanel">

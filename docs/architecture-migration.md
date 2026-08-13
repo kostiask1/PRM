@@ -748,6 +748,8 @@ Next:
 - Phase 176 preserves one scene-notes presentation calculation, bulk-collapse plan/reorder order, virtual-note and isolated drag-control behavior, the root/header/list DOM/classes, note order/last flag, and `enableHistory={false}` in private page UI. One added static regression brings the full suite to 462/462 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 177 by moving Encounter Page header-action presentation from `EncounterPage.tsx` to private `ui/components/EncounterHeaderActions.tsx`. The raw page retains state/ref ownership, the distinct Encounter pointer-dismissal lifecycle, the functional toggle, and normalized settings persistence; `EncounterHeader`/identity/metrics remain raw.
 - Phase 177 preserves the always-mounted action root/classes, independent encounter-count read, metrics/menu/control/history/input/import/export order, `.json` input/ref, display/grid gates, direct action callbacks, and saving-disabled undo/redo behavior. One added static regression brings the full suite to 463/463 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 178 by moving Campaign Page session-list presentation from `CampaignPage.tsx` to private `ui/components/CampaignSessionsSection.tsx`. The raw page retains state, filtering/reorder policy, navigation, and configured session-card/delete workflow; the leaf receives only controlled list inputs, explicit commands, and the card render slot.
+- Phase 178 preserves sessions-pane DOM/classes, search input, draggable/static branch, filtered source, `fileName` identity, reorder/drop delegation, empty state, and raw href/navigation/delete ordering. One added static regression brings the full suite to 464/464 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -903,6 +905,9 @@ virtual-note/drag behavior at 462/462 tests.
 Phase 177 isolates Encounter Page header-action presentation in private page UI
 while retaining raw dismissal, state/ref, and settings-persistence ownership at
 463/463 tests.
+Phase 178 isolates Campaign Page session-list presentation in private page UI
+while retaining raw filter/reorder, navigation, and session-card workflow
+ownership at 464/464 tests.
 
 ### Provenance and transfer rule
 
@@ -1284,7 +1289,8 @@ Status: **In progress**
   169 passes 455/455 tests; Phase 170 passes 456/456 tests; Phase 171 passes
   457/457 tests; Phase 172 passes 458/458 tests; Phase 173 passes 459/459
   tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests; Phase
-  176 passes 462/462 tests; Phase 177 passes 463/463 tests.
+  176 passes 462/462 tests; Phase 177 passes 463/463 tests; Phase 178 passes
+  464/464 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2205,6 +2211,25 @@ Phase 177 is page-local header presentation only, not a new Encounter workflow.
 The full `npm test` gate passes 463/463 tests; architecture, performance, and
 Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
 remains open for complete lint/typecheck.
+
+### Recovery R48 / Phase 178 - Private Campaign session-list presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Campaign Page session-list presentation into private
+  `pages/campaign/ui/components/CampaignSessionsSection.tsx`.
+- [x] Keep `CampaignView` session-search state, memoized filtering, reorder
+  gate, navigation, configured card/delete slot, and all session workflows raw.
+- [x] Pass controlled list/search inputs, explicit create/reorder/drop commands,
+  and a render slot; preserve the pane DOM/classes/id, branch, `fileName`
+  identity, callbacks, and empty state.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, or mutation workflow dependency.
+
+Phase 178 is page-local session-list presentation only, not a new Campaign
+workflow. The full `npm test` gate passes 464/464 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

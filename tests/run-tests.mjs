@@ -4388,6 +4388,121 @@ await run(
 );
 
 await run(
+	"Phase 178 isolates Campaign session-list presentation",
+	async () => {
+		const [
+			campaignSource,
+			sessionsSectionSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		] = await Promise.all([
+			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/campaign/ui/components/CampaignSessionsSection.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			campaignSource,
+			/import CampaignSessionsSection from "\.\/components\/CampaignSessionsSection\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			campaignSource,
+			[
+				"function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {",
+				"const { navigateToSession } = useCampaignPageRuntime();",
+				"const [sessionSearch, setSessionSearch] = useState(\"\");",
+				"const filteredSessions = useMemo(",
+				"() => filterCampaignSessions(view.sessions, sessionSearch),",
+				"[view.sessions, sessionSearch],",
+				"const canReorderSessions = sessionSearch.trim().length === 0;",
+				"const renderSessionCard = (session: CampaignSessionItem) => (",
+				"<ListCard",
+				"key={session.fileName}",
+				"href={viewModel.buildSessionHref(session.fileName)}",
+				"onClick={() => navigateToSession(campaign.slug, session.fileName)}",
+				'"CampaignView__sessionDelete"',
+				"onClick={(e) => {",
+				"e.stopPropagation();",
+				"view.handleDeleteSession(session);",
+				"<CampaignSessionsSection",
+				"canReorderSessions={canReorderSessions}",
+				"filteredSessions={filteredSessions}",
+				"onCreateSession={view.handleCreateSession}",
+				"onReorder={view.setSessions}",
+				"onReorderDrop={view.handleSessionReorderDrop}",
+				"onSessionSearchChange={setSessionSearch}",
+				"renderSessionCard={renderSessionCard}",
+				"sessionSearch={sessionSearch}",
+			],
+			"Campaign raw session filtering, card workflow, and composition",
+		);
+		assert.doesNotMatch(
+			campaignSource,
+			/interface CampaignSessionsSectionProps|function CampaignSessionsSection|CampaignView__sessionsPane/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/CampaignSessionsSection/,
+		);
+		assertSourceTokensInOrder(
+			sessionsSectionSource,
+			[
+				'import type { ReactNode } from "react";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { Button, DraggableList } from "../../../../shared/ui/index.js";',
+				'import type { CampaignSessionItem } from "../../model/campaignPagePresentation.ts";',
+				"interface CampaignSessionsSectionProps {",
+				"canReorderSessions: boolean;",
+				"filteredSessions: CampaignSessionItem[];",
+				"onCreateSession: () => void;",
+				"onReorder: (sessions: CampaignSessionItem[]) => void;",
+				"onReorderDrop: (sessions: CampaignSessionItem[]) => void;",
+				"onSessionSearchChange: (value: string) => void;",
+				"renderSessionCard: (session: CampaignSessionItem) => ReactNode;",
+				"sessionSearch: string;",
+				"export default function CampaignSessionsSection({",
+				"return (",
+				'"CampaignView__sessionsPane"',
+				'id="campaign-sessions"',
+				'"CampaignView__sessionsPaneHeader"',
+				'{lang.t("Sessions")}',
+				'variant="create"',
+				"onClick={onCreateSession}",
+				'icon="plus"',
+				'{lang.t("New session")}',
+				'"CampaignView__sessionsPaneControls"',
+				'"CampaignView__sessionSearch"',
+				'{lang.t("Search sessions...")}',
+				"value={sessionSearch}",
+				"onChange={(event) => onSessionSearchChange(event.target.value)}",
+				'"CampaignView__sessionsPaneList"',
+				"canReorderSessions ? (",
+				"<DraggableList",
+				"items={filteredSessions}",
+				"onReorder={onReorder}",
+				"onDrop={onReorderDrop}",
+				"keyExtractor={(session) => session.fileName}",
+				"renderItem={renderSessionCard}",
+				'"CampaignView__sessions"',
+				"filteredSessions.map(renderSessionCard)",
+				"filteredSessions.length === 0 && (",
+				'"muted CampaignView__emptySessions"',
+				'{lang.t("No sessions found.")}',
+			],
+			"Campaign private session-list presentation",
+		);
+		assert.doesNotMatch(
+			sessionsSectionSource,
+			/useState|useEffect|useMemo|useCampaignView|useCampaignPageRuntime|CampaignViewModel|ListCard|navigateToSession|filterCampaignSessions|handleDeleteSession|app\/model|shared\/model|<Modal\b/,
+		);
+	},
+);
+
+await run(
 	"Phase 177 isolates Encounter header-action presentation",
 	async () => {
 		const [
