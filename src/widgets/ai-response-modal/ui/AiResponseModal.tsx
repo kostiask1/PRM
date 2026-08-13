@@ -17,7 +17,6 @@ import { formatSourceLabel } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	buildCardHighlightFields,
-	buildNoteHighlightFields,
 	encounterMonsterStatsChanged,
 	getCardEntityType,
 	getEncounterParticipantEntries,
@@ -42,6 +41,7 @@ import AiResponseEncounterParticipantList from "./AiResponseEncounterParticipant
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
 import AiResponseGenericDiff from "./AiResponseGenericDiff.tsx";
 import AiResponseJsonDiff from "./AiResponseJsonDiff.tsx";
+import AiResponseNoteDiff from "./AiResponseNoteDiff.tsx";
 import AiResponseModalView from "./AiResponseModalView.tsx";
 import {
 	createAiResponseCreatureFieldEditing,
@@ -505,76 +505,17 @@ function AiResponseModal({
 		);
 	};
 
-	const renderSingleNoteDiff = (resource: PreviewResource, isNew: boolean) => (
-		<div className="AiAssistant__preview_card_stack">
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">
-					{isNew ? lang.t("New") : lang.t("Deleted")}
-				</div>
-				<div
-					className={classNames(
-						"AiAssistant__preview_note_surface",
-						isDraft && isNew && "is_editable",
-					)}
-				>
-					{renderNoteCard(
-						resource,
-						isNew ? resource.after : resource.before,
-						isDraft && isNew && !isResourceApplied(resource),
-						isNew ? ["title", "text"] : null,
-					)}
-				</div>
-			</div>
-		</div>
-	);
-
-	const renderChangedNoteDiff = (resource: PreviewResource) => {
-		const highlightFields = buildNoteHighlightFields(resource);
-		return (
-			<div className="AiAssistant__preview_card_columns">
-				<div className="AiAssistant__preview_card_frame">
-					<div className="AiAssistant__preview_column_title">{lang.t("Before")}</div>
-					<div className="AiAssistant__preview_note_surface is_before">
-						{renderNoteCard(resource, resource.before, false, highlightFields)}
-					</div>
-				</div>
-				<div className="AiAssistant__preview_card_frame">
-					<div className="AiAssistant__preview_column_title">{lang.t("After")}</div>
-					<div
-						className={classNames(
-							"AiAssistant__preview_note_surface is_after",
-							isDraft && "is_editable",
-						)}
-					>
-						{renderNoteCard(
-							resource,
-							resource.after,
-							isDraft && !isResourceApplied(resource),
-							highlightFields,
-						)}
-					</div>
-				</div>
-			</div>
-		);
-	};
-
 	const renderNoteCardDiff = (resource: PreviewResource) => {
 		resource = getEditedPreviewResource(resource);
-		const isNew = resource.before === null;
-		const isDeleted = resource.after === null;
 		return (
-			<div
+			<AiResponseNoteDiff
 				key={resource.id}
-				className={getPreviewResourceClassName(
-					resource,
-					"AiAssistant__preview_resource_notes",
-				)}
-			>
-				{renderPreviewResourceHeader(resource)}
-				{isNew || isDeleted
-					? renderSingleNoteDiff(resource, isNew)
-					: renderChangedNoteDiff(resource)}
-			</div>
+				resource={resource}
+				isDraft={isDraft}
+				getPreviewResourceClassName={getPreviewResourceClassName}
+				renderPreviewResourceHeader={renderPreviewResourceHeader}
+				renderNoteCard={renderNoteCard}
+			/>
 		);
 	};
 

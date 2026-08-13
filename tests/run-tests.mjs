@@ -3826,6 +3826,116 @@ await run(
 );
 
 await run(
+	"Phase 169 isolates AI response note-diff presentation",
+	async () => {
+		const [
+			responseModalSource,
+			noteDiffSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			responseModalSource,
+			/import AiResponseNoteDiff from "\.\/AiResponseNoteDiff\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			responseModalSource,
+			[
+				"const renderNoteCard = (",
+				"const renderNoteCardDiff = (resource: PreviewResource) => {",
+				"resource = getEditedPreviewResource(resource);",
+				"<AiResponseNoteDiff",
+				"key={resource.id}",
+				"resource={resource}",
+				"isDraft={isDraft}",
+				"getPreviewResourceClassName={getPreviewResourceClassName}",
+				"renderPreviewResourceHeader={renderPreviewResourceHeader}",
+				"renderNoteCard={renderNoteCard}",
+				"const renderNoteArrayDiff = (",
+				"getNoteDiffKey(note, index)",
+				"listIndex: listIndex >= 0 ? listIndex : null,",
+				"if (isNoteResource(resource)) return renderNoteCardDiff(resource);",
+			],
+			"AI response note-diff composition",
+		);
+		assert.doesNotMatch(
+			responseModalSource,
+			/renderSingleNoteDiff|renderChangedNoteDiff/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/AiResponseNoteDiff/,
+		);
+		assertSourceTokensInOrder(
+			noteDiffSource,
+			[
+				'import type { ReactNode } from "react";',
+				'import { classNames, lang } from "../../../shared/lib/index.js";',
+				"buildNoteHighlightFields,",
+				"isResourceApplied,",
+				"type RenderNoteCard = (",
+				"type GetPreviewResourceClassName = (",
+				"interface AiResponseNoteDiffProps {",
+				"getPreviewResourceClassName: GetPreviewResourceClassName;",
+				"isDraft: boolean;",
+				"renderNoteCard: RenderNoteCard;",
+				"renderPreviewResourceHeader: (resource: PreviewResource) => ReactNode;",
+				"resource: PreviewResource;",
+				"function getSingleNoteSurfaceClassName(",
+				'"AiAssistant__preview_note_surface"',
+				'isDraft && isNew && "is_editable"',
+				"function isSingleNoteEditable(",
+				"isDraft && isNew && !isResourceApplied(resource)",
+				"function getSingleNoteHighlightFields(",
+				'return isNew ? ["title", "text"] : null;',
+				"function AiResponseSingleNoteDiff({",
+				'{isNew ? lang.t("New") : lang.t("Deleted")}',
+				"getSingleNoteSurfaceClassName(isDraft, isNew)",
+				"isNew ? resource.after : resource.before",
+				"isSingleNoteEditable(isDraft, isNew, resource)",
+				"getSingleNoteHighlightFields(isNew)",
+				"function AiResponseChangedNoteDiff({",
+				"const highlightFields = buildNoteHighlightFields(resource);",
+				'{lang.t("Before")}',
+				"renderNoteCard(resource, resource.before, false, highlightFields)",
+				'{lang.t("After")}',
+				'"AiAssistant__preview_note_surface is_after"',
+				'isDraft && "is_editable"',
+				"resource.after,",
+				"isDraft && !isResourceApplied(resource)",
+				"highlightFields,",
+				"export default function AiResponseNoteDiff({",
+				"const isNew = resource.before === null;",
+				"const isDeleted = resource.after === null;",
+				'"AiAssistant__preview_resource_notes"',
+				"{renderPreviewResourceHeader(resource)}",
+				"isNew || isDeleted ? (",
+				"<AiResponseSingleNoteDiff",
+				"isNew={isNew}",
+				"<AiResponseChangedNoteDiff",
+			],
+			"AI response note-diff presentation",
+		);
+	},
+);
+
+await run(
 	"Phase 167 isolates Bestiary header action presentation",
 	async () => {
 		const [

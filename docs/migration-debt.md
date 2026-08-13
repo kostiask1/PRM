@@ -21,6 +21,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 166 | Completed widget-local consolidation | Moved AI Response Modal encounter participant-list presentation into private `widgets/ai-response-modal/ui/AiResponseEncounterParticipantList.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, encounter-side panels, encounter MonsterStatBlock slots, encounter editing/resource composition, preview tree, and editor placement. | Keep the renderer private; preserve entry/map derivation, empty state, participant keys, ordered classes, names, and both metadata evaluations without widening widget public entries. | 452/452 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 167 | Completed widget-local consolidation | Moved Bestiary Browser header-action presentation/action dispatch, menu-local state, and refs into private `widgets/bestiary-browser/ui/BestiaryHeaderActions.tsx`. `BestiaryBrowser` retains custom-monster import parsing/persistence/messages, JSON export, undo/redo operations and stacks, and `BestiaryContent` composition. | Keep the component private; preserve the always-mounted menu, hidden `.json` input, functional toggle, class/title/icon/copy, close-before-action order, and disabled capability flags without widening widget public entries. | 453/453 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 168 | Completed shared UI consolidation | Extracted duplicate open-only header-action pointer dismissal from Campaign Page, Session Page, and private Bestiary Header Actions to public `shared/ui/usePointerDownOutsideDismissal.ts`; each consumer retains state, ref, menu presentation, and commands. | Keep the hook limited to conditional `pointerdown` cleanup/root containment; retain guards/toggle/close-before-action order; do not alter Encounter/Dice behavior, Select/MultiSelect portal lifecycle, or widen Bestiary API. | 454/454 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 169 | Completed widget-local consolidation | Moved AI Response Modal note-diff presentation into private `widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, injected slots, `AiResponseNoteCard` factory, `renderNoteCard` draft callback, twice-resolved resource flow, nested note-array identity synthesis, preview classification, and editor placement. | Keep the renderer private; preserve new/deleted/changed snapshot routing, labels/classes, draft/apply eligibility, note highlight construction, resource key/header, and callback argument order without widening widget public entries. | 455/455 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -172,6 +173,18 @@ and outside/non-Node close. The expanded suite passes 454/454 tests;
 architecture, performance, and Ukrainian encoding checks pass. `MD-R02`
 remains closed; `MD-R04` remains verification-blocked until the declared local
 lint/typecheck tooling is available.
+
+Phase 169 moves AI Response Modal note-diff presentation into private
+`ui/AiResponseNoteDiff.tsx`. The raw renderer retains configured
+factory/composition, state/controller/guard order, injected slots, the
+`AiResponseNoteCard` factory and draft-update callback, twice-resolved resource
+flow, nested note-array identity synthesis, preview classification, and editor
+placement. The private renderer preserves new/deleted/changed routing,
+labels/classes, draft/apply eligibility, note highlights, resource key/header,
+and callback order. The expanded suite passes 455/455 tests; architecture,
+performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
+`MD-R04` remains verification-blocked until the declared local lint/typecheck
+tooling is available.
 
 ## Closed recovery items
 

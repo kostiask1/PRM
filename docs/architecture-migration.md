@@ -730,6 +730,8 @@ Next:
 - Phase 167 keeps the always-mounted menu structure, hidden `.json` input, functional toggle, classes/titles/icons/copy, close-before-action dispatch, and disabled capability flags widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 453/453 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 168 by moving the behaviorally identical open-gated header `pointerdown` dismissal from Campaign Page, Session Page, and private Bestiary Header Actions to public `shared/ui/usePointerDownOutsideDismissal.ts`. Each consumer retains its own state, root ref, menu presentation, and commands.
 - Phase 168 preserves the `Node` containment guard, inside-root no-op, outside/non-Node close, listener cleanup, functional toggles, and close-before-action behavior. Encounter and Dice retain their distinct dismissal policies, while Select/MultiSelect keep their existing `mousedown` portal lifecycle. One added static regression brings the full suite to 454/454 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 169 by moving AI Response Modal note-diff presentation from `AiResponseModal.tsx` to private `ui/AiResponseNoteDiff.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, injected card/editor slots, `AiResponseNoteCard` factory, `renderNoteCard` draft-update callback, twice-resolved resource flow, nested note-array ID/label/list-index synthesis, preview classification, and the `AiResponseModalView` boundary.
+- Phase 169 keeps single new/deleted and changed Before/After routing, snapshot selection, note-surface classes, localized labels, draft/apply edit eligibility, highlight construction, outer resource key/header, and callback argument order widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 455/455 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -859,7 +861,9 @@ that widget at 452/452 tests. Phase 167 isolates Bestiary Browser header-action
 presentation and menu-local lifecycle in its private widget UI at 453/453
 tests. Phase 168 centralizes the identical Campaign, Session, and Bestiary
 header pointer-dismissal lifecycle in shared UI while retaining local menus and
-commands at 454/454 tests.
+commands at 454/454 tests. Phase 169 isolates AI Response Modal note-diff
+presentation in private widget UI while retaining raw resource, draft, and
+editor composition at 455/455 tests.
 
 ### Provenance and transfer rule
 
@@ -1237,7 +1241,8 @@ Status: **In progress**
   tests; Phase 160 passes 446/446 tests; Phase 161 passes 447/447 tests; Phase
   162 passes 448/448 tests; Phase 163 passes 449/449 tests; Phase 164 passes
   450/450 tests; Phase 165 passes 451/451 tests; Phase 166 passes 452/452
-  tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests.
+  tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests; Phase
+  169 passes 455/455 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1967,6 +1972,27 @@ Phase 168 is shared lifecycle reuse only, not shared header/menu presentation
 or a new Bestiary workflow. The full `npm test` gate passes 454/454 tests;
 architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
 remains closed and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R39 / Phase 169 - Private AI response note-diff presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move AI Response Modal note-diff presentation into private
+  `widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx`.
+- [x] Keep the configured raw renderer, state/controller/guard order, injected
+  card/editor slots, `AiResponseNoteCard` factory, `renderNoteCard` draft
+  callback, twice-resolved resource flow, nested note-array synthesis, preview
+  classification, and editor placement in `AiResponseModal`.
+- [x] Preserve single new/deleted and changed Before/After routing, snapshot
+  selection, note-surface classes, localized labels, draft/apply eligibility,
+  highlight construction, resource key/header, and callback argument order.
+- [x] Keep the component outside widget public runtime/type/model entries and
+  retain its internal-only import from the raw modal.
+
+Phase 169 is private note-diff presentation only, not a new public AI Response
+workflow. The full `npm test` gate passes 455/455 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 
