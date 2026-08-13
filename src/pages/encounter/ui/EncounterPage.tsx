@@ -56,6 +56,7 @@ import {
 	createCampaignEntity,
 } from "../../../features/campaign-entity/index.js";
 import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";
+import EncounterHeaderActions from "./components/EncounterHeaderActions.tsx";
 
 const EncounterRulesReferenceContent =
 	createRulesReferenceModalContentComponent({
@@ -576,55 +577,6 @@ function EncounterHeaderIdentity({
 			</Tooltip>
 			<EncounterMetrics {...{ view, averageTooltip, maxTooltip, weightedTooltip }} />
 		</div>
-	);
-}
-
-function EncounterHeaderActions(props: Omit<EncounterHeaderProps, "averageTooltip" | "maxTooltip" | "weightedTooltip">) {
-	const { view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns } = props;
-	return (
-		<div ref={actionsRef as RefObject<HTMLDivElement>} className={classNames("EncounterView__headerActions", { is_open: isActionsOpen })}>
-			<Tooltip content={metricsTooltip} className="EncounterView__metricsTooltipTrigger">
-				<Button variant="ghost" size={Button.SIZES.SMALL} icon="swords" aria-label={lang.t("Combat encounters")}>{view.encounter?.monsters.length || 0}</Button>
-			</Tooltip>
-			<Button variant="ghost" size={Button.SIZES.SMALL} icon="menu" className="EncounterView__headerActionsToggle" onClick={onToggleActions} title={lang.t("Encounter actions")} />
-			<div className="EncounterView__headerActionsMenu">
-				<EncounterViewModeControls {...{ displayMode, displayedMonsterCount, onDisplayMode }} />
-				<EncounterGridColumnControls {...{ displayMode, gridColumns, onGridColumns }} />
-				<EncounterHistoryControls view={view} />
-				<input type="file" ref={view.fileInputRef as RefObject<HTMLInputElement>} style={{ display: "none" }} accept=".json" onChange={view.handleFileChange} />
-				<Button variant="ghost" size={Button.SIZES.SMALL} icon="import" onClick={() => view.fileInputRef.current?.click()} title={lang.t("Import encounter")} />
-				<Button variant="ghost" size={Button.SIZES.SMALL} icon="export" onClick={view.handleExport} title={lang.t("Export encounter")} />
-			</div>
-		</div>
-	);
-}
-
-function EncounterViewModeControls({ displayMode, displayedMonsterCount, onDisplayMode }: Pick<EncounterHeaderProps, "displayMode" | "displayedMonsterCount" | "onDisplayMode">) {
-	return (
-		<div className="EncounterView__viewModeSwitch">
-			<Button variant={displayMode === "single" ? "primary" : "ghost"} size={Button.SIZES.SMALL} icon="list" onClick={() => onDisplayMode("single")} title={lang.t("Preview")} />
-			<Button variant={displayMode === "grid" ? "primary" : "ghost"} size={Button.SIZES.SMALL} icon="layers" onClick={() => onDisplayMode("grid")} disabled={displayedMonsterCount === 1} title={lang.t("All")} />
-		</div>
-	);
-}
-
-function EncounterGridColumnControls({ displayMode, gridColumns, onGridColumns }: Pick<EncounterHeaderProps, "displayMode" | "gridColumns" | "onGridColumns">) {
-	if (displayMode !== "grid") return null;
-	return (
-		<div className="EncounterView__gridColumnsSwitch" aria-label={lang.t("Grid columns")}>
-			{[1, 2, 3, 4].map((columns) => (
-				<Button key={columns} variant={gridColumns === columns ? "primary" : "ghost"} size={Button.SIZES.SMALL} onClick={() => onGridColumns(columns)} title={lang.t("{count} columns", { count: columns })}>{columns}</Button>
-			))}
-		</div>
-	);
-}
-
-function EncounterHistoryControls({ view }: Pick<EncounterHeaderProps, "view">) {
-	return (
-		<>
-			<Button variant="ghost" size={Button.SIZES.SMALL} icon="undo" onClick={view.handleUndo} disabled={view.undoStack.length === 0 || view.isSaving} title={lang.t("Undo (Ctrl+Z)")} />
-			<Button variant="ghost" size={Button.SIZES.SMALL} icon="redo" onClick={view.handleRedo} disabled={view.redoStack.length === 0 || view.isSaving} title={lang.t("Redo (Ctrl+Y)")} />
-		</>
 	);
 }
 

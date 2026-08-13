@@ -4388,6 +4388,138 @@ await run(
 );
 
 await run(
+	"Phase 177 isolates Encounter header-action presentation",
+	async () => {
+		const [
+			encounterSource,
+			headerActionsSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		] = await Promise.all([
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/encounter/ui/components/EncounterHeaderActions.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/encounter/index.js", "utf8"),
+			fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			encounterSource,
+			/import EncounterHeaderActions from "\.\/components\/EncounterHeaderActions\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			encounterSource,
+			[
+				"function EncounterHeader({",
+				"<EncounterHeaderIdentity",
+				"<EncounterHeaderActions {...{ view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns }} />",
+				"function useEncounterHeaderDismissal(",
+				"if (!isOpen) return undefined;",
+				"if (!actionsRef.current?.contains(event.target as Node)) onClose();",
+				'document.addEventListener("pointerdown", handlePointerDown);',
+				'return () => document.removeEventListener("pointerdown", handlePointerDown);',
+				"function EncounterView() {",
+				"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
+				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
+				"useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));",
+				"const updateEncounterViewMode = (mode: EncounterDisplayMode) => {",
+				'const nextMode = mode === "grid" ? "grid" : "single";',
+				"patchUiSettings({ encounterViewMode: nextMode });",
+				"api.updateSettings({ encounterViewMode: nextMode }).catch((error) => {",
+				"const updateEncounterGridColumns = (columns: number) => {",
+				"const nextColumns = Math.min(4, Math.max(1, Number(columns) || 2));",
+				"patchUiSettings({ encounterGridColumns: nextColumns });",
+				"api.updateSettings({ encounterGridColumns: nextColumns }).catch((error) => {",
+				"<EncounterHeader",
+				"isActionsOpen={isHeaderActionsOpen}",
+				"actionsRef={headerActionsRef}",
+				"onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}",
+				"onDisplayMode={updateEncounterViewMode}",
+				"onGridColumns={updateEncounterGridColumns}",
+			],
+			"Encounter header page-owned lifecycle and settings commands",
+		);
+		assert.doesNotMatch(
+			encounterSource,
+			/function EncounterHeaderActions|function EncounterViewModeControls|function EncounterGridColumnControls|function EncounterHistoryControls|EncounterView__headerActions(?:Toggle|Menu)?/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/EncounterHeaderActions/,
+		);
+		assertSourceTokensInOrder(
+			headerActionsSource,
+			[
+				'import type { ReactNode, RefObject } from "react";',
+				'import type { EncounterViewModel } from "../../model/contracts.ts";',
+				'import { classNames, lang } from "../../../../shared/lib/index.js";',
+				'import { Button, Tooltip } from "../../../../shared/ui/index.js";',
+				'type EncounterDisplayMode = "grid" | "single";',
+				"type EncounterHeaderActionsView = Pick<",
+				'| "encounter"',
+				'| "undoStack"',
+				'| "redoStack"',
+				'| "isSaving"',
+				'| "fileInputRef"',
+				'| "handleFileChange"',
+				'| "handleExport"',
+				'| "handleUndo"',
+				'| "handleRedo"',
+				"interface EncounterHeaderActionsProps {",
+				"actionsRef: RefObject<HTMLDivElement | null>;",
+				"metricsTooltip: ReactNode;",
+				"view: EncounterHeaderActionsView;",
+				"export default function EncounterHeaderActions({",
+				"ref={actionsRef as RefObject<HTMLDivElement>}",
+				'"EncounterView__headerActions"',
+				"is_open: isActionsOpen",
+				'"EncounterView__metricsTooltipTrigger"',
+				'icon="swords"',
+				'aria-label={lang.t("Combat encounters")}',
+				"{view.encounter?.monsters.length || 0}",
+				'icon="menu"',
+				'"EncounterView__headerActionsToggle"',
+				"onClick={onToggleActions}",
+				'"EncounterView__headerActionsMenu"',
+				"<EncounterViewModeControls",
+				"<EncounterGridColumnControls",
+				"<EncounterHistoryControls",
+				"<input",
+				'type="file"',
+				"ref={view.fileInputRef as RefObject<HTMLInputElement>}",
+				'style={{ display: "none" }}',
+				'accept=".json"',
+				"onChange={view.handleFileChange}",
+				'icon="import"',
+				"onClick={() => view.fileInputRef.current?.click()}",
+				'icon="export"',
+				"onClick={view.handleExport}",
+				"function EncounterViewModeControls({",
+				'variant={displayMode === "single" ? "primary" : "ghost"}',
+				'onClick={() => onDisplayMode("single")}',
+				'variant={displayMode === "grid" ? "primary" : "ghost"}',
+				'onClick={() => onDisplayMode("grid")}',
+				"disabled={displayedMonsterCount === 1}",
+				"function EncounterGridColumnControls({",
+				'if (displayMode !== "grid") return null;',
+				'"EncounterView__gridColumnsSwitch"',
+				"[1, 2, 3, 4].map((columns) => (",
+				"function EncounterHistoryControls({",
+				"disabled={view.undoStack.length === 0 || view.isSaving}",
+				"disabled={view.redoStack.length === 0 || view.isSaving}",
+			],
+			"Encounter private header-action presentation",
+		);
+		assert.doesNotMatch(
+			headerActionsSource,
+			/useState|useRef|useEffect|useEncounterHeaderDismissal|usePointerDownOutsideDismissal|useEncounterPageRuntime|patchUiSettings|api\.updateSettings|settingsApi|setIsHeaderActionsOpen|closeActions|<Modal\b/,
+		);
+	},
+);
+
+await run(
 	"Phase 176 isolates Session scene-note presentation",
 	async () => {
 		const [

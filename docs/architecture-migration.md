@@ -746,6 +746,8 @@ Next:
 - Phase 175 preserves the exact preview header root/first-label-span/nested-actions/state-span hierarchy, classes, and CSS selector order in private widget UI. One added static regression brings the full suite to 461/461 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 176 by moving Session Page scene-note presentation from `SessionPage.tsx` to private `ui/components/SceneNotes.tsx`. The raw page retains its module-scoped `SessionNoteCard` factory and passes a narrow note-render slot; `SceneCard` retains every scene note mutation and surrounding card composition.
 - Phase 176 preserves one scene-notes presentation calculation, bulk-collapse plan/reorder order, virtual-note and isolated drag-control behavior, the root/header/list DOM/classes, note order/last flag, and `enableHistory={false}` in private page UI. One added static regression brings the full suite to 462/462 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 177 by moving Encounter Page header-action presentation from `EncounterPage.tsx` to private `ui/components/EncounterHeaderActions.tsx`. The raw page retains state/ref ownership, the distinct Encounter pointer-dismissal lifecycle, the functional toggle, and normalized settings persistence; `EncounterHeader`/identity/metrics remain raw.
+- Phase 177 preserves the always-mounted action root/classes, independent encounter-count read, metrics/menu/control/history/input/import/export order, `.json` input/ref, display/grid gates, direct action callbacks, and saving-disabled undo/redo behavior. One added static regression brings the full suite to 463/463 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -898,6 +900,9 @@ tests.
 Phase 176 isolates Session Page scene-note presentation in private page UI while
 retaining its configured note-card identity, raw scene mutation bindings, and
 virtual-note/drag behavior at 462/462 tests.
+Phase 177 isolates Encounter Page header-action presentation in private page UI
+while retaining raw dismissal, state/ref, and settings-persistence ownership at
+463/463 tests.
 
 ### Provenance and transfer rule
 
@@ -1279,7 +1284,7 @@ Status: **In progress**
   169 passes 455/455 tests; Phase 170 passes 456/456 tests; Phase 171 passes
   457/457 tests; Phase 172 passes 458/458 tests; Phase 173 passes 459/459
   tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests; Phase
-  176 passes 462/462 tests.
+  176 passes 462/462 tests; Phase 177 passes 463/463 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2179,6 +2184,27 @@ Phase 176 is page-local scene-note presentation only, not a new public Session
 workflow. The full `npm test` gate passes 462/462 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R47 / Phase 177 - Private Encounter header-action presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move the Encounter Page header-action subtree into private
+  `pages/encounter/ui/components/EncounterHeaderActions.tsx`.
+- [x] Keep `EncounterView` state/ref ownership, its distinct pointer-dismissal
+  lifecycle, functional menu toggle, and UI-settings patch-then-API commands
+  raw; keep `EncounterHeader`, identity, and metrics raw.
+- [x] Pass only a narrow encounter-view projection plus controlled menu/display
+  inputs; preserve the action-root/classes, independent monster count, menu
+  order, file input/ref, grid/display gates, direct actions, and undo/redo
+  saving guards.
+- [x] Keep the component outside public page runtime/type entries without a
+  runtime, API, store, or workflow dependency.
+
+Phase 177 is page-local header presentation only, not a new Encounter workflow.
+The full `npm test` gate passes 463/463 tests; architecture, performance, and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 
