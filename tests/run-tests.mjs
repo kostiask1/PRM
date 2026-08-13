@@ -3897,16 +3897,10 @@ await run(
 				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
 				"const customImportInputRef = useRef<HTMLInputElement>(null);",
 				"const headerActionsRef = useRef<HTMLDivElement>(null);",
-				"useEffect(() => {",
-				"if (!isHeaderActionsOpen) return undefined;",
-				"const handlePointerDown = (event: PointerEvent) => {",
-				"event.target instanceof Node",
-				"headerActionsRef.current?.contains(event.target)",
-				"setIsHeaderActionsOpen(false);",
-				'document.addEventListener("pointerdown", handlePointerDown);',
-				"return () => {",
-				'document.removeEventListener("pointerdown", handlePointerDown);',
-				"}, [isHeaderActionsOpen]);",
+				"usePointerDownOutsideDismissal({",
+				"containerRef: headerActionsRef,",
+				"isOpen: isHeaderActionsOpen,",
+				"setIsOpen: setIsHeaderActionsOpen,",
 				"const closeActions = () => {",
 				"const toggleActions = () => {",
 				"setIsHeaderActionsOpen((value) => !value);",
@@ -3962,6 +3956,108 @@ await run(
 				'{lang.t("Redo (Ctrl+Y)")}',
 			],
 			"Bestiary header-action presentation",
+		);
+	},
+);
+
+await run(
+	"Phase 168 centralizes shared header pointer dismissal",
+	async () => {
+		const [
+			dismissalSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			campaignSource,
+			sessionSource,
+			headerActionsSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/shared/ui/usePointerDownOutsideDismissal.ts",
+				"utf8",
+			),
+			fs.readFile("src/shared/ui/index.js", "utf8"),
+			fs.readFile("src/shared/ui/index.d.ts", "utf8"),
+			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryHeaderActions.tsx",
+				"utf8",
+			),
+		]);
+
+		assert.match(
+			runtimeEntrySource,
+			/export \{ usePointerDownOutsideDismissal \} from "\.\/usePointerDownOutsideDismissal\.ts";/,
+		);
+		assert.match(
+			typeEntrySource,
+			/export \{\s*usePointerDownOutsideDismissal,\s*\} from "\.\/usePointerDownOutsideDismissal\.ts";/,
+		);
+		assertSourceTokensInOrder(
+			dismissalSource,
+			[
+				"import {",
+				"useEffect,",
+				"type Dispatch,",
+				"type RefObject,",
+				"type SetStateAction,",
+				"interface PointerDownOutsideDismissalOptions {",
+				"containerRef: RefObject<HTMLElement | null>;",
+				"isOpen: boolean;",
+				"setIsOpen: Dispatch<SetStateAction<boolean>>;",
+				"export function usePointerDownOutsideDismissal({",
+				"useEffect(() => {",
+				"if (!isOpen) return undefined;",
+				"const handlePointerDown = (event: PointerEvent) => {",
+				"event.target instanceof Node",
+				"containerRef.current?.contains(event.target)",
+				"setIsOpen(false);",
+				'document.addEventListener("pointerdown", handlePointerDown);',
+				"return () => {",
+				'document.removeEventListener("pointerdown", handlePointerDown);',
+				"}, [containerRef, isOpen, setIsOpen]);",
+			],
+			"shared header pointer-dismissal lifecycle",
+		);
+		for (const [name, source] of [
+			["Campaign Page", campaignSource],
+			["Session Page", sessionSource],
+			["Bestiary header actions", headerActionsSource],
+		]) {
+			assert.match(
+				source,
+				/usePointerDownOutsideDismissal/,
+				`${name} uses the shared pointer-dismissal lifecycle`,
+			);
+			assert.doesNotMatch(
+				source,
+				/document\.addEventListener\("pointerdown"/,
+				`${name} does not duplicate the pointer listener`,
+			);
+		}
+		assert.doesNotMatch(
+			sessionSource,
+			/useSessionHeaderActionsDismissal/,
+		);
+		assertSourceTokensInOrder(
+			campaignSource,
+			[
+				"usePointerDownOutsideDismissal({",
+				"containerRef: headerActionsRef,",
+				"isOpen: isHeaderActionsOpen,",
+				"setIsOpen: setIsHeaderActionsOpen,",
+			],
+			"Campaign header pointer-dismissal composition",
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"usePointerDownOutsideDismissal({",
+				"containerRef: headerActionsRef,",
+				"isOpen: isHeaderActionsOpen,",
+				"setIsOpen: setIsHeaderActionsOpen,",
+			],
+			"Session header pointer-dismissal composition",
 		);
 	},
 );

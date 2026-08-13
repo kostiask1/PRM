@@ -8,7 +8,12 @@ import {
 	type RefObject,
 	type SetStateAction,
 } from "react";
-import { Button, Panel, Tooltip } from "../../../shared/ui/index.js";
+import {
+	Button,
+	Panel,
+	Tooltip,
+	usePointerDownOutsideDismissal,
+} from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { DraggableList, ListCard } from "../../../shared/ui/index.js";
 import {
@@ -567,23 +572,11 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		};
 	}, [view]);
 
-	useEffect(() => {
-		if (!isHeaderActionsOpen) return undefined;
-
-		const handlePointerDown = (event: PointerEvent) => {
-			if (
-				event.target instanceof Node &&
-				headerActionsRef.current?.contains(event.target)
-			)
-				return;
-			setIsHeaderActionsOpen(false);
-		};
-
-		document.addEventListener("pointerdown", handlePointerDown);
-		return () => {
-			document.removeEventListener("pointerdown", handlePointerDown);
-		};
-	}, [isHeaderActionsOpen]);
+	usePointerDownOutsideDismissal({
+		containerRef: headerActionsRef,
+		isOpen: isHeaderActionsOpen,
+		setIsOpen: setIsHeaderActionsOpen,
+	});
 
 	const handleNotesViewModeChange = (mode: CampaignNotesViewMode) => {
 		const plan = getCampaignNotesViewModePlan(mode, isNotesCollapsed);

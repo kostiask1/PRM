@@ -726,8 +726,10 @@ Next:
 - Phase 165 keeps new/deleted/changed routing, snapshot selection, localized labels, card-surface classes, draft/apply edit eligibility, highlight construction, callback argument order, and the outer resource wrapper/header/key widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 451/451 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 166 by moving AI Response Modal encounter participant-list presentation from `AiResponseModal.tsx` to private `ui/AiResponseEncounterParticipantList.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, encounter-side panels, encounter MonsterStatBlock slots, encounter editing/resource composition, preview tree, and the `AiResponseModalView` boundary.
 - Phase 166 keeps before/after entry derivation and maps, empty-state copy, participant list keys, ordered before/after/mutated class routing, participant-name rendering, and both metadata evaluations widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 452/452 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
-- Completed Phase 167 by moving Bestiary Browser header-action presentation/action dispatch, menu-local state, DOM refs, and pointer-close lifecycle from `BestiaryBrowser.tsx` to private `ui/BestiaryHeaderActions.tsx`. The raw browser retains custom-monster import parsing/persistence/messages, JSON export, undo/redo operations and stacks, and its existing `BestiaryContent` header-actions composition.
-- Phase 167 keeps the always-mounted menu structure, hidden `.json` input, functional toggle, pointer guard/listener cleanup, classes/titles/icons/copy, close-before-action dispatch, and disabled capability flags widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 453/453 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 167 by moving Bestiary Browser header-action presentation/action dispatch, menu-local state, and DOM refs from `BestiaryBrowser.tsx` to private `ui/BestiaryHeaderActions.tsx`. The raw browser retains custom-monster import parsing/persistence/messages, JSON export, undo/redo operations and stacks, and its existing `BestiaryContent` header-actions composition.
+- Phase 167 keeps the always-mounted menu structure, hidden `.json` input, functional toggle, classes/titles/icons/copy, close-before-action dispatch, and disabled capability flags widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 453/453 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 168 by moving the behaviorally identical open-gated header `pointerdown` dismissal from Campaign Page, Session Page, and private Bestiary Header Actions to public `shared/ui/usePointerDownOutsideDismissal.ts`. Each consumer retains its own state, root ref, menu presentation, and commands.
+- Phase 168 preserves the `Node` containment guard, inside-root no-op, outside/non-Node close, listener cleanup, functional toggles, and close-before-action behavior. Encounter and Dice retain their distinct dismissal policies, while Select/MultiSelect keep their existing `mousedown` portal lifecycle. One added static regression brings the full suite to 454/454 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -855,7 +857,9 @@ tests. Phase 164 isolates generic snapshot-diff presentation in that widget at
 451/451 tests. Phase 166 isolates encounter participant-list presentation in
 that widget at 452/452 tests. Phase 167 isolates Bestiary Browser header-action
 presentation and menu-local lifecycle in its private widget UI at 453/453
-tests.
+tests. Phase 168 centralizes the identical Campaign, Session, and Bestiary
+header pointer-dismissal lifecycle in shared UI while retaining local menus and
+commands at 454/454 tests.
 
 ### Provenance and transfer rule
 
@@ -1233,7 +1237,7 @@ Status: **In progress**
   tests; Phase 160 passes 446/446 tests; Phase 161 passes 447/447 tests; Phase
   162 passes 448/448 tests; Phase 163 passes 449/449 tests; Phase 164 passes
   450/450 tests; Phase 165 passes 451/451 tests; Phase 166 passes 452/452
-  tests; Phase 167 passes 453/453 tests.
+  tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1940,6 +1944,27 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 167 is private presentation/action-dispatch ownership only, not a new
 public Bestiary workflow. The full `npm test` gate passes 453/453 tests;
+architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
+remains closed and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R38 / Phase 168 - Shared header pointer-dismissal lifecycle
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Extract the identical open-gated document `pointerdown` dismissal into
+  public `shared/ui/usePointerDownOutsideDismissal.ts`.
+- [x] Migrate Campaign Page, Session Page, and private Bestiary Header Actions
+  while keeping each consumer's state, root ref, menu presentation, and
+  commands local.
+- [x] Preserve the `Node` containment guard, inside-root no-op,
+  outside/non-Node close, listener cleanup, functional toggles, and
+  close-before-action behavior.
+- [x] Export only the hook through the shared UI JavaScript/type barrels; do
+  not change the distinct Encounter/Dice dismissal policies or the Select/
+  MultiSelect `mousedown` portal lifecycle.
+
+Phase 168 is shared lifecycle reuse only, not shared header/menu presentation
+or a new Bestiary workflow. The full `npm test` gate passes 454/454 tests;
 architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
 remains closed and `MD-R04` remains open for complete lint/typecheck.
 

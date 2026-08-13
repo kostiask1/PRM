@@ -1,12 +1,14 @@
 import {
-	useEffect,
 	useRef,
 	useState,
 	type ChangeEvent,
 } from "react";
 
 import { classNames, lang } from "../../../shared/lib/index.js";
-import { Button } from "../../../shared/ui/index.js";
+import {
+	Button,
+	usePointerDownOutsideDismissal,
+} from "../../../shared/ui/index.js";
 
 interface BestiaryHeaderActionsProps {
 	canExport: boolean;
@@ -31,22 +33,11 @@ export default function BestiaryHeaderActions({
 	const customImportInputRef = useRef<HTMLInputElement>(null);
 	const headerActionsRef = useRef<HTMLDivElement>(null);
 
-	useEffect(() => {
-		if (!isHeaderActionsOpen) return undefined;
-
-		const handlePointerDown = (event: PointerEvent) => {
-			if (
-				event.target instanceof Node &&
-				headerActionsRef.current?.contains(event.target)
-			) return;
-			setIsHeaderActionsOpen(false);
-		};
-
-		document.addEventListener("pointerdown", handlePointerDown);
-		return () => {
-			document.removeEventListener("pointerdown", handlePointerDown);
-		};
-	}, [isHeaderActionsOpen]);
+	usePointerDownOutsideDismissal({
+		containerRef: headerActionsRef,
+		isOpen: isHeaderActionsOpen,
+		setIsOpen: setIsHeaderActionsOpen,
+	});
 
 	const closeActions = () => {
 		setIsHeaderActionsOpen(false);

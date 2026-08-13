@@ -13,3 +13,4 @@ export { default as TextInput } from "./TextInput.tsx";
 export { highlightText } from "./SearchHighlight.tsx";
 export { default as Select } from "./Select.tsx";
 export { default as Tooltip } from "./Tooltip.tsx";
+export { usePointerDownOutsideDismissal } from "./usePointerDownOutsideDismissal.ts";

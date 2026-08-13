@@ -16,6 +16,7 @@ import {
 	Modal,
 	Panel,
 	Tooltip,
+	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import {
@@ -844,24 +845,6 @@ function useSessionHashNavigation({
 	]);
 }
 
-function useSessionHeaderActionsDismissal(
-	isOpen: boolean,
-	actionsRef: RefObject<HTMLDivElement>,
-	setIsOpen: (value: boolean) => void,
-): void {
-	useEffect(() => {
-		if (!isOpen) return undefined;
-		const handlePointerDown = (event: PointerEvent) => {
-			if (event.target instanceof Node && actionsRef.current?.contains(event.target)) {
-				return;
-			}
-			setIsOpen(false);
-		};
-		document.addEventListener("pointerdown", handlePointerDown);
-		return () => document.removeEventListener("pointerdown", handlePointerDown);
-	}, [actionsRef, isOpen, setIsOpen]);
-}
-
 function SessionView() {
 	const { activeSessionFileName: sessionId, navigateToEncounter } =
 		useSessionPageRuntime();
@@ -912,11 +895,11 @@ function SessionView() {
 		scenes,
 		onToggleSectionCollapse: handleToggleSectionCollapse,
 	});
-	useSessionHeaderActionsDismissal(
-		isHeaderActionsOpen,
-		headerActionsRef,
-		setIsHeaderActionsOpen,
-	);
+	usePointerDownOutsideDismissal({
+		containerRef: headerActionsRef,
+		isOpen: isHeaderActionsOpen,
+		setIsOpen: setIsHeaderActionsOpen,
+	});
 
 	if (!session) return null;
 

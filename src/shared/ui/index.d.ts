@@ -38,3 +38,6 @@ export {
 	default as Select,
 	type SelectProps,
 } from "./Select.tsx";
+export {
+	usePointerDownOutsideDismissal,
+} from "./usePointerDownOutsideDismissal.ts";
