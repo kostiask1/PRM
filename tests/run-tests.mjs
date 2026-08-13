@@ -3382,6 +3382,97 @@ await run(
 );
 
 await run(
+	"Phase 162 isolates AI response creature-field draft editing",
+	async () => {
+		const [
+			responseModalSource,
+			creatureFieldEditingSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/aiResponseCreatureFieldEditing.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			responseModalSource,
+			/import \{\s*createAiResponseCreatureFieldEditing,\s*type CreatureEditState,\s*\} from "\.\/aiResponseCreatureFieldEditing\.ts";/,
+		);
+		assertSourceTokensInOrder(
+			responseModalSource,
+			[
+				"useState<CreatureEditState | null>(null)",
+				"useAiResponseDraftController({",
+				"if (!generatedPrompt) return null;",
+				"createAiResponseCreatureFieldEditing({",
+				"fieldEditingCreature,",
+				"setFieldEditingCreature,",
+				"isDraft,",
+				"resolvePreviewResource: getEditedPreviewResource,",
+				"updateDraftResourceAfter,",
+				"toBestiaryMonster,",
+				"<AiResponseModalView",
+				"<MonsterEditorModal",
+			],
+			"AI response modal state, draft-controller, field-edit, and view composition",
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/CreatureFieldEditing|CreatureEditState|CreatureEditOptions/,
+		);
+
+		assertSourceTokensInOrder(
+			creatureFieldEditingSource,
+			[
+				"function preserveCreatureIdentity(",
+				"const next = { ...parsed };",
+				'["id", "instanceId", "participantType"].forEach((key) => {',
+				"if (!hasOwn(next, key) && original?.[key] !== undefined)",
+				"next[key] = original[key];",
+				"function replaceEncounterParticipant(",
+				"const nextEncounter = cloneSnapshot(",
+				"isObjectSnapshot(encounter) ? encounter : {},",
+				"nextEncounter.monsters = getEncounterParticipantEntries(",
+				"entry.key === participantKey ? nextMonster : entry.participant,",
+				"function getSavedCreatureFieldEdit(",
+				"if (!fieldEditingCreature?.resource || !isObjectSnapshot(draftMonster))",
+				"nextMonster: preserveCreatureIdentity(fieldEditingCreature.monster, draftMonster),",
+				"function updateSavedCreatureFieldEdit({",
+				'fieldEditingCreature.mode === "encounter-participant" &&',
+				"const editedResource = resolvePreviewResource(fieldEditingCreature.resource);",
+				"replaceEncounterParticipant(",
+				"updateDraftResourceAfter(fieldEditingCreature.resource, nextMonster);",
+				"export function createAiResponseCreatureFieldEditing({",
+				"const openCreatureFieldEdit = (",
+				"if (!isDraft || isResourceApplied(resource) || !isObjectSnapshot(monster))",
+				"monster: toBestiaryMonster(monster),",
+				"...options,",
+				"const closeCreatureFieldEdit = () => {",
+				"setFieldEditingCreature(null);",
+				"const saveCreatureFieldEdit = (draftMonster: BestiaryMonster) => {",
+				"const savedEdit = getSavedCreatureFieldEdit(",
+				"if (!savedEdit) return;",
+				"updateSavedCreatureFieldEdit({",
+				"closeCreatureFieldEdit();",
+			],
+			"AI response creature field-edit lifecycle",
+		);
+	},
+);
+
+await run(
 	"Phase 131 composes rules reference and monster editor widgets at stable owners",
 	async () => {
 		const [

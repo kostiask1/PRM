@@ -18,7 +18,6 @@ import { lang } from "../../../shared/lib/index.js";
 import {
 	buildCardHighlightFields,
 	buildNoteHighlightFields,
-	cloneSnapshot,
 	encounterMonsterStatsChanged,
 	formatFieldValue,
 	getCardEntityType,
@@ -30,7 +29,6 @@ import {
 	getNoteDiffKey,
 	getPreviewCardType,
 	getPreviewFieldKeys,
-	hasOwn,
 	isEncounterResource,
 	isNoteResource,
 	isObjectSnapshot,
@@ -44,6 +42,10 @@ import {
 import { useAiResponseDraftController } from "../model/useAiResponseDraftController.ts";
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
 import AiResponseModalView from "./AiResponseModalView.tsx";
+import {
+	createAiResponseCreatureFieldEditing,
+	type CreatureEditState,
+} from "./aiResponseCreatureFieldEditing.ts";
 import type { AiResponseModalCompositionSlots } from "./aiResponseModalComposition.ts";
 
 const AiResponseNoteCard = createNoteCardComponent({
@@ -55,18 +57,6 @@ const getEncounterParticipantName = (participant = {}) =>
 	buildEncounterParticipantName(participant, lang.t("Creature"));
 const getEncounterParticipantMeta = (participant = {}) =>
 	buildEncounterParticipantMeta(participant, formatSourceLabel);
-
-interface CreatureEditState {
-	resource: PreviewResource;
-	monster: BestiaryMonster;
-	mode?: "encounter-participant";
-	participantKey?: string;
-}
-
-interface CreatureEditOptions {
-	mode?: "encounter-participant";
-	participantKey?: string;
-}
 
 interface EncounterMonsterEditOptions {
 	resource: PreviewResource;
@@ -177,78 +167,18 @@ function AiResponseModal({
 			</div>
 		</div>
 	);
-	const preserveCreatureIdentity = (
-		original: BestiaryMonster,
-		parsed: BestiaryMonster,
-	): BestiaryMonster => {
-		const next = { ...parsed };
-		["id", "instanceId", "participantType"].forEach((key) => {
-			if (!hasOwn(next, key) && original?.[key] !== undefined) {
-				next[key] = original[key];
-			}
-		});
-		return next;
-	};
-	const replaceEncounterParticipant = (
-		encounter: unknown,
-		participantKey: string,
-		nextMonster: BestiaryMonster,
-	): SnapshotRecord => {
-		const nextEncounter = cloneSnapshot(
-			isObjectSnapshot(encounter) ? encounter : {},
-		);
-		nextEncounter.monsters = getEncounterParticipantEntries(
-			nextEncounter.monsters,
-		).map((entry) =>
-			entry.key === participantKey ? nextMonster : entry.participant,
-		);
-		return nextEncounter;
-	};
-	const openCreatureFieldEdit = (
-		resource: PreviewResource,
-		monster: unknown,
-		options: CreatureEditOptions = {},
-	) => {
-		if (!isDraft || isResourceApplied(resource) || !isObjectSnapshot(monster)) {
-			return;
-		}
-		setFieldEditingCreature({
-			resource,
-			monster: toBestiaryMonster(monster),
-			...options,
-		});
-	};
-	const closeCreatureFieldEdit = () => {
-		setFieldEditingCreature(null);
-	};
-	const saveCreatureFieldEdit = (draftMonster: BestiaryMonster) => {
-		if (!fieldEditingCreature?.resource || !isObjectSnapshot(draftMonster)) {
-			return;
-		}
-		const nextMonster = preserveCreatureIdentity(
-			fieldEditingCreature.monster,
-			draftMonster,
-		);
-		if (
-			fieldEditingCreature.mode === "encounter-participant" &&
-			fieldEditingCreature.participantKey
-		) {
-			const editedResource = getEditedPreviewResource(
-				fieldEditingCreature.resource,
-			);
-			updateDraftResourceAfter(
-				editedResource,
-				replaceEncounterParticipant(
-					editedResource.after,
-					fieldEditingCreature.participantKey,
-					nextMonster,
-				),
-			);
-		} else {
-			updateDraftResourceAfter(fieldEditingCreature.resource, nextMonster);
-		}
-		closeCreatureFieldEdit();
-	};
+	const {
+		closeCreatureFieldEdit,
+		openCreatureFieldEdit,
+		saveCreatureFieldEdit,
+	} = createAiResponseCreatureFieldEditing({
+		fieldEditingCreature,
+		setFieldEditingCreature,
+		isDraft,
+		resolvePreviewResource: getEditedPreviewResource,
+		updateDraftResourceAfter,
+		toBestiaryMonster,
+	});
 	const renderNoteCard = (
 		resource: PreviewResource,
 		note: unknown,

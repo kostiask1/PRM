@@ -716,6 +716,8 @@ Next:
 - Phase 160 keeps editor-owned promise/selection behavior, `Input` and `EditableField` interactions, and the public editor UI boundary intact while concentrating app-wide store/API/modal orchestration in an app host. One added static regression brings the full suite to 446/446 tests; architecture, performance, and Ukrainian encoding checks pass. `MD-R02` remains closed and complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 161 by extracting the Rules Reference Modal's mounted/controller/requested-tab/loading/error lifecycle from `RulesReferenceModalContent.tsx` into private `ui/useReferenceTabLoading.ts`. The widget retains seven-tab API aggregation and `AbortController` effects while content retains navigation/history, search, selection, scrolling, and rendering.
 - Phase 161 keeps the Node-safe `widgets/rules-reference-modal/model.js`, public widget entry, injected runtime, and stable content factory unchanged. Active-request identity, abort cleanup, retry release, mounted result/error/finalization guards, localized errors, custom-Bestiary abort propagation, and existing selection defaults remain private UI behavior. One added static regression brings the full suite to 447/447 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 162 by moving the AI Response Modal's creature-field draft editing state coordination from `AiResponseModal.tsx` to private `ui/aiResponseCreatureFieldEditing.ts`. The raw renderer retains its state-before-draft-controller-before-prompt-guard order, configured factory, injected card/editor slots, preview tree, and final editor placement.
+- Phase 162 keeps draft/applied/object guards, identity-field preservation, encounter-participant replacement, nested draft-resource resolution, draft update, and close-after-success ordering private to the widget UI. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 448/448 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -835,7 +837,9 @@ orchestration out of root `App` into `app/ui/MentionPickerModalHost.tsx` while
 retaining the Editor's injected runtime and feature-owned selection policy at
 446/446 tests. Phase 161 extracts the private Rules Reference Modal tab loader
 without widening its Node-safe model, public widget entry, runtime, or stable
-content-factory contracts, at 447/447 tests.
+content-factory contracts, at 447/447 tests. Phase 162 isolates AI Response
+Modal creature-field draft editing in a private widget controller at 448/448
+tests.
 
 ### Provenance and transfer rule
 
@@ -1210,7 +1214,8 @@ Status: **In progress**
   tests; Phase 153 passes 439/439 tests; Phase 154 passes 440/440 tests; Phase
   155 passes 441/441 tests; Phase 156 passes 442/442 tests; Phase 157 passes
   443/443 tests; Phase 158 passes 444/444 tests; Phase 159 passes 445/445
-  tests; Phase 160 passes 446/446 tests; Phase 161 passes 447/447 tests.
+  tests; Phase 160 passes 446/446 tests; Phase 161 passes 447/447 tests; Phase
+  162 passes 448/448 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1794,6 +1799,27 @@ seven-tab aggregation and browser lifecycle, while `model.js` retains pure
 policy only. `MD-R02` remains closed and `MD-R04` remains open for complete
 lint/typecheck. The full `npm test` gate passes 447/447 tests; architecture,
 performance, and Ukrainian encoding checks also pass.
+
+### Recovery R32 / Phase 162 - Private AI response creature-field editing
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move creature-field editor state coordination, applied/draft/object
+  eligibility, identity preservation, encounter-participant replacement, and
+  draft update/close sequencing into private
+  `widgets/ai-response-modal/ui/aiResponseCreatureFieldEditing.ts`.
+- [x] Keep `AiResponseModal.tsx` as the private raw renderer/composition owner:
+  its `useState` -> draft-controller -> generated-prompt guard ordering,
+  configured factory, injected slot contracts, card/stat-block rendering, and
+  final monster-editor placement remain unchanged.
+- [x] Keep the controller outside widget public runtime/type/model entries and
+  retain its internal-only import from the raw renderer.
+
+Phase 162 isolates a widget-local editing controller; it neither creates a
+shared editing policy nor widens the configured response-modal API. The full
+`npm test` gate passes 448/448 tests; architecture, performance, and Ukrainian
+encoding checks also pass. `MD-R02` remains closed and `MD-R04` remains open
+for complete lint/typecheck.
 
 ## Validation required for every phase
 
