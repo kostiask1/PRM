@@ -29,6 +29,7 @@ import SceneCardMedia from "./components/SceneCardMedia.tsx";
 import SceneCardFields from "./components/SceneCardFields.tsx";
 import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
+import SessionScenesSection from "./components/SessionScenesSection.tsx";
 import SessionScopeImportOverlay from "./components/SessionScopeImportOverlay.tsx";
 import SceneNotes from "./components/SceneNotes.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
@@ -429,23 +430,17 @@ function SessionLocationSection({
 	);
 }
 
-interface SessionScenesSectionProps {
+interface SessionSceneItemProps {
 	view: SessionController;
-	scenes: SessionScene[];
+	scene: SessionScene;
+	number: number;
 	simplifiedNotesEnabled: boolean;
-	onBulkCollapse: (collapsed: boolean) => void;
 	onToggleNoteAiIgnored: (
 		sceneId: SessionResourceId,
 		noteId: SessionResourceId,
 		ignored: boolean,
 	) => void;
 	getEncounterName: (scene: SessionScene) => string;
-}
-
-interface SessionSceneItemProps
-	extends Omit<SessionScenesSectionProps, "onBulkCollapse" | "scenes"> {
-	scene: SessionScene;
-	number: number;
 }
 
 function SessionSceneItem({
@@ -500,38 +495,6 @@ function SessionSceneItem({
 				simplifiedNotesEnabled={simplifiedNotesEnabled}
 			/>
 		</div>
-	);
-}
-
-function SessionScenesSection(props: SessionScenesSectionProps) {
-	const { view, scenes, onBulkCollapse } = props;
-	return (
-		<TodoSection
-			title={lang.t("Scenes")}
-			action={
-				<div className="SessionView__sectionActions">
-					<BulkCollapseButton items={scenes} onChange={onBulkCollapse} />
-					<Button variant="primary" size={Button.SIZES.SMALL} onClick={view.addScene} icon="plus" iconSize={16} className="SessionView__mobileIconOnly">
-						{lang.t("Add")}
-					</Button>
-				</div>
-			}
-		>
-			{scenes.length > 0 && (
-				<DraggableList
-					items={scenes}
-					onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}
-					keyExtractor={(scene) => scene.id}
-					renderItem={(scene) => (
-						<SessionSceneItem
-							{...props}
-							scene={scene}
-							number={scenes.findIndex((item) => item.id === scene.id) + 1}
-						/>
-					)}
-				/>
-			)}
-		</TodoSection>
 	);
 }
 
@@ -751,6 +714,8 @@ function SessionView() {
 			true,
 		);
 	};
+	const getEncounterName = (scene: SessionScene) =>
+		lang.t(viewModel.findEncounterName(scene));
 
 	return (
 		<EntityLinkResolverContext.Provider value={sessionScopedEntityLinks}>
@@ -808,14 +773,20 @@ function SessionView() {
 							onToggleAiIgnored={toggleSessionEntityAiIgnored}
 						/>
 						<SessionScenesSection
-							view={view}
 							scenes={scenes}
-							simplifiedNotesEnabled={simplifiedNotesEnabled}
 							onBulkCollapse={handleBulkScenesCollapse}
-							onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}
-							getEncounterName={(scene) =>
-								lang.t(viewModel.findEncounterName(scene))
-							}
+							onAddScene={view.addScene}
+							onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}
+							renderScene={(scene) => (
+								<SessionSceneItem
+									view={view}
+									scene={scene}
+									number={scenes.findIndex((item) => item.id === scene.id) + 1}
+									simplifiedNotesEnabled={simplifiedNotesEnabled}
+									onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}
+									getEncounterName={getEncounterName}
+								/>
+							)}
 						/>
 
 						<TodoSection title={lang.t("Session result")}>

@@ -760,6 +760,8 @@ Next:
 - Phase 182 preserves section DOM/id/classes, title/toggle behavior, setter-before-save policy, and the closed-gated description/editor reads. One added static regression brings the full suite to 468/468 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 183 by moving Campaign Page entity-section presentation from `CampaignPage.tsx` to private `ui/components/CampaignEntitySection.tsx`. The raw page retains per-type collapse/reorder persistence, cross-type drag policy, and all card/control render slots; the leaf receives controlled list state and explicit commands.
 - Phase 183 preserves outer drop-target semantics, shared collapse callbacks, expanded-only action/list gates, bulk current-item delegation, DraggableList reorder/drop behavior, key policy, and raw card/AI-control workflows. One added static regression brings the full suite to 469/469 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 184 by moving Session Page scenes-section presentation from `SessionPage.tsx` to private `ui/components/SessionScenesSection.tsx`. The raw page retains `SessionSceneItem`, scene projection/persistence, and all SceneCard workflow bindings; the leaf receives a controlled list, explicit commands, and a render slot.
+- Phase 184 preserves empty-list actions, section/list markup, raw duplicate-ID numbering and encounter-label evaluation, bulk/add/reorder behavior, key extraction, and direct render-slot delegation. One added static regression brings the full suite to 470/470 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -933,6 +935,9 @@ ownership at 468/468 tests.
 Phase 183 isolates Campaign Page entity-section presentation in private page UI
 while retaining raw per-type persistence, drag policy, and card/control
 workflow ownership at 469/469 tests.
+Phase 184 isolates Session Page scenes-section presentation in private page UI
+while retaining raw scene projection, persistence, and SceneCard workflow
+ownership at 470/470 tests.
 
 ### Provenance and transfer rule
 
@@ -1317,7 +1322,7 @@ Status: **In progress**
   176 passes 462/462 tests; Phase 177 passes 463/463 tests; Phase 178 passes
   464/464 tests; Phase 179 passes 465/465 tests; Phase 180 passes 466/466
   tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests;
-  Phase 183 passes 469/469 tests.
+  Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2354,6 +2359,27 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 183 is page-local entity-section presentation only, not a new Campaign
 workflow. The full `npm test` gate passes 469/469 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R54 / Phase 184 - Private Session scenes-section presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Session Page scenes-section presentation into private
+  `pages/session/ui/components/SessionScenesSection.tsx`.
+- [x] Keep `SessionView` and raw `SessionSceneItem` ownership of scene
+  projection/persistence, duplicate-ID numbering, encounter labels, wrapper
+  identity, and all SceneCard workflow callbacks.
+- [x] Pass controlled scene data, explicit bulk/add/reorder commands, and a
+  render slot; preserve empty-list actions, section/list DOM, key extraction,
+  and direct render-slot delegation.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, or SceneCard workflow
+  dependency.
+
+Phase 184 is page-local scenes-section presentation only, not a new Session
+workflow. The full `npm test` gate passes 470/470 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

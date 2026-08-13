@@ -4894,6 +4894,130 @@ await run(
 );
 
 await run(
+	"Phase 184 isolates Session scenes-section presentation",
+	async () => {
+		const [sessionSource, sectionSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+				fs.readFile(
+					"src/pages/session/ui/components/SessionScenesSection.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/session/index.js", "utf8"),
+				fs.readFile("src/pages/session/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			sessionSource,
+			/import SessionScenesSection from "\.\/components\/SessionScenesSection\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"interface SessionSceneItemProps {",
+				"view: SessionController;",
+				"scene: SessionScene;",
+				"number: number;",
+				"simplifiedNotesEnabled: boolean;",
+				"onToggleNoteAiIgnored: (",
+				"getEncounterName: (scene: SessionScene) => string;",
+				"function SessionSceneItem({",
+				'<div id={makeDomId("session", "scene", scene.id)}>',
+				"<SceneCard",
+				"number={number}",
+				"fields={SessionViewModel.sceneSchema}",
+				"collapsed={Boolean(scene.collapsed)}",
+				"onToggle={() => view.toggleSceneCollapse(scene.id)}",
+				"onRemove={() => view.removeScene(scene.id)}",
+				"onOpenEncounter={(event) => view.handleOpenEncounter(scene, event)}",
+				'view.updateScene(scene.id, "imageUrl", imageUrl, true)',
+				"campaignSlug={view.campaignSlug}",
+				"hasEncounter={Boolean(scene.encounterId)}",
+				"encounterName={getEncounterName(scene)}",
+				"view.updateScene(scene.id, field, value)",
+				"view.handleToggleSceneNotesCollapse(scene.id)",
+				"view.handleSceneNoteTitleChange(scene.id, noteId, title)",
+				"view.handleSceneNoteChange(scene.id, noteId, text)",
+				"view.handleSceneNotesReorder(scene.id, notes)",
+				"onToggleNoteAiIgnored(scene.id, noteId, ignored)",
+				"view.handleSceneToggleNoteCollapse(scene.id, noteId)",
+				"view.handleSceneDeleteNote(scene.id, noteId)",
+				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
+				"function SessionView() {",
+				"const handleBulkScenesCollapse = (collapsed: boolean) => {",
+				'view.updateData(\n\t\t\t"scenes",\n\t\t\tscenes.map((scene) => ({ ...scene, collapsed })),\n\t\t\ttrue,',
+				"const getEncounterName = (scene: SessionScene) =>",
+				"lang.t(viewModel.findEncounterName(scene));",
+				"<SessionScenesSection",
+				"scenes={scenes}",
+				"onBulkCollapse={handleBulkScenesCollapse}",
+				"onAddScene={view.addScene}",
+				'onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}',
+				"renderScene={(scene) => (",
+				"<SessionSceneItem",
+				"view={view}",
+				"scene={scene}",
+				"number={scenes.findIndex((item) => item.id === scene.id) + 1}",
+				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
+				"onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}",
+				"getEncounterName={getEncounterName}",
+				'<TodoSection title={lang.t("Session result")}>',
+			],
+			"Session raw scene-card workflow and scene-list command ownership",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/interface SessionScenesSectionProps|function SessionScenesSection/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionScenesSection/,
+		);
+		assertSourceTokensInOrder(
+			sectionSource,
+			[
+				'import type { ReactNode } from "react";',
+				'import type { SessionScene } from "../../../../entities/session/index.js";',
+				'import { BulkCollapseButton } from "../../../../features/notes/ui/index.js";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { Button, DraggableList } from "../../../../shared/ui/index.js";',
+				'import TodoSection from "./TodoSection.tsx";',
+				"interface SessionScenesSectionProps {",
+				"scenes: SessionScene[];",
+				"onBulkCollapse: (collapsed: boolean) => void;",
+				"onAddScene: () => void;",
+				"onReorder: (scenes: SessionScene[]) => void;",
+				"renderScene: (scene: SessionScene) => ReactNode;",
+				"export default function SessionScenesSection({",
+				"<TodoSection",
+				'title={lang.t("Scenes")}',
+				'"SessionView__sectionActions"',
+				"<BulkCollapseButton items={scenes} onChange={onBulkCollapse} />",
+				"<Button",
+				'variant="primary"',
+				"size={Button.SIZES.SMALL}",
+				"onClick={onAddScene}",
+				'icon="plus"',
+				"iconSize={16}",
+				'className="SessionView__mobileIconOnly"',
+				'{lang.t("Add")}',
+				"{scenes.length > 0 && (",
+				"<DraggableList",
+				"items={scenes}",
+				"onReorder={onReorder}",
+				"keyExtractor={(scene) => scene.id}",
+				"renderItem={renderScene}",
+			],
+			"Session private scenes-section presentation",
+		);
+		assert.doesNotMatch(
+			sectionSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|SessionViewModel|SceneCard|SessionSceneItem|makeDomId|findIndex|\bnumber\b|updateData|handleScene|toggleSceneCollapse|removeScene|addScene|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+		);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
