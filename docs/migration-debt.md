@@ -22,6 +22,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 167 | Completed widget-local consolidation | Moved Bestiary Browser header-action presentation/action dispatch, menu-local state, and refs into private `widgets/bestiary-browser/ui/BestiaryHeaderActions.tsx`. `BestiaryBrowser` retains custom-monster import parsing/persistence/messages, JSON export, undo/redo operations and stacks, and `BestiaryContent` composition. | Keep the component private; preserve the always-mounted menu, hidden `.json` input, functional toggle, class/title/icon/copy, close-before-action order, and disabled capability flags without widening widget public entries. | 453/453 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 168 | Completed shared UI consolidation | Extracted duplicate open-only header-action pointer dismissal from Campaign Page, Session Page, and private Bestiary Header Actions to public `shared/ui/usePointerDownOutsideDismissal.ts`; each consumer retains state, ref, menu presentation, and commands. | Keep the hook limited to conditional `pointerdown` cleanup/root containment; retain guards/toggle/close-before-action order; do not alter Encounter/Dice behavior, Select/MultiSelect portal lifecycle, or widen Bestiary API. | 454/454 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 169 | Completed widget-local consolidation | Moved AI Response Modal note-diff presentation into private `widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, injected slots, `AiResponseNoteCard` factory, `renderNoteCard` draft callback, twice-resolved resource flow, nested note-array identity synthesis, preview classification, and editor placement. | Keep the renderer private; preserve new/deleted/changed snapshot routing, labels/classes, draft/apply eligibility, note highlight construction, resource key/header, and callback argument order without widening widget public entries. | 455/455 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 170 | Completed page/shared UI consolidation | Moved Campaign Page header-action presentation, menu-local state/refs, and shared dismissal composition into private `pages/campaign/ui/components/CampaignHeaderActions.tsx`; `CampaignHeader` retains title/rename/created metadata and passes narrow workflow commands. Consolidated the duplicate Campaign/Session undo-redo pair in public `shared/ui/UndoRedoButtons.tsx`. | Keep page menu ownership private and the shared component limited to the fragment-only pair plus optional disabled gate; preserve menu lifecycle, direct search/undo/redo behavior, capability/saving flags, classes/copy, and close-before-action order without public page/runtime/store expansion. | 456/456 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -185,6 +186,21 @@ and callback order. The expanded suite passes 455/455 tests; architecture,
 performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
 `MD-R04` remains verification-blocked until the declared local lint/typecheck
 tooling is available.
+
+Phase 170 moves Campaign Page header-action presentation, menu-local state/ref,
+and shared pointer-dismissal composition into private
+`ui/components/CampaignHeaderActions.tsx`. `CampaignHeader` retains campaign
+title/rename/created metadata and passes narrow search, partial-archive,
+undo/redo, export, and deletion commands. The Fallow-detected duplicate
+Campaign/Session undo-redo pair is consolidated in public
+`shared/ui/UndoRedoButtons.tsx`, which remains a fragment-only pair with an
+optional disabled gate. The phase preserves the always-mounted menu,
+pointer-dismissal lifecycle, functional toggle, labels/classes/icons, direct
+search/undo/redo callbacks, capability/saving flags, and close-before-action
+order. The expanded suite passes 456/456 tests; architecture, performance, and
+Ukrainian encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
+verification-blocked until the declared local lint/typecheck tooling is
+available.
 
 ## Closed recovery items
 

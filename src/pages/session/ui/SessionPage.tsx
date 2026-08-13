@@ -16,6 +16,7 @@ import {
 	Modal,
 	Panel,
 	Tooltip,
+	UndoRedoButtons,
 	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
@@ -198,8 +199,13 @@ function SessionHeader({
 					<Button variant="ghost" size={Button.SIZES.SMALL} icon="search" onClick={onOpenSearch} title={lang.t("Global search")}>
 						{lang.t("Search")}
 					</Button>
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="undo" onClick={onUndo} disabled={!canUndo || isSaving} title={lang.t("Undo (Ctrl+Z)")} />
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="redo" onClick={onRedo} disabled={!canRedo || isSaving} title={lang.t("Redo (Ctrl+Y)")} />
+					<UndoRedoButtons
+						canRedo={canRedo}
+						canUndo={canUndo}
+						disabled={isSaving}
+						onRedo={onRedo}
+						onUndo={onUndo}
+					/>
 					<Button variant="danger" size={Button.SIZES.SMALL} icon="trash" onClick={onDelete} title={lang.t("Delete session")} />
 				</div>
 			</div>

@@ -732,6 +732,8 @@ Next:
 - Phase 168 preserves the `Node` containment guard, inside-root no-op, outside/non-Node close, listener cleanup, functional toggles, and close-before-action behavior. Encounter and Dice retain their distinct dismissal policies, while Select/MultiSelect keep their existing `mousedown` portal lifecycle. One added static regression brings the full suite to 454/454 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 169 by moving AI Response Modal note-diff presentation from `AiResponseModal.tsx` to private `ui/AiResponseNoteDiff.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, injected card/editor slots, `AiResponseNoteCard` factory, `renderNoteCard` draft-update callback, twice-resolved resource flow, nested note-array ID/label/list-index synthesis, preview classification, and the `AiResponseModalView` boundary.
 - Phase 169 keeps single new/deleted and changed Before/After routing, snapshot selection, note-surface classes, localized labels, draft/apply edit eligibility, highlight construction, outer resource key/header, and callback argument order widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 455/455 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 170 by moving Campaign Page header-action presentation, menu-local state/ref, and shared pointer-dismissal composition from `CampaignPage.tsx` to private `ui/components/CampaignHeaderActions.tsx`. `CampaignHeader` retains campaign title/rename/created metadata and supplies only narrow search, partial-archive, undo/redo, export, and deletion callbacks. The Fallow-detected duplicate undo-redo pair is now public shared `ui/UndoRedoButtons.tsx`, used by Campaign and Session headers.
+- Phase 170 keeps the always-mounted menu, classes/titles/icons/localized copy, open-only `pointerdown` containment lifecycle, functional toggle, direct search/undo/redo behavior, capability/saving-disabled flags, and close-before-export/partial-archive/delete order intact. `UndoRedoButtons` remains a fragment-only button pair with an optional disabled gate, not a menu/workflow owner. Page public/runtime entries remain unchanged. One added static regression brings the full suite to 456/456 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -863,7 +865,10 @@ tests. Phase 168 centralizes the identical Campaign, Session, and Bestiary
 header pointer-dismissal lifecycle in shared UI while retaining local menus and
 commands at 454/454 tests. Phase 169 isolates AI Response Modal note-diff
 presentation in private widget UI while retaining raw resource, draft, and
-editor composition at 455/455 tests.
+editor composition at 455/455 tests. Phase 170 isolates Campaign Page
+header-action presentation and menu-local lifecycle in private page UI while
+consolidating its duplicated Campaign/Session undo-redo controls in shared UI,
+at 456/456 tests.
 
 ### Provenance and transfer rule
 
@@ -1242,7 +1247,7 @@ Status: **In progress**
   162 passes 448/448 tests; Phase 163 passes 449/449 tests; Phase 164 passes
   450/450 tests; Phase 165 passes 451/451 tests; Phase 166 passes 452/452
   tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests; Phase
-  169 passes 455/455 tests.
+  169 passes 455/455 tests; Phase 170 passes 456/456 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1993,6 +1998,30 @@ Phase 169 is private note-diff presentation only, not a new public AI Response
 workflow. The full `npm test` gate passes 455/455 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R40 / Phase 170 - Private Campaign header-action presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Campaign Page header-action presentation, open state/root ref, and
+  shared pointer-dismissal composition into private
+  `pages/campaign/ui/components/CampaignHeaderActions.tsx`.
+- [x] Retain CampaignHeader's campaign title/rename/created metadata composition
+  and pass only narrow search, partial-archive, undo/redo, export, and deletion
+  commands to the private component.
+- [x] Consolidate the duplicate Campaign/Session undo-redo button pair in public
+  `shared/ui/UndoRedoButtons.tsx`, preserving each caller's capability and
+  saving-disabled flags without adding a DOM wrapper or workflow ownership.
+- [x] Preserve the always-mounted menu, classes/titles/icons/localized copy,
+  shared pointer dismissal, functional toggle, direct search/undo/redo
+  callbacks, and close-before-action order; keep the page component private and
+  free of new page-root/runtime/store access.
+
+Phase 170 is page-local header presentation/lifecycle ownership plus focused
+shared button reuse, not a new public campaign workflow. The full `npm test`
+gate passes 456/456 tests; architecture, performance, and Ukrainian encoding
+checks also pass. `MD-R02` remains closed and `MD-R04` remains open for complete
+lint/typecheck.
 
 ## Validation required for every phase
 

@@ -3936,6 +3936,154 @@ await run(
 );
 
 await run(
+	"Phase 170 isolates Campaign header action presentation",
+	async () => {
+		const [
+			campaignSource,
+			headerActionsSource,
+			sessionSource,
+			sharedRuntimeEntrySource,
+			sharedTypeEntrySource,
+			undoRedoButtonsSource,
+		] = await Promise.all([
+			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/campaign/ui/components/CampaignHeaderActions.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile("src/shared/ui/index.js", "utf8"),
+			fs.readFile("src/shared/ui/index.d.ts", "utf8"),
+			fs.readFile("src/shared/ui/UndoRedoButtons.tsx", "utf8"),
+		]);
+
+		assert.match(
+			campaignSource,
+			/import CampaignHeaderActions from "\.\/components\/CampaignHeaderActions\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			campaignSource,
+			[
+				"function CampaignHeader({",
+				'<div className="CampaignView__header">',
+				"view.handleRename",
+				"viewModel.createdAtLabel",
+				"<CampaignHeaderActions",
+				"canRedo={view.redoStack.length > 0}",
+				"canUndo={view.undoStack.length > 0}",
+				"onDelete={() => view.handleDeleteCampaign()}",
+				"onExport={() => view.handleExport()}",
+				"onOpenPartialArchive={onOpenPartialArchive}",
+				"onOpenSearch={onOpenSearch}",
+				"onRedo={view.handleRedo}",
+				"onUndo={view.handleUndo}",
+			],
+			"Campaign header-action composition",
+		);
+		assert.doesNotMatch(
+			campaignSource,
+			/isHeaderActionsOpen|headerActionsRef|usePointerDownOutsideDismissal/,
+		);
+		assertSourceTokensInOrder(
+			headerActionsSource,
+			[
+				'import { useRef, useState } from "react";',
+				"interface CampaignHeaderActionsProps {",
+				"canRedo: boolean;",
+				"canUndo: boolean;",
+				"onDelete: () => void;",
+				"onExport: () => void;",
+				"onOpenPartialArchive: () => void;",
+				"onOpenSearch: () => void;",
+				"onRedo: () => void;",
+				"onUndo: () => void;",
+				"export default function CampaignHeaderActions({",
+				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
+				"const headerActionsRef = useRef<HTMLDivElement>(null);",
+				"usePointerDownOutsideDismissal({",
+				"containerRef: headerActionsRef,",
+				"isOpen: isHeaderActionsOpen,",
+				"setIsOpen: setIsHeaderActionsOpen,",
+				"const closeActions = () => setIsHeaderActionsOpen(false);",
+			],
+			"Campaign header-action lifecycle",
+		);
+		assertSourceTokensInOrder(
+			headerActionsSource,
+			[
+				"return (",
+				'<div\n\t\t\tref={headerActionsRef}',
+				'"CampaignView__headerActions"',
+				"is_open: isHeaderActionsOpen",
+				'icon="search"',
+				"onClick={onOpenSearch}",
+				'{lang.t("Search")}',
+				"<UndoRedoButtons",
+				"canRedo={canRedo}",
+				"canUndo={canUndo}",
+				"onRedo={onRedo}",
+				"onUndo={onUndo}",
+				'icon="menu"',
+				'"CampaignView__headerActionsToggle"',
+				"onClick={() => setIsHeaderActionsOpen((value) => !value)}",
+				'"CampaignView__headerActionsMenu"',
+				"closeActions();",
+				"onExport();",
+				"onOpenPartialArchive();",
+				"onDelete();",
+			],
+			"Campaign header-action presentation and close-before-action order",
+		);
+		assert.match(
+			sharedRuntimeEntrySource,
+			/export \{ UndoRedoButtons \} from "\.\/UndoRedoButtons\.tsx";/,
+		);
+		assert.match(
+			sharedTypeEntrySource,
+			/export \{ UndoRedoButtons \} from "\.\/UndoRedoButtons\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			undoRedoButtonsSource,
+			[
+				'import { lang } from "../lib/index.js";',
+				'import Button from "./Button.tsx";',
+				"interface UndoRedoButtonsProps {",
+				"canRedo: boolean;",
+				"canUndo: boolean;",
+				"disabled?: boolean;",
+				"onRedo: () => void;",
+				"onUndo: () => void;",
+				"export function UndoRedoButtons({",
+				"disabled = false,",
+				'icon="undo"',
+				"onClick={onUndo}",
+				"disabled={!canUndo || disabled}",
+				'{lang.t("Undo (Ctrl+Z)")}',
+				'icon="redo"',
+				"onClick={onRedo}",
+				"disabled={!canRedo || disabled}",
+				'{lang.t("Redo (Ctrl+Y)")}',
+			],
+			"shared undo-redo presentation",
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"UndoRedoButtons,",
+				'"SessionView__headerActionsMenu"',
+				"<UndoRedoButtons",
+				"canRedo={canRedo}",
+				"canUndo={canUndo}",
+				"disabled={isSaving}",
+				"onRedo={onRedo}",
+				"onUndo={onUndo}",
+			],
+			"Session undo-redo shared presentation",
+		);
+	},
+);
+
+await run(
 	"Phase 167 isolates Bestiary header action presentation",
 	async () => {
 		const [
@@ -4078,6 +4226,7 @@ await run(
 			runtimeEntrySource,
 			typeEntrySource,
 			campaignSource,
+			campaignHeaderActionsSource,
 			sessionSource,
 			headerActionsSource,
 		] = await Promise.all([
@@ -4088,6 +4237,10 @@ await run(
 			fs.readFile("src/shared/ui/index.js", "utf8"),
 			fs.readFile("src/shared/ui/index.d.ts", "utf8"),
 			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/campaign/ui/components/CampaignHeaderActions.tsx",
+				"utf8",
+			),
 			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryHeaderActions.tsx",
@@ -4130,7 +4283,7 @@ await run(
 			"shared header pointer-dismissal lifecycle",
 		);
 		for (const [name, source] of [
-			["Campaign Page", campaignSource],
+			["Campaign header actions", campaignHeaderActionsSource],
 			["Session Page", sessionSource],
 			["Bestiary header actions", headerActionsSource],
 		]) {
@@ -4149,8 +4302,12 @@ await run(
 			sessionSource,
 			/useSessionHeaderActionsDismissal/,
 		);
-		assertSourceTokensInOrder(
+		assert.doesNotMatch(
 			campaignSource,
+			/usePointerDownOutsideDismissal/,
+		);
+		assertSourceTokensInOrder(
+			campaignHeaderActionsSource,
 			[
 				"usePointerDownOutsideDismissal({",
 				"containerRef: headerActionsRef,",

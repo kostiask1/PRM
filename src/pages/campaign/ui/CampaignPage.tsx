@@ -1,18 +1,15 @@
 import {
 	useEffect,
 	useMemo,
-	useRef,
 	useState,
 	type Dispatch,
 	type ReactNode,
-	type RefObject,
 	type SetStateAction,
 } from "react";
 import {
 	Button,
 	Panel,
 	Tooltip,
-	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { DraggableList, ListCard } from "../../../shared/ui/index.js";
@@ -27,6 +24,7 @@ import {
 	CreateLocationButton,
 	LocationCard,
 } from "../../../widgets/campaign-entity-card/index.js";
+import CampaignHeaderActions from "./components/CampaignHeaderActions.tsx";
 import CampaignNotesSection from "./components/CampaignNotesSection.tsx";
 import PartialArchiveModal from "./components/PartialArchiveModal.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
@@ -36,10 +34,7 @@ import useCampaignView from "../model/useCampaignView.ts";
 import { useCampaignPageRuntime } from "../model/CampaignPageRuntime.tsx";
 import { CampaignViewModel } from "../../../entities/campaign/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import {
-	classNames,
-	getNotesForRender,
-} from "../../../shared/lib/index.js";
+import { getNotesForRender } from "../../../shared/lib/index.js";
 import { makeDomId, scrollToHashTarget } from "../../../shared/lib/index.js";
 import type { DomainId } from "../../../entities/campaign/index.js";
 import type { CampaignPartialArchiveSection } from "../../../entities/campaign/index.js";
@@ -71,9 +66,6 @@ type CampaignViewController = ReturnType<typeof useCampaignView>;
 interface CampaignHeaderProps {
 	view: CampaignViewController;
 	viewModel: CampaignViewModel;
-	headerActionsRef: RefObject<HTMLDivElement | null>;
-	isHeaderActionsOpen: boolean;
-	setIsHeaderActionsOpen: Dispatch<SetStateAction<boolean>>;
 	onOpenSearch: () => void;
 	onOpenPartialArchive: () => void;
 }
@@ -81,13 +73,9 @@ interface CampaignHeaderProps {
 function CampaignHeader({
 	view,
 	viewModel,
-	headerActionsRef,
-	isHeaderActionsOpen,
-	setIsHeaderActionsOpen,
 	onOpenSearch,
 	onOpenPartialArchive,
 }: CampaignHeaderProps) {
-	const closeActions = () => setIsHeaderActionsOpen(false);
 	return (
 		<div className="Panel__header">
 			<div className="CampaignView__header">
@@ -100,81 +88,16 @@ function CampaignHeader({
 					{lang.t("Created")}: {viewModel.createdAtLabel}
 				</p>
 			</div>
-			<div
-				ref={headerActionsRef as RefObject<HTMLDivElement>}
-				className={classNames("CampaignView__headerActions", {
-					is_open: isHeaderActionsOpen,
-				})}
-			>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon="search"
-					onClick={onOpenSearch}
-					title={lang.t("Global search")}
-				>
-					{lang.t("Search")}
-				</Button>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon="undo"
-					onClick={view.handleUndo}
-					disabled={view.undoStack.length === 0}
-					title={lang.t("Undo (Ctrl+Z)")}
-				/>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon="redo"
-					onClick={view.handleRedo}
-					disabled={view.redoStack.length === 0}
-					title={lang.t("Redo (Ctrl+Y)")}
-				/>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon="menu"
-					className="CampaignView__headerActionsToggle"
-					onClick={() => setIsHeaderActionsOpen((value) => !value)}
-					title={lang.t("Campaign actions")}
-				/>
-				<div className="CampaignView__headerActionsMenu">
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						onClick={() => {
-							closeActions();
-							view.handleExport();
-						}}
-						icon="export"
-					>
-						{lang.t("Export")}
-					</Button>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="database"
-						onClick={() => {
-							closeActions();
-							onOpenPartialArchive();
-						}}
-					>
-						{lang.t("Import/export parts")}
-					</Button>
-					<Button
-						variant="danger"
-						size={Button.SIZES.SMALL}
-						icon="trash"
-						onClick={() => {
-							closeActions();
-							view.handleDeleteCampaign();
-						}}
-					>
-						{lang.t("Delete")}
-					</Button>
-				</div>
-			</div>
+			<CampaignHeaderActions
+				canRedo={view.redoStack.length > 0}
+				canUndo={view.undoStack.length > 0}
+				onDelete={() => view.handleDeleteCampaign()}
+				onExport={() => view.handleExport()}
+				onOpenPartialArchive={onOpenPartialArchive}
+				onOpenSearch={onOpenSearch}
+				onRedo={view.handleRedo}
+				onUndo={view.handleUndo}
+			/>
 		</div>
 	);
 }
@@ -449,8 +372,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		useState<CampaignNotesViewMode>("list");
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);
-	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
-	const headerActionsRef = useRef<HTMLDivElement | null>(null);
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const {
 		hasDescriptionData,
@@ -572,12 +493,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		};
 	}, [view]);
 
-	usePointerDownOutsideDismissal({
-		containerRef: headerActionsRef,
-		isOpen: isHeaderActionsOpen,
-		setIsOpen: setIsHeaderActionsOpen,
-	});
-
 	const handleNotesViewModeChange = (mode: CampaignNotesViewMode) => {
 		const plan = getCampaignNotesViewModePlan(mode, isNotesCollapsed);
 		setNotesViewMode(plan.viewMode);
@@ -619,9 +534,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 			<CampaignHeader
 				view={view}
 				viewModel={viewModel}
-				headerActionsRef={headerActionsRef}
-				isHeaderActionsOpen={isHeaderActionsOpen}
-				setIsHeaderActionsOpen={setIsHeaderActionsOpen}
 				onOpenSearch={() => setIsGlobalSearchOpen(true)}
 				onOpenPartialArchive={() => setIsPartialArchiveOpen(true)}
 			/>

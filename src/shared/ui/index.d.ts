@@ -27,6 +27,7 @@ export {
 	type NotificationProps,
 } from "./Notification.tsx";
 export { default as Tooltip, type TooltipProps } from "./Tooltip.tsx";
+export { UndoRedoButtons } from "./UndoRedoButtons.tsx";
 export { default as Panel, type PanelProps } from "./Panel.tsx";
 export { default as Switch, type SwitchProps } from "./Switch.tsx";
 export {
