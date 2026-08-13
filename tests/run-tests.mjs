@@ -4058,6 +4058,108 @@ await run(
 );
 
 await run(
+	"Phase 172 isolates Monster action-section presentation",
+	async () => {
+		const [modalSource, actionSectionsSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile(
+					"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/features/edit-monster/ui/MonsterActionSections.tsx",
+					"utf8",
+				),
+				fs.readFile("src/features/edit-monster/index.js", "utf8"),
+				fs.readFile("src/features/edit-monster/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			modalSource,
+			/import MonsterActionSections from "\.\/MonsterActionSections\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			modalSource,
+			[
+				"const updateDraft = (",
+				"setJsonText(JSON.stringify(next || {}, null, 2));",
+				"const updateAction = (",
+				"updateMonsterAction(current, section, index, updater)",
+				"const addAction = (section: CreatureActionSection) => {",
+				"updateDraft((current) => addMonsterAction(current, section));",
+				"const removeAction = (section: CreatureActionSection, index: number) => {",
+				"updateDraft((current) => removeMonsterAction(current, section, index));",
+				"const updateActionName = (",
+				"event: ChangeEvent<HTMLInputElement>,",
+				"updateAction(section, index, (currentAction) => ({",
+				"name: event.target.value,",
+				"const updateActionText = (",
+				"event: ChangeEvent<HTMLTextAreaElement>,",
+				"actionFromText(currentAction, event.target.value)",
+				"const openRuleInsertPicker = (",
+				"if (!isRulesReferenceShortcut(event)) return;",
+				"event.preventDefault();",
+				"event.stopPropagation();",
+				"setRuleInsertTarget({",
+				"const openActionRuleInsertPicker = (",
+				"openRuleInsertPicker(event, { type: \"action\", section, index });",
+				"<MonsterActionSections",
+				"draft={draft}",
+				"onAddAction={addAction}",
+				"onActionNameChange={updateActionName}",
+				"onActionTextChange={updateActionText}",
+				"onActionTextKeyDown={openActionRuleInsertPicker}",
+				"onRemoveAction={removeAction}",
+			],
+			"Monster action-section raw mutation and rule-picker ownership",
+		);
+		assert.doesNotMatch(
+			modalSource,
+			/MonsterFieldEditModal__action_(?:section|header|list|item|title)/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/MonsterActionSections/,
+		);
+		assertSourceTokensInOrder(
+			actionSectionsSource,
+			[
+				'import type { ChangeEvent, KeyboardEvent } from "react";',
+				"actionEntriesToText,",
+				"CREATURE_ACTION_SECTIONS,",
+				"getMonsterActionList,",
+				"interface MonsterActionSectionsProps {",
+				"draft: MonsterData;",
+				"onAddAction: (section: CreatureActionSection) => void;",
+				"onActionNameChange: (",
+				"onActionTextChange: (",
+				"onActionTextKeyDown: (",
+				"onRemoveAction: (section: CreatureActionSection, index: number) => void;",
+				"export default function MonsterActionSections({",
+				"return (",
+				"CREATURE_ACTION_SECTIONS.map((section) => {",
+				"const list = getMonsterActionList(draft, section.key);",
+				'"MonsterFieldEditModal__action_section"',
+				"onClick={() => onAddAction(section.key)}",
+				'lang.t("No entries.")',
+				"key={`${section.key}-${index}`}",
+				"value={String(action?.name || \"\")}",
+				"onActionNameChange(event, section.key, index)",
+				"onClick={() => onRemoveAction(section.key, index)}",
+				"value={actionEntriesToText(action)}",
+				"onActionTextChange(event, section.key, index)",
+				"onActionTextKeyDown(event, section.key, index)",
+			],
+			"Monster action-section private presentation",
+		);
+		assert.doesNotMatch(
+			actionSectionsSource,
+			/useState|useEffect|<Modal\b|parseMonsterJson|prepareMonsterDraftForSave|updateMonsterAction|addMonsterAction|removeMonsterAction|isRulesReferenceShortcut|applyRuleReferenceTag|event\.target\.value/,
+		);
+	},
+);
+
+await run(
 	"Phase 170 isolates Campaign header action presentation",
 	async () => {
 		const [
@@ -11728,6 +11830,7 @@ await run(
 			"src/features/campaign-create/ui/CreateCampaignModalContent.tsx",
 			"src/features/dice/ui/DiceCalculator.tsx",
 			"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+			"src/features/edit-monster/ui/MonsterActionSections.tsx",
 			"src/features/player-questions/ui/PlayerQuestionsModalContent.tsx",
 		];
 		const [textInputSource, runtimeBarrel, declarationBarrel, ...consumers] =

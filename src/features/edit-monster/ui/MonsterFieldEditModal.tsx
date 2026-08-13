@@ -1,4 +1,5 @@
 import {
+	type ChangeEvent,
 	type ComponentType,
 	type KeyboardEvent,
 	type ReactNode,
@@ -20,16 +21,13 @@ import {
 import {
 	ALIGNMENT_OPTIONS,
 	CREATURE_ABILITY_KEYS,
-	CREATURE_ACTION_SECTIONS,
 	SIZE_OPTIONS,
-	actionEntriesToText,
 	actionFromText,
 	addMonsterAction,
 	applyRuleReferenceTag,
 	cloneMonster,
 	getCreatureEditableFieldInput,
 	getCreatureSelectValue,
-	getMonsterActionList,
 	isRulesReferenceShortcut,
 	parseMonsterJson,
 	prepareMonsterDraftForSave,
@@ -43,6 +41,7 @@ import {
 	type RuleInsertTarget,
 	type RuleReferenceSelection,
 } from "../model.ts";
+import MonsterActionSections from "./MonsterActionSections.tsx";
 import "../../../assets/components/MonsterFieldEditModal.css";
 
 interface RulesReferenceContentProps {
@@ -144,6 +143,31 @@ export default function MonsterFieldEditModal({
 			updateMonsterAction(current, section, index, updater),
 		);
 	};
+	const addAction = (section: CreatureActionSection) => {
+		updateDraft((current) => addMonsterAction(current, section));
+	};
+	const removeAction = (section: CreatureActionSection, index: number) => {
+		updateDraft((current) => removeMonsterAction(current, section, index));
+	};
+	const updateActionName = (
+		event: ChangeEvent<HTMLInputElement>,
+		section: CreatureActionSection,
+		index: number,
+	) => {
+		updateAction(section, index, (currentAction) => ({
+			...currentAction,
+			name: event.target.value,
+		}));
+	};
+	const updateActionText = (
+		event: ChangeEvent<HTMLTextAreaElement>,
+		section: CreatureActionSection,
+		index: number,
+	) => {
+		updateAction(section, index, (currentAction) =>
+			actionFromText(currentAction, event.target.value),
+		);
+	};
 
 	const openRuleInsertPicker = (
 		event: KeyboardEvent<HTMLTextAreaElement>,
@@ -159,6 +183,13 @@ export default function MonsterFieldEditModal({
 			selectionEnd:
 				node.selectionEnd ?? node.selectionStart ?? node.value.length,
 		});
+	};
+	const openActionRuleInsertPicker = (
+		event: KeyboardEvent<HTMLTextAreaElement>,
+		section: CreatureActionSection,
+		index: number,
+	) => {
+		openRuleInsertPicker(event, { type: "action", section, index });
 	};
 
 	const applyRuleInsert = ({ tag }: RuleReferenceSelection) => {
@@ -282,109 +313,6 @@ export default function MonsterFieldEditModal({
 		</label>
 	);
 
-	const renderActionSection = (
-		section: (typeof CREATURE_ACTION_SECTIONS)[number],
-	) => {
-		const list = getMonsterActionList(draft, section.key);
-		return (
-			<section
-				key={section.key}
-				className="MonsterFieldEditModal__action_section"
-			>
-				<div className="MonsterFieldEditModal__action_header">
-					<h4>{lang.t(section.label)}</h4>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="plus"
-						onClick={() =>
-							updateDraft((current) =>
-								addMonsterAction(current, section.key),
-							)
-						}
-					>
-						{lang.t("Add action")}
-					</Button>
-				</div>
-				{list.length === 0 ? (
-					<div className="MonsterFieldEditModal__empty">
-						{lang.t("No entries.")}
-					</div>
-				) : (
-					<div className="MonsterFieldEditModal__action_list">
-						{list.map((action, index) => (
-							<div
-								key={`${section.key}-${index}`}
-								className="MonsterFieldEditModal__action_item"
-							>
-								<div className="MonsterFieldEditModal__action_title">
-									<label className="MonsterFieldEditModal__field">
-										<span>{lang.t("Name")}</span>
-										<TextInput
-											value={String(action?.name || "")}
-											onChange={(event) =>
-												updateAction(
-													section.key,
-													index,
-													(currentAction) => ({
-														...currentAction,
-														name: event.target.value,
-													}),
-												)
-											}
-										/>
-									</label>
-									<Button
-										variant="ghost"
-										size={Button.SIZES.SMALL}
-										icon="trash"
-										onClick={() =>
-											updateDraft((current) =>
-												removeMonsterAction(
-													current,
-													section.key,
-													index,
-												),
-											)
-										}
-										title={lang.t("Remove action")}
-									/>
-								</div>
-								<label className="MonsterFieldEditModal__field">
-									<span>{lang.t("Text")}</span>
-									<textarea
-										className="Input Input__textarea MonsterFieldEditModal__textarea"
-										rows={4}
-										value={actionEntriesToText(action)}
-										onChange={(event) =>
-											updateAction(
-												section.key,
-												index,
-												(currentAction) =>
-													actionFromText(
-														currentAction,
-														event.target.value,
-													),
-											)
-										}
-										onKeyDown={(event) =>
-											openRuleInsertPicker(event, {
-												type: "action",
-												section: section.key,
-												index,
-											})
-										}
-										title={lang.t("Ctrl+K — Insert rule reference")}
-									/>
-								</label>
-							</div>
-						))}
-					</div>
-				)}
-			</section>
-		);
-	};
-
 	return (
 		<>
 			<Modal
@@ -443,7 +371,14 @@ export default function MonsterFieldEditModal({
 								{renderTextField("desc", "Description", 4)}
 							</div>
 							<div className="MonsterFieldEditModal__actions">
-								{CREATURE_ACTION_SECTIONS.map(renderActionSection)}
+								<MonsterActionSections
+									draft={draft}
+									onAddAction={addAction}
+									onActionNameChange={updateActionName}
+									onActionTextChange={updateActionText}
+									onActionTextKeyDown={openActionRuleInsertPicker}
+									onRemoveAction={removeAction}
+								/>
 							</div>
 						</>
 					) : (

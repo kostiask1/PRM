@@ -736,6 +736,8 @@ Next:
 - Phase 170 keeps the always-mounted menu, classes/titles/icons/localized copy, open-only `pointerdown` containment lifecycle, functional toggle, direct search/undo/redo behavior, capability/saving-disabled flags, and close-before-export/partial-archive/delete order intact. `UndoRedoButtons` remains a fragment-only button pair with an optional disabled gate, not a menu/workflow owner. Page public/runtime entries remain unchanged. One added static regression brings the full suite to 456/456 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 171 by moving AI Response Modal encounter monster-change presentation from `AiResponseModal.tsx` to private `ui/AiResponseEncounterMonsterChange.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, `renderEncounterMonsterCard` MonsterStatBlock/field-edit slot, participant entry/map/change detection, draft/apply eligibility, highlight construction, localized labels, resource keys, and encounter composition.
 - Phase 171 keeps precomputed card/label slot evaluation in the raw renderer while the private component preserves single/paired stack/column/frame/title markup and ordering. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 457/457 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 172 by moving Monster Field Edit Modal action-section presentation from `MonsterFieldEditModal.tsx` to private `ui/MonsterActionSections.tsx`. The raw feature modal retains draft/JSON synchronization, functional action mutations, rule-picker lifecycle, parsing, save, and error ownership.
+- Phase 172 forwards original change/keyboard events to raw callbacks while the private Fragment-only component preserves section order, keys, classes, localized copy, empty/add/remove/name/text behavior, and no public-entry expansion. One added static regression brings the full suite to 458/458 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -873,6 +875,9 @@ consolidating its duplicated Campaign/Session undo-redo controls in shared UI,
 at 456/456 tests. Phase 171 isolates AI Response Modal encounter monster-change
 presentation in private widget UI while retaining raw participant mapping,
 change detection, card/editor, and draft composition at 457/457 tests.
+Phase 172 isolates Monster Field Edit Modal action-section presentation in
+private feature UI while retaining raw draft synchronization, action mutations,
+and rule-picker lifecycle at 458/458 tests.
 
 ### Provenance and transfer rule
 
@@ -1252,7 +1257,7 @@ Status: **In progress**
   450/450 tests; Phase 165 passes 451/451 tests; Phase 166 passes 452/452
   tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests; Phase
   169 passes 455/455 tests; Phase 170 passes 456/456 tests; Phase 171 passes
-  457/457 tests.
+  457/457 tests; Phase 172 passes 458/458 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2048,6 +2053,27 @@ Phase 171 is private encounter monster-change presentation only, not a new
 public AI Response workflow. The full `npm test` gate passes 457/457 tests;
 architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
 remains closed and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R42 / Phase 172 - Private Monster action-section presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Monster Field Edit Modal action-section presentation into private
+  `features/edit-monster/ui/MonsterActionSections.tsx`.
+- [x] Keep draft/JSON synchronization, `updateAction`, functional action
+  mutations, Ctrl+K shortcut detection/selection state, parsing, save, and
+  error lifecycle in the raw `MonsterFieldEditModal`.
+- [x] Forward original change/keyboard events to raw callbacks so it continues
+  to read event values and construct `{ type: "action", section, index }` rule
+  targets under the existing functional-update path.
+- [x] Preserve Fragment-only output, section order, `${section.key}-${index}`
+  keys, class hierarchy, localized copy, empty/add/remove/name/text behavior,
+  and private-only feature ownership.
+
+Phase 172 is feature-local action presentation only, not a new public Monster
+editing workflow. The full `npm test` gate passes 458/458 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 
