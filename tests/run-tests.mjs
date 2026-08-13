@@ -3473,6 +3473,76 @@ await run(
 );
 
 await run(
+	"Phase 163 isolates AI response JSON-diff presentation",
+	async () => {
+		const [
+			responseModalSource,
+			jsonDiffSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseJsonDiff.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			responseModalSource,
+			/import AiResponseJsonDiff from "\.\/AiResponseJsonDiff\.tsx";/,
+		);
+		assert.match(
+			responseModalSource,
+			/jsonDiff=\{\s*<AiResponseJsonDiff\s+resources=\{selectedResponseDiffResources\}\s+getDiffResourceState=\{getDiffResourceState\}\s*\/>\s*\}/,
+		);
+		assert.doesNotMatch(responseModalSource, /const renderJsonDiff =/);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/AiResponseJsonDiff/,
+		);
+		assertSourceTokensInOrder(
+			jsonDiffSource,
+			[
+				'import type { AiResponseModalProps } from "../../../features/ai/ui/index.js";',
+				'import { classNames, lang } from "../../../shared/lib/index.js";',
+				"function getDiffLineMarker(type: AiResponseDiffLine[\"type\"]): string {",
+				'type === "added" ? "+" : type === "removed" ? "-" : " "',
+				"function AiResponseJsonDiffLine({",
+				'`is_${line.type}`',
+				'{line.oldNumber || ""}',
+				'{line.newNumber || ""}',
+				"{getDiffLineMarker(line.type)}",
+				'<code>{line.text || " "}</code>',
+				"export default function AiResponseJsonDiff({",
+				"return resources.map((resource) => (",
+				"key={resource.id}",
+				"{resource.label}",
+				"{getDiffResourceState(resource)}",
+				"resource.fieldSummary.length > 0",
+				'{lang.t("Changed fields")}:',
+				"resource.fieldSummary.map((field) =>",
+				"key={`${resource.id}-${field}`}",
+				"resource.lines.map((line, index) =>",
+				"<AiResponseJsonDiffLine",
+				"key={`${resource.id}-${index}`}",
+				"line={line}",
+			],
+			"AI response JSON-diff presentation",
+		);
+	},
+);
+
+await run(
 	"Phase 131 composes rules reference and monster editor widgets at stable owners",
 	async () => {
 		const [

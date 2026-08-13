@@ -718,6 +718,8 @@ Next:
 - Phase 161 keeps the Node-safe `widgets/rules-reference-modal/model.js`, public widget entry, injected runtime, and stable content factory unchanged. Active-request identity, abort cleanup, retry release, mounted result/error/finalization guards, localized errors, custom-Bestiary abort propagation, and existing selection defaults remain private UI behavior. One added static regression brings the full suite to 447/447 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 162 by moving the AI Response Modal's creature-field draft editing state coordination from `AiResponseModal.tsx` to private `ui/aiResponseCreatureFieldEditing.ts`. The raw renderer retains its state-before-draft-controller-before-prompt-guard order, configured factory, injected card/editor slots, preview tree, and final editor placement.
 - Phase 162 keeps draft/applied/object guards, identity-field preservation, encounter-participant replacement, nested draft-resource resolution, draft update, and close-after-success ordering private to the widget UI. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 448/448 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 163 by moving AI Response Modal JSON-diff markup from `AiResponseModal.tsx` to private `ui/AiResponseJsonDiff.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, injected card/editor slots, preview tree, and the `AiResponseModalView` boundary.
+- Phase 163 keeps resource/field/line keys, localized labels, resource-state lookup, diff-line classes and markers, and number/text fallbacks widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 449/449 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -839,6 +841,7 @@ retaining the Editor's injected runtime and feature-owned selection policy at
 without widening its Node-safe model, public widget entry, runtime, or stable
 content-factory contracts, at 447/447 tests. Phase 162 isolates AI Response
 Modal creature-field draft editing in a private widget controller at 448/448
+tests. Phase 163 isolates JSON-diff presentation in the same widget at 449/449
 tests.
 
 ### Provenance and transfer rule
@@ -1215,7 +1218,7 @@ Status: **In progress**
   155 passes 441/441 tests; Phase 156 passes 442/442 tests; Phase 157 passes
   443/443 tests; Phase 158 passes 444/444 tests; Phase 159 passes 445/445
   tests; Phase 160 passes 446/446 tests; Phase 161 passes 447/447 tests; Phase
-  162 passes 448/448 tests.
+  162 passes 448/448 tests; Phase 163 passes 449/449 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1820,6 +1823,26 @@ shared editing policy nor widens the configured response-modal API. The full
 `npm test` gate passes 448/448 tests; architecture, performance, and Ukrainian
 encoding checks also pass. `MD-R02` remains closed and `MD-R04` remains open
 for complete lint/typecheck.
+
+### Recovery R33 / Phase 163 - Private AI response JSON-diff presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move JSON-diff resource, field-summary, and line presentation into
+  private `widgets/ai-response-modal/ui/AiResponseJsonDiff.tsx`.
+- [x] Preserve resource/field/line keys, localized labels, resource-state
+  lookup, exact line-state CSS class and marker routing, and falsy number/text
+  fallbacks.
+- [x] Keep the raw renderer's configured factory, state/controller/guard
+  ordering, injected slots, preview tree, editor placement, and the View's
+  modal/diff-switch/draft-editor composition unchanged.
+- [x] Keep the component outside widget public runtime/type/model entries and
+  retain its internal-only import from the raw renderer.
+
+Phase 163 is private presentation ownership only, not a new public response
+format or a shared diff renderer. The full `npm test` gate passes 449/449
+tests; architecture, performance, and Ukrainian encoding checks also pass.
+`MD-R02` remains closed and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

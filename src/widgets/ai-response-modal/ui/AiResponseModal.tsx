@@ -41,6 +41,7 @@ import {
 } from "../model/aiResponseModal.ts";
 import { useAiResponseDraftController } from "../model/useAiResponseDraftController.ts";
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
+import AiResponseJsonDiff from "./AiResponseJsonDiff.tsx";
 import AiResponseModalView from "./AiResponseModalView.tsx";
 import {
 	createAiResponseCreatureFieldEditing,
@@ -815,50 +816,6 @@ function AiResponseModal({
 		return renderGenericResourceDiff(resource);
 	};
 
-	const renderJsonDiff = () =>
-		selectedResponseDiffResources.map((resource) => (
-			<div key={resource.id} className="AiAssistant__diff_file">
-				<div className="AiAssistant__diff_file_header">
-					<span>{resource.label}</span>
-					<span>{getDiffResourceState(resource)}</span>
-				</div>
-				{resource.fieldSummary.length > 0 && (
-					<div className="AiAssistant__diff_field_summary">
-						<span>{lang.t("Changed fields")}:</span>
-						{resource.fieldSummary.map((field) => (
-							<code key={`${resource.id}-${field}`}>{field}</code>
-						))}
-					</div>
-				)}
-				<div className="AiAssistant__diff_lines">
-					{resource.lines.map((line, index) => (
-						<div
-							key={`${resource.id}-${index}`}
-							className={classNames(
-								"AiAssistant__diff_line",
-								`is_${line.type}`,
-							)}
-						>
-							<span className="AiAssistant__diff_line_number">
-								{line.oldNumber || ""}
-							</span>
-							<span className="AiAssistant__diff_line_number">
-								{line.newNumber || ""}
-							</span>
-							<span className="AiAssistant__diff_line_marker">
-								{line.type === "added"
-									? "+"
-									: line.type === "removed"
-										? "-"
-										: " "}
-							</span>
-							<code>{line.text || " "}</code>
-						</div>
-					))}
-				</div>
-			</div>
-		));
-
 	return (
 		<>
 			<AiResponseModalView
@@ -889,7 +846,12 @@ function AiResponseModal({
 						{selectedResponseDiffResources.map(renderPreviewResource)}
 					</div>
 				}
-				jsonDiff={renderJsonDiff()}
+				jsonDiff={
+					<AiResponseJsonDiff
+						resources={selectedResponseDiffResources}
+						getDiffResourceState={getDiffResourceState}
+					/>
+				}
 			/>
 			<MonsterEditorModal
 				editingMonster={fieldEditingCreature?.monster || null}
