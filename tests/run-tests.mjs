@@ -4160,6 +4160,104 @@ await run(
 );
 
 await run(
+	"Phase 173 isolates Monster fields-mode layout presentation",
+	async () => {
+		const [modalSource, fieldSectionsSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile(
+					"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/features/edit-monster/ui/MonsterFieldSections.tsx",
+					"utf8",
+				),
+				fs.readFile("src/features/edit-monster/index.js", "utf8"),
+				fs.readFile("src/features/edit-monster/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			modalSource,
+			/import MonsterFieldSections from "\.\/MonsterFieldSections\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			modalSource,
+			[
+				"const renderInputField = (",
+				"getCreatureEditableFieldInput(draft, key)",
+				"updateDraft((current) =>",
+				"updateCreatureBasicField(current, key, event.target.value)",
+				"const renderSelectField = (",
+				"const currentValue = getCreatureSelectValue(draft, key);",
+				"options.some((option) => option.value === currentValue)",
+				"currentValue || lang.t(\"Custom\")",
+				"const renderTextField = (",
+				"openRuleInsertPicker(event, { type: \"field\", key })",
+				"<MonsterFieldSections",
+				"basicFields={",
+				'renderInputField("name", "Name")',
+				'renderInputField("source", "Source", { disabled: true })',
+				'renderSelectField("size", "Size", SIZE_OPTIONS)',
+				'renderInputField("type", "Type")',
+				'"alignment",',
+				'"Alignment",',
+				"ALIGNMENT_OPTIONS,",
+				'renderInputField("ac", "Armor Class")',
+				'renderInputField("hpFormula", "HP Formula")',
+				'renderInputField("cr", "Challenge Rating")',
+				"abilityFields={CREATURE_ABILITY_KEYS.map((ability) =>",
+				"renderInputField(ability, ability.toUpperCase(), {",
+				'type: "number",',
+				"textFields={",
+				'renderTextField("speed", "Speed", 2)',
+				'renderTextField("senses", "Senses", 2)',
+				'renderTextField("languages", "Languages", 2)',
+				'renderTextField("desc", "Description", 4)',
+				"actionSections={",
+				"<MonsterActionSections",
+				"draft={draft}",
+				"onActionTextKeyDown={openActionRuleInsertPicker}",
+			],
+			"Monster fields-mode raw field and action composition",
+		);
+		assert.doesNotMatch(
+			modalSource,
+			/MonsterFieldEditModal__(?:fields|abilities|text_fields|actions)/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/MonsterFieldSections/,
+		);
+		assertSourceTokensInOrder(
+			fieldSectionsSource,
+			[
+				'import type { ReactNode } from "react";',
+				"interface MonsterFieldSectionsProps {",
+				"actionSections: ReactNode;",
+				"abilityFields: ReactNode;",
+				"basicFields: ReactNode;",
+				"textFields: ReactNode;",
+				"export default function MonsterFieldSections({",
+				"return (",
+				'"MonsterFieldEditModal__fields"',
+				"{basicFields}",
+				'"MonsterFieldEditModal__fields MonsterFieldEditModal__abilities"',
+				"{abilityFields}",
+				'"MonsterFieldEditModal__text_fields"',
+				"{textFields}",
+				'"MonsterFieldEditModal__actions"',
+				"{actionSections}",
+			],
+			"Monster fields-mode private layout presentation",
+		);
+		assert.doesNotMatch(
+			fieldSectionsSource,
+			/MonsterActionSections|useState|useEffect|<Modal\b|TextInput|Select|parseMonsterJson|prepareMonsterDraftForSave|updateCreatureBasicField|openRuleInsertPicker|event\.target\.value/,
+		);
+	},
+);
+
+await run(
 	"Phase 170 isolates Campaign header action presentation",
 	async () => {
 		const [

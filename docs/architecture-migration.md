@@ -738,6 +738,8 @@ Next:
 - Phase 171 keeps precomputed card/label slot evaluation in the raw renderer while the private component preserves single/paired stack/column/frame/title markup and ordering. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 457/457 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 172 by moving Monster Field Edit Modal action-section presentation from `MonsterFieldEditModal.tsx` to private `ui/MonsterActionSections.tsx`. The raw feature modal retains draft/JSON synchronization, functional action mutations, rule-picker lifecycle, parsing, save, and error ownership.
 - Phase 172 forwards original change/keyboard events to raw callbacks while the private Fragment-only component preserves section order, keys, classes, localized copy, empty/add/remove/name/text behavior, and no public-entry expansion. One added static regression brings the full suite to 458/458 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 173 by moving Monster Field Edit Modal fields-mode layout from `MonsterFieldEditModal.tsx` to private `ui/MonsterFieldSections.tsx`. The raw feature modal retains draft/JSON synchronization, raw field renderers and select fallback, update/rule-picker callbacks, action composition, parsing, save, error, and modal lifecycle ownership.
+- Phase 173 precomputes basic, ability, text, and action slots in the raw renderer's original evaluation order while the private Fragment-only component preserves only the four wrapper groups, order/classes, fields/keys, disabled source, custom select option, and textarea presentation. One added static regression brings the full suite to 459/459 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -878,6 +880,9 @@ change detection, card/editor, and draft composition at 457/457 tests.
 Phase 172 isolates Monster Field Edit Modal action-section presentation in
 private feature UI while retaining raw draft synchronization, action mutations,
 and rule-picker lifecycle at 458/458 tests.
+Phase 173 isolates its fields-mode layout in private feature UI while retaining
+raw field renderers, draft/JSON lifecycle, action composition, update/rule-picker
+callbacks, and save/error behavior at 459/459 tests.
 
 ### Provenance and transfer rule
 
@@ -1257,7 +1262,8 @@ Status: **In progress**
   450/450 tests; Phase 165 passes 451/451 tests; Phase 166 passes 452/452
   tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests; Phase
   169 passes 455/455 tests; Phase 170 passes 456/456 tests; Phase 171 passes
-  457/457 tests; Phase 172 passes 458/458 tests.
+  457/457 tests; Phase 172 passes 458/458 tests; Phase 173 passes 459/459
+  tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2074,6 +2080,26 @@ Phase 172 is feature-local action presentation only, not a new public Monster
 editing workflow. The full `npm test` gate passes 458/458 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R43 / Phase 173 - Private Monster fields-mode layout
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Monster Field Edit Modal fields-mode layout into private
+  `features/edit-monster/ui/MonsterFieldSections.tsx`.
+- [x] Keep draft/JSON synchronization, raw field renderers and reads, select
+  fallback, update and Ctrl+K rule-picker callbacks, action composition,
+  parsing, save, error, and modal lifecycle in the raw `MonsterFieldEditModal`.
+- [x] Precompute basic, ability, text, and action slots in raw evaluation order;
+  preserve the four existing Fragment-only wrapper groups, field order/keys,
+  classes, disabled source, custom select option, and textarea presentation.
+- [x] Keep the component outside feature public runtime/type/model entries and
+  retain its internal-only import from the raw modal.
+
+Phase 173 is feature-local fields-mode presentation only, not a new public
+Monster editing workflow. The full `npm test` gate passes 459/459 tests;
+architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
+remains closed and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

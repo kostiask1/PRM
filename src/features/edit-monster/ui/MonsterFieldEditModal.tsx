@@ -42,6 +42,7 @@ import {
 	type RuleReferenceSelection,
 } from "../model.ts";
 import MonsterActionSections from "./MonsterActionSections.tsx";
+import MonsterFieldSections from "./MonsterFieldSections.tsx";
 import "../../../assets/components/MonsterFieldEditModal.css";
 
 interface RulesReferenceContentProps {
@@ -342,35 +343,37 @@ export default function MonsterFieldEditModal({
 						</Button>
 					</div>
 					{editMode === "fields" ? (
-						<>
-							<div className="MonsterFieldEditModal__fields">
-								{renderInputField("name", "Name")}
-								{renderInputField("source", "Source", { disabled: true })}
-								{renderSelectField("size", "Size", SIZE_OPTIONS)}
-								{renderInputField("type", "Type")}
-								{renderSelectField(
-									"alignment",
-									"Alignment",
-									ALIGNMENT_OPTIONS,
-								)}
-								{renderInputField("ac", "Armor Class")}
-								{renderInputField("hpFormula", "HP Formula")}
-								{renderInputField("cr", "Challenge Rating")}
-							</div>
-							<div className="MonsterFieldEditModal__fields MonsterFieldEditModal__abilities">
-								{CREATURE_ABILITY_KEYS.map((ability) =>
-									renderInputField(ability, ability.toUpperCase(), {
-										type: "number",
-									}),
-								)}
-							</div>
-							<div className="MonsterFieldEditModal__text_fields">
-								{renderTextField("speed", "Speed", 2)}
-								{renderTextField("senses", "Senses", 2)}
-								{renderTextField("languages", "Languages", 2)}
-								{renderTextField("desc", "Description", 4)}
-							</div>
-							<div className="MonsterFieldEditModal__actions">
+						<MonsterFieldSections
+							basicFields={
+								<>
+									{renderInputField("name", "Name")}
+									{renderInputField("source", "Source", { disabled: true })}
+									{renderSelectField("size", "Size", SIZE_OPTIONS)}
+									{renderInputField("type", "Type")}
+									{renderSelectField(
+										"alignment",
+										"Alignment",
+										ALIGNMENT_OPTIONS,
+									)}
+									{renderInputField("ac", "Armor Class")}
+									{renderInputField("hpFormula", "HP Formula")}
+									{renderInputField("cr", "Challenge Rating")}
+								</>
+							}
+							abilityFields={CREATURE_ABILITY_KEYS.map((ability) =>
+								renderInputField(ability, ability.toUpperCase(), {
+									type: "number",
+								}),
+							)}
+							textFields={
+								<>
+									{renderTextField("speed", "Speed", 2)}
+									{renderTextField("senses", "Senses", 2)}
+									{renderTextField("languages", "Languages", 2)}
+									{renderTextField("desc", "Description", 4)}
+								</>
+							}
+							actionSections={
 								<MonsterActionSections
 									draft={draft}
 									onAddAction={addAction}
@@ -379,8 +382,8 @@ export default function MonsterFieldEditModal({
 									onActionTextKeyDown={openActionRuleInsertPicker}
 									onRemoveAction={removeAction}
 								/>
-							</div>
-						</>
+							}
+						/>
 					) : (
 						<textarea
 							className="Input Input__textarea MonsterFieldEditModal__json"

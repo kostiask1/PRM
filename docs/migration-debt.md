@@ -25,6 +25,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 170 | Completed page/shared UI consolidation | Moved Campaign Page header-action presentation, menu-local state/refs, and shared dismissal composition into private `pages/campaign/ui/components/CampaignHeaderActions.tsx`; `CampaignHeader` retains title/rename/created metadata and passes narrow workflow commands. Consolidated the duplicate Campaign/Session undo-redo pair in public `shared/ui/UndoRedoButtons.tsx`. | Keep page menu ownership private and the shared component limited to the fragment-only pair plus optional disabled gate; preserve menu lifecycle, direct search/undo/redo behavior, capability/saving flags, classes/copy, and close-before-action order without public page/runtime/store expansion. | 456/456 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 171 | Completed widget-local consolidation | Moved AI Response Modal encounter monster-change presentation into private `widgets/ai-response-modal/ui/AiResponseEncounterMonsterChange.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, `renderEncounterMonsterCard` MonsterStatBlock/edit slot, participant entries/maps/change detection, draft/apply eligibility, highlights, labels, keys, and encounter composition. | Keep the renderer private; pass only prepared card/label slots and preserve single/paired stack/column/frame/title markup and render/evaluation order without widening widget public entries. | 457/457 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 172 | Completed feature-local consolidation | Moved Monster Field Edit Modal action-section presentation into private `features/edit-monster/ui/MonsterActionSections.tsx`. `MonsterFieldEditModal` retains draft/JSON synchronization, action mutations, rule-picker lifecycle, parsing, save, and error ownership. | Keep the presenter private and Fragment-only; forward original change/keyboard events to raw functional callbacks, preserve action section order/keys/classes/copy, and do not widen the feature public entry. | 458/458 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 173 | Completed feature-local consolidation | Moved Monster Field Edit Modal fields-mode layout into private `features/edit-monster/ui/MonsterFieldSections.tsx`. `MonsterFieldEditModal` retains all draft/JSON, raw field-renderer, action, rule-picker, parsing, save, and error ownership. | Keep the presenter private and Fragment-only; precompute field/action slots in raw evaluation order, preserve four wrapper groups/order/classes, fields/keys/disabled/custom-select/textarea behavior, and do not widen the public entry. | 459/459 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -223,6 +224,17 @@ and preserves section order, keys, classes, copy, and action fields. The expande
 suite passes 458/458 tests; architecture, performance, and Ukrainian encoding
 checks pass. `MD-R02` remains closed; `MD-R04` remains verification-blocked until
 the declared local lint/typecheck tooling is available.
+
+Phase 173 moves Monster Field Edit Modal fields-mode layout into private
+`ui/MonsterFieldSections.tsx`. The raw feature modal retains draft/JSON
+synchronization, field renderer/field-read and select-fallback behavior, action
+composition, update and Ctrl+K rule-picker callbacks, parsing, save, error, and
+modal lifecycle ownership. It precomputes basic, ability, text, and action slots
+in the original raw evaluation order; the private Fragment-only component keeps
+only their four wrapper groups and their classes/order. The expanded suite passes
+459/459 tests; architecture, performance, and Ukrainian encoding checks pass.
+`MD-R02` remains closed; `MD-R04` remains verification-blocked until the declared
+local lint/typecheck tooling is available.
 
 ## Closed recovery items
 
