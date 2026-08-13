@@ -10,7 +10,6 @@ import {
 
 import {
 	Button,
-	CollapseToggleButton,
 	DraggableList,
 	Icon,
 	Modal,
@@ -32,6 +31,7 @@ import SceneCardHeader from "./components/SceneCardHeader.tsx";
 import SceneCardMedia from "./components/SceneCardMedia.tsx";
 import SceneCardFields from "./components/SceneCardFields.tsx";
 import SessionHeaderActions from "./components/SessionHeaderActions.tsx";
+import SceneNotes from "./components/SceneNotes.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import {
 	CharacterCard,
@@ -70,10 +70,8 @@ import type { CampaignEntityRecord } from "../../../entities/campaign/index.js";
 import type { SharedNote } from "../../../shared/lib/index.js";
 import type { SessionResourceId } from "../../../features/session-editor/index.js";
 import {
-	getSceneNotesWithCollapsedState,
 	getSessionEncounterLinks,
 	getSessionPageData,
-	getSessionSceneNotesPresentation,
 	getSessionScopeImportPresentation,
 	getSessionSectionCollapsed,
 	hasSessionNoteContent,
@@ -1105,94 +1103,6 @@ interface SceneCardProps {
 	simplifiedNotesEnabled: boolean;
 }
 
-type SceneNotesProps = Pick<
-	SceneCardProps,
-	| "campaignSlug"
-	| "onSceneNoteAiIgnoredChange"
-	| "onSceneNoteChange"
-	| "onSceneNoteDelete"
-	| "onSceneNotesReorder"
-	| "onSceneNoteTitleChange"
-	| "onSceneNoteToggleCollapse"
-	| "onToggleNotesCollapse"
-	| "scene"
-	| "simplifiedNotesEnabled"
->;
-
-function SceneNotes(props: SceneNotesProps) {
-	const presentation = getSessionSceneNotesPresentation(
-		props.scene.notes,
-		props.scene.isNotesCollapsed,
-		props.simplifiedNotesEnabled,
-	);
-	const handleBulkSceneNotesCollapse = () => {
-		props.onSceneNotesReorder(
-			getSceneNotesWithCollapsedState(
-				presentation.notes,
-				presentation.bulkActionShouldCollapse,
-			),
-		);
-	};
-
-	return (
-		<div className="SceneCard__notes">
-							<div className="SceneCard__notes_headerRow">
-								<div
-									className="SceneCard__notes_header"
-									onClick={
-										presentation.hasData ? props.onToggleNotesCollapse : undefined
-									}
-								>
-									{presentation.hasData && (
-										<CollapseToggleButton
-											size={Button.SIZES.SMALL}
-											collapsed={presentation.isCollapsed}
-											onClick={props.onToggleNotesCollapse}
-										/>
-									)}
-									<label>{lang.t("Scene notes")}</label>
-								</div>
-								{presentation.showBulkAction && (
-									<Button
-										variant="ghost"
-										size={Button.SIZES.SMALL}
-										icon="chevron"
-										iconSize={16}
-										onClick={handleBulkSceneNotesCollapse}
-										title={lang.t(
-											presentation.bulkActionTitleKey,
-										)}
-									>
-										{lang.t(presentation.bulkActionLabelKey)}
-									</Button>
-								)}
-							</div>
-							{presentation.showList && (
-								<DraggableList
-									items={presentation.renderableNotes}
-									className="SceneCard__notes_list"
-									onReorder={props.onSceneNotesReorder}
-									{...getAiIgnoredNoteListProps(
-										props.onSceneNoteAiIgnoredChange,
-									)}
-									renderItem={(note, isDragging, index) => (
-										<SessionNoteCard
-											note={note}
-											isLast={index === presentation.renderableNotes.length - 1}
-											campaignSlug={props.campaignSlug}
-											enableHistory={false}
-											onToggleCollapse={props.onSceneNoteToggleCollapse}
-											onTitleChange={props.onSceneNoteTitleChange}
-											onTextChange={props.onSceneNoteChange}
-											onDelete={props.onSceneNoteDelete}
-										/>
-									)}
-								/>
-							)}
-		</div>
-	);
-}
-
 function SceneCard(props: SceneCardProps) {
 	const encounterLabel = props.hasEncounter
 		? props.encounterName
@@ -1217,7 +1127,25 @@ function SceneCard(props: SceneCardProps) {
 							enableHistory={false}
 							onUpdateField={props.onUpdateField}
 						/>
-						<SceneNotes {...props} />
+						<SceneNotes
+							scene={props.scene}
+							simplifiedNotesEnabled={props.simplifiedNotesEnabled}
+							onSceneNoteAiIgnoredChange={props.onSceneNoteAiIgnoredChange}
+							onSceneNotesReorder={props.onSceneNotesReorder}
+							onToggleNotesCollapse={props.onToggleNotesCollapse}
+							renderNoteCard={(note, isLast) => (
+								<SessionNoteCard
+									note={note}
+									isLast={isLast}
+									campaignSlug={props.campaignSlug}
+									enableHistory={false}
+									onToggleCollapse={props.onSceneNoteToggleCollapse}
+									onTitleChange={props.onSceneNoteTitleChange}
+									onTextChange={props.onSceneNoteChange}
+									onDelete={props.onSceneNoteDelete}
+								/>
+							)}
+						/>
 					</div>
 					<SceneCardMedia
 						number={props.number}

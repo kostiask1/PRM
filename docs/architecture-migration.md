@@ -744,6 +744,8 @@ Next:
 - Phase 174 preserves the existing always-mounted ref root, classes/open state, menu/button order, icons/titles/copy, and saving-disabled shared undo/redo gate in private page UI. One added static regression brings the full suite to 460/460 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 175 by moving AI Response Modal preview-resource header markup from `AiResponseModal.tsx` to private `ui/AiResponsePreviewResourceHeader.tsx`. The raw adapter retains default/fallback resource-label reads, resource-state lookup, and action construction in their original order before passing prepared nodes to the leaf.
 - Phase 175 preserves the exact preview header root/first-label-span/nested-actions/state-span hierarchy, classes, and CSS selector order in private widget UI. One added static regression brings the full suite to 461/461 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 176 by moving Session Page scene-note presentation from `SessionPage.tsx` to private `ui/components/SceneNotes.tsx`. The raw page retains its module-scoped `SessionNoteCard` factory and passes a narrow note-render slot; `SceneCard` retains every scene note mutation and surrounding card composition.
+- Phase 176 preserves one scene-notes presentation calculation, bulk-collapse plan/reorder order, virtual-note and isolated drag-control behavior, the root/header/list DOM/classes, note order/last flag, and `enableHistory={false}` in private page UI. One added static regression brings the full suite to 462/462 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -893,6 +895,9 @@ close-before-command workflows at 460/460 tests.
 Phase 175 isolates AI Response Modal preview-resource header markup in private
 widget UI while retaining raw resource-label/state/action evaluation at 461/461
 tests.
+Phase 176 isolates Session Page scene-note presentation in private page UI while
+retaining its configured note-card identity, raw scene mutation bindings, and
+virtual-note/drag behavior at 462/462 tests.
 
 ### Provenance and transfer rule
 
@@ -1273,7 +1278,8 @@ Status: **In progress**
   tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests; Phase
   169 passes 455/455 tests; Phase 170 passes 456/456 tests; Phase 171 passes
   457/457 tests; Phase 172 passes 458/458 tests; Phase 173 passes 459/459
-  tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests.
+  tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests; Phase
+  176 passes 462/462 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2150,6 +2156,27 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 175 is widget-local preview-header presentation only, not a new public AI
 response workflow. The full `npm test` gate passes 461/461 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R46 / Phase 176 - Private Session scene-note presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Session Page scene-note presentation into private
+  `pages/session/ui/components/SceneNotes.tsx`.
+- [x] Keep the module-scoped configured `SessionNoteCard` identity in
+  `SessionPage`; inject a narrow note-render slot and keep `SceneCard` scene
+  composition plus title/text/delete/collapse mutation bindings raw.
+- [x] Preserve one `getSessionSceneNotesPresentation` call, bulk collapse via
+  `getSceneNotesWithCollapsedState` then one reorder command, virtual-note and
+  isolated drag-control behavior, root/header/collapse/label/bulk/list DOM,
+  note order/last calculation, and `enableHistory={false}`.
+- [x] Keep the component outside public page runtime/type entries and retain its
+  internal-only import from the raw page UI.
+
+Phase 176 is page-local scene-note presentation only, not a new public Session
+workflow. The full `npm test` gate passes 462/462 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

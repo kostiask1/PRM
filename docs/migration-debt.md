@@ -28,6 +28,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 173 | Completed feature-local consolidation | Moved Monster Field Edit Modal fields-mode layout into private `features/edit-monster/ui/MonsterFieldSections.tsx`. `MonsterFieldEditModal` retains all draft/JSON, raw field-renderer, action, rule-picker, parsing, save, and error ownership. | Keep the presenter private and Fragment-only; precompute field/action slots in raw evaluation order, preserve four wrapper groups/order/classes, fields/keys/disabled/custom-select/textarea behavior, and do not widen the public entry. | 459/459 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 174 | Completed page-local consolidation | Moved Session Page header action-menu presentation into private `pages/session/ui/components/SessionHeaderActions.tsx`. `SessionView` retains menu state/ref, shared pointer-dismissal lifecycle, global-search state, functional toggle, and close-before-search/undo/redo/delete commands; `SessionHeader` retains title and encounter quick access. | Keep the presenter private; preserve the always-mounted ref root/classes/open state, menu/button order, icons/copy, saving-disabled undo/redo gate, and no public page/runtime/store expansion. | 460/460 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 175 | Completed widget-local consolidation | Moved AI Response Modal preview-resource header markup into private `widgets/ai-response-modal/ui/AiResponsePreviewResourceHeader.tsx`. `AiResponseModal` retains default/fallback resource-label reads plus resource-state/action evaluation and policy. | Keep the leaf private and DOM-only; precompute label, state, and actions in raw order, preserve root/span/action hierarchy and CSS classes, and do not widen widget public entries. | 461/461 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 176 | Completed page-local consolidation | Moved Session Page scene-note presentation into private `pages/session/ui/components/SceneNotes.tsx`. `SessionPage` retains its single configured `SessionNoteCard` identity and `SceneCard` mutation/card composition; the presenter receives only a note-render slot plus narrow note commands. | Keep the presenter private; preserve notes presentation/bulk-collapse/reorder order, virtual-note and isolated drag-control behavior, root/header/list DOM/classes, note order/last flag, and `enableHistory={false}` without public page/runtime/store expansion. | 462/462 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -259,6 +260,17 @@ The expanded suite passes 461/461 tests; architecture, performance, and
 Ukrainian encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
+
+Phase 176 moves Session Page scene-note presentation into private
+`ui/components/SceneNotes.tsx`. The raw page retains its module-scoped
+`SessionNoteCard` factory and supplies a narrow note-render slot; `SceneCard`
+retains scene/card composition and all note mutation bindings. The private
+presenter retains one scene-notes presentation call, its bulk collapse plan then
+reorder command, virtual-note/list control behavior, and the existing
+root/header/collapse/label/bulk/list DOM. The expanded suite passes 462/462
+tests; architecture, performance, and Ukrainian encoding checks pass. `MD-R02`
+remains closed; `MD-R04` remains verification-blocked until the declared local
+lint/typecheck tooling is available.
 
 ## Closed recovery items
 

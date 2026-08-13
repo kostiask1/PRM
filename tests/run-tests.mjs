@@ -4388,6 +4388,141 @@ await run(
 );
 
 await run(
+	"Phase 176 isolates Session scene-note presentation",
+	async () => {
+		const [
+			sessionSource,
+			sceneNotesSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		] = await Promise.all([
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SceneNotes.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/session/index.js", "utf8"),
+			fs.readFile("src/pages/session/index.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			sessionSource,
+			/import SceneNotes from "\.\/components\/SceneNotes\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"const SessionNoteCard = createNoteCardComponent({",
+				"EditableField,",
+				"renderMentionText,",
+				"function isSessionEntityId",
+				"function SceneCard(props: SceneCardProps) {",
+				"<SceneCardHeader",
+				"<SceneCardFields",
+				"<SceneNotes",
+				"scene={props.scene}",
+				"simplifiedNotesEnabled={props.simplifiedNotesEnabled}",
+				"onSceneNoteAiIgnoredChange={props.onSceneNoteAiIgnoredChange}",
+				"onSceneNotesReorder={props.onSceneNotesReorder}",
+				"onToggleNotesCollapse={props.onToggleNotesCollapse}",
+				"renderNoteCard={(note, isLast) => (",
+				"<SessionNoteCard",
+				"note={note}",
+				"isLast={isLast}",
+				"campaignSlug={props.campaignSlug}",
+				"enableHistory={false}",
+				"onToggleCollapse={props.onSceneNoteToggleCollapse}",
+				"onTitleChange={props.onSceneNoteTitleChange}",
+				"onTextChange={props.onSceneNoteChange}",
+				"onDelete={props.onSceneNoteDelete}",
+				"<SceneCardMedia",
+			],
+			"Session scene-card raw note-card composition",
+		);
+		assert.equal(
+			Array.from(sessionSource.matchAll(/<SessionNoteCard(?=\s|>)/g)).length,
+			2,
+			"Session NoteCard factory remains configured once with two page call sites",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/getSessionSceneNotesPresentation|getSceneNotesWithCollapsedState|SceneCard__notes/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SceneNotes/,
+		);
+		assertSourceTokensInOrder(
+			sceneNotesSource,
+			[
+				'import type { ReactNode } from "react";',
+				'import type { SessionScene } from "../../../../entities/session/index.js";',
+				'import { getAiIgnoredNoteListProps } from "../../../../features/notes/ui/index.js";',
+				'import type { SessionResourceId } from "../../../../features/session-editor/index.js";',
+				'import { lang, type SharedNote } from "../../../../shared/lib/index.js";',
+				"Button,",
+				"CollapseToggleButton,",
+				"DraggableList,",
+				"getSceneNotesWithCollapsedState,",
+				"getSessionSceneNotesPresentation,",
+				"type SessionSceneNotesPresentation,",
+				"interface SceneNotesProps {",
+				"onSceneNoteAiIgnoredChange: (",
+				"onSceneNotesReorder: (notes: SharedNote[]) => void;",
+				"onToggleNotesCollapse: () => void;",
+				"renderNoteCard: (note: SharedNote, isLast: boolean) => ReactNode;",
+				"scene: SessionScene;",
+				"simplifiedNotesEnabled: boolean;",
+				"export default function SceneNotes({",
+				"const presentation = getSessionSceneNotesPresentation(",
+				"scene.notes,",
+				"scene.isNotesCollapsed,",
+				"simplifiedNotesEnabled,",
+				"const handleBulkSceneNotesCollapse = () => {",
+				"onSceneNotesReorder(",
+				"getSceneNotesWithCollapsedState(",
+				"presentation.notes,",
+				"presentation.bulkActionShouldCollapse,",
+				"return (",
+				'"SceneCard__notes"',
+				"renderSceneNotesHeader({",
+				"onBulkSceneNotesCollapse: handleBulkSceneNotesCollapse,",
+				"presentation,",
+				"presentation.showList && (",
+				"renderSceneNotesList({",
+				"interface SceneNotesHeaderProps {",
+				"function renderSceneNotesHeader({",
+				'"SceneCard__notes_headerRow"',
+				'"SceneCard__notes_header"',
+				"presentation.hasData ? onToggleNotesCollapse : undefined",
+				"<CollapseToggleButton",
+				"collapsed={presentation.isCollapsed}",
+				"onClick={onToggleNotesCollapse}",
+				'{lang.t("Scene notes")}',
+				"presentation.showBulkAction && (",
+				'icon="chevron"',
+				"onClick={onBulkSceneNotesCollapse}",
+				"interface SceneNotesListProps {",
+				"function renderSceneNotesList({",
+				"<DraggableList",
+				"items={presentation.renderableNotes}",
+				'"SceneCard__notes_list"',
+				"onReorder={onSceneNotesReorder}",
+				"{...getAiIgnoredNoteListProps(onSceneNoteAiIgnoredChange)}",
+				"renderItem={(note, isDragging, index) =>",
+				"renderNoteCard(",
+				"index === presentation.renderableNotes.length - 1,",
+			],
+			"Session scene-note private presentation",
+		);
+		assert.doesNotMatch(
+			sceneNotesSource,
+			/createNoteCardComponent|SessionNoteCard|useState|useEffect|useSessionView|useSessionPageRuntime|<Modal\b|handleScene|onSceneNoteTitleChange|onSceneNoteChange|onSceneNoteDelete/,
+		);
+	},
+);
+
+await run(
 	"Phase 175 isolates AI response preview-resource header presentation",
 	async () => {
 		const [
