@@ -38,6 +38,7 @@ import {
 } from "../model/aiResponseModal.ts";
 import { useAiResponseDraftController } from "../model/useAiResponseDraftController.ts";
 import AiResponseCardDiff from "./AiResponseCardDiff.tsx";
+import AiResponseEncounterParticipantList from "./AiResponseEncounterParticipantList.tsx";
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
 import AiResponseGenericDiff from "./AiResponseGenericDiff.tsx";
 import AiResponseJsonDiff from "./AiResponseJsonDiff.tsx";
@@ -288,61 +289,6 @@ function AiResponseModal({
 		);
 	};
 
-	const renderEncounterParticipantList = (
-		snapshot: unknown,
-		counterpartSnapshot: unknown,
-		side: EncounterSide,
-	) => {
-		const entries = getEncounterParticipantEntries(
-			getEncounterParticipants(snapshot),
-		);
-		const counterpartEntries = getEncounterParticipantEntries(
-			getEncounterParticipants(counterpartSnapshot),
-		);
-		const counterpartByKey = new Map(
-			counterpartEntries.map((entry) => [entry.key, entry.participant]),
-		);
-
-		if (entries.length === 0) {
-			return (
-				<div className="AiAssistant__encounter_empty">
-					{lang.t("No creatures in encounter.")}
-				</div>
-			);
-		}
-
-		return (
-			<ol className="AiAssistant__encounter_list">
-				{entries.map(({ key, participant, index }) => {
-					const counterpart = counterpartByKey.get(key);
-					const isMissing = !counterpart;
-					const isChanged =
-						counterpart && !snapshotsEqual(participant, counterpart);
-					return (
-						<li
-							key={`${side}-${key}-${index}`}
-							className={classNames(
-								"AiAssistant__encounter_item",
-								side === "before" && isMissing && "is_removed",
-								side === "after" && isMissing && "is_added",
-								isChanged && "is_modified",
-							)}
-						>
-							<span className="AiAssistant__encounter_item_name">
-								{getEncounterParticipantName(participant)}
-							</span>
-							{getEncounterParticipantMeta(participant) && (
-								<span className="AiAssistant__encounter_item_meta">
-									{getEncounterParticipantMeta(participant)}
-								</span>
-							)}
-						</li>
-					);
-				})}
-			</ol>
-		);
-	};
-
 	const renderEncounterMonsterCard = (
 		participant: unknown,
 		className: string,
@@ -513,7 +459,13 @@ function AiResponseModal({
 			<div className="AiAssistant__preview_card_frame">
 				<div className="AiAssistant__preview_column_title">{label}</div>
 				<div className={`AiAssistant__encounter_panel is_${side}`}>
-					{renderEncounterParticipantList(snapshot, counterpart, side)}
+					<AiResponseEncounterParticipantList
+						snapshot={snapshot}
+						counterpartSnapshot={counterpart}
+						side={side}
+						getEncounterParticipantName={getEncounterParticipantName}
+						getEncounterParticipantMeta={getEncounterParticipantMeta}
+					/>
 				</div>
 			</div>
 		);

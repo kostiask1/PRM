@@ -724,6 +724,8 @@ Next:
 - Phase 164 keeps single-snapshot selection, metadata exclusion, value fallback, ordered field projection, note-array delegation, resource/field keys, localized Before/After labels, formatted values, and CSS classes widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 450/450 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 165 by moving AI Response Modal card-diff presentation from `AiResponseModal.tsx` to private `ui/AiResponseCardDiff.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, every injected card/editor slot tag, preview tree, and the `AiResponseModalView` boundary.
 - Phase 165 keeps new/deleted/changed routing, snapshot selection, localized labels, card-surface classes, draft/apply edit eligibility, highlight construction, callback argument order, and the outer resource wrapper/header/key widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 451/451 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 166 by moving AI Response Modal encounter participant-list presentation from `AiResponseModal.tsx` to private `ui/AiResponseEncounterParticipantList.tsx`. The raw renderer retains configured factory/composition, state/controller/guard order, encounter-side panels, encounter MonsterStatBlock slots, encounter editing/resource composition, preview tree, and the `AiResponseModalView` boundary.
+- Phase 166 keeps before/after entry derivation and maps, empty-state copy, participant list keys, ordered before/after/mutated class routing, participant-name rendering, and both metadata evaluations widget-private. The public widget runtime/type/model entries remain unchanged. One added static regression brings the full suite to 452/452 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -848,7 +850,8 @@ Modal creature-field draft editing in a private widget controller at 448/448
 tests. Phase 163 isolates JSON-diff presentation in the same widget at 449/449
 tests. Phase 164 isolates generic snapshot-diff presentation in that widget at
 450/450 tests. Phase 165 isolates card-diff presentation in that widget at
-451/451 tests.
+451/451 tests. Phase 166 isolates encounter participant-list presentation in
+that widget at 452/452 tests.
 
 ### Provenance and transfer rule
 
@@ -1225,7 +1228,8 @@ Status: **In progress**
   443/443 tests; Phase 158 passes 444/444 tests; Phase 159 passes 445/445
   tests; Phase 160 passes 446/446 tests; Phase 161 passes 447/447 tests; Phase
   162 passes 448/448 tests; Phase 163 passes 449/449 tests; Phase 164 passes
-  450/450 tests; Phase 165 passes 451/451 tests.
+  450/450 tests; Phase 165 passes 451/451 tests; Phase 166 passes 452/452
+  tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1889,6 +1893,27 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 165 is private presentation ownership only, not a new public response
 format or a shared card renderer. The full `npm test` gate passes 451/451
+tests; architecture, performance, and Ukrainian encoding checks also pass.
+`MD-R02` remains closed and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R36 / Phase 166 - Private AI response encounter participant-list presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move encounter participant-list presentation into private
+  `widgets/ai-response-modal/ui/AiResponseEncounterParticipantList.tsx`.
+- [x] Preserve before/after entry derivation and maps, empty-state copy,
+  participant keys, ordered before/after/mutated class routing, participant
+  names, and both metadata evaluations.
+- [x] Keep the raw renderer's configured factory, state/controller/guard
+  ordering, encounter-side panels, encounter MonsterStatBlock slots, encounter
+  editing/resource composition, preview tree, editor placement, and the View's
+  modal/diff-switch/draft-editor composition unchanged.
+- [x] Keep the component outside widget public runtime/type/model entries and
+  retain its internal-only import from the raw renderer.
+
+Phase 166 is private presentation ownership only, not a new public response
+format or a shared encounter renderer. The full `npm test` gate passes 452/452
 tests; architecture, performance, and Ukrainian encoding checks also pass.
 `MD-R02` remains closed and `MD-R04` remains open for complete lint/typecheck.
 

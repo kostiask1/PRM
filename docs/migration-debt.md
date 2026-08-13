@@ -18,6 +18,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 163 | Completed widget-local consolidation | Moved AI Response Modal JSON-diff markup into private `widgets/ai-response-modal/ui/AiResponseJsonDiff.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, injected slots, preview tree, and editor placement. | Keep the renderer private; preserve resource/field/line keys, localized labels, resource states, line classes/markers, and number/text fallbacks without widening widget public entries. | 449/449 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 164 | Completed widget-local consolidation | Moved AI Response Modal generic snapshot-diff presentation into private `widgets/ai-response-modal/ui/AiResponseGenericDiff.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, injected slots, preview tree, and editor placement. | Keep the renderer private; preserve snapshot selection, metadata exclusion, field fallback/order, nested notes delegation, keys, localized Before/After labels, formatted values, and CSS classes without widening widget public entries. | 450/450 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 165 | Completed widget-local consolidation | Moved AI Response Modal card-diff presentation into private `widgets/ai-response-modal/ui/AiResponseCardDiff.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, every injected card/editor slot tag, preview tree, outer card resource shell, and editor placement. | Keep the renderer private; preserve new/deleted/changed routing, snapshot selection, labels/classes, draft/apply eligibility, highlight construction, and callback argument order without widening widget public entries. | 451/451 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 166 | Completed widget-local consolidation | Moved AI Response Modal encounter participant-list presentation into private `widgets/ai-response-modal/ui/AiResponseEncounterParticipantList.tsx`. `AiResponseModal` retains configured factory/composition, state/controller/guard order, encounter-side panels, encounter MonsterStatBlock slots, encounter editing/resource composition, preview tree, and editor placement. | Keep the renderer private; preserve entry/map derivation, empty state, participant keys, ordered classes, names, and both metadata evaluations without widening widget public entries. | 452/452 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -139,6 +140,16 @@ The expanded suite passes 451/451 tests; architecture, performance, and
 Ukrainian encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
+Phase 166 moves AI Response Modal encounter participant-list presentation into
+private `ui/AiResponseEncounterParticipantList.tsx`. It preserves raw renderer
+composition/state ordering, configured factory/public entries, encounter-side
+panels, encounter MonsterStatBlock slots, encounter editing/resource
+composition, preview tree, and editor placement while retaining entry/map
+derivation, empty state, participant keys, ordered classes, names, and both
+metadata evaluations. The expanded suite passes 452/452 tests; architecture,
+performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
+`MD-R04` remains verification-blocked until the declared local lint/typecheck
+tooling is available.
 
 ## Closed recovery items
 

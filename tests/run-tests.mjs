@@ -3725,6 +3725,107 @@ await run(
 );
 
 await run(
+	"Phase 166 isolates AI response encounter participant-list presentation",
+	async () => {
+		const [
+			responseModalSource,
+			participantListSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseEncounterParticipantList.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			responseModalSource,
+			/import AiResponseEncounterParticipantList from "\.\/AiResponseEncounterParticipantList\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			responseModalSource,
+			[
+				"const renderEncounterSide = (",
+				"if (snapshot === null) return null;",
+				"<AiResponseEncounterParticipantList",
+				"snapshot={snapshot}",
+				"counterpartSnapshot={counterpart}",
+				"side={side}",
+				"getEncounterParticipantName={getEncounterParticipantName}",
+				"getEncounterParticipantMeta={getEncounterParticipantMeta}",
+			],
+			"AI response encounter participant-list composition",
+		);
+		assert.doesNotMatch(responseModalSource, /renderEncounterParticipantList/);
+		assert.doesNotMatch(
+			participantListSource,
+			/AiResponseEncounterParticipantItem/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/AiResponseEncounterParticipantList/,
+		);
+		assertSourceTokensInOrder(
+			participantListSource,
+			[
+				'import { classNames, lang } from "../../../shared/lib/index.js";',
+				"getEncounterParticipantEntries,",
+				"getEncounterParticipants,",
+				"snapshotsEqual,",
+				'type EncounterSide = "before" | "after";',
+				"interface AiResponseEncounterParticipantListProps {",
+				"counterpartSnapshot: unknown;",
+				"getEncounterParticipantMeta:",
+				"getEncounterParticipantName:",
+				"side: EncounterSide;",
+				"snapshot: unknown;",
+				"function getBeforeEncounterParticipantClassName(",
+				'side === "before" && isMissing && "is_removed"',
+				"function getAfterEncounterParticipantClassName(",
+				'side === "after" && isMissing && "is_added"',
+				"function getModifiedEncounterParticipantClassName(",
+				'isChanged && "is_modified"',
+				"function getEncounterParticipantClassName(",
+				'"AiAssistant__encounter_item"',
+				"getBeforeEncounterParticipantClassName(side, isMissing)",
+				"getAfterEncounterParticipantClassName(side, isMissing)",
+				"getModifiedEncounterParticipantClassName(isChanged)",
+				"export default function AiResponseEncounterParticipantList({",
+				"const entries = getEncounterParticipantEntries(",
+				"getEncounterParticipants(snapshot),",
+				"const counterpartEntries = getEncounterParticipantEntries(",
+				"getEncounterParticipants(counterpartSnapshot),",
+				"const counterpartByKey = new Map(",
+				"if (entries.length === 0) {",
+				'{lang.t("No creatures in encounter.")}',
+				"entries.map(({ key, participant, index }) => {",
+				"const counterpart = counterpartByKey.get(key);",
+				"const isMissing = !counterpart;",
+				"const isChanged =",
+				"counterpart && !snapshotsEqual(participant, counterpart);",
+				"key={`${side}-${key}-${index}`}",
+				"className={getEncounterParticipantClassName(",
+				"{getEncounterParticipantName(participant)}",
+				"{getEncounterParticipantMeta(participant) && (",
+				"{getEncounterParticipantMeta(participant)}",
+			],
+			"AI response encounter participant-list presentation",
+		);
+	},
+);
+
+await run(
 	"Phase 131 composes rules reference and monster editor widgets at stable owners",
 	async () => {
 		const [
