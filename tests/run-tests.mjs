@@ -4512,6 +4512,112 @@ await run(
 );
 
 await run(
+	"Phase 181 isolates Session scope-import overlay presentation",
+	async () => {
+		const [sessionSource, overlaySource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+				fs.readFile(
+					"src/pages/session/ui/components/SessionScopeImportOverlay.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/session/index.js", "utf8"),
+				fs.readFile("src/pages/session/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			sessionSource,
+			/import SessionScopeImportOverlay from "\.\/components\/SessionScopeImportOverlay\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"function SessionView() {",
+				"if (!session) return null;",
+				"const scopeImportModal = view.scopeImportModal;",
+				"getSessionScopeImportPresentation(scopeImportModal, lang.t)",
+				"<SessionChecklistOverlay",
+				"<SessionScopeImportOverlay",
+				"modal={scopeImportModal}",
+				"copy={scopeImportCopy}",
+				"type={scopeImportType}",
+				"onClose={view.closeScopeImportModal}",
+				"onMoveToSession={(type, entity) =>",
+				"view.moveCampaignEntityToSession(type, entity)",
+				"<SessionFloatingActions",
+			],
+			"Session raw scope-import derivation and movement ownership",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/interface SessionScopeImport(?:Overlay|Item|List)Props|function SessionScopeImport(?:Overlay|Item|List)|getSessionScopeImportItemKey|SessionView__scopeImport(?:List|Item)/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionScopeImportOverlay/,
+		);
+		assertSourceTokensInOrder(
+			overlaySource,
+			[
+				'import { Button, Modal } from "../../../../shared/ui/index.js";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { renderMentionText } from "../../../../features/entity-link/index.js";',
+				'import type { ScopeImportModalState } from "../../../../features/campaign-entity/index.js";',
+				'import type { SessionScopeImportCopy } from "../../model/sessionPagePresentation.ts";',
+				"getSessionEntityDisplayName,",
+				"type SessionEntityType,",
+				'type SessionScopeImportItem = ScopeImportModalState["items"][number];',
+				"interface SessionScopeImportOverlayProps {",
+				"modal: ScopeImportModalState | null;",
+				"copy: SessionScopeImportCopy | null;",
+				"type: SessionEntityType;",
+				"onClose: () => void;",
+				"onMoveToSession: (",
+				"function SessionScopeImportItem({",
+				"getSessionEntityDisplayName(type, entity, lang.t(\"Untitled\"))",
+				'"SessionView__scopeImportItem"',
+				"renderMentionText(name)",
+				'icon="import"',
+				"onClick={() => onMoveToSession(type, entity)}",
+				'{lang.t("Move to session")}',
+				"function getSessionScopeImportItemKey(",
+				"entity.slug ||",
+				"entity.id ||",
+				"getSessionEntityDisplayName(type, entity, lang.t(\"Untitled\"))",
+				"function SessionScopeImportList({",
+				"if (modal.isLoading)",
+				'{lang.t("Loading...")}',
+				"if (modal.items.length === 0)",
+				"copy.emptyText",
+				"modal.items.map((entity) => (",
+				"key={getSessionScopeImportItemKey(entity, type)}",
+				"type={type}",
+				"entity={entity}",
+				"onMoveToSession={onMoveToSession}",
+				"export default function SessionScopeImportOverlay({",
+				"if (!modal || !copy) return null;",
+				"<Modal",
+				"title={copy.title}",
+				"onConfirm={onClose}",
+				"onCancel={onClose}",
+				"showFooter={false}",
+				'"SessionView__scopeImportList"',
+				"<SessionScopeImportList",
+				"modal={modal}",
+				"copy={copy}",
+				"type={type}",
+				"onMoveToSession={onMoveToSession}",
+			],
+			"Session private scope-import overlay presentation",
+		);
+		assert.doesNotMatch(
+			overlaySource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|moveCampaignEntityToSession|closeScopeImportModal|openCampaignScopeImport|getSessionScopeImportPresentation|app\/model|shared\/model/,
+		);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
@@ -6719,6 +6825,7 @@ await run(
 				"src/pages/session/ui/SessionPage.tsx",
 				"src/pages/session/ui/components/SceneCardHeader.tsx",
 				"src/pages/session/ui/components/SessionHeader.tsx",
+				"src/pages/session/ui/components/SessionScopeImportOverlay.tsx",
 				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
 				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
 				"src/widgets/campaign-entity-card/ui/CampaignEntityCardNotes.tsx",

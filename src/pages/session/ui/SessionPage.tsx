@@ -11,7 +11,6 @@ import {
 	Button,
 	DraggableList,
 	Icon,
-	Modal,
 	Panel,
 	Tooltip,
 	usePointerDownOutsideDismissal,
@@ -30,6 +29,7 @@ import SceneCardMedia from "./components/SceneCardMedia.tsx";
 import SceneCardFields from "./components/SceneCardFields.tsx";
 import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
+import SessionScopeImportOverlay from "./components/SessionScopeImportOverlay.tsx";
 import SceneNotes from "./components/SceneNotes.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import {
@@ -65,7 +65,6 @@ import {
 import {
 	findEntityByName,
 } from "../../../entities/campaign/index.js";
-import type { CampaignEntityRecord } from "../../../entities/campaign/index.js";
 import type { SharedNote } from "../../../shared/lib/index.js";
 import type { SessionResourceId } from "../../../features/session-editor/index.js";
 import {
@@ -75,10 +74,8 @@ import {
 	getSessionSectionCollapsed,
 	hasSessionNoteContent,
 	shouldExpandSessionNotesFromHash,
-	type SessionScopeImportCopy,
 } from "../model/sessionPagePresentation.ts";
 import {
-	getSessionEntityDisplayName,
 	normalizeSessionEntity,
 	type SessionEntityType,
 	type SessionPageEntity,
@@ -538,93 +535,6 @@ function SessionScenesSection(props: SessionScenesSectionProps) {
 	);
 }
 
-interface SessionScopeImportOverlayProps {
-	view: SessionController;
-	modal: NonNullable<SessionController["scopeImportModal"]> | null;
-	copy: SessionScopeImportCopy | null;
-	type: SessionEntityType;
-}
-
-interface SessionScopeImportItemProps {
-	view: SessionController;
-	type: SessionEntityType;
-	entity: CampaignEntityRecord;
-}
-
-function SessionScopeImportItem({
-	view,
-	type,
-	entity,
-}: SessionScopeImportItemProps) {
-	const name = getSessionEntityDisplayName(type, entity, lang.t("Untitled"));
-	return (
-		<div className="SessionView__scopeImportItem">
-			<span>{renderMentionText(name)}</span>
-			<Button
-				variant="primary"
-				size={Button.SIZES.SMALL}
-				icon="import"
-				onClick={() => view.moveCampaignEntityToSession(type, entity)}
-			>
-				{lang.t("Move to session")}
-			</Button>
-		</div>
-	);
-}
-
-function getSessionScopeImportItemKey(
-	entity: CampaignEntityRecord,
-	type: SessionEntityType,
-): string {
-	return String(
-		entity.slug ||
-		entity.id ||
-		getSessionEntityDisplayName(type, entity, lang.t("Untitled")),
-	);
-}
-
-function SessionScopeImportList({
-	view,
-	modal,
-	copy,
-	type,
-}: Omit<SessionScopeImportOverlayProps, "modal" | "copy"> & {
-	modal: NonNullable<SessionScopeImportOverlayProps["modal"]>;
-	copy: NonNullable<SessionScopeImportOverlayProps["copy"]>;
-}) {
-	if (modal.isLoading) return <div className="muted">{lang.t("Loading...")}</div>;
-	if (modal.items.length === 0) return <div className="muted">{copy.emptyText}</div>;
-	return modal.items.map((entity) => (
-		<SessionScopeImportItem
-			key={getSessionScopeImportItemKey(entity, type)}
-			view={view}
-			type={type}
-			entity={entity}
-		/>
-	));
-}
-
-function SessionScopeImportOverlay({
-	view,
-	modal,
-	copy,
-	type,
-}: SessionScopeImportOverlayProps) {
-	if (!modal || !copy) return null;
-	return (
-		<Modal title={copy.title} onConfirm={view.closeScopeImportModal} onCancel={view.closeScopeImportModal} showFooter={false}>
-			<div className="SessionView__scopeImportList">
-				<SessionScopeImportList
-					view={view}
-					modal={modal}
-					copy={copy}
-					type={type}
-				/>
-			</div>
-		</Modal>
-	);
-}
-
 interface SessionFloatingActionsProps {
 	view: SessionController;
 	isGlobalSearchOpen: boolean;
@@ -933,10 +843,13 @@ function SessionView() {
 					/>
 				)}
 				<SessionScopeImportOverlay
-					view={view}
 					modal={scopeImportModal}
 					copy={scopeImportCopy}
 					type={scopeImportType}
+					onClose={view.closeScopeImportModal}
+					onMoveToSession={(type, entity) =>
+						view.moveCampaignEntityToSession(type, entity)
+					}
 				/>
 				<SessionFloatingActions
 					view={view}

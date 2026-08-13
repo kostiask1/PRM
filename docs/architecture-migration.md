@@ -754,6 +754,8 @@ Next:
 - Phase 179 preserves open-gated reads of checklist/progress data, the shared modal close callback, no-footer modal, progress/classes, dynamic checked lookup, item order, and raw `updateData(..., true)` persistence policy. One added static regression brings the full suite to 465/465 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 180 by moving Session Page header presentation from `SessionPage.tsx` to private `ui/components/SessionHeader.tsx`. The raw page retains session gating, navigation, action-menu lifecycle, global-search state, and close-before-action commands; the leaf receives only header data, callbacks, and the action ref.
 - Phase 180 preserves the header DOM/classes, back/rename behavior, encounter gate/order/key, localized scene fallback/mention rendering, and existing sibling action-menu presentation. One added static regression brings the full suite to 466/466 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 181 by moving Session Page scope-import overlay presentation from `SessionPage.tsx` to private `ui/components/SessionScopeImportOverlay.tsx`. The raw page retains the post-guard modal snapshot, presentation derivation, and move/close lifecycle; the leaf receives only display data and explicit commands.
+- Phase 181 preserves unconditional composition with a private null guard, modal lifecycle/classes, loading-before-empty order, lazy item labels/keys, list order, mention rendering, and click-only move delegation. One added static regression brings the full suite to 467/467 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -918,6 +920,9 @@ UI while retaining raw open-gate, state, and persistence-command ownership at
 Phase 180 isolates Session Page header presentation in private page UI while
 retaining raw guard, navigation, action-menu lifecycle, and close-command
 ownership at 466/466 tests.
+Phase 181 isolates Session Page scope-import overlay presentation in private
+page UI while retaining raw modal derivation, move, and close lifecycle
+ownership at 467/467 tests.
 
 ### Provenance and transfer rule
 
@@ -1301,7 +1306,7 @@ Status: **In progress**
   tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests; Phase
   176 passes 462/462 tests; Phase 177 passes 463/463 tests; Phase 178 passes
   464/464 tests; Phase 179 passes 465/465 tests; Phase 180 passes 466/466
-  tests.
+  tests; Phase 181 passes 467/467 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2281,6 +2286,26 @@ Phase 180 is page-local header presentation only, not a new Session workflow.
 The full `npm test` gate passes 466/466 tests; architecture, performance, and
 Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
 remains open for complete lint/typecheck.
+
+### Recovery R51 / Phase 181 - Private Session scope-import overlay presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move the Session Page scope-import overlay and private item/list/key
+  presentation into `pages/session/ui/components/SessionScopeImportOverlay.tsx`.
+- [x] Keep `SessionView` ownership of the post-guard modal snapshot,
+  presentation derivation, close, and scope-move lifecycle; compose the leaf in
+  the existing unconditional JSX slot.
+- [x] Pass modal/copy/type plus explicit close/move commands; preserve the
+  private null guard, shared modal close callback, loading-before-empty order,
+  lazy labels/keys, list order, mention rendering, and click-only delegation.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, or movement workflow dependency.
+
+Phase 181 is page-local scope-import presentation only, not a new Session
+workflow. The full `npm test` gate passes 467/467 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

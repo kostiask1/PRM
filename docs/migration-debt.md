@@ -33,6 +33,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 178 | Completed page-local consolidation | Moved Campaign Page session-list presentation into private `pages/campaign/ui/components/CampaignSessionsSection.tsx`. `CampaignView` retains session-search/filter/reorder policy, runtime navigation, and configured session-card/delete workflow. | Keep the leaf private with controlled list/search inputs, explicit create/reorder/drop commands, and the card slot; preserve pane DOM, filtered drag/static branches, identity, callbacks, empty state, and raw navigation/delete behavior without public page/runtime/store/API expansion. | 464/464 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 179 | Completed page-local consolidation | Moved Session Page checklist-overlay presentation into private `pages/session/ui/components/SessionChecklistOverlay.tsx`. `SessionView` retains the open gate, checklist state, and persistence command. | Keep the leaf private; preserve open-gated reads, modal lifecycle/presentation, progress/item projections, dynamic check lookup, direct item-change delegation, raw floating trigger, and no public page/runtime/store/API expansion. | 465/465 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 180 | Completed page-local consolidation | Moved Session Page header presentation into private `pages/session/ui/components/SessionHeader.tsx`. `SessionView` retains guard, navigation, action-menu lifecycle, and close-before-action workflow. | Keep the leaf private; preserve header/quick-access/action-menu composition, values/callbacks/ref, DOM/classes, encounter identity/fallback rendering, and raw state/navigation/workflow ownership without public page/runtime/store/API expansion. | 466/466 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 181 | Completed page-local consolidation | Moved Session Page scope-import overlay presentation into private `pages/session/ui/components/SessionScopeImportOverlay.tsx`. `SessionView` retains modal derivation, close, and scope-move lifecycle. | Keep the leaf private; preserve unconditional composition/private null guard, modal/list/item/key presentation, loading/key evaluation order, explicit commands, and raw workflow ownership without public page/runtime/store/API expansion. | 467/467 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -319,6 +320,18 @@ mention rendering, and the sibling action-menu presentation. The expanded suite
 passes 466/466 tests; architecture, performance, and Ukrainian encoding checks
 pass. `MD-R02` remains closed; `MD-R04` remains verification-blocked until the
 declared local lint/typecheck tooling is available.
+
+Phase 181 moves Session Page scope-import overlay presentation into private
+`ui/components/SessionScopeImportOverlay.tsx`. The raw page retains the
+post-guard modal snapshot, presentation derivation, and scope-move/close
+lifecycle. The private leaf stays in the existing unconditional JSX slot and
+retains its null guard, receiving modal/copy/type plus explicit close/move
+commands. It preserves modal/classes, loading-before-empty order, lazy
+display-name and key fallback, item order, mention rendering, and click-only
+move delegation. The expanded suite passes 467/467 tests; architecture,
+performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
+`MD-R04` remains verification-blocked until the declared local lint/typecheck
+tooling is available.
 
 ## Closed recovery items
 
