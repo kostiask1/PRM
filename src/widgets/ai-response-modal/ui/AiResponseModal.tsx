@@ -19,16 +19,13 @@ import {
 	buildCardHighlightFields,
 	buildNoteHighlightFields,
 	encounterMonsterStatsChanged,
-	formatFieldValue,
 	getCardEntityType,
 	getEncounterParticipantEntries,
 	getEncounterParticipantMeta as buildEncounterParticipantMeta,
 	getEncounterParticipantName as buildEncounterParticipantName,
 	getEncounterParticipants,
-	getFieldValue,
 	getNoteDiffKey,
 	getPreviewCardType,
-	getPreviewFieldKeys,
 	isEncounterResource,
 	isNoteResource,
 	isObjectSnapshot,
@@ -41,6 +38,7 @@ import {
 } from "../model/aiResponseModal.ts";
 import { useAiResponseDraftController } from "../model/useAiResponseDraftController.ts";
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
+import AiResponseGenericDiff from "./AiResponseGenericDiff.tsx";
 import AiResponseJsonDiff from "./AiResponseJsonDiff.tsx";
 import AiResponseModalView from "./AiResponseModalView.tsx";
 import {
@@ -733,67 +731,6 @@ function AiResponseModal({
 			: renderChangedCardResourceDiff(resource);
 	};
 
-	const renderSingleSnapshotFields = (resource: PreviewResource) => {
-		const snapshot = resource.before === null ? resource.after : resource.before;
-		const keys = isObjectSnapshot(snapshot)
-			? Object.keys(snapshot).filter(
-					(key) => !["id", "slug", "source", "createdAt"].includes(key),
-				)
-			: ["value"];
-		return (
-			<div className="AiAssistant__preview_stack">
-				{keys.map((key) => (
-					<div key={`${resource.id}-${key}`} className="AiAssistant__preview_field">
-						<div className="AiAssistant__preview_field_label">{key}</div>
-						<pre>{formatFieldValue(getFieldValue(snapshot, key))}</pre>
-					</div>
-				))}
-			</div>
-		);
-	};
-
-	const renderChangedField = (resource: PreviewResource, key: string) => {
-		const before = getFieldValue(resource.before, key);
-		const after = getFieldValue(resource.after, key);
-		if (key === "notes" && (Array.isArray(before) || Array.isArray(after))) {
-			return renderNoteArrayDiff(resource, before, after);
-		}
-		return (
-			<div className="AiAssistant__preview_columns">
-				<div className="AiAssistant__preview_column">
-					<div className="AiAssistant__preview_column_title">{lang.t("Before")}</div>
-					<pre className="is_removed">{formatFieldValue(before)}</pre>
-				</div>
-				<div className="AiAssistant__preview_column">
-					<div className="AiAssistant__preview_column_title">{lang.t("After")}</div>
-					<pre className="is_added">{formatFieldValue(after)}</pre>
-				</div>
-			</div>
-		);
-	};
-
-	const renderGenericResourceDiff = (resource: PreviewResource) => {
-		const isSingleSnapshot = resource.before === null || resource.after === null;
-		const fieldKeys = getPreviewFieldKeys(
-			resource.before,
-			resource.after,
-			resource.fieldSummary,
-		);
-		return (
-			<div key={resource.id} className={getPreviewResourceClassName(resource)}>
-				{renderPreviewResourceHeader(resource)}
-				{isSingleSnapshot
-					? renderSingleSnapshotFields(resource)
-					: fieldKeys.map((key) => (
-							<div key={`${resource.id}-${key}`} className="AiAssistant__preview_field">
-								<div className="AiAssistant__preview_field_label">{key}</div>
-								{renderChangedField(resource, key)}
-							</div>
-						))}
-			</div>
-		);
-	};
-
 	const renderPreviewResource = (resource: PreviewResource) => {
 		resource = getEditedPreviewResource(resource);
 		const cardType = getPreviewCardType(resource);
@@ -813,7 +750,15 @@ function AiResponseModal({
 				</div>
 			);
 		}
-		return renderGenericResourceDiff(resource);
+		return (
+			<AiResponseGenericDiff
+				key={resource.id}
+				resource={resource}
+				getPreviewResourceClassName={getPreviewResourceClassName}
+				renderPreviewResourceHeader={renderPreviewResourceHeader}
+				renderNoteArrayDiff={renderNoteArrayDiff}
+			/>
+		);
 	};
 
 	return (

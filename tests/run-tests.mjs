@@ -3543,6 +3543,95 @@ await run(
 );
 
 await run(
+	"Phase 164 isolates AI response generic snapshot-diff presentation",
+	async () => {
+		const [
+			responseModalSource,
+			genericDiffSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseGenericDiff.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			responseModalSource,
+			/import AiResponseGenericDiff from "\.\/AiResponseGenericDiff\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			responseModalSource,
+			[
+				"return (\n\t\t\t<AiResponseGenericDiff",
+				"key={resource.id}",
+				"resource={resource}",
+				"getPreviewResourceClassName={getPreviewResourceClassName}",
+				"renderPreviewResourceHeader={renderPreviewResourceHeader}",
+				"renderNoteArrayDiff={renderNoteArrayDiff}",
+			],
+			"AI response generic-diff composition",
+		);
+		assert.doesNotMatch(
+			responseModalSource,
+			/renderSingleSnapshotFields|renderChangedField|renderGenericResourceDiff/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/AiResponseGenericDiff/,
+		);
+		assertSourceTokensInOrder(
+			genericDiffSource,
+			[
+				'import type { ReactNode } from "react";',
+				'import { lang } from "../../../shared/lib/index.js";',
+				"function AiResponseSingleSnapshotFields({",
+				"const snapshot = resource.before === null ? resource.after : resource.before;",
+				"const keys = isObjectSnapshot(snapshot)",
+				'!["id", "slug", "source", "createdAt"].includes(key)',
+				': ["value"];',
+				"keys.map((key) =>",
+				"key={`${resource.id}-${key}`}",
+				"formatFieldValue(getFieldValue(snapshot, key))",
+				"function AiResponseChangedField({",
+				"const before = getFieldValue(resource.before, field);",
+				"const after = getFieldValue(resource.after, field);",
+				'field === "notes" && (Array.isArray(before) || Array.isArray(after))',
+				"return renderNoteArrayDiff(resource, before, after);",
+				'{lang.t("Before")}',
+				"formatFieldValue(before)",
+				'{lang.t("After")}',
+				"formatFieldValue(after)",
+				"export default function AiResponseGenericDiff({",
+				"const isSingleSnapshot = resource.before === null || resource.after === null;",
+				"const fieldKeys = getPreviewFieldKeys(",
+				"<div className={getPreviewResourceClassName(resource)}>",
+				"{renderPreviewResourceHeader(resource)}",
+				"<AiResponseSingleSnapshotFields resource={resource} />",
+				"fieldKeys.map((field) =>",
+				"key={`${resource.id}-${field}`}",
+				"{field}",
+				"<AiResponseChangedField",
+				"field={field}",
+				"renderNoteArrayDiff={renderNoteArrayDiff}",
+			],
+			"AI response generic snapshot-diff presentation",
+		);
+	},
+);
+
+await run(
 	"Phase 131 composes rules reference and monster editor widgets at stable owners",
 	async () => {
 		const [
