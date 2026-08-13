@@ -28,13 +28,13 @@ import type {
 import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
 import { isAbortError } from "../../../shared/api/index.ts";
-import { Button } from "../../../shared/ui/index.js";
 import {
 	MonsterAiActionModal,
 	type MonsterAiAction,
 	type MonsterAiEditMode,
 } from "../../../features/ai-edit-monster/index.js";
 import BestiaryContent from "./BestiaryContent.tsx";
+import BestiaryHeaderActions from "./BestiaryHeaderActions.tsx";
 import { MonsterStatBlockModel } from "../../../entities/bestiary/index.js";
 import { useDebounce } from "../../../shared/lib/index.js";
 import { buildDiffResources } from "../../../features/ai/index.js";
@@ -61,7 +61,6 @@ import {
 import { downloadJsonFile } from "../../../shared/lib/index.js";
 import "../../../assets/components/Bestiary.css";
 import { lang } from "../../../shared/lib/index.js";
-import { classNames } from "../../../shared/lib/index.js";
 import {
 	cloneCustomMonsters,
 	enrichMonstersWithLegendaryGroups,
@@ -223,12 +222,9 @@ export default function BestiaryBrowser({
 	const [selectedAiModel, setSelectedAiModel] = useState("");
 	const [aiDraftResponseEntry, setAiDraftResponseEntry] = useState<AiHistoryEntry | null>(null);
 	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
-	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const [undoStack, setUndoStack] = useState<BestiaryMonster[][]>([]);
 	const [redoStack, setRedoStack] = useState<BestiaryMonster[][]>([]);
 	const listRef = useRef<ReactList>(null);
-	const customImportInputRef = useRef<HTMLInputElement>(null);
-	const headerActionsRef = useRef<HTMLDivElement>(null);
 	const selectedMonsterRef = useRef<BestiaryMonster | null>(null);
 	const aiDraftResponseRef = useRef<HTMLDivElement>(null);
 	const aiEditControllerRef = useRef<AbortController | null>(null);
@@ -288,23 +284,6 @@ export default function BestiaryBrowser({
 	useEffect(() => {
 		embeddedScrolledMonsterRef.current = "";
 	}, [initialSelectedName, initialSelectedSource]);
-
-	useEffect(() => {
-		if (!isHeaderActionsOpen) return undefined;
-
-		const handlePointerDown = (event: PointerEvent) => {
-			if (
-				event.target instanceof Node &&
-				headerActionsRef.current?.contains(event.target)
-			) return;
-			setIsHeaderActionsOpen(false);
-		};
-
-		document.addEventListener("pointerdown", handlePointerDown);
-		return () => {
-			document.removeEventListener("pointerdown", handlePointerDown);
-		};
-	}, [isHeaderActionsOpen]);
 
 	useEffect(() => {
 		return () => {
@@ -1072,77 +1051,15 @@ export default function BestiaryBrowser({
 	};
 
 	const bestiaryActions = (
-		<div
-			ref={headerActionsRef}
-			className={classNames("Bestiary__header_actions", {
-				is_open: isHeaderActionsOpen,
-			})}
-		>
-			<input
-				ref={customImportInputRef}
-				type="file"
-				accept=".json"
-				style={{ display: "none" }}
-				onChange={handleImportCustomMonsters}
-			/>
-			<Button
-				variant="ghost"
-				size={Button.SIZES.SMALL}
-				icon="menu"
-				className="Bestiary__header_actionsToggle"
-				onClick={() => setIsHeaderActionsOpen((value) => !value)}
-				title={lang.t("Bestiary actions")}
-			/>
-			<div className="Bestiary__header_actionsMenu">
-				<Button
-					variant="ghost"
-					size={Button.SIZES.MEDIUM}
-					icon="import"
-					onClick={() => {
-						setIsHeaderActionsOpen(false);
-						customImportInputRef.current?.click();
-					}}
-					title={lang.t("Import custom creatures")}
-				>
-					{lang.t("Import")}
-				</Button>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.MEDIUM}
-					icon="export"
-					onClick={() => {
-						setIsHeaderActionsOpen(false);
-						handleExportCustomMonsters();
-					}}
-					disabled={customMonsters.length === 0}
-					title={lang.t("Export custom creatures")}
-				>
-					{lang.t("Export")}
-				</Button>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.MEDIUM}
-					icon="undo"
-					onClick={() => {
-						setIsHeaderActionsOpen(false);
-						handleUndo();
-					}}
-					disabled={undoStack.length === 0}
-					title={lang.t("Undo (Ctrl+Z)")}
-				/>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.MEDIUM}
-					icon="redo"
-					onClick={() => {
-						setIsHeaderActionsOpen(false);
-						handleRedo();
-					}}
-					disabled={redoStack.length === 0}
-					title={lang.t("Redo (Ctrl+Y)")}
-				/>
-			</div>
-		</div>
+		<BestiaryHeaderActions
+			canExport={customMonsters.length > 0}
+			canRedo={redoStack.length > 0}
+			canUndo={undoStack.length > 0}
+			onExport={handleExportCustomMonsters}
+			onImport={handleImportCustomMonsters}
+			onRedo={handleRedo}
+			onUndo={handleUndo}
+		/>
 	);
 
 	const bestiaryContent = (

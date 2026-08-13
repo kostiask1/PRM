@@ -3826,6 +3826,147 @@ await run(
 );
 
 await run(
+	"Phase 167 isolates Bestiary header action presentation",
+	async () => {
+		const [
+			browserSource,
+			headerActionsSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryHeaderActions.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+			fs.readFile("src/widgets/bestiary-browser/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+			fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			browserSource,
+			/import BestiaryHeaderActions from "\.\/BestiaryHeaderActions\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				"const handleUndo = async () => {",
+				"const handleRedo = async () => {",
+				"const handleExportCustomMonsters = () => {",
+				"const handleImportCustomMonsters = async (",
+				"const bestiaryActions = (",
+				"<BestiaryHeaderActions",
+				"canExport={customMonsters.length > 0}",
+				"canRedo={redoStack.length > 0}",
+				"canUndo={undoStack.length > 0}",
+				"onExport={handleExportCustomMonsters}",
+				"onImport={handleImportCustomMonsters}",
+				"onRedo={handleRedo}",
+				"onUndo={handleUndo}",
+				"headerActions={bestiaryActions}",
+			],
+			"Bestiary header-action composition",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/isHeaderActionsOpen|headerActionsRef|customImportInputRef/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/BestiaryHeaderActions/,
+		);
+		assertSourceTokensInOrder(
+			headerActionsSource,
+			[
+				"interface BestiaryHeaderActionsProps {",
+				"canExport: boolean;",
+				"canRedo: boolean;",
+				"canUndo: boolean;",
+				"onExport: () => void;",
+				"onImport: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;",
+				"onRedo: () => Promise<void>;",
+				"onUndo: () => Promise<void>;",
+				"export default function BestiaryHeaderActions({",
+				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
+				"const customImportInputRef = useRef<HTMLInputElement>(null);",
+				"const headerActionsRef = useRef<HTMLDivElement>(null);",
+				"useEffect(() => {",
+				"if (!isHeaderActionsOpen) return undefined;",
+				"const handlePointerDown = (event: PointerEvent) => {",
+				"event.target instanceof Node",
+				"headerActionsRef.current?.contains(event.target)",
+				"setIsHeaderActionsOpen(false);",
+				'document.addEventListener("pointerdown", handlePointerDown);',
+				"return () => {",
+				'document.removeEventListener("pointerdown", handlePointerDown);',
+				"}, [isHeaderActionsOpen]);",
+				"const closeActions = () => {",
+				"const toggleActions = () => {",
+				"setIsHeaderActionsOpen((value) => !value);",
+				"const handleImport = () => {",
+				"closeActions();",
+				"customImportInputRef.current?.click();",
+				"const handleExport = () => {",
+				"closeActions();",
+				"onExport();",
+				"const handleUndo = () => {",
+				"closeActions();",
+				"onUndo();",
+				"const handleRedo = () => {",
+				"closeActions();",
+				"onRedo();",
+			],
+			"Bestiary header-action lifecycle and dispatch",
+		);
+		assertSourceTokensInOrder(
+			headerActionsSource,
+			[
+				"return (",
+				'<div\n\t\t\tref={headerActionsRef}',
+				'"Bestiary__header_actions"',
+				"is_open: isHeaderActionsOpen",
+				"<input",
+				"ref={customImportInputRef}",
+				'type="file"',
+				'accept=".json"',
+				'style={{ display: "none" }}',
+				"onChange={onImport}",
+				'icon="menu"',
+				'"Bestiary__header_actionsToggle"',
+				"onClick={toggleActions}",
+				'{lang.t("Bestiary actions")}',
+				'"Bestiary__header_actionsMenu"',
+				'icon="import"',
+				"onClick={handleImport}",
+				'{lang.t("Import custom creatures")}',
+				'{lang.t("Import")}',
+				'icon="export"',
+				"onClick={handleExport}",
+				"disabled={!canExport}",
+				'{lang.t("Export custom creatures")}',
+				'{lang.t("Export")}',
+				'icon="undo"',
+				"onClick={handleUndo}",
+				"disabled={!canUndo}",
+				'{lang.t("Undo (Ctrl+Z)")}',
+				'icon="redo"',
+				"onClick={handleRedo}",
+				"disabled={!canRedo}",
+				'{lang.t("Redo (Ctrl+Y)")}',
+			],
+			"Bestiary header-action presentation",
+		);
+	},
+);
+
+await run(
 	"Phase 131 composes rules reference and monster editor widgets at stable owners",
 	async () => {
 		const [
