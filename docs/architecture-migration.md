@@ -750,6 +750,8 @@ Next:
 - Phase 177 preserves the always-mounted action root/classes, independent encounter-count read, metrics/menu/control/history/input/import/export order, `.json` input/ref, display/grid gates, direct action callbacks, and saving-disabled undo/redo behavior. One added static regression brings the full suite to 463/463 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 178 by moving Campaign Page session-list presentation from `CampaignPage.tsx` to private `ui/components/CampaignSessionsSection.tsx`. The raw page retains state, filtering/reorder policy, navigation, and configured session-card/delete workflow; the leaf receives only controlled list inputs, explicit commands, and the card render slot.
 - Phase 178 preserves sessions-pane DOM/classes, search input, draggable/static branch, filtered source, `fileName` identity, reorder/drop delegation, empty state, and raw href/navigation/delete ordering. One added static regression brings the full suite to 464/464 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 179 by moving Session Page checklist-overlay presentation from `SessionPage.tsx` to private `ui/components/SessionChecklistOverlay.tsx`. The raw page retains the open gate, checklist state, and persistence command; the leaf receives only rendered checklist data and explicit close/item-change callbacks.
+- Phase 179 preserves open-gated reads of checklist/progress data, the shared modal close callback, no-footer modal, progress/classes, dynamic checked lookup, item order, and raw `updateData(..., true)` persistence policy. One added static regression brings the full suite to 465/465 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -908,6 +910,9 @@ while retaining raw dismissal, state/ref, and settings-persistence ownership at
 Phase 178 isolates Campaign Page session-list presentation in private page UI
 while retaining raw filter/reorder, navigation, and session-card workflow
 ownership at 464/464 tests.
+Phase 179 isolates Session Page checklist-overlay presentation in private page
+UI while retaining raw open-gate, state, and persistence-command ownership at
+465/465 tests.
 
 ### Provenance and transfer rule
 
@@ -1290,7 +1295,7 @@ Status: **In progress**
   457/457 tests; Phase 172 passes 458/458 tests; Phase 173 passes 459/459
   tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests; Phase
   176 passes 462/462 tests; Phase 177 passes 463/463 tests; Phase 178 passes
-  464/464 tests.
+  464/464 tests; Phase 179 passes 465/465 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2228,6 +2233,26 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 178 is page-local session-list presentation only, not a new Campaign
 workflow. The full `npm test` gate passes 464/464 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R49 / Phase 179 - Private Session checklist-overlay presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move the Session Page checklist-overlay subtree into private
+  `pages/session/ui/components/SessionChecklistOverlay.tsx`.
+- [x] Keep `SessionView` ownership of the open gate, checklist/progress reads,
+  and `updateData` persistence command; mount the leaf only while open.
+- [x] Pass explicit close and item-change commands; preserve the modal title,
+  shared confirm/cancel close callback, no footer, DOM/classes, progress width,
+  item identity/order, and Boolean dynamic check lookup.
+- [x] Keep the floating-action trigger raw and the component outside public
+  page runtime/type entries without a hook, runtime, API, store, navigation,
+  or workflow dependency.
+
+Phase 179 is page-local checklist presentation only, not a new Session
+workflow. The full `npm test` gate passes 465/465 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

@@ -26,11 +26,11 @@ import {
 	useSimplifiedNotesEnabled,
 } from "../../../features/notes/ui/index.js";
 import TodoSection from "./components/TodoSection.tsx";
-import TodoItem from "./components/TodoItem.tsx";
 import SceneCardHeader from "./components/SceneCardHeader.tsx";
 import SceneCardMedia from "./components/SceneCardMedia.tsx";
 import SceneCardFields from "./components/SceneCardFields.tsx";
 import SessionHeaderActions from "./components/SessionHeaderActions.tsx";
+import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
 import SceneNotes from "./components/SceneNotes.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import {
@@ -637,43 +637,6 @@ function SessionScenesSection(props: SessionScenesSectionProps) {
 	);
 }
 
-interface SessionChecklistOverlayProps {
-	view: SessionController;
-	sessionData: Record<string, unknown>;
-}
-
-function SessionChecklistOverlay({
-	view,
-	sessionData,
-}: SessionChecklistOverlayProps) {
-	if (!view.isChecklistOpen) return null;
-	const close = () => view.setIsChecklistOpen(false);
-	return (
-		<Modal title={lang.t("Preparation checklist")} onConfirm={close} onCancel={close} showFooter={false}>
-			<div className="SessionView__checklistModal">
-				<div className="SessionView__progressWrap">
-					<div className="ProgressBar__label">
-						<span>{lang.t("Preparation progress")}</span>
-						<span>{view.progress}%</span>
-					</div>
-					<div className="ProgressBar">
-						<div className="ProgressBar__fill" style={{ width: `${view.progress}%` }} />
-					</div>
-				</div>
-				{view.checklistItems.map((item) => (
-					<TodoItem
-						key={item.id}
-						checked={Boolean(sessionData[`${item.id}_check`])}
-						onChange={(checked) => view.updateData(`${item.id}_check`, checked, true)}
-						title={item.label}
-						note={item.note}
-					/>
-				))}
-			</div>
-		</Modal>
-	);
-}
-
 interface SessionScopeImportOverlayProps {
 	view: SessionController;
 	modal: NonNullable<SessionController["scopeImportModal"]> | null;
@@ -1057,7 +1020,17 @@ function SessionView() {
 					</div>
 				</div>
 
-				<SessionChecklistOverlay view={view} sessionData={sessionData} />
+				{view.isChecklistOpen && (
+					<SessionChecklistOverlay
+						checklistItems={view.checklistItems}
+						onClose={() => view.setIsChecklistOpen(false)}
+						onChecklistItemChange={(itemId, checked) =>
+							view.updateData(`${itemId}_check`, checked, true)
+						}
+						progress={view.progress}
+						sessionData={sessionData}
+					/>
+				)}
 				<SessionScopeImportOverlay
 					view={view}
 					modal={scopeImportModal}

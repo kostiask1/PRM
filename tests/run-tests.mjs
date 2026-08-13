@@ -4388,6 +4388,102 @@ await run(
 );
 
 await run(
+	"Phase 179 isolates Session checklist-overlay presentation",
+	async () => {
+		const [
+			sessionSource,
+			checklistOverlaySource,
+			runtimeEntrySource,
+			typeEntrySource,
+		] = await Promise.all([
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionChecklistOverlay.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/session/index.js", "utf8"),
+			fs.readFile("src/pages/session/index.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			sessionSource,
+			/import SessionChecklistOverlay from "\.\/components\/SessionChecklistOverlay\.tsx";/,
+		);
+		assert.doesNotMatch(sessionSource, /import TodoItem/);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"function SessionView() {",
+				"const view = useSessionView();",
+				"const sessionData = getSessionPageData(session);",
+				"if (!session) return null;",
+				"{view.isChecklistOpen && (",
+				"<SessionChecklistOverlay",
+				"checklistItems={view.checklistItems}",
+				"onClose={() => view.setIsChecklistOpen(false)}",
+				"onChecklistItemChange={(itemId, checked) =>",
+				"view.updateData(`${itemId}_check`, checked, true)",
+				"progress={view.progress}",
+				"sessionData={sessionData}",
+				"<SessionScopeImportOverlay",
+				"<SessionFloatingActions",
+			],
+			"Session raw checklist state and persistence composition",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/interface SessionChecklistOverlayProps|function SessionChecklistOverlay|SessionView__checklistModal|ProgressBar__fill/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionChecklistOverlay/,
+		);
+		assertSourceTokensInOrder(
+			checklistOverlaySource,
+			[
+				'import type { SessionChecklistItem } from "../../model/contracts.ts";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { Modal } from "../../../../shared/ui/index.js";',
+				'import TodoItem from "./TodoItem.tsx";',
+				"interface SessionChecklistOverlayProps {",
+				"checklistItems: SessionChecklistItem[];",
+				"onClose: () => void;",
+				"onChecklistItemChange: (itemId: string, checked: boolean) => void;",
+				"progress: number;",
+				"sessionData: Record<string, unknown>;",
+				"export default function SessionChecklistOverlay({",
+				"return (",
+				"<Modal",
+				'title={lang.t("Preparation checklist")}',
+				"onConfirm={onClose}",
+				"onCancel={onClose}",
+				"showFooter={false}",
+				'"SessionView__checklistModal"',
+				'"SessionView__progressWrap"',
+				'"ProgressBar__label"',
+				'{lang.t("Preparation progress")}',
+				"{progress}%",
+				'"ProgressBar"',
+				'"ProgressBar__fill"',
+				"style={{ width: `${progress}%` }}",
+				"checklistItems.map((item) => (",
+				"<TodoItem",
+				"key={item.id}",
+				"checked={Boolean(sessionData[`${item.id}_check`])}",
+				"onChange={(checked) => onChecklistItemChange(item.id, checked)}",
+				"title={item.label}",
+				"note={item.note}",
+			],
+			"Session private checklist-overlay presentation",
+		);
+		assert.doesNotMatch(
+			checklistOverlaySource,
+			/useState|useEffect|useSessionView|useSessionPageRuntime|SessionController|\bview\b|updateData|setIsChecklistOpen|app\/model|shared\/model|<Panel\b/,
+		);
+	},
+);
+
+await run(
 	"Phase 178 isolates Campaign session-list presentation",
 	async () => {
 		const [
