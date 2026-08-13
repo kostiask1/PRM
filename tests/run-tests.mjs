@@ -5018,6 +5018,78 @@ await run(
 );
 
 await run(
+	"Phase 185 isolates Session floating-actions presentation",
+	async () => {
+		const [sessionSource, actionsSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+				fs.readFile(
+					"src/pages/session/ui/components/SessionFloatingActions.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/session/index.js", "utf8"),
+				fs.readFile("src/pages/session/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			sessionSource,
+			/import SessionFloatingActions from "\.\/components\/SessionFloatingActions\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"function SessionView() {",
+				"const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);",
+				"if (!session) return null;",
+				"{view.isChecklistOpen && (",
+				"<SessionChecklistOverlay",
+				"<SessionFloatingActions",
+				"progress={view.progress}",
+				"isGlobalSearchOpen={isGlobalSearchOpen}",
+				"onOpenChecklist={() => view.setIsChecklistOpen(true)}",
+				"onCloseGlobalSearch={() => setIsGlobalSearchOpen(false)}",
+			],
+			"Session raw floating-action state and commands",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/interface SessionFloatingActionsProps|function SessionFloatingActions|import \{ GlobalSearchModal \}|\bIcon,|\bTooltip,/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionFloatingActions/,
+		);
+		assertSourceTokensInOrder(
+			actionsSource,
+			[
+				'import { GlobalSearchModal } from "../../../../widgets/campaign-search/index.js";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { Icon, Tooltip } from "../../../../shared/ui/index.js";',
+				"interface SessionFloatingActionsProps {",
+				"progress: number;",
+				"isGlobalSearchOpen: boolean;",
+				"onOpenChecklist: () => void;",
+				"onCloseGlobalSearch: () => void;",
+				"export default function SessionFloatingActions({",
+				"<Tooltip",
+				'{lang.t("Preparation checklist")}',
+				'"SessionView__checklistToggle"',
+				"<button onClick={onOpenChecklist}",
+				'<Icon name="list" size={28} />',
+				'progress < 100 && <span className="SessionView__checklistBadge" />',
+				"{isGlobalSearchOpen && (",
+				"<GlobalSearchModal onCancel={onCloseGlobalSearch} />",
+			],
+			"Session private floating-actions presentation",
+		);
+		assert.doesNotMatch(
+			actionsSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|setIsChecklistOpen|setIsGlobalSearchOpen|updateData|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+		);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
@@ -10184,6 +10256,7 @@ await run(
 			mainContentSource,
 			campaignPageSource,
 			sessionPageSource,
+			sessionFloatingActionsSource,
 			eslintSource,
 		] = await Promise.all([
 			fs.readFile(
@@ -10204,6 +10277,10 @@ await run(
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
 			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
 			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionFloatingActions.tsx",
+				"utf8",
+			),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
@@ -10325,7 +10402,11 @@ await run(
 			/<(?:AiAssistantPanel|Sidebar|MessageBoxHost|DiceCalculatorHost|RulesReferenceModalHost)\b/,
 		);
 		assert.match(campaignPageSource, /<GlobalSearchModal onCancel={onCloseGlobalSearch} \/>/);
-		assert.match(sessionPageSource, /<GlobalSearchModal onCancel={onCloseGlobalSearch} \/>/);
+		assert.match(sessionPageSource, /<SessionFloatingActions[\s\S]*?onCloseGlobalSearch=\{\(\) => setIsGlobalSearchOpen\(false\)\}/);
+		assert.match(
+			sessionFloatingActionsSource,
+			/<GlobalSearchModal onCancel={onCloseGlobalSearch} \/>/,
+		);
 
 		const forbiddenCampaignSearchStoreImporters = [];
 		for (const filePath of await collectFsdSourceFiles(

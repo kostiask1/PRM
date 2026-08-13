@@ -10,9 +10,7 @@ import {
 import {
 	Button,
 	DraggableList,
-	Icon,
 	Panel,
-	Tooltip,
 	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
@@ -29,10 +27,10 @@ import SceneCardMedia from "./components/SceneCardMedia.tsx";
 import SceneCardFields from "./components/SceneCardFields.tsx";
 import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
+import SessionFloatingActions from "./components/SessionFloatingActions.tsx";
 import SessionScenesSection from "./components/SessionScenesSection.tsx";
 import SessionScopeImportOverlay from "./components/SessionScopeImportOverlay.tsx";
 import SceneNotes from "./components/SceneNotes.tsx";
-import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import {
 	CharacterCard,
 	CreateCharacterButton,
@@ -498,30 +496,6 @@ function SessionSceneItem({
 	);
 }
 
-interface SessionFloatingActionsProps {
-	view: SessionController;
-	isGlobalSearchOpen: boolean;
-	onCloseGlobalSearch: () => void;
-}
-
-function SessionFloatingActions({
-	view,
-	isGlobalSearchOpen,
-	onCloseGlobalSearch,
-}: SessionFloatingActionsProps) {
-	return (
-		<>
-			<Tooltip content={lang.t("Preparation checklist")} className="SessionView__checklistToggle">
-				<button onClick={() => view.setIsChecklistOpen(true)}>
-					<Icon name="list" size={28} />
-					{view.progress < 100 && <span className="SessionView__checklistBadge" />}
-				</button>
-			</Tooltip>
-			{isGlobalSearchOpen && <GlobalSearchModal onCancel={onCloseGlobalSearch} />}
-		</>
-	);
-}
-
 function getSessionViewList<T>(value: T[] | null | undefined): T[] {
 	return value || [];
 }
@@ -823,8 +797,9 @@ function SessionView() {
 					}
 				/>
 				<SessionFloatingActions
-					view={view}
+					progress={view.progress}
 					isGlobalSearchOpen={isGlobalSearchOpen}
+					onOpenChecklist={() => view.setIsChecklistOpen(true)}
 					onCloseGlobalSearch={() => setIsGlobalSearchOpen(false)}
 				/>
 			</Panel>

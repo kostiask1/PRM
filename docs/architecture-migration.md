@@ -762,6 +762,8 @@ Next:
 - Phase 183 preserves outer drop-target semantics, shared collapse callbacks, expanded-only action/list gates, bulk current-item delegation, DraggableList reorder/drop behavior, key policy, and raw card/AI-control workflows. One added static regression brings the full suite to 469/469 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 184 by moving Session Page scenes-section presentation from `SessionPage.tsx` to private `ui/components/SessionScenesSection.tsx`. The raw page retains `SessionSceneItem`, scene projection/persistence, and all SceneCard workflow bindings; the leaf receives a controlled list, explicit commands, and a render slot.
 - Phase 184 preserves empty-list actions, section/list markup, raw duplicate-ID numbering and encounter-label evaluation, bulk/add/reorder behavior, key extraction, and direct render-slot delegation. One added static regression brings the full suite to 470/470 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 185 by moving Session Page floating checklist/search actions from `SessionPage.tsx` to private `ui/components/SessionFloatingActions.tsx`. The raw page retains search/checklist state and commands; the leaf receives controlled state, progress, and explicit callbacks.
+- Phase 185 preserves the unconditional trigger, tooltip/button/badge presentation, strict progress gate, and open-only search-modal mount. One added static regression brings the full suite to 471/471 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -938,6 +940,8 @@ workflow ownership at 469/469 tests.
 Phase 184 isolates Session Page scenes-section presentation in private page UI
 while retaining raw scene projection, persistence, and SceneCard workflow
 ownership at 470/470 tests.
+Phase 185 isolates Session Page floating checklist/search actions in private
+page UI while retaining raw state and command ownership at 471/471 tests.
 
 ### Provenance and transfer rule
 
@@ -1322,7 +1326,8 @@ Status: **In progress**
   176 passes 462/462 tests; Phase 177 passes 463/463 tests; Phase 178 passes
   464/464 tests; Phase 179 passes 465/465 tests; Phase 180 passes 466/466
   tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests;
-  Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests.
+  Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests; Phase 185
+  passes 471/471 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2380,6 +2385,25 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 184 is page-local scenes-section presentation only, not a new Session
 workflow. The full `npm test` gate passes 470/470 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R55 / Phase 185 - Private Session floating actions
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Session Page floating checklist/search presentation into private
+  `pages/session/ui/components/SessionFloatingActions.tsx`.
+- [x] Keep `SessionView` ownership of search/checklist state, the progress
+  read, and explicit open/close commands.
+- [x] Pass controlled state plus explicit callbacks; preserve trigger/tooltip/
+  badge DOM, strict progress gate, and the open-only search-modal lifecycle.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, or checklist/search
+  workflow dependency.
+
+Phase 185 is page-local floating-action presentation only, not a new Session
+workflow. The full `npm test` gate passes 471/471 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 
