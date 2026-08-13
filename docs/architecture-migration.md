@@ -756,6 +756,8 @@ Next:
 - Phase 180 preserves the header DOM/classes, back/rename behavior, encounter gate/order/key, localized scene fallback/mention rendering, and existing sibling action-menu presentation. One added static regression brings the full suite to 466/466 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 181 by moving Session Page scope-import overlay presentation from `SessionPage.tsx` to private `ui/components/SessionScopeImportOverlay.tsx`. The raw page retains the post-guard modal snapshot, presentation derivation, and move/close lifecycle; the leaf receives only display data and explicit commands.
 - Phase 181 preserves unconditional composition with a private null guard, modal lifecycle/classes, loading-before-empty order, lazy item labels/keys, list order, mention rendering, and click-only move delegation. One added static regression brings the full suite to 467/467 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 182 by moving Campaign Page description-section chrome from `CampaignPage.tsx` to private `ui/components/CampaignDescriptionSection.tsx`. The raw page retains collapse state/persistence and the expanded-only editor render callback; the leaf receives only display state, a toggle command, and the render slot.
+- Phase 182 preserves section DOM/id/classes, title/toggle behavior, setter-before-save policy, and the closed-gated description/editor reads. One added static regression brings the full suite to 468/468 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -923,6 +925,9 @@ ownership at 466/466 tests.
 Phase 181 isolates Session Page scope-import overlay presentation in private
 page UI while retaining raw modal derivation, move, and close lifecycle
 ownership at 467/467 tests.
+Phase 182 isolates Campaign Page description-section chrome in private page UI
+while retaining raw collapse/persistence policy and expanded-only editor
+ownership at 468/468 tests.
 
 ### Provenance and transfer rule
 
@@ -1306,7 +1311,7 @@ Status: **In progress**
   tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests; Phase
   176 passes 462/462 tests; Phase 177 passes 463/463 tests; Phase 178 passes
   464/464 tests; Phase 179 passes 465/465 tests; Phase 180 passes 466/466
-  tests; Phase 181 passes 467/467 tests.
+  tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2304,6 +2309,25 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 181 is page-local scope-import presentation only, not a new Session
 workflow. The full `npm test` gate passes 467/467 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R52 / Phase 182 - Private Campaign description-section chrome
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Campaign Page description-section chrome into private
+  `pages/campaign/ui/components/CampaignDescriptionSection.tsx`.
+- [x] Keep `CampaignView` ownership of collapse state, the has-data guard,
+  setter-then-save policy, and expanded-only description-editor render slot.
+- [x] Pass display state and an explicit toggle command; preserve section
+  DOM/id/classes, title/toggle behavior, localized copy, medium control size,
+  and closed-gated editor reads.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, persistence, or editor workflow dependency.
+
+Phase 182 is page-local description-section chrome only, not a new Campaign
+workflow. The full `npm test` gate passes 468/468 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

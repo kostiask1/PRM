@@ -25,6 +25,7 @@ import {
 	LocationCard,
 } from "../../../widgets/campaign-entity-card/index.js";
 import CampaignHeaderActions from "./components/CampaignHeaderActions.tsx";
+import CampaignDescriptionSection from "./components/CampaignDescriptionSection.tsx";
 import CampaignNotesSection from "./components/CampaignNotesSection.tsx";
 import CampaignSessionsSection from "./components/CampaignSessionsSection.tsx";
 import PartialArchiveModal from "./components/PartialArchiveModal.tsx";
@@ -99,53 +100,6 @@ function CampaignHeader({
 				onRedo={view.handleRedo}
 				onUndo={view.handleUndo}
 			/>
-		</div>
-	);
-}
-
-interface CampaignDescriptionSectionProps {
-	view: CampaignViewController;
-	hasData: boolean;
-	isCollapsed: boolean;
-}
-
-function CampaignDescriptionSection({
-	view,
-	hasData,
-	isCollapsed,
-}: CampaignDescriptionSectionProps) {
-	const toggle = () => {
-		if (!hasData) return;
-		const next = !isCollapsed;
-		view.setIsDescriptionCollapsed(next);
-		view.triggerSave({ isDescriptionCollapsed: next });
-	};
-	return (
-		<div className="CampaignView__section" id={makeDomId("campaign", "description")}>
-			<div className="section_row">
-				<div className="section_title_group" onClick={toggle}>
-					{hasData && (
-						<CollapseToggleButton
-							size={Button.SIZES.MEDIUM}
-							collapsed={isCollapsed}
-							onClick={toggle}
-						/>
-					)}
-					<h3>{lang.t("Campaign story")}</h3>
-				</div>
-			</div>
-			{!isCollapsed && (
-				<EditableField
-					type="textarea"
-					className="CampaignView__script"
-					enableHistory={false}
-					placeholder={lang.t(
-						"Describe the main plotline, key events, and goals...",
-					)}
-					value={view.description}
-					onChange={view.handleDescriptionChange}
-				/>
-			)}
 		</div>
 	);
 }
@@ -444,6 +398,24 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		view.handleNotesReorder(view.notes.map((note) => ({ ...note, collapsed })));
 		view.finishTrackedReorder();
 	};
+	const toggleCampaignDescription = () => {
+		if (!hasDescriptionData) return;
+		const next = !isDescriptionCollapsed;
+		view.setIsDescriptionCollapsed(next);
+		view.triggerSave({ isDescriptionCollapsed: next });
+	};
+	const renderCampaignDescriptionEditor = () => (
+		<EditableField
+			type="textarea"
+			className="CampaignView__script"
+			enableHistory={false}
+			placeholder={lang.t(
+				"Describe the main plotline, key events, and goals...",
+			)}
+			value={view.description}
+			onChange={view.handleDescriptionChange}
+		/>
+	);
 
 	const renderSessionCard = (session: CampaignSessionItem) => (
 		<ListCard
@@ -491,9 +463,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 
 					<div className="CampaignView__contentPanel">
 						<CampaignDescriptionSection
-							view={view}
 							hasData={hasDescriptionData}
 							isCollapsed={isDescriptionCollapsed}
+							onToggle={toggleCampaignDescription}
+							renderEditor={renderCampaignDescriptionEditor}
 						/>
 
 						<CampaignNotesSection

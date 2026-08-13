@@ -4618,6 +4618,97 @@ await run(
 );
 
 await run(
+	"Phase 182 isolates Campaign description-section presentation",
+	async () => {
+		const [campaignSource, sectionSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignDescriptionSection.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			campaignSource,
+			/import CampaignDescriptionSection from "\.\/components\/CampaignDescriptionSection\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			campaignSource,
+			[
+				"function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {",
+				"const view = useCampaignView({ campaign });",
+				"const {",
+				"hasDescriptionData,",
+				"isDescriptionCollapsed,",
+				"const handleBulkNotesCollapse = (collapsed: boolean) => {",
+				"const toggleCampaignDescription = () => {",
+				"if (!hasDescriptionData) return;",
+				"const next = !isDescriptionCollapsed;",
+				"view.setIsDescriptionCollapsed(next);",
+				"view.triggerSave({ isDescriptionCollapsed: next });",
+				"const renderCampaignDescriptionEditor = () => (",
+				"<EditableField",
+				'type="textarea"',
+				'"CampaignView__script"',
+				"enableHistory={false}",
+				'"Describe the main plotline, key events, and goals..."',
+				"value={view.description}",
+				"onChange={view.handleDescriptionChange}",
+				"<CampaignDescriptionSection",
+				"hasData={hasDescriptionData}",
+				"isCollapsed={isDescriptionCollapsed}",
+				"onToggle={toggleCampaignDescription}",
+				"renderEditor={renderCampaignDescriptionEditor}",
+				"<CampaignNotesSection",
+			],
+			"Campaign raw description state, save order, and expanded-only editor ownership",
+		);
+		assert.doesNotMatch(
+			campaignSource,
+			/interface CampaignDescriptionSectionProps|function CampaignDescriptionSection/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/CampaignDescriptionSection/,
+		);
+		assertSourceTokensInOrder(
+			sectionSource,
+			[
+				'import type { ReactNode } from "react";',
+				'import { Button, CollapseToggleButton } from "../../../../shared/ui/index.js";',
+				'import { lang, makeDomId } from "../../../../shared/lib/index.js";',
+				"interface CampaignDescriptionSectionProps {",
+				"hasData: boolean;",
+				"isCollapsed: boolean;",
+				"onToggle: () => void;",
+				"renderEditor: () => ReactNode;",
+				"export default function CampaignDescriptionSection({",
+				'"CampaignView__section"',
+				'id={makeDomId("campaign", "description")}',
+				'"section_row"',
+				'"section_title_group"',
+				"onClick={onToggle}",
+				"{hasData && (",
+				"<CollapseToggleButton",
+				"size={Button.SIZES.MEDIUM}",
+				"collapsed={isCollapsed}",
+				"onClick={onToggle}",
+				'{lang.t("Campaign story")}',
+				"{!isCollapsed && renderEditor()}",
+			],
+			"Campaign private description-section chrome",
+		);
+		assert.doesNotMatch(
+			sectionSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|CampaignViewController|\bview\b|triggerSave|setIsDescriptionCollapsed|handleDescriptionChange|EditableField|CampaignPageRuntime|campaignApi|app\/model|shared\/model/,
+		);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
