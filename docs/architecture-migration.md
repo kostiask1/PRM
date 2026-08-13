@@ -752,6 +752,8 @@ Next:
 - Phase 178 preserves sessions-pane DOM/classes, search input, draggable/static branch, filtered source, `fileName` identity, reorder/drop delegation, empty state, and raw href/navigation/delete ordering. One added static regression brings the full suite to 464/464 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 179 by moving Session Page checklist-overlay presentation from `SessionPage.tsx` to private `ui/components/SessionChecklistOverlay.tsx`. The raw page retains the open gate, checklist state, and persistence command; the leaf receives only rendered checklist data and explicit close/item-change callbacks.
 - Phase 179 preserves open-gated reads of checklist/progress data, the shared modal close callback, no-footer modal, progress/classes, dynamic checked lookup, item order, and raw `updateData(..., true)` persistence policy. One added static regression brings the full suite to 465/465 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 180 by moving Session Page header presentation from `SessionPage.tsx` to private `ui/components/SessionHeader.tsx`. The raw page retains session gating, navigation, action-menu lifecycle, global-search state, and close-before-action commands; the leaf receives only header data, callbacks, and the action ref.
+- Phase 180 preserves the header DOM/classes, back/rename behavior, encounter gate/order/key, localized scene fallback/mention rendering, and existing sibling action-menu presentation. One added static regression brings the full suite to 466/466 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -913,6 +915,9 @@ ownership at 464/464 tests.
 Phase 179 isolates Session Page checklist-overlay presentation in private page
 UI while retaining raw open-gate, state, and persistence-command ownership at
 465/465 tests.
+Phase 180 isolates Session Page header presentation in private page UI while
+retaining raw guard, navigation, action-menu lifecycle, and close-command
+ownership at 466/466 tests.
 
 ### Provenance and transfer rule
 
@@ -1295,7 +1300,8 @@ Status: **In progress**
   457/457 tests; Phase 172 passes 458/458 tests; Phase 173 passes 459/459
   tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests; Phase
   176 passes 462/462 tests; Phase 177 passes 463/463 tests; Phase 178 passes
-  464/464 tests; Phase 179 passes 465/465 tests.
+  464/464 tests; Phase 179 passes 465/465 tests; Phase 180 passes 466/466
+  tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2255,6 +2261,26 @@ Phase 179 is page-local checklist presentation only, not a new Session
 workflow. The full `npm test` gate passes 465/465 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R50 / Phase 180 - Private Session header presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move the Session Page header subtree into private
+  `pages/session/ui/components/SessionHeader.tsx`.
+- [x] Keep `SessionView` ownership of the null-session guard, quick-access
+  navigation/modifier policy, action-menu state/ref/dismissal, global-search
+  state, and close-before-action commands.
+- [x] Pass explicit display values/callbacks and the action ref; preserve the
+  header DOM/classes, title/back/rename behavior, encounter gate/order/key,
+  localized scene fallback/mention rendering, and sibling action menu.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, or mutation workflow dependency.
+
+Phase 180 is page-local header presentation only, not a new Session workflow.
+The full `npm test` gate passes 466/466 tests; architecture, performance, and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

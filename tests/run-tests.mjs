@@ -4262,11 +4262,16 @@ await run(
 	async () => {
 		const [
 			sessionSource,
+			headerSource,
 			headerActionsSource,
 			runtimeEntrySource,
 			typeEntrySource,
 		] = await Promise.all([
 			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionHeader.tsx",
+				"utf8",
+			),
 			fs.readFile(
 				"src/pages/session/ui/components/SessionHeaderActions.tsx",
 				"utf8",
@@ -4277,12 +4282,12 @@ await run(
 
 		assert.match(
 			sessionSource,
-			/import SessionHeaderActions from "\.\/components\/SessionHeaderActions\.tsx";/,
+			/import SessionHeader from "\.\/components\/SessionHeader\.tsx";/,
 		);
 		assertSourceTokensInOrder(
-			sessionSource,
+			headerSource,
 			[
-				"function SessionHeader({",
+				"export default function SessionHeader({",
 				'<div className="Panel__header">',
 				'"SessionView__encountersQuickAccess"',
 				"key={encounter.id}",
@@ -4335,7 +4340,7 @@ await run(
 		);
 		assert.doesNotMatch(
 			`${runtimeEntrySource}\n${typeEntrySource}`,
-			/SessionHeaderActions/,
+			/SessionHeader(?:Actions)?/,
 		);
 		assertSourceTokensInOrder(
 			headerActionsSource,
@@ -4383,6 +4388,125 @@ await run(
 		assert.doesNotMatch(
 			headerActionsSource,
 			/useState|useRef|useEffect|usePointerDownOutsideDismissal|setIsHeaderActionsOpen|setIsGlobalSearchOpen|handleDeleteSessionAndBack|handleUndo|handleRedo/,
+		);
+	},
+);
+
+await run(
+	"Phase 180 isolates Session header presentation",
+	async () => {
+		const [sessionSource, headerSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+				fs.readFile(
+					"src/pages/session/ui/components/SessionHeader.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/session/index.js", "utf8"),
+				fs.readFile("src/pages/session/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			sessionSource,
+			/import SessionHeader from "\.\/components\/SessionHeader\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"function SessionView() {",
+				"const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);",
+				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
+				"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
+				"usePointerDownOutsideDismissal({",
+				"containerRef: headerActionsRef,",
+				"isOpen: isHeaderActionsOpen,",
+				"setIsOpen: setIsHeaderActionsOpen,",
+				"if (!session) return null;",
+				"const openEncounterFromQuickAccess = (",
+				"navigateToEncounter(",
+				"shouldOpenInNewTabFromEvent(event)",
+				"<SessionHeader",
+				"sessionName={session.name}",
+				"encounters={sessionEncounters}",
+				"isActionsOpen={isHeaderActionsOpen}",
+				"actionsRef={headerActionsRef}",
+				"isSaving={view.isSaving}",
+				"canUndo={view.undoStack.length > 0}",
+				"canRedo={view.redoStack.length > 0}",
+				"onBack={view.handleBack}",
+				"onRename={view.handleRename}",
+				"onOpenEncounter={openEncounterFromQuickAccess}",
+				"onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}",
+				"onOpenSearch={() => {",
+				"setIsHeaderActionsOpen(false);",
+				"setIsGlobalSearchOpen(true);",
+				"onUndo={() => {",
+				"view.handleUndo();",
+				"onRedo={() => {",
+				"view.handleRedo();",
+				"onDelete={() => {",
+				"void view.handleDeleteSessionAndBack();",
+			],
+			"Session raw header state, navigation, and close-before-action ownership",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/interface SessionHeaderProps|function SessionHeader|SessionView__encountersQuickAccess/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionHeader/,
+		);
+		assertSourceTokensInOrder(
+			headerSource,
+			[
+				'import type { MouseEvent, RefObject } from "react";',
+				'import { Button } from "../../../../shared/ui/index.js";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { renderMentionText } from "../../../../features/entity-link/index.js";',
+				'import type { SessionDomainId } from "../../../../entities/session/index.js";',
+				'import type { SessionEncounterLink } from "../../model/sessionPagePresentation.ts";',
+				'import SessionHeaderActions from "./SessionHeaderActions.tsx";',
+				"interface SessionHeaderProps {",
+				"sessionName?: string;",
+				"encounters: readonly SessionEncounterLink[];",
+				"actionsRef: RefObject<HTMLDivElement>;",
+				"onOpenEncounter: (",
+				"encounterId: SessionDomainId,",
+				"export default function SessionHeader({",
+				'<div className="Panel__header">',
+				'icon="back"',
+				'"SessionView__backBtn"',
+				"onClick={onRename}",
+				"{sessionName}",
+				"encounters.length > 0",
+				'"SessionView__encountersQuickAccess"',
+				'{lang.t("Combat encounters")}:',
+				"encounters.map((encounter) => (",
+				"key={encounter.id}",
+				"onOpenEncounter(encounter.id, event)",
+				"renderMentionText(",
+				"encounter.sceneNumber",
+				'lang.t("Scene {number}", {',
+				"number: encounter.sceneNumber,",
+				"encounter.name",
+				"<SessionHeaderActions",
+				"actionsRef={actionsRef}",
+				"canRedo={canRedo}",
+				"canUndo={canUndo}",
+				"isOpen={isActionsOpen}",
+				"isSaving={isSaving}",
+				"onDelete={onDelete}",
+				"onOpenSearch={onOpenSearch}",
+				"onRedo={onRedo}",
+				"onToggle={onToggleActions}",
+				"onUndo={onUndo}",
+			],
+			"Session private header presentation",
+		);
+		assert.doesNotMatch(
+			headerSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|usePointerDownOutsideDismissal|useSessionView|useSessionPageRuntime|SessionController|navigateToEncounter|setIsHeaderActionsOpen|setIsGlobalSearchOpen|handleDeleteSessionAndBack|handleUndo|handleRedo|app\/model|shared\/model/,
 		);
 	},
 );
@@ -4960,6 +5084,7 @@ await run(
 			campaignSource,
 			headerActionsSource,
 			sessionSource,
+			sessionHeaderSource,
 			sessionHeaderActionsSource,
 			sharedRuntimeEntrySource,
 			sharedTypeEntrySource,
@@ -4971,6 +5096,10 @@ await run(
 				"utf8",
 			),
 			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionHeader.tsx",
+				"utf8",
+			),
 			fs.readFile(
 				"src/pages/session/ui/components/SessionHeaderActions.tsx",
 				"utf8",
@@ -5104,8 +5233,8 @@ await run(
 			"Session undo-redo shared presentation",
 		);
 		assert.match(
-			sessionSource,
-			/import SessionHeaderActions from "\.\/components\/SessionHeaderActions\.tsx";/,
+			sessionHeaderSource,
+			/import SessionHeaderActions from "\.\/SessionHeaderActions\.tsx";/,
 		);
 	},
 );
@@ -6589,6 +6718,7 @@ await run(
 				"src/pages/encounter/ui/EncounterPage.tsx",
 				"src/pages/session/ui/SessionPage.tsx",
 				"src/pages/session/ui/components/SceneCardHeader.tsx",
+				"src/pages/session/ui/components/SessionHeader.tsx",
 				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
 				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
 				"src/widgets/campaign-entity-card/ui/CampaignEntityCardNotes.tsx",
