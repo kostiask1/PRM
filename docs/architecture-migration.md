@@ -742,6 +742,8 @@ Next:
 - Phase 173 precomputes basic, ability, text, and action slots in the raw renderer's original evaluation order while the private Fragment-only component preserves only the four wrapper groups, order/classes, fields/keys, disabled source, custom select option, and textarea presentation. One added static regression brings the full suite to 459/459 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 174 by moving Session Page header action-menu presentation from `SessionPage.tsx` to private `ui/components/SessionHeaderActions.tsx`. `SessionView` retains menu state/ref, shared pointer-dismissal lifecycle, global-search state, functional toggle, and close-before-search/undo/redo/delete command ownership; `SessionHeader` retains title/back/rename and encounter quick access.
 - Phase 174 preserves the existing always-mounted ref root, classes/open state, menu/button order, icons/titles/copy, and saving-disabled shared undo/redo gate in private page UI. One added static regression brings the full suite to 460/460 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 175 by moving AI Response Modal preview-resource header markup from `AiResponseModal.tsx` to private `ui/AiResponsePreviewResourceHeader.tsx`. The raw adapter retains default/fallback resource-label reads, resource-state lookup, and action construction in their original order before passing prepared nodes to the leaf.
+- Phase 175 preserves the exact preview header root/first-label-span/nested-actions/state-span hierarchy, classes, and CSS selector order in private widget UI. One added static regression brings the full suite to 461/461 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -888,6 +890,9 @@ callbacks, and save/error behavior at 459/459 tests.
 Phase 174 isolates Session Page header action-menu presentation in private page
 UI while retaining `SessionView` menu lifecycle, global-search state, and
 close-before-command workflows at 460/460 tests.
+Phase 175 isolates AI Response Modal preview-resource header markup in private
+widget UI while retaining raw resource-label/state/action evaluation at 461/461
+tests.
 
 ### Provenance and transfer rule
 
@@ -1268,7 +1273,7 @@ Status: **In progress**
   tests; Phase 167 passes 453/453 tests; Phase 168 passes 454/454 tests; Phase
   169 passes 455/455 tests; Phase 170 passes 456/456 tests; Phase 171 passes
   457/457 tests; Phase 172 passes 458/458 tests; Phase 173 passes 459/459
-  tests; Phase 174 passes 460/460 tests.
+  tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2124,6 +2129,27 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 174 is page-local header presentation only, not a new public Session
 workflow. The full `npm test` gate passes 460/460 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R45 / Phase 175 - Private AI preview-resource header presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move AI Response Modal preview-resource header markup into private
+  `widgets/ai-response-modal/ui/AiResponsePreviewResourceHeader.tsx`.
+- [x] Keep raw `renderPreviewResourceHeader` ownership of the default
+  `resource.label` read, fallback `label || resource.label` read,
+  `getDiffResourceState(resource)`, and `renderResourceActions(resource)` in
+  that exact order before leaf composition.
+- [x] Preserve the preview header root, first label span, nested actions, state
+  span, classes, and CSS selector order; pass only prepared React nodes to the
+  private leaf.
+- [x] Keep the component outside public widget runtime/type/model entries; do
+  not change the distinct draft-resource header in `AiResponseModalView`.
+
+Phase 175 is widget-local preview-header presentation only, not a new public AI
+response workflow. The full `npm test` gate passes 461/461 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

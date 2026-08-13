@@ -4388,6 +4388,94 @@ await run(
 );
 
 await run(
+	"Phase 175 isolates AI response preview-resource header presentation",
+	async () => {
+		const [
+			responseModalSource,
+			previewHeaderSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			modelEntrySource,
+			modelTypeEntrySource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponsePreviewResourceHeader.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/model.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			responseModalSource,
+			/import AiResponsePreviewResourceHeader from "\.\/AiResponsePreviewResourceHeader\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			responseModalSource,
+			[
+				"const renderResourceActions = (resource: PreviewResource) => (",
+				"<AiResponseResourceActions",
+				"resource={resource}",
+				"isDraft={isDraft}",
+				"isRestoringResponse={isRestoringResponse}",
+				"onApply={handleApplyResource}",
+				"onUndo={handleUndoResource}",
+				"const getPreviewResourceClassName = (",
+				"const renderPreviewResourceHeader = (",
+				"resource: PreviewResource,",
+				"label: ReactNode = resource.label,",
+				"const displayLabel = label || resource.label;",
+				"const resourceState = getDiffResourceState(resource);",
+				"const resourceActions = renderResourceActions(resource);",
+				"<AiResponsePreviewResourceHeader",
+				"label={displayLabel}",
+				"state={resourceState}",
+				"actions={resourceActions}",
+				"const {",
+				"closeCreatureFieldEdit,",
+			],
+			"AI response raw preview-resource header evaluation ownership",
+		);
+		assert.doesNotMatch(
+			responseModalSource,
+			/AiAssistant__preview_resource_header/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
+			/AiResponsePreviewResourceHeader/,
+		);
+		assertSourceTokensInOrder(
+			previewHeaderSource,
+			[
+				'import type { ReactNode } from "react";',
+				"interface AiResponsePreviewResourceHeaderProps {",
+				"actions: ReactNode;",
+				"label: ReactNode;",
+				"state: ReactNode;",
+				"export default function AiResponsePreviewResourceHeader({",
+				"return (",
+				'"AiAssistant__preview_resource_header"',
+				"<span>{label}</span>",
+				'"AiAssistant__preview_resource_actions"',
+				"<span>{state}</span>",
+				"{actions}",
+			],
+			"AI response preview-resource header private presentation",
+		);
+		assert.doesNotMatch(
+			previewHeaderSource,
+			/useState|useEffect|type\s+PreviewResource|getDiffResourceState|renderResourceActions|AiResponseResourceActions|classNames|lang/,
+		);
+	},
+);
+
+await run(
 	"Phase 170 isolates Campaign header action presentation",
 	async () => {
 		const [

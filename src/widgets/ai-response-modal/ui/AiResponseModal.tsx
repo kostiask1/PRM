@@ -44,6 +44,7 @@ import AiResponseGenericDiff from "./AiResponseGenericDiff.tsx";
 import AiResponseJsonDiff from "./AiResponseJsonDiff.tsx";
 import AiResponseNoteDiff from "./AiResponseNoteDiff.tsx";
 import AiResponseModalView from "./AiResponseModalView.tsx";
+import AiResponsePreviewResourceHeader from "./AiResponsePreviewResourceHeader.tsx";
 import {
 	createAiResponseCreatureFieldEditing,
 	type CreatureEditState,
@@ -160,15 +161,18 @@ function AiResponseModal({
 	const renderPreviewResourceHeader = (
 		resource: PreviewResource,
 		label: ReactNode = resource.label,
-	) => (
-		<div className="AiAssistant__preview_resource_header">
-			<span>{label || resource.label}</span>
-			<div className="AiAssistant__preview_resource_actions">
-				<span>{getDiffResourceState(resource)}</span>
-				{renderResourceActions(resource)}
-			</div>
-		</div>
-	);
+	) => {
+		const displayLabel = label || resource.label;
+		const resourceState = getDiffResourceState(resource);
+		const resourceActions = renderResourceActions(resource);
+		return (
+			<AiResponsePreviewResourceHeader
+				label={displayLabel}
+				state={resourceState}
+				actions={resourceActions}
+			/>
+		);
+	};
 	const {
 		closeCreatureFieldEdit,
 		openCreatureFieldEdit,
