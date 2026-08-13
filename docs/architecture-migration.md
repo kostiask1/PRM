@@ -758,6 +758,8 @@ Next:
 - Phase 181 preserves unconditional composition with a private null guard, modal lifecycle/classes, loading-before-empty order, lazy item labels/keys, list order, mention rendering, and click-only move delegation. One added static regression brings the full suite to 467/467 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 182 by moving Campaign Page description-section chrome from `CampaignPage.tsx` to private `ui/components/CampaignDescriptionSection.tsx`. The raw page retains collapse state/persistence and the expanded-only editor render callback; the leaf receives only display state, a toggle command, and the render slot.
 - Phase 182 preserves section DOM/id/classes, title/toggle behavior, setter-before-save policy, and the closed-gated description/editor reads. One added static regression brings the full suite to 468/468 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 183 by moving Campaign Page entity-section presentation from `CampaignPage.tsx` to private `ui/components/CampaignEntitySection.tsx`. The raw page retains per-type collapse/reorder persistence, cross-type drag policy, and all card/control render slots; the leaf receives controlled list state and explicit commands.
+- Phase 183 preserves outer drop-target semantics, shared collapse callbacks, expanded-only action/list gates, bulk current-item delegation, DraggableList reorder/drop behavior, key policy, and raw card/AI-control workflows. One added static regression brings the full suite to 469/469 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -928,6 +930,9 @@ ownership at 467/467 tests.
 Phase 182 isolates Campaign Page description-section chrome in private page UI
 while retaining raw collapse/persistence policy and expanded-only editor
 ownership at 468/468 tests.
+Phase 183 isolates Campaign Page entity-section presentation in private page UI
+while retaining raw per-type persistence, drag policy, and card/control
+workflow ownership at 469/469 tests.
 
 ### Provenance and transfer rule
 
@@ -1311,7 +1316,8 @@ Status: **In progress**
   tests; Phase 174 passes 460/460 tests; Phase 175 passes 461/461 tests; Phase
   176 passes 462/462 tests; Phase 177 passes 463/463 tests; Phase 178 passes
   464/464 tests; Phase 179 passes 465/465 tests; Phase 180 passes 466/466
-  tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests.
+  tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests;
+  Phase 183 passes 469/469 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2328,6 +2334,26 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 182 is page-local description-section chrome only, not a new Campaign
 workflow. The full `npm test` gate passes 468/468 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R53 / Phase 183 - Private Campaign entity-section presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Campaign Page entity-section presentation into private
+  `pages/campaign/ui/components/CampaignEntitySection.tsx`.
+- [x] Keep `CampaignView` ownership of per-type collapse/persistence commands,
+  drag/drop policy, global drop handling, and card/control render slots.
+- [x] Pass controlled list values, display configuration, render/drag slots,
+  and explicit commands; preserve section/drop-target DOM, toggle behavior,
+  collapsed gates, bulk/reorder/drop order, and key policy.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, or entity workflow
+  dependency.
+
+Phase 183 is page-local entity-section presentation only, not a new Campaign
+workflow. The full `npm test` gate passes 469/469 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

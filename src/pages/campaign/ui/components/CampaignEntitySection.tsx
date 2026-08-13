@@ -1,0 +1,92 @@
+import type { ReactNode } from "react";
+import {
+	Button,
+	CollapseToggleButton,
+	DraggableList,
+} from "../../../../shared/ui/index.js";
+import { BulkCollapseButton } from "../../../../features/notes/ui/index.js";
+import type { CampaignPageEntity } from "../../model/contracts.ts";
+import { getCampaignEntityRenderKey } from "../../model/campaignPagePresentation.ts";
+
+interface CampaignEntitySectionProps {
+	title: string;
+	items: CampaignPageEntity[];
+	hasData: boolean;
+	isCollapsed: boolean;
+	listClassName: string;
+	dropType?: "characters" | "npc";
+	actions: ReactNode;
+	dragData?: (entity: CampaignPageEntity) => unknown;
+	renderItemControl?: (entity: CampaignPageEntity) => ReactNode;
+	isItemControlActive?: (entity: CampaignPageEntity) => boolean;
+	renderItem: (entity: CampaignPageEntity) => ReactNode;
+	onToggle: () => void;
+	onBulkCollapse: (
+		items: CampaignPageEntity[],
+		collapsed: boolean,
+	) => void;
+	onReorder: (items: CampaignPageEntity[]) => void;
+	onReorderDrop: (items: CampaignPageEntity[]) => void;
+}
+
+export default function CampaignEntitySection({
+	title,
+	items,
+	hasData,
+	isCollapsed,
+	listClassName,
+	dropType,
+	actions,
+	dragData,
+	renderItemControl,
+	isItemControlActive,
+	renderItem,
+	onToggle,
+	onBulkCollapse,
+	onReorder,
+	onReorderDrop,
+}: CampaignEntitySectionProps) {
+	return (
+		<div
+			className="CampaignView__section"
+			data-character-drop-type={dropType}
+		>
+			<div className="section_row">
+				<div className="section_title_group" onClick={onToggle}>
+					{hasData && (
+						<CollapseToggleButton
+							size={Button.SIZES.MEDIUM}
+							collapsed={isCollapsed}
+							onClick={onToggle}
+						/>
+					)}
+					<h3>{title}</h3>
+				</div>
+				{!isCollapsed && (
+					<div className="CampaignView__sectionActions">
+						<BulkCollapseButton
+							items={items}
+							onChange={(collapsed) => onBulkCollapse(items, collapsed)}
+						/>
+						{actions}
+					</div>
+				)}
+			</div>
+			{!isCollapsed && (
+				<DraggableList
+					items={items}
+					className={listClassName}
+					onReorder={onReorder}
+					onDrop={onReorderDrop}
+					dragData={dragData}
+					keyExtractor={(entity, index) =>
+						getCampaignEntityRenderKey(entity, index)
+					}
+					renderItemControl={renderItemControl}
+					isItemControlActive={isItemControlActive}
+					renderItem={renderItem}
+				/>
+			)}
+		</div>
+	);
+}
