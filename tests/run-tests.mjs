@@ -4258,12 +4258,143 @@ await run(
 );
 
 await run(
+	"Phase 174 isolates Session header action presentation",
+	async () => {
+		const [
+			sessionSource,
+			headerActionsSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		] = await Promise.all([
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionHeaderActions.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/session/index.js", "utf8"),
+			fs.readFile("src/pages/session/index.d.ts", "utf8"),
+		]);
+
+		assert.match(
+			sessionSource,
+			/import SessionHeaderActions from "\.\/components\/SessionHeaderActions\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"function SessionHeader({",
+				'<div className="Panel__header">',
+				'"SessionView__encountersQuickAccess"',
+				"key={encounter.id}",
+				"<SessionHeaderActions",
+				"actionsRef={actionsRef}",
+				"canRedo={canRedo}",
+				"canUndo={canUndo}",
+				"isOpen={isActionsOpen}",
+				"isSaving={isSaving}",
+				"onDelete={onDelete}",
+				"onOpenSearch={onOpenSearch}",
+				"onRedo={onRedo}",
+				"onToggle={onToggleActions}",
+				"onUndo={onUndo}",
+			],
+			"Session header composition and encounter quick access",
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"function SessionView() {",
+				"const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);",
+				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
+				"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
+				"usePointerDownOutsideDismissal({",
+				"containerRef: headerActionsRef,",
+				"isOpen: isHeaderActionsOpen,",
+				"setIsOpen: setIsHeaderActionsOpen,",
+				"if (!session) return null;",
+				"<SessionHeader",
+				"onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}",
+				"onOpenSearch={() => {",
+				"setIsHeaderActionsOpen(false);",
+				"setIsGlobalSearchOpen(true);",
+				"onUndo={() => {",
+				"setIsHeaderActionsOpen(false);",
+				"view.handleUndo();",
+				"onRedo={() => {",
+				"setIsHeaderActionsOpen(false);",
+				"view.handleRedo();",
+				"onDelete={() => {",
+				"setIsHeaderActionsOpen(false);",
+				"void view.handleDeleteSessionAndBack();",
+			],
+			"Session header page-owned lifecycle and close-before-action commands",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/SessionView__headerActions(?:Toggle|Menu)?/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionHeaderActions/,
+		);
+		assertSourceTokensInOrder(
+			headerActionsSource,
+			[
+				'import type { RefObject } from "react";',
+				'import { classNames, lang } from "../../../../shared/lib/index.js";',
+				'import { Button, UndoRedoButtons } from "../../../../shared/ui/index.js";',
+				"interface SessionHeaderActionsProps {",
+				"actionsRef: RefObject<HTMLDivElement>;",
+				"canRedo: boolean;",
+				"canUndo: boolean;",
+				"isOpen: boolean;",
+				"isSaving: boolean;",
+				"onDelete: () => void;",
+				"onOpenSearch: () => void;",
+				"onRedo: () => void;",
+				"onToggle: () => void;",
+				"onUndo: () => void;",
+				"export default function SessionHeaderActions({",
+				"return (",
+				"ref={actionsRef}",
+				'"SessionView__headerActions"',
+				"is_open: isOpen",
+				'icon="menu"',
+				'"SessionView__headerActionsToggle"',
+				"onClick={onToggle}",
+				'{lang.t("Session actions")}',
+				'"SessionView__headerActionsMenu"',
+				'icon="search"',
+				"onClick={onOpenSearch}",
+				'{lang.t("Search")}',
+				"<UndoRedoButtons",
+				"canRedo={canRedo}",
+				"canUndo={canUndo}",
+				"disabled={isSaving}",
+				"onRedo={onRedo}",
+				"onUndo={onUndo}",
+				'variant="danger"',
+				'icon="trash"',
+				"onClick={onDelete}",
+				'{lang.t("Delete session")}',
+			],
+			"Session header action private presentation",
+		);
+		assert.doesNotMatch(
+			headerActionsSource,
+			/useState|useRef|useEffect|usePointerDownOutsideDismissal|setIsHeaderActionsOpen|setIsGlobalSearchOpen|handleDeleteSessionAndBack|handleUndo|handleRedo/,
+		);
+	},
+);
+
+await run(
 	"Phase 170 isolates Campaign header action presentation",
 	async () => {
 		const [
 			campaignSource,
 			headerActionsSource,
 			sessionSource,
+			sessionHeaderActionsSource,
 			sharedRuntimeEntrySource,
 			sharedTypeEntrySource,
 			undoRedoButtonsSource,
@@ -4274,6 +4405,10 @@ await run(
 				"utf8",
 			),
 			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionHeaderActions.tsx",
+				"utf8",
+			),
 			fs.readFile("src/shared/ui/index.js", "utf8"),
 			fs.readFile("src/shared/ui/index.d.ts", "utf8"),
 			fs.readFile("src/shared/ui/UndoRedoButtons.tsx", "utf8"),
@@ -4389,9 +4524,9 @@ await run(
 			"shared undo-redo presentation",
 		);
 		assertSourceTokensInOrder(
-			sessionSource,
+			sessionHeaderActionsSource,
 			[
-				"UndoRedoButtons,",
+				"UndoRedoButtons }",
 				'"SessionView__headerActionsMenu"',
 				"<UndoRedoButtons",
 				"canRedo={canRedo}",
@@ -4401,6 +4536,10 @@ await run(
 				"onUndo={onUndo}",
 			],
 			"Session undo-redo shared presentation",
+		);
+		assert.match(
+			sessionSource,
+			/import SessionHeaderActions from "\.\/components\/SessionHeaderActions\.tsx";/,
 		);
 	},
 );

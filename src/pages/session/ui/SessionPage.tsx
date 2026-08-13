@@ -16,7 +16,6 @@ import {
 	Modal,
 	Panel,
 	Tooltip,
-	UndoRedoButtons,
 	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
@@ -32,6 +31,7 @@ import TodoItem from "./components/TodoItem.tsx";
 import SceneCardHeader from "./components/SceneCardHeader.tsx";
 import SceneCardMedia from "./components/SceneCardMedia.tsx";
 import SceneCardFields from "./components/SceneCardFields.tsx";
+import SessionHeaderActions from "./components/SessionHeaderActions.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import {
 	CharacterCard,
@@ -67,7 +67,6 @@ import {
 	findEntityByName,
 } from "../../../entities/campaign/index.js";
 import type { CampaignEntityRecord } from "../../../entities/campaign/index.js";
-import { classNames } from "../../../shared/lib/index.js";
 import type { SharedNote } from "../../../shared/lib/index.js";
 import type { SessionResourceId } from "../../../features/session-editor/index.js";
 import {
@@ -181,34 +180,18 @@ function SessionHeader({
 					)}
 				</div>
 			</div>
-			<div
-				ref={actionsRef}
-				className={classNames("SessionView__headerActions", {
-					is_open: isActionsOpen,
-				})}
-			>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon="menu"
-					className="SessionView__headerActionsToggle"
-					onClick={onToggleActions}
-					title={lang.t("Session actions")}
-				/>
-				<div className="SessionView__headerActionsMenu">
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="search" onClick={onOpenSearch} title={lang.t("Global search")}>
-						{lang.t("Search")}
-					</Button>
-					<UndoRedoButtons
-						canRedo={canRedo}
-						canUndo={canUndo}
-						disabled={isSaving}
-						onRedo={onRedo}
-						onUndo={onUndo}
-					/>
-					<Button variant="danger" size={Button.SIZES.SMALL} icon="trash" onClick={onDelete} title={lang.t("Delete session")} />
-				</div>
-			</div>
+			<SessionHeaderActions
+				actionsRef={actionsRef}
+				canRedo={canRedo}
+				canUndo={canUndo}
+				isOpen={isActionsOpen}
+				isSaving={isSaving}
+				onDelete={onDelete}
+				onOpenSearch={onOpenSearch}
+				onRedo={onRedo}
+				onToggle={onToggleActions}
+				onUndo={onUndo}
+			/>
 		</div>
 	);
 }
