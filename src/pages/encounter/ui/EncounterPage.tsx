@@ -39,6 +39,7 @@ import {
 import useEncounterView from "../model/useEncounterView.ts";
 import { useEncounterAiModelLoading } from "../model/useEncounterAiModelLoading.ts";
 import { useEncounterGridFocus } from "../model/useEncounterGridFocus.ts";
+import { useEncounterPlayerCreation } from "../model/useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
 import "../../../assets/components/EncounterView.css";
 import { campaignApi } from "../../../entities/campaign/index.js";
@@ -48,10 +49,6 @@ import {
 } from "../../../entities/bestiary/index.js";
 import { aiApi } from "../../../features/ai/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
-import {
-	buildCreateEntityPayload,
-	createCampaignEntity,
-} from "../../../features/campaign-entity/index.js";
 import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";
 import EncounterBestiaryOverlay from "./components/EncounterBestiaryOverlay.tsx";
 import EncounterCharacterOverlays from "./components/EncounterCharacterOverlays.tsx";
@@ -91,12 +88,10 @@ import {
 	getLocalizedDiffResourceState,
 } from "../../../features/ai/index.js";
 import {
-	createEmptyEncounterCharacterDraft as createEmptyCharacterDraft,
 	applyEncounterGeneratedMonsterResult,
 	applyEncounterMonsterRestoreResult,
 	executeEncounterAiRestoreRequest,
 	executeEncounterParticipantSelection,
-	executeEncounterPlayerCreation,
 	getAvailableEncounterCharacters,
 	getEncounterGridProjection,
 	getEncounterParticipantSelectionPlan,
@@ -121,23 +116,9 @@ type FieldEditingMonster = {
 	original: EncounterViewParticipant;
 	monster: EncounterMonsterTarget;
 };
-type PlayerDraft = CharacterData & { firstName: string };
 type RestoreMode = "apply" | "undo";
 type RestoreOptions = { resourceIds?: string[] };
 
-const ENCOUNTER_CHARACTER_DEFAULTS: Record<string, unknown> = {
-	firstName: "",
-	lastName: "",
-	race: "",
-	class: "",
-	level: 1,
-	motivation: "",
-	description: "",
-	trait: "",
-	notes: [],
-	collapsed: false,
-	isNotesCollapsed: false,
-};
 const EMPTY_ENCOUNTER_PARTICIPANTS: EncounterViewParticipant[] = [];
 const EMPTY_CAMPAIGN_ENTITIES: CampaignEntityRecord[] = [];
 
@@ -246,11 +227,6 @@ function EncounterView() {
 	const gridColumns = getEncounterGridColumns(encounterGridColumns);
 	const [modalCharacter, setModalCharacter] =
 		useState<EncounterViewParticipant | null>(null);
-	const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
-	const [playerDraft, setPlayerDraft] = useState<PlayerDraft>(() =>
-		createEmptyCharacterDraft() as PlayerDraft,
-	);
-	const [isPlayerSubmitting, setIsPlayerSubmitting] = useState(false);
 	const [hpDrafts, setHpDrafts] = useState<Record<string, string>>({});
 	const [aiActionMonster, setAiActionMonster] =
 		useState<EncounterViewParticipant | null>(null);
@@ -319,6 +295,18 @@ function EncounterView() {
 		),
 		[encounterParticipants, playerCharacters],
 	);
+	const playerCreation = useEncounterPlayerCreation({
+		campaignSlug: campaign?.slug || "",
+		onAdd: view.handleAddCharacter,
+		onClosePicker: () => view.setShowCharacterPicker(false),
+		refreshEntities,
+		showMessage,
+		messages: {
+			errorTitle: lang.t("Error"),
+			missingName: lang.t("Name is required to create an entry."),
+			failedCreation: lang.t("Failed to create entity."),
+		},
+	});
 
 	useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);
 	useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));
@@ -624,51 +612,6 @@ function EncounterView() {
 		});
 	};
 
-	const resetPlayerCreateForm = () => {
-		setIsCreatingPlayer(false);
-		setPlayerDraft(createEmptyCharacterDraft() as PlayerDraft);
-	};
-
-	const closeCharacterPicker = () => {
-		if (isPlayerSubmitting) return;
-		resetPlayerCreateForm();
-		view.setShowCharacterPicker(false);
-	};
-
-	const startCreatePlayer = () => {
-		setPlayerDraft(createEmptyCharacterDraft() as PlayerDraft);
-		setIsCreatingPlayer(true);
-	};
-
-	const handleCreatePlayer = async () => {
-		if (!playerDraft.firstName?.trim()) {
-			showMessage({
-				title: lang.t("Error"),
-				message: lang.t("Name is required to create an entry."),
-			});
-			return;
-		}
-		const payload = buildCreateEntityPayload(ENCOUNTER_CHARACTER_DEFAULTS, playerDraft);
-		setIsPlayerSubmitting(true);
-		await executeEncounterPlayerCreation({
-			request: () => createCampaignEntity(
-				activeCampaign.slug,
-				"characters",
-				payload as CampaignEntityRecord,
-			),
-			onRefresh: refreshEntities,
-			onAdd: view.handleAddCharacter,
-			onReset: resetPlayerCreateForm,
-			onError: (error) => {
-				console.error("Failed to create player from encounter", error);
-				showMessage({
-					title: lang.t("Error"),
-					message: lang.t("Failed to create entity."),
-				});
-			},
-			onComplete: () => setIsPlayerSubmitting(false),
-		});
-	};
 
 	const averageInitiativeTooltip = (
 		<div>
@@ -827,18 +770,18 @@ function EncounterView() {
 
 			<EncounterCharacterOverlays
 				open={view.showCharacterPicker}
-				creating={isCreatingPlayer}
-				submitting={isPlayerSubmitting}
-				draft={playerDraft}
+				creating={playerCreation.creating}
+				submitting={playerCreation.submitting}
+				draft={playerCreation.draft}
 				available={availablePlayerCharacters}
 				allCharacters={view.playerCharacters}
 				modalCharacter={modalCharacter}
 				campaignSlug={activeCampaign.slug}
-				onClosePicker={closeCharacterPicker}
-				onDraft={setPlayerDraft}
-				onCreate={handleCreatePlayer}
-				onReset={resetPlayerCreateForm}
-				onStartCreate={startCreatePlayer}
+				onClosePicker={playerCreation.closePicker}
+				onDraft={playerCreation.setDraft}
+				onCreate={playerCreation.submit}
+				onReset={playerCreation.reset}
+				onStartCreate={playerCreation.start}
 				onAdd={view.handleAddCharacter}
 				onCloseCharacter={() => setModalCharacter(null)}
 				getModalCharacterOnChange={(character) =>

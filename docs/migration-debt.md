@@ -57,6 +57,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 202 | Completed page-model consolidation | Moved Session Page hash-navigation lifecycle into private `pages/session/model/useSessionHashNavigation.ts`. Raw `SessionView` retains session state, rendered collections, and section-toggle command ownership. | Keep the hook private; preserve the Session-specific notes-expand predicate, `140ms` delayed scroll/cleanup, original dependencies, and no public page/runtime/store/API expansion. | 488/488 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 203 | Completed page-model consolidation | Moved Campaign Page character-type drag-drop browser lifecycle into private `pages/campaign/model/useCampaignCharacterTypeDrop.ts`. Raw `CampaignView` retains view identity and character-type drop command ownership. | Keep the hook private; preserve target/drop-zone lookup, drop-plan construction, listener lifecycle, raw-view dependency, and no public page/runtime/store/API expansion. | 489/489 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 204 | Completed page-model consolidation | Moved Encounter Page grid-focus state, refs, and timeout policy into private `pages/encounter/model/useEncounterGridFocus.ts`. Raw `EncounterView` retains grid projection, participant-selection plan, and selection command ownership. | Keep the hook private; preserve representative lookup, ref map updates, scroll, timeout replacement/conditional reset, cleanup integration, and no public page/runtime/store/API expansion. | 490/490 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 205 | Completed page-model consolidation | Moved Encounter Page player-character creation state and lifecycle into private `pages/encounter/model/useEncounterPlayerCreation.ts`. Raw `EncounterView` retains adapters, localization, route guard, and overlay composition. | Keep the hook private; preserve draft/close/error/finally policy and create → refresh → add → reset order without public page/runtime/store/API expansion. | 491/491 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -419,6 +420,14 @@ event-to-value adapter. The expanded suite passes 473/473 tests; architecture,
 performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
 `MD-R04` remains verification-blocked until the declared local lint/typecheck
 tooling is available.
+
+Phase 205 moves Encounter Page player-character creation state and lifecycle
+into private `model/useEncounterPlayerCreation.ts`. Raw `EncounterView` retains
+runtime/view adapters, localization, route guard, and overlay composition. The
+hook preserves draft and close-guard policy, blank-name/error handling, payload
+defaults, create → refresh → add → reset order, and finally reset. The expanded
+suite passes 491/491 tests; architecture, performance, and Ukrainian encoding
+checks pass. `MD-R02` remains closed; `MD-R04` remains verification-blocked.
 
 Phase 188 moves the paired Session NPC/location list shells into private
 `ui/components/SessionEntitySection.tsx`. The raw page retains type-bound

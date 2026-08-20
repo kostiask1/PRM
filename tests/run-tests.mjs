@@ -5723,41 +5723,28 @@ await run(
 				"function EncounterView() {",
 				"const [modalCharacter, setModalCharacter] =",
 				"useState<EncounterViewParticipant | null>(null);",
-				"const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);",
-				"const [playerDraft, setPlayerDraft] = useState<PlayerDraft>(() =>",
-				"const [isPlayerSubmitting, setIsPlayerSubmitting] = useState(false);",
 				"const availablePlayerCharacters = useMemo(",
 				"getAvailableEncounterCharacters(",
+				"const playerCreation = useEncounterPlayerCreation({",
+				"onAdd: view.handleAddCharacter,",
 				"const handleCharacterChange =",
 				"view.updateEncounterCharacter(instanceId, nextCharacter);",
 				"setModalCharacter((current) =>",
-				"const resetPlayerCreateForm = () => {",
-				"setIsCreatingPlayer(false);",
-				"setPlayerDraft(createEmptyCharacterDraft() as PlayerDraft);",
-				"const closeCharacterPicker = () => {",
-				"if (isPlayerSubmitting) return;",
-				"resetPlayerCreateForm();",
-				"view.setShowCharacterPicker(false);",
-				"const startCreatePlayer = () => {",
-				"setIsCreatingPlayer(true);",
-				"const handleCreatePlayer = async () => {",
-				"buildCreateEntityPayload(ENCOUNTER_CHARACTER_DEFAULTS, playerDraft)",
-				"executeEncounterPlayerCreation({",
 				"<EncounterBestiaryOverlay",
 				"<EncounterCharacterOverlays",
 				"open={view.showCharacterPicker}",
-				"creating={isCreatingPlayer}",
-				"submitting={isPlayerSubmitting}",
-				"draft={playerDraft}",
+				"creating={playerCreation.creating}",
+				"submitting={playerCreation.submitting}",
+				"draft={playerCreation.draft}",
 				"available={availablePlayerCharacters}",
 				"allCharacters={view.playerCharacters}",
 				"modalCharacter={modalCharacter}",
 				"campaignSlug={activeCampaign.slug}",
-				"onClosePicker={closeCharacterPicker}",
-				"onDraft={setPlayerDraft}",
-				"onCreate={handleCreatePlayer}",
-				"onReset={resetPlayerCreateForm}",
-				"onStartCreate={startCreatePlayer}",
+				"onClosePicker={playerCreation.closePicker}",
+				"onDraft={playerCreation.setDraft}",
+				"onCreate={playerCreation.submit}",
+				"onReset={playerCreation.reset}",
+				"onStartCreate={playerCreation.start}",
 				"onAdd={view.handleAddCharacter}",
 				"onCloseCharacter={() => setModalCharacter(null)}",
 				"getModalCharacterOnChange={(character) =>",
@@ -6812,6 +6799,41 @@ await run(
 			"}, 1800);",
 		], "Encounter page-model grid focus");
 		assert.doesNotMatch(focusSource, /useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|aiApi|app\/model|shared\/model/);
+	},
+);
+
+await run(
+	"Phase 205 isolates Encounter player creation in page model",
+	async () => {
+		const [encounterSource, creationSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				fs.readFile("src/pages/encounter/model/useEncounterPlayerCreation.ts", "utf8"),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+		assert.match(encounterSource, /import \{ useEncounterPlayerCreation \} from "\.\.\/model\/useEncounterPlayerCreation\.ts";/);
+		assert.doesNotMatch(encounterSource, /executeEncounterPlayerCreation|buildCreateEntityPayload|createEmptyEncounterCharacterDraft|const handleCreatePlayer/);
+		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterPlayerCreation/);
+		assertSourceTokensInOrder(encounterSource, [
+			"const playerCreation = useEncounterPlayerCreation({",
+			"onAdd: view.handleAddCharacter,",
+			"onClosePicker: () => view.setShowCharacterPicker(false),",
+			"creating={playerCreation.creating}",
+			"onCreate={playerCreation.submit}",
+		], "Encounter raw player-creation composition");
+		assertSourceTokensInOrder(creationSource, [
+			"export function useEncounterPlayerCreation(options: Options)",
+			"if (!draft.firstName?.trim())",
+			"buildCreateEntityPayload(DEFAULTS, draft)",
+			"setSubmitting(true);",
+			"executeEncounterPlayerCreation({",
+			"onRefresh: options.refreshEntities,",
+			"onAdd: options.onAdd,",
+			"onReset: reset,",
+			"onComplete: () => setSubmitting(false),",
+		], "Encounter page-model player creation");
+		assert.doesNotMatch(creationSource, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 	},
 );
 
