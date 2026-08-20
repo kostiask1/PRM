@@ -1739,18 +1739,6 @@ function getRequiredSourceMatch(source, pattern, message = String(pattern)) {
 	return match[0];
 }
 
-function getEncounterBestiaryOverlayParts(source) {
-	const overlay = getRequiredSourceMatch(
-		source,
-		/function EncounterBestiaryOverlay\([\s\S]*?(?=\r?\n\r?\nfunction EncounterNotification)/,
-	);
-	const tag = getRequiredSourceMatch(
-		overlay,
-		/<Bestiary(?=\s|>)[\s\S]*?\/>/,
-	);
-	return { overlay, tag };
-}
-
 async function getEncounterPrivateComponentSources(componentName) {
 	const [encounterSource, componentSource, runtimeEntrySource, typeEntrySource] =
 		await Promise.all([
@@ -2377,7 +2365,7 @@ await run(
 		);
 		assert.match(
 			encounterSource,
-			/function EncounterBestiaryOverlay\([\s\S]*?\)\s*\{\s*if \(!open\) return null;\s*return \(\s*<Modal[\s\S]*?<Bestiary(?=\s|>)/,
+			/import EncounterBestiaryOverlay from "\.\/components\/EncounterBestiaryOverlay\.tsx";/,
 		);
 		assert.match(
 			monsterFieldModalSource,
@@ -2624,13 +2612,9 @@ await run(
 			encounterSource,
 			/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/\.\.\/widgets\/monster-stat-block\/index\.js";/,
 		);
-		const {
-			overlay: encounterBestiaryOverlay,
-			tag: encounterBestiaryTag,
-		} = getEncounterBestiaryOverlayParts(encounterSource);
-		assert.match(
-			encounterBestiaryOverlay,
-			/if \(!open\) return null;\s*return \(\s*<Modal/,
+		const encounterBestiaryTag = getRequiredSourceMatch(
+			encounterSource,
+			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
 		);
 		assert.match(
 			encounterBestiaryTag,
@@ -3032,13 +3016,9 @@ await run(
 			/<\/div>\s*<AiAssistantPanel(?=\s|>)[\s\S]*?\/>\s*<\/div>\s*\);\s*\}/,
 		);
 
-		const {
-			overlay: encounterBestiaryOverlay,
-			tag: encounterBestiaryTag,
-		} = getEncounterBestiaryOverlayParts(encounterSource);
-		assert.match(
-			encounterBestiaryOverlay,
-			/if \(!open\) return null;\s*return \(\s*<Modal/,
+		const encounterBestiaryTag = getRequiredSourceMatch(
+			encounterSource,
+			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
 		);
 		assert.match(
 			encounterBestiaryTag,
@@ -3400,7 +3380,7 @@ await run(
 		assert.ok(encounterBinding);
 		assert.ok(
 			encounterSource.indexOf(encounterBinding) <
-				encounterSource.indexOf("function EncounterBestiaryOverlay"),
+				encounterSource.indexOf("<EncounterBestiaryOverlay"),
 		);
 		for (const [binding, configuredEditor] of [
 			[mainBinding, "MainContentMonsterEditorModal"],
@@ -6501,6 +6481,79 @@ await run(
 );
 
 await run(
+	"Phase 197 isolates Encounter Bestiary overlay presentation",
+	async () => {
+		const {
+			encounterSource,
+			componentSource: overlaySource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getEncounterPrivateComponentSources("EncounterBestiaryOverlay");
+
+		assert.match(
+			encounterSource,
+			/import EncounterBestiaryOverlay from "\.\/components\/EncounterBestiaryOverlay\.tsx";/,
+		);
+		assert.doesNotMatch(
+			encounterSource,
+			/function EncounterBestiaryOverlay\(|\bModal\b/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/EncounterBestiaryOverlay/,
+		);
+		assertSourceTokensInOrder(
+			encounterSource,
+			[
+				"function EncounterView() {",
+				"<EncounterBestiaryOverlay",
+				"open={view.showBestiary}",
+				"onClose={() => view.setShowBestiary(false)}",
+				"onAdd={view.handleAddMonster}",
+				"renderBestiary={(onAdd) => (",
+				"<Bestiary",
+				"BestiaryAiModals={EncounterBestiaryAiModals}",
+				"AiAssistantPanel={AiAssistantPanel}",
+				"MonsterStatBlock={MonsterStatBlock}",
+				"ResponseModal={EncounterAiResponseModal}",
+				"MonsterEditorModal={EncounterMonsterEditorModal}",
+				"onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}",
+				"<EncounterCharacterOverlays",
+			],
+			"Encounter raw Bestiary composition and workflow ownership",
+		);
+		assertSourceTokensInOrder(
+			overlaySource,
+			[
+				'import type { ReactNode } from "react";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { Modal } from "../../../../shared/ui/index.js";',
+				'import type { EncounterViewParticipant } from "../../model/contracts.ts";',
+				"interface EncounterBestiaryOverlayProps {",
+				"open: boolean;",
+				"onClose: () => void;",
+				"onAdd: (monster: EncounterViewParticipant) => void;",
+				"renderBestiary: (",
+				"export default function EncounterBestiaryOverlay({",
+				"if (!open) return null;",
+				"<Modal",
+				"onConfirm={() => {}}",
+				'title={lang.t("Choose monster")}',
+				"onCancel={onClose}",
+				"showFooter={false}",
+				'type="custom"',
+				"{renderBestiary(onAdd)}",
+			],
+			"Encounter private Bestiary overlay presentation",
+		);
+		assert.doesNotMatch(
+			overlaySource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useEncounterView|useEncounterPageRuntime|EncounterViewModel|BestiaryBrowser|AiAssistantPanel|MonsterStatBlock|EncounterBestiaryAiModals|EncounterAiResponseModal|EncounterMonsterEditorModal|campaignApi|bestiaryApi|aiApi|settingsApi|\bapi\.|handleAddMonster|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|EncounterPage/,
+		);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
@@ -8052,7 +8105,7 @@ await run(
 		assert.ok(
 			encounterSource.indexOf(
 				'import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";',
-			) < encounterSource.indexOf("function EncounterBestiaryOverlay"),
+			) < encounterSource.indexOf("<EncounterBestiaryOverlay"),
 		);
 
 		assert.match(

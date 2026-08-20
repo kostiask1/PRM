@@ -49,6 +49,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 194 | Completed page-local consolidation | Moved Session Page session-scoped NPC/location modal card presentation into private `pages/session/ui/components/SessionScopedEntityModal.tsx`. Raw `SessionView` retains resolver/current-entity lookup, ID guards, and change/delete/close command ownership. | Keep the leaf private; preserve type branch, normalization, card identity/flags, forced expanded state, and delete-before-close ordering without public page/runtime/store/API expansion. | 480/480 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 195 | Completed page-local consolidation | Moved Campaign Page header presentation into private `pages/campaign/ui/components/CampaignHeader.tsx`, forwarding private `CampaignHeaderActions`. Raw `CampaignView` retains campaign/state/modal-trigger/action command ownership. | Keep the leaf private; preserve header/title/metadata hierarchy, rename tooltip/handler, undo/redo/action forwarding, classes/copy, and no public page/runtime/store/API expansion. | 481/481 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 196 | Completed page-local consolidation | Moved Campaign Page partial-archive overlay lifecycle/presentation into private `pages/campaign/ui/components/CampaignPartialArchiveOverlay.tsx`. Raw `CampaignView` retains search/archive-open state, search close, and archive command ownership. | Keep the leaf private; preserve always-mounted busy state, null gate, await/finally and import-close ordering, modal props, global-search placement, and no public page/runtime/store/API expansion. | 482/482 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 197 | Completed page-local consolidation | Moved Encounter Page Bestiary overlay shell into private `pages/encounter/ui/components/EncounterBestiaryOverlay.tsx`. Raw `EncounterView` retains Bestiary composition, stable widget slots, monster-add command, and cast ownership. | Keep the leaf private; preserve closed-gated slot evaluation, custom modal props/title/no-op confirm, action forwarding, raw composition imports, sibling overlay order, and no public page/runtime/store/API expansion. | 483/483 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -513,6 +514,17 @@ open/close/export/import inputs while preserving always-mounted busy state, the
 closed-overlay null gate, busy-before-await/finally reset, import success before
 close, `PartialArchiveModal` prop routing, and global-search placement. The
 expanded suite passes 482/482 tests; architecture, performance, and Ukrainian
+encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
+verification-blocked until the declared local lint/typecheck tooling is
+available.
+
+Phase 197 moves Encounter Page Bestiary overlay shell into private
+`ui/components/EncounterBestiaryOverlay.tsx`. Raw `EncounterView` retains
+Bestiary composition, all stable widget slots, the monster-add command, and
+cast ownership. The leaf receives open/close/action inputs plus a render slot,
+preserving closed-gated slot evaluation, custom modal title/props/no-op confirm,
+action forwarding, raw composition imports, and sibling overlay order. The
+expanded suite passes 483/483 tests; architecture, performance, and Ukrainian
 encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.

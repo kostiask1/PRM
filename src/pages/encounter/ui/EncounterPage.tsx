@@ -8,7 +8,6 @@ import {
 import {
 	Button,
 	DraggableList,
-	Modal,
 	Notification,
 	Panel,
 } from "../../../shared/ui/index.js";
@@ -52,6 +51,7 @@ import {
 	createCampaignEntity,
 } from "../../../features/campaign-entity/index.js";
 import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";
+import EncounterBestiaryOverlay from "./components/EncounterBestiaryOverlay.tsx";
 import EncounterCharacterOverlays from "./components/EncounterCharacterOverlays.tsx";
 import EncounterDetail from "./components/EncounterDetail.tsx";
 import EncounterHeader from "./components/EncounterHeader.tsx";
@@ -211,30 +211,6 @@ function getEncounterViewPlayerCharacters(
 	view: EncounterViewModel,
 ): CampaignEntityRecord[] {
 	return view.playerCharacters || EMPTY_CAMPAIGN_ENTITIES;
-}
-
-function EncounterBestiaryOverlay({
-	open,
-	onClose,
-	onAdd,
-}: {
-	open: boolean;
-	onClose: () => void;
-	onAdd: EncounterViewModel["handleAddMonster"];
-}) {
-	if (!open) return null;
-	return (
-		<Modal onConfirm={() => {}} title={lang.t("Choose monster")} onCancel={onClose} showFooter={false} type="custom">
-			<Bestiary
-				BestiaryAiModals={EncounterBestiaryAiModals}
-				AiAssistantPanel={AiAssistantPanel}
-				MonsterStatBlock={MonsterStatBlock}
-				ResponseModal={EncounterAiResponseModal}
-				MonsterEditorModal={EncounterMonsterEditorModal}
-				onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}
-			/>
-		</Modal>
-	);
 }
 
 function EncounterNotification({
@@ -898,6 +874,16 @@ function EncounterView() {
 				open={view.showBestiary}
 				onClose={() => view.setShowBestiary(false)}
 				onAdd={view.handleAddMonster}
+				renderBestiary={(onAdd) => (
+					<Bestiary
+						BestiaryAiModals={EncounterBestiaryAiModals}
+						AiAssistantPanel={AiAssistantPanel}
+						MonsterStatBlock={MonsterStatBlock}
+						ResponseModal={EncounterAiResponseModal}
+						MonsterEditorModal={EncounterMonsterEditorModal}
+						onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}
+						/>
+				)}
 			/>
 
 			<EncounterCharacterOverlays

@@ -786,6 +786,8 @@ Next:
 - Phase 195 preserves the header/title/created-metadata hierarchy, rename tooltip/handler, undo/redo capability reads, direct action callbacks, action-menu forwarding, classes, and localized copy. One added static regression brings the full suite to 481/481 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 196 by moving Campaign Page partial-archive overlay lifecycle and presentation from `CampaignPage.tsx` to private `ui/components/CampaignPartialArchiveOverlay.tsx`. Raw `CampaignView` retains global-search/partial-archive state, search close, and archive commands; the leaf receives controlled open/close/export/import inputs.
 - Phase 196 preserves always-mounted busy state, the closed-overlay null gate, busy-before-await/finally reset, import success before close, `PartialArchiveModal` prop routing, and global-search placement. One added static regression brings the full suite to 482/482 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 197 by moving Encounter Page Bestiary overlay shell from `EncounterPage.tsx` to private `ui/components/EncounterBestiaryOverlay.tsx`. Raw `EncounterView` retains Bestiary composition, stable widget slots, the monster-add command, and cast ownership; the leaf receives controlled open/close/action inputs plus a render slot.
+- Phase 197 preserves the closed-overlay gate before slot evaluation, custom Modal title/props/no-op confirm, action forwarding, raw composition imports, and sibling overlay order. One added static regression brings the full suite to 483/483 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -998,6 +1000,9 @@ ownership at 481/481 tests.
 Phase 196 isolates Campaign Page partial-archive overlay lifecycle/presentation
 in private page UI while retaining raw search/archive state and archive-command
 ownership at 482/482 tests.
+Phase 197 isolates Encounter Page Bestiary overlay shell in private page UI
+while retaining raw Bestiary composition, stable widget slots, and monster-add
+workflow ownership at 483/483 tests.
 
 ### Provenance and transfer rule
 
@@ -1388,7 +1393,7 @@ Status: **In progress**
   tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests;
   Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests; Phase 194
   passes 480/480 tests; Phase 195 passes 481/481 tests; Phase 196 passes
-  482/482 tests.
+  482/482 tests; Phase 197 passes 483/483 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2705,6 +2710,27 @@ Phase 196 is page-local partial-archive overlay presentation only, not a new
 Campaign archive workflow. The full `npm test` gate passes 482/482 tests;
 architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
 remains closed and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R67 / Phase 197 - Private Encounter Bestiary overlay
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Encounter Page Bestiary overlay shell into private
+  `pages/encounter/ui/components/EncounterBestiaryOverlay.tsx`.
+- [x] Keep raw `EncounterView` ownership of Bestiary composition, stable widget
+  slots, the monster-add command, and the monster cast.
+- [x] Pass the leaf only controlled open/close/action inputs plus a render
+  slot; preserve closed-gated slot evaluation, custom modal title/props/no-op
+  confirm, action forwarding, raw composition imports, and sibling overlay
+  order.
+- [x] Keep the component outside public page runtime/type entries without a
+  runtime, API, store, navigation, Bestiary, AI, monster-add, or encounter
+  workflow dependency.
+
+Phase 197 is page-local Bestiary-overlay presentation only, not a new Encounter
+workflow. The full `npm test` gate passes 483/483 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 
