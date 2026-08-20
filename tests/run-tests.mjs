@@ -5995,18 +5995,10 @@ await run(
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
 				"function EncounterView() {",
-				"const [hpDrafts, setHpDrafts] = useState<Record<string, string>>({});",
+				"const hpEditing = useEncounterHpEditing({",
+				"onUpdate: view.updateMonsterHp,",
 				"const handleSelectMonster = (monster: EncounterViewParticipant) => {",
 				"executeEncounterParticipantSelection(",
-				"const handleHpInputChange = (instanceId: string, value: string) => {",
-				"setHpDrafts((current) => ({",
-				"const handleHpInputBlur = (monster: EncounterViewParticipant) => {",
-				"const instanceId = getParticipantInstanceId(monster);",
-				"const draftValue = hpDrafts[instanceId];",
-				"if (draftValue === undefined) return;",
-				"view.updateMonsterHp(",
-				"resolveHpInputValue(draftValue, monster.currentHp)",
-				"delete next[instanceId];",
 				"<DraggableList",
 				"items={encounter.monsters}",
 				"onReorder={view.handleReorderMonsters}",
@@ -6016,12 +6008,12 @@ await run(
 				"<EncounterMonsterRow",
 				"monster={monster}",
 				"isDragging={isDragging}",
-				"hpDrafts={hpDrafts}",
+				"hpDrafts={hpEditing.drafts}",
 				"selectedInstanceId={getOptionalParticipantId(view.selectedInstance)}",
 				"view={view}",
 				"onSelect={handleSelectMonster}",
-				"onHpChange={handleHpInputChange}",
-				"onHpBlur={handleHpInputBlur}",
+				"onHpChange={hpEditing.onChange}",
+				"onHpBlur={hpEditing.onBlur}",
 				"getParticipantInstanceId={getParticipantInstanceId}",
 				"<EncounterDetail",
 			],
@@ -6836,6 +6828,31 @@ await run(
 		assert.doesNotMatch(creationSource, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 	},
 );
+
+await run("Phase 206 isolates Encounter HP editing in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterHpEditing.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterHpEditing \} from "\.\.\/model\/useEncounterHpEditing\.ts";/);
+	assert.doesNotMatch(page, /const handleHpInputChange|const handleHpInputBlur|setHpDrafts/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterHpEditing/);
+	assertSourceTokensInOrder(page, [
+		"const hpEditing = useEncounterHpEditing({",
+		"onUpdate: view.updateMonsterHp,",
+		"hpDrafts={hpEditing.drafts}",
+		"onHpChange={hpEditing.onChange}",
+		"onHpBlur={hpEditing.onBlur}",
+	], "Encounter raw HP-editing composition");
+	assertSourceTokensInOrder(hook, [
+		"export function useEncounterHpEditing(",
+		"if (draftValue === undefined) return;",
+		"resolveEncounterHpInputValue(draftValue, monster.currentHp)",
+		"delete next[instanceId];",
+	], "Encounter page-model HP editing");
+});
 
 await run(
 	"Phase 179 isolates Session checklist-overlay presentation",

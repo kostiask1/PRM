@@ -804,6 +804,8 @@ Next:
 - Phase 204 preserves representative lookup, ref-map updates, auto-center scroll, timeout replacement/conditional reset after `1800ms`, and cleanup integration. One added static regression brings the full suite to 490/490 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 205 by moving Encounter Page player-character creation state and lifecycle from `EncounterPage.tsx` to private `model/useEncounterPlayerCreation.ts`. Raw `EncounterView` retains runtime/view adapters, localization, route guard, and overlay composition.
 - Phase 205 preserves draft/close/error/finally policy and create → refresh → add → reset order. One added static regression brings the full suite to 491/491 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 206 by moving Encounter Page HP draft/edit lifecycle from `EncounterPage.tsx` to private `model/useEncounterHpEditing.ts`. Raw `EncounterView` retains participant identity and the update adapter.
+- Phase 206 preserves per-instance draft replacement, absent-draft no-op, HP normalization, and delete-after-commit policy. One added static regression brings the full suite to 492/492 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1043,6 +1045,9 @@ workflow ownership at 490/490 tests.
 Phase 205 isolates Encounter Page player-character creation lifecycle in private
 page model while retaining raw adapters, localization, guard, and overlay
 composition at 491/491 tests.
+Phase 206 isolates Encounter Page HP draft/edit lifecycle in private page model
+while retaining raw participant identity and update-adapter ownership at 492/492
+tests.
 
 ### Provenance and transfer rule
 
@@ -1436,7 +1441,7 @@ Status: **In progress**
   482/482 tests; Phase 197 passes 483/483 tests; Phase 198 passes 484/484
   tests; Phase 199 passes 485/485 tests; Phase 200 passes 486/486 tests;
   Phase 201 passes 487/487 tests; Phase 202 passes 488/488 tests; Phase 203
-  passes 489/489 tests; Phase 204 passes 490/490 tests; Phase 205 passes 491/491 tests.
+  passes 489/489 tests; Phase 204 passes 490/490 tests; Phase 205 passes 491/491 tests; Phase 206 passes 492/492 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2923,6 +2928,24 @@ Phase 205 is page-model player-creation ownership only, not a new Encounter
 workflow. The full `npm test` gate passes 491/491 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R76 / Phase 206 - Encounter HP editing
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move HP draft/edit lifecycle into private
+  `pages/encounter/model/useEncounterHpEditing.ts`.
+- [x] Keep raw `EncounterView` ownership of participant identity and the update
+  adapter.
+- [x] Preserve per-instance draft replacement, absent-draft no-op, HP
+  normalization, and delete-after-commit policy.
+- [x] Keep the hook outside public page entries without runtime, store,
+  selection, AI, or encounter-workflow dependencies.
+
+Phase 206 is page-model HP-editing ownership only, not a new Encounter workflow.
+The full `npm test` gate passes 492/492 tests; architecture, performance, and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

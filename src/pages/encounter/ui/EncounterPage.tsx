@@ -39,6 +39,7 @@ import {
 import useEncounterView from "../model/useEncounterView.ts";
 import { useEncounterAiModelLoading } from "../model/useEncounterAiModelLoading.ts";
 import { useEncounterGridFocus } from "../model/useEncounterGridFocus.ts";
+import { useEncounterHpEditing } from "../model/useEncounterHpEditing.ts";
 import { useEncounterPlayerCreation } from "../model/useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
 import "../../../assets/components/EncounterView.css";
@@ -227,7 +228,6 @@ function EncounterView() {
 	const gridColumns = getEncounterGridColumns(encounterGridColumns);
 	const [modalCharacter, setModalCharacter] =
 		useState<EncounterViewParticipant | null>(null);
-	const [hpDrafts, setHpDrafts] = useState<Record<string, string>>({});
 	const [aiActionMonster, setAiActionMonster] =
 		useState<EncounterViewParticipant | null>(null);
 	const [aiEditingMonster, setAiEditingMonster] =
@@ -306,6 +306,10 @@ function EncounterView() {
 			missingName: lang.t("Name is required to create an entry."),
 			failedCreation: lang.t("Failed to create entity."),
 		},
+	});
+	const hpEditing = useEncounterHpEditing({
+	getInstanceId: getParticipantInstanceId,
+	onUpdate: view.updateMonsterHp,
 	});
 
 	useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);
@@ -555,28 +559,6 @@ function EncounterView() {
 		setAiDraftMode("global");
 	};
 
-	const handleHpInputChange = (instanceId: string, value: string) => {
-		setHpDrafts((current) => ({
-			...current,
-			[instanceId]: value,
-		}));
-	};
-
-	const handleHpInputBlur = (monster: EncounterViewParticipant) => {
-		const instanceId = getParticipantInstanceId(monster);
-		const draftValue = hpDrafts[instanceId];
-		if (draftValue === undefined) return;
-
-		view.updateMonsterHp(
-			instanceId,
-			resolveHpInputValue(draftValue, monster.currentHp),
-		);
-		setHpDrafts((current) => {
-			const next = { ...current };
-			delete next[instanceId];
-			return next;
-		});
-	};
 
 	const handleCharacterChange =
 		(instanceId: string) => (
@@ -721,12 +703,12 @@ function EncounterView() {
 								<EncounterMonsterRow
 									monster={monster}
 									isDragging={isDragging}
-									hpDrafts={hpDrafts}
+								hpDrafts={hpEditing.drafts}
 									selectedInstanceId={getOptionalParticipantId(view.selectedInstance)}
 									view={view}
 									onSelect={handleSelectMonster}
-									onHpChange={handleHpInputChange}
-									onHpBlur={handleHpInputBlur}
+								onHpChange={hpEditing.onChange}
+								onHpBlur={hpEditing.onBlur}
 									getParticipantInstanceId={getParticipantInstanceId}
 								/>
 							)}
