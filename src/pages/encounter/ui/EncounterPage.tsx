@@ -3,7 +3,6 @@ import {
 	useMemo,
 	useRef,
 	useState,
-	type CSSProperties,
 	type ReactNode,
 	type RefObject,
 } from "react";
@@ -57,6 +56,7 @@ import {
 } from "../../../features/campaign-entity/index.js";
 import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";
 import EncounterCharacterOverlays from "./components/EncounterCharacterOverlays.tsx";
+import EncounterDetail from "./components/EncounterDetail.tsx";
 import EncounterHeaderActions from "./components/EncounterHeaderActions.tsx";
 
 const EncounterRulesReferenceContent =
@@ -398,92 +398,6 @@ function EncounterMonsterRow({
 			</div>
 		</div>
 	);
-}
-
-interface EncounterDetailProps {
-	displayMode: EncounterDisplayMode;
-	gridMonsters: EncounterViewParticipant[];
-	gridColumns: number;
-	selectedInstance: EncounterViewParticipant | null;
-	selectedGridInstanceId: string | null;
-	focusedMonsterId: string | null;
-	campaignSlug: string;
-	setGridItemRef: (instanceId: string, node: HTMLDivElement | null) => void;
-	onAiAction: (monster: EncounterViewParticipant) => void;
-	onFieldEdit: (monster: EncounterViewParticipant) => void;
-	onTokenImageChange: (
-		monster: EncounterViewParticipant,
-		imageUrl: string | null,
-	) => void;
-	onCharacterChange: (
-		instanceId: string,
-	) => (
-		id: string | number | undefined,
-		character: CharacterData,
-	) => void;
-	getMonsterImageOverride: EncounterViewModel["getMonsterImageOverride"];
-}
-
-function EncounterDetail(props: EncounterDetailProps) {
-	return props.displayMode === "grid"
-		? <EncounterGridDetail {...props} />
-		: <EncounterSingleDetail {...props} />;
-}
-
-function EncounterGridDetail(props: EncounterDetailProps) {
-	return (
-		<div className="EncounterView__detailView EncounterView__detailView__grid">
-			{props.gridMonsters.length > 0 ? (
-				<div className="EncounterView__grid" style={{ "--encounter-grid-columns": props.gridColumns } as CSSProperties}>
-					{props.gridMonsters.map((monster) => <EncounterGridMonster key={getParticipantInstanceId(monster)} monster={monster} props={props} />)}
-				</div>
-			) : <EncounterDetailEmptyState />}
-		</div>
-	);
-}
-
-function EncounterGridMonster({ monster, props }: { monster: EncounterViewParticipant; props: EncounterDetailProps }) {
-	const instanceId = getParticipantInstanceId(monster);
-	return (
-		<div ref={(node) => props.setGridItemRef(instanceId, node)} className={classNames("EncounterView__gridItem", { is_selected: props.selectedGridInstanceId === instanceId, is_focused: props.focusedMonsterId === instanceId })}>
-			<EncounterMonsterStatBlock monster={monster} props={props} layoutMode="grid" />
-		</div>
-	);
-}
-
-function EncounterSingleDetail(props: EncounterDetailProps) {
-	return (
-		<div className="EncounterView__detailView EncounterView__detailView__single">
-			<EncounterSelectedDetail {...props} />
-		</div>
-	);
-}
-
-function EncounterSelectedDetail(props: EncounterDetailProps) {
-	const selected = props.selectedInstance;
-	if (!selected) return <EncounterDetailEmptyState />;
-	if (isEncounterCharacterParticipant(selected)) {
-		return <CharacterCard character={selected} campaignSlug={props.campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} onChange={props.onCharacterChange(getParticipantInstanceId(selected))} />;
-	}
-	return <EncounterMonsterStatBlock monster={selected} props={props} />;
-}
-
-function EncounterMonsterStatBlock({ monster, props, layoutMode }: { monster: EncounterViewParticipant; props: EncounterDetailProps; layoutMode?: "grid" }) {
-	return (
-		<MonsterStatBlock
-			monster={monster as BestiaryMonster}
-			onAiAction={(value) => props.onAiAction(value as EncounterViewParticipant)}
-			onFieldEdit={(value) => props.onFieldEdit(value as EncounterViewParticipant)}
-			onTokenImageChange={(value, imageUrl) => props.onTokenImageChange(value as EncounterViewParticipant, imageUrl)}
-			tokenUploadCampaignSlug={props.campaignSlug}
-			tokenImageOverrideUrl={props.getMonsterImageOverride(monster)}
-			layoutMode={layoutMode}
-		/>
-	);
-}
-
-function EncounterDetailEmptyState() {
-	return <p className="muted">{lang.t("Select a monster from the list to see its stats.")}</p>;
 }
 
 interface EncounterHeaderProps {
@@ -1250,6 +1164,7 @@ function EncounterView() {
 						selectedGridInstanceId={selectedGridInstanceId}
 						focusedMonsterId={focusedMonsterId}
 						campaignSlug={activeCampaign.slug}
+						getParticipantInstanceId={getParticipantInstanceId}
 						setGridItemRef={setGridItemRef}
 						onAiAction={handleMonsterAiAction}
 						onFieldEdit={openEditMonsterAction}

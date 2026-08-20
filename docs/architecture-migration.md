@@ -774,6 +774,8 @@ Next:
 - Phase 189 preserves the private SceneCard/header/expanded-content/fields/notes/media composition, localized encounter fallback, disabled field history, and raw note-card callback binding. One added static regression brings the full suite to 475/475 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 190 by moving Encounter Page player-picker and character-modal presentation from `EncounterPage.tsx` to private `ui/components/EncounterCharacterOverlays.tsx`. Raw `EncounterView` retains player/modal state, available-list derivation, close/reset/start/create workflows, character-change handling, participant identity, and the injected modal-card callback factory.
 - Phase 190 preserves picker/modal null gates, picker create/list/empty composition, button actions, list key/meta policy, CharacterCard flags, and modal identity evaluation after its null gate. One added static regression brings the full suite to 476/476 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 191 by moving Encounter Page detail grid/single/stat-block presentation from `EncounterPage.tsx` to private `ui/components/EncounterDetail.tsx`. Raw `EncounterView` retains participant identity, display/selection/focus state, grid refs, callbacks, and image-override policy; the leaf receives those controlled dependencies.
+- Phase 191 preserves the grid's repeated ID evaluation, selection/ref/class policy, grid/single empty states, post-null selected-character callback evaluation, CharacterCard flags, and stat-block callback/image-override delegation. One added static regression brings the full suite to 477/477 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -968,6 +970,9 @@ Phase 190 isolates Encounter Page player-picker and character-modal presentation
 in private page UI while retaining raw player/modal state, available-list and
 workflow ownership, participant identity, character-change handling, and modal
 card callback factory at 476/476 tests.
+Phase 191 isolates Encounter Page detail grid/single/stat-block presentation in
+private page UI while retaining raw participant identity, state/ref/callback,
+and image-override ownership at 477/477 tests.
 
 ### Provenance and transfer rule
 
@@ -1355,7 +1360,7 @@ Status: **In progress**
   Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests; Phase 185
   passes 471/471 tests; Phase 186 passes 472/472 tests; Phase 187 passes
   473/473 tests; Phase 188 passes 474/474 tests; Phase 189 passes 475/475
-  tests; Phase 190 passes 476/476 tests.
+  tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2540,6 +2545,28 @@ Phase 190 is page-local character-overlay presentation only, not a new
 Encounter workflow. The full `npm test` gate passes 476/476 tests;
 architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
 remains closed and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R61 / Phase 191 - Private Encounter detail presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Encounter Page detail grid/single/stat-block presentation into
+  private `pages/encounter/ui/components/EncounterDetail.tsx`.
+- [x] Keep raw `EncounterView` ownership of `getParticipantInstanceId`, display,
+  selection, and focus state, grid refs, AI/edit/token/character callbacks, and
+  image-override policy; inject those dependencies into the leaf.
+- [x] Preserve repeated grid participant-ID evaluation for keys and item refs,
+  selection/ref/class behavior, grid/single empty states, CharacterCard flags,
+  the selected-character null gate before identity/callback evaluation, and
+  stat-block callback/image-override delegation.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, selection, image, or
+  encounter-workflow dependency.
+
+Phase 191 is page-local Encounter-detail presentation only, not a new Encounter
+workflow. The full `npm test` gate passes 477/477 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

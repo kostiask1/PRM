@@ -1751,6 +1751,40 @@ function getEncounterBestiaryOverlayParts(source) {
 	return { overlay, tag };
 }
 
+async function getEncounterPrivateComponentSources(componentName) {
+	const [encounterSource, componentSource, runtimeEntrySource, typeEntrySource] =
+		await Promise.all([
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			fs.readFile(
+				`src/pages/encounter/ui/components/${componentName}.tsx`,
+				"utf8",
+			),
+			fs.readFile("src/pages/encounter/index.js", "utf8"),
+			fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+		]);
+	return { encounterSource, componentSource, runtimeEntrySource, typeEntrySource };
+}
+
+function assertEncounterPrivateComponentBoundary({
+	componentName,
+	encounterSource,
+	rawDefinitionPattern,
+	runtimeEntrySource,
+	typeEntrySource,
+}) {
+	assert.match(
+		encounterSource,
+		new RegExp(
+			`import ${componentName} from "\\./components/${componentName}\\.tsx";`,
+		),
+	);
+	assert.doesNotMatch(encounterSource, rawDefinitionPattern);
+	assert.doesNotMatch(
+		`${runtimeEntrySource}\n${typeEntrySource}`,
+		new RegExp(componentName),
+	);
+}
+
 function getRequiredSourceSlice(source, startToken, endToken) {
 	const startIndex = source.indexOf(startToken);
 	const endIndex = source.indexOf(endToken, startIndex);
@@ -5663,29 +5697,20 @@ await run(
 await run(
 	"Phase 190 isolates Encounter character-overlay presentation",
 	async () => {
-		const [encounterSource, overlaysSource, runtimeEntrySource, typeEntrySource] =
-			await Promise.all([
-				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
-				fs.readFile(
-					"src/pages/encounter/ui/components/EncounterCharacterOverlays.tsx",
-					"utf8",
-				),
-				fs.readFile("src/pages/encounter/index.js", "utf8"),
-				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
-			]);
-
-		assert.match(
+		const {
 			encounterSource,
-			/import EncounterCharacterOverlays from "\.\/components\/EncounterCharacterOverlays\.tsx";/,
-		);
-		assert.doesNotMatch(
+			componentSource: overlaysSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getEncounterPrivateComponentSources("EncounterCharacterOverlays");
+		assertEncounterPrivateComponentBoundary({
+			componentName: "EncounterCharacterOverlays",
 			encounterSource,
-			/interface EncounterCharacterOverlaysProps|function EncounterCharacter(?:Overlays|PickerOverlay|CreateForm|List|EmptyState|ModalOverlay)/,
-		);
-		assert.doesNotMatch(
-			`${runtimeEntrySource}\n${typeEntrySource}`,
-			/EncounterCharacterOverlays/,
-		);
+			rawDefinitionPattern:
+				/interface EncounterCharacterOverlaysProps|function EncounterCharacter(?:Overlays|PickerOverlay|CreateForm|List|EmptyState|ModalOverlay)/,
+			runtimeEntrySource,
+			typeEntrySource,
+		});
 		assertSourceTokensInOrder(
 			encounterSource,
 			[
@@ -5851,6 +5876,107 @@ await run(
 		assert.doesNotMatch(
 			overlaysSource,
 			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useEncounterView|useEncounterPageRuntime|EncounterViewModel|\bview\b|campaignApi|bestiaryApi|aiApi|settingsApi|\bapi\.|buildCreateEntityPayload|createCampaignEntity|executeEncounterPlayerCreation|getParticipantInstanceId|handleCharacterChange|setModalCharacter|setIsCreatingPlayer|setPlayerDraft|setIsPlayerSubmitting|resetPlayerCreateForm|startCreatePlayer|handleCreatePlayer|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|EncounterPage/,
+		);
+	},
+);
+
+await run(
+	"Phase 191 isolates Encounter detail presentation",
+	async () => {
+		const {
+			encounterSource,
+			componentSource: detailSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getEncounterPrivateComponentSources("EncounterDetail");
+		assertEncounterPrivateComponentBoundary({
+			componentName: "EncounterDetail",
+			encounterSource,
+			rawDefinitionPattern:
+				/interface EncounterDetailProps|function Encounter(?:Detail|GridDetail|GridMonster|SingleDetail|SelectedDetail|MonsterStatBlock|DetailEmptyState)\(/,
+			runtimeEntrySource,
+			typeEntrySource,
+		});
+		assertSourceTokensInOrder(
+			encounterSource,
+			[
+				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
+				'return String(participant.instanceId || participant.id || "");',
+				"function EncounterView() {",
+				"const handleCharacterChange =",
+				"view.updateEncounterCharacter(instanceId, nextCharacter);",
+				"<EncounterDetail",
+				"displayMode={effectiveDisplayMode}",
+				"gridMonsters={gridMonsters}",
+				"gridColumns={effectiveGridColumns}",
+				"selectedInstance={view.selectedInstance}",
+				"selectedGridInstanceId={selectedGridInstanceId}",
+				"focusedMonsterId={focusedMonsterId}",
+				"campaignSlug={activeCampaign.slug}",
+				"getParticipantInstanceId={getParticipantInstanceId}",
+				"setGridItemRef={setGridItemRef}",
+				"onAiAction={handleMonsterAiAction}",
+				"onFieldEdit={openEditMonsterAction}",
+				"onTokenImageChange={handleMonsterTokenImageChange}",
+				"onCharacterChange={handleCharacterChange}",
+				"getMonsterImageOverride={view.getMonsterImageOverride}",
+				"<EncounterBestiaryOverlay",
+			],
+			"Encounter raw detail state, identity, and callback ownership",
+		);
+		assertSourceTokensInOrder(
+			detailSource,
+			[
+				'import type { CSSProperties } from "react";',
+				'import { classNames, lang } from "../../../../shared/lib/index.js";',
+				'import type { BestiaryMonster } from "../../../../entities/bestiary/index.js";',
+				'import { isEncounterCharacterParticipant } from "../../../../entities/encounter/index.js";',
+				"CharacterCard,",
+				'type CharacterCardProps,',
+				'import { MonsterStatBlock } from "../../../../widgets/monster-stat-block/index.js";',
+				"interface EncounterDetailProps {",
+				'displayMode: "grid" | "single";',
+				"gridMonsters: EncounterViewParticipant[];",
+				"selectedInstance: EncounterViewParticipant | null;",
+				"getParticipantInstanceId: (participant: EncounterViewParticipant) => string;",
+				") => CharacterCardProps[\"onChange\"];",
+				"export default function EncounterDetail(props: EncounterDetailProps) {",
+				'props.displayMode === "grid"',
+				"<EncounterGridDetail {...props} />",
+				"<EncounterSingleDetail {...props} />",
+				"function EncounterGridDetail(props: EncounterDetailProps) {",
+				"props.gridMonsters.length > 0",
+				'{ "--encounter-grid-columns": props.gridColumns } as CSSProperties',
+				"props.gridMonsters.map((monster) => <EncounterGridMonster key={props.getParticipantInstanceId(monster)} monster={monster} props={props} />)",
+				"function EncounterGridMonster({ monster, props }",
+				"const instanceId = props.getParticipantInstanceId(monster);",
+				"props.setGridItemRef(instanceId, node)",
+				'"EncounterView__gridItem"',
+				"is_selected: props.selectedGridInstanceId === instanceId",
+				"is_focused: props.focusedMonsterId === instanceId",
+				'<EncounterMonsterStatBlock monster={monster} props={props} layoutMode="grid" />',
+				"function EncounterSingleDetail(props: EncounterDetailProps) {",
+				"function EncounterSelectedDetail(props: EncounterDetailProps) {",
+				"const selected = props.selectedInstance;",
+				"if (!selected) return <EncounterDetailEmptyState />;",
+				"if (isEncounterCharacterParticipant(selected)) {",
+				'<CharacterCard character={selected} campaignSlug={props.campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} onChange={props.onCharacterChange(props.getParticipantInstanceId(selected))} />',
+				"function EncounterMonsterStatBlock({ monster, props, layoutMode }",
+				"monster={monster as BestiaryMonster}",
+				"onAiAction={(value) => props.onAiAction(value as EncounterViewParticipant)}",
+				"onFieldEdit={(value) => props.onFieldEdit(value as EncounterViewParticipant)}",
+				"onTokenImageChange={(value, imageUrl) => props.onTokenImageChange(value as EncounterViewParticipant, imageUrl)}",
+				"tokenUploadCampaignSlug={props.campaignSlug}",
+				"tokenImageOverrideUrl={props.getMonsterImageOverride(monster)}",
+				"layoutMode={layoutMode}",
+				"function EncounterDetailEmptyState() {",
+				'lang.t("Select a monster from the list to see its stats.")',
+			],
+			"Encounter private detail presentation",
+		);
+		assert.doesNotMatch(
+			detailSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|aiApi|settingsApi|\bapi\.|handleCharacterChange|handleMonsterAiAction|openEditMonsterAction|handleMonsterTokenImageChange|setGridItemRef\s*=|function getParticipantInstanceId|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|EncounterPage/,
 		);
 	},
 );
