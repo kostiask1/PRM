@@ -768,6 +768,8 @@ Next:
 - Phase 186 preserves the controlled no-data toggle and expanded gates, raw bulk source, sanitizing reorder persistence, Notes-feature virtual-note/key/AI-list policy, explicit false drag-event isolation, note-card identity/IDs/last-item evaluation, and callback order. One added static regression brings the full suite to 472/472 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 187 by moving Session Page result-section presentation from `SessionPage.tsx` to private `ui/components/SessionResultSection.tsx`. The raw page retains result coercion and persistence; the leaf receives a controlled value and command.
 - Phase 187 preserves the exact raw result coercion, textarea presentation, localized copy, disabled history, controlled value, and event-to-value callback routing. One added static regression brings the full suite to 473/473 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 188 by moving the paired Session NPC/location list shells from `SessionPage.tsx` to private `ui/components/SessionEntitySection.tsx`. The raw page retains entity persistence and cards; the leaf receives controlled display/list values, commands, and a card slot.
+- Phase 188 preserves always-visible actions, current-items bulk delegation, nonempty/empty presentation, ID keys, AI-control presentation, default drag behavior, type-bound commands, DOM identities, and all card workflows. One added static regression brings the full suite to 474/474 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -951,6 +953,9 @@ while retaining raw note persistence and card workflow ownership at 472/472
 tests.
 Phase 187 isolates Session Page result-section presentation in private page UI
 while retaining raw result coercion and persistence ownership at 473/473 tests.
+Phase 188 isolates the paired Session NPC/location list shells in private page
+UI while retaining raw entity persistence and card workflow ownership at
+474/474 tests.
 
 ### Provenance and transfer rule
 
@@ -1337,7 +1342,7 @@ Status: **In progress**
   tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests;
   Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests; Phase 185
   passes 471/471 tests; Phase 186 passes 472/472 tests; Phase 187 passes
-  473/473 tests.
+  473/473 tests; Phase 188 passes 474/474 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2455,6 +2460,27 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 187 is page-local result-section presentation only, not a new Session
 workflow. The full `npm test` gate passes 473/473 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R58 / Phase 188 - Private Session entity-section presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move paired Session NPC/location list-shell presentation into private
+  `pages/session/ui/components/SessionEntitySection.tsx`.
+- [x] Keep `SessionView` ownership of per-type AI/bulk persistence, localized
+  display/action values, create/import/reorder/export commands, DOM identities,
+  card slots, and all card callbacks.
+- [x] Pass controlled display/list values, explicit commands, and card slots;
+  preserve always-visible actions, current-items bulk delegation, empty/list
+  gates, ID keys, AI-control presentation, and default drag behavior.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, card, or entity-workflow
+  dependency.
+
+Phase 188 is page-local entity-list presentation only, not a new Session
+workflow. The full `npm test` gate passes 474/474 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

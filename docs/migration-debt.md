@@ -40,6 +40,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 185 | Completed page-local consolidation | Moved Session Page floating checklist/search actions into private `pages/session/ui/components/SessionFloatingActions.tsx`. `SessionView` retains search/checklist state and commands. | Keep the leaf private; preserve controlled progress/search props, the trigger/tooltip/badge/search-modal gates, explicit callbacks, and no public page/runtime/store/API expansion. | 471/471 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 186 | Completed page-local consolidation | Moved Session Page notes-section presentation into private `pages/session/ui/components/SessionNotesSection.tsx`. `SessionView` retains note persistence, AI mutation, and NoteCard workflows. | Keep the leaf private; preserve controlled note data/state/slot commands, no-data and expanded gates, raw bulk/reorder/AI/ID/last-note policy, shared Notes list policy with false drag isolation, and no public page/runtime/store/API expansion. | 472/472 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 187 | Completed page-local consolidation | Moved Session Page result-section presentation into private `pages/session/ui/components/SessionResultSection.tsx`. `SessionView` retains result coercion and persistence. | Keep the leaf private; preserve controlled value/command, localized textarea presentation, disabled history, event-to-value routing, raw coercion/update command, and no public page/runtime/store/API expansion. | 473/473 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 188 | Completed page-local consolidation | Moved paired Session NPC/location list shells into private `pages/session/ui/components/SessionEntitySection.tsx`. `SessionView` retains per-type entity persistence and card workflows. | Keep the leaf private; preserve controlled display/list/command/slot values, actions and list gates, current-items bulk delegation, ID/AI/default-drag policy, raw type-bound commands/cards/IDs, and no public page/runtime/store/API expansion. | 474/474 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -402,6 +403,16 @@ event-to-value adapter. The expanded suite passes 473/473 tests; architecture,
 performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
 `MD-R04` remains verification-blocked until the declared local lint/typecheck
 tooling is available.
+
+Phase 188 moves the paired Session NPC/location list shells into private
+`ui/components/SessionEntitySection.tsx`. The raw page retains type-bound
+entity persistence, action/card workflows, and IDs while the generic leaf
+receives controlled display/list values, commands, and card slots. It preserves
+always-visible actions, current-items bulk delegation, empty/list gates, ID and
+AI-control policy, and default drag behavior. The expanded suite passes
+474/474 tests; architecture, performance, and Ukrainian encoding checks pass.
+`MD-R02` remains closed; `MD-R04` remains verification-blocked until the
+declared local lint/typecheck tooling is available.
 
 ## Closed recovery items
 

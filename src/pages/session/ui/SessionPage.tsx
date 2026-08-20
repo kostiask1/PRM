@@ -9,23 +9,20 @@ import {
 
 import {
 	Button,
-	DraggableList,
 	Panel,
 	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import {
-	AiContextIgnoreButton,
-	BulkCollapseButton,
 	createNoteCardComponent,
 	useSimplifiedNotesEnabled,
 } from "../../../features/notes/ui/index.js";
-import TodoSection from "./components/TodoSection.tsx";
 import SceneCardHeader from "./components/SceneCardHeader.tsx";
 import SceneCardMedia from "./components/SceneCardMedia.tsx";
 import SceneCardFields from "./components/SceneCardFields.tsx";
 import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
+import SessionEntitySection from "./components/SessionEntitySection.tsx";
 import SessionFloatingActions from "./components/SessionFloatingActions.tsx";
 import SessionNotesSection from "./components/SessionNotesSection.tsx";
 import SessionResultSection from "./components/SessionResultSection.tsx";
@@ -226,138 +223,6 @@ function useSessionScopedEntityLinks(
 		view.sessionLocations,
 		view.sessionNpcs,
 	]);
-}
-
-interface SessionEntitySectionProps {
-	view: SessionController;
-	onBulkCollapse: (
-		type: SessionEntityType,
-		items: SessionPageEntity[],
-		collapsed: boolean,
-	) => void;
-	onToggleAiIgnored: (
-		type: SessionEntityType,
-		entityId: string | number,
-		ignored: boolean,
-	) => void;
-}
-
-function SessionNpcSection({
-	view,
-	onBulkCollapse,
-	onToggleAiIgnored,
-}: SessionEntitySectionProps) {
-	const items = view.sessionNpcs;
-	return (
-		<TodoSection
-			title={lang.t("Session NPCs")}
-			action={
-				<div className="SessionView__sectionActions">
-					<BulkCollapseButton items={items} onChange={(collapsed) => onBulkCollapse("npc", items, collapsed)} />
-					<CreateCharacterButton
-						buttonVariant="primary"
-						campaignSlug={view.campaignSlug}
-						entityType="npc"
-						buttonLabel={lang.t("New session NPC")}
-						buttonClassName="SessionView__mobileIconOnly"
-						onCreate={view.handleCreateSessionNpc}
-					/>
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="import" className="SessionView__mobileIconOnly" onClick={() => view.openCampaignScopeImport("npc")}>
-						{lang.t("Move from campaign")}
-					</Button>
-				</div>
-			}
-		>
-			{items.length > 0 ? (
-				<DraggableList
-					items={items}
-					className="SessionView__characters"
-					onReorder={view.handleSessionNpcsReorder}
-					keyExtractor={(npc) => npc.id}
-					isItemControlActive={(npc) => Boolean(npc._aiIgnored)}
-					renderItemControl={(npc) => (
-						<AiContextIgnoreButton ignored={Boolean(npc._aiIgnored)} onToggle={(ignored) => onToggleAiIgnored("npc", npc.id, ignored)} />
-					)}
-					renderItem={(npc) => (
-						<div id={makeDomId("session", "npc", npc.id)}>
-							<CharacterCard
-								character={npc}
-								onToggleCollapse={view.handleSessionNpcToggleCollapse}
-								onChange={view.handleSessionNpcChange}
-								onDelete={view.handleSessionNpcDelete}
-								campaignSlug={view.campaignSlug}
-								enableHistory={false}
-								type="npc"
-								headerActions={
-									<Button variant="ghost" size={Button.SIZES.SMALL} icon="export" iconSize={14} onClick={() => view.moveSessionEntityToCampaign("npc", npc.id)} title={lang.t("Move to campaign")} />
-								}
-							/>
-						</div>
-					)}
-				/>
-			) : (
-				<div className="muted SessionView__emptySection">{lang.t("No session NPCs yet.")}</div>
-			)}
-		</TodoSection>
-	);
-}
-
-function SessionLocationSection({
-	view,
-	onBulkCollapse,
-	onToggleAiIgnored,
-}: SessionEntitySectionProps) {
-	const items = view.sessionLocations;
-	return (
-		<TodoSection
-			title={lang.t("Session locations/factions")}
-			action={
-				<div className="SessionView__sectionActions">
-					<BulkCollapseButton items={items} onChange={(collapsed) => onBulkCollapse("locations", items, collapsed)} />
-					<CreateLocationButton
-						buttonVariant="primary"
-						campaignSlug={view.campaignSlug}
-						buttonLabel={lang.t("New session location/faction")}
-						buttonClassName="SessionView__mobileIconOnly"
-						onCreate={view.handleCreateSessionLocation}
-					/>
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="import" className="SessionView__mobileIconOnly" onClick={() => view.openCampaignScopeImport("locations")}>
-						{lang.t("Move from campaign")}
-					</Button>
-				</div>
-			}
-		>
-			{items.length > 0 ? (
-				<DraggableList
-					items={items}
-					className="SessionView__locations"
-					onReorder={view.handleSessionLocationsReorder}
-					keyExtractor={(location) => location.id}
-					isItemControlActive={(location) => Boolean(location._aiIgnored)}
-					renderItemControl={(location) => (
-						<AiContextIgnoreButton ignored={Boolean(location._aiIgnored)} onToggle={(ignored) => onToggleAiIgnored("locations", location.id, ignored)} />
-					)}
-					renderItem={(location) => (
-						<div id={makeDomId("session", "location", location.id)}>
-							<LocationCard
-								location={location}
-								onToggleCollapse={view.handleSessionLocationToggleCollapse}
-								onChange={view.handleSessionLocationChange}
-								onDelete={view.handleSessionLocationDelete}
-								campaignSlug={view.campaignSlug}
-								enableHistory={false}
-								headerActions={
-									<Button variant="ghost" size={Button.SIZES.SMALL} icon="export" iconSize={14} onClick={() => view.moveSessionEntityToCampaign("locations", location.id)} title={lang.t("Move to campaign")} />
-								}
-							/>
-						</div>
-					)}
-				/>
-			) : (
-				<div className="muted SessionView__emptySection">{lang.t("No session locations/factions yet.")}</div>
-			)}
-		</TodoSection>
-	);
 }
 
 interface SessionSceneItemProps {
@@ -684,16 +549,122 @@ function SessionView() {
 								</div>
 							)}
 						/>
-						<SessionNpcSection
-							view={view}
-							onBulkCollapse={handleBulkSessionEntitiesCollapse}
-							onToggleAiIgnored={toggleSessionEntityAiIgnored}
+						<SessionEntitySection
+							title={lang.t("Session NPCs")}
+							actions={
+								<>
+									<CreateCharacterButton
+										buttonVariant="primary"
+										campaignSlug={view.campaignSlug}
+										entityType="npc"
+										buttonLabel={lang.t("New session NPC")}
+										buttonClassName="SessionView__mobileIconOnly"
+										onCreate={view.handleCreateSessionNpc}
+									/>
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										icon="import"
+										className="SessionView__mobileIconOnly"
+										onClick={() => view.openCampaignScopeImport("npc")}
+									>
+										{lang.t("Move from campaign")}
+									</Button>
+								</>
+							}
+							emptyText={lang.t("No session NPCs yet.")}
+							items={view.sessionNpcs}
+							listClassName="SessionView__characters"
+							onBulkCollapse={(items, collapsed) =>
+								handleBulkSessionEntitiesCollapse("npc", items, collapsed)
+							}
+							onReorder={view.handleSessionNpcsReorder}
+							onToggleAiIgnored={(entityId, ignored) =>
+								toggleSessionEntityAiIgnored("npc", entityId, ignored)
+							}
+							renderItem={(npc) => (
+								<div id={makeDomId("session", "npc", npc.id)}>
+									<CharacterCard
+										character={npc}
+										onToggleCollapse={view.handleSessionNpcToggleCollapse}
+										onChange={view.handleSessionNpcChange}
+										onDelete={view.handleSessionNpcDelete}
+										campaignSlug={view.campaignSlug}
+										enableHistory={false}
+										type="npc"
+										headerActions={
+											<Button
+												variant="ghost"
+												size={Button.SIZES.SMALL}
+												icon="export"
+												iconSize={14}
+												onClick={() =>
+													view.moveSessionEntityToCampaign("npc", npc.id)
+												}
+												title={lang.t("Move to campaign")}
+											/>
+										}
+									/>
+								</div>
+							)}
 						/>
 
-						<SessionLocationSection
-							view={view}
-							onBulkCollapse={handleBulkSessionEntitiesCollapse}
-							onToggleAiIgnored={toggleSessionEntityAiIgnored}
+						<SessionEntitySection
+							title={lang.t("Session locations/factions")}
+							actions={
+								<>
+									<CreateLocationButton
+										buttonVariant="primary"
+										campaignSlug={view.campaignSlug}
+										buttonLabel={lang.t("New session location/faction")}
+										buttonClassName="SessionView__mobileIconOnly"
+										onCreate={view.handleCreateSessionLocation}
+									/>
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										icon="import"
+										className="SessionView__mobileIconOnly"
+										onClick={() => view.openCampaignScopeImport("locations")}
+									>
+										{lang.t("Move from campaign")}
+									</Button>
+								</>
+							}
+							emptyText={lang.t("No session locations/factions yet.")}
+							items={view.sessionLocations}
+							listClassName="SessionView__locations"
+							onBulkCollapse={(items, collapsed) =>
+								handleBulkSessionEntitiesCollapse("locations", items, collapsed)
+							}
+							onReorder={view.handleSessionLocationsReorder}
+							onToggleAiIgnored={(entityId, ignored) =>
+								toggleSessionEntityAiIgnored("locations", entityId, ignored)
+							}
+							renderItem={(location) => (
+								<div id={makeDomId("session", "location", location.id)}>
+									<LocationCard
+										location={location}
+										onToggleCollapse={view.handleSessionLocationToggleCollapse}
+										onChange={view.handleSessionLocationChange}
+										onDelete={view.handleSessionLocationDelete}
+										campaignSlug={view.campaignSlug}
+										enableHistory={false}
+										headerActions={
+											<Button
+												variant="ghost"
+												size={Button.SIZES.SMALL}
+												icon="export"
+												iconSize={14}
+												onClick={() =>
+													view.moveSessionEntityToCampaign("locations", location.id)
+												}
+												title={lang.t("Move to campaign")}
+											/>
+										}
+									/>
+								</div>
+							)}
 						/>
 						<SessionScenesSection
 							scenes={scenes}
