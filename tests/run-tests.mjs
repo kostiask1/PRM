@@ -6667,6 +6667,45 @@ await run(
 );
 
 await run(
+	"Phase 201 isolates Campaign hash navigation in page model",
+	async () => {
+		const [campaignSource, navigationSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+				fs.readFile("src/pages/campaign/model/useCampaignHashNavigation.ts", "utf8"),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+		assert.match(campaignSource, /import \{ useCampaignHashNavigation \} from "\.\.\/model\/useCampaignHashNavigation\.ts";/);
+		assert.doesNotMatch(campaignSource, /getCampaignHashNavigationPlan|executeCampaignHashNavigationPlan|scrollToHashTarget/);
+		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useCampaignHashNavigation/);
+		assertSourceTokensInOrder(campaignSource, [
+			"const {",
+			"setIsCharactersCollapsed,",
+			"setIsLocationsCollapsed,",
+			"setIsNotesCollapsed,",
+			"setIsNpcsCollapsed,",
+			"} = view;",
+			"useCampaignHashNavigation({",
+			"campaignSlug: campaign.slug,",
+			"notesForRender,",
+			"setNotesViewMode,",
+		], "Campaign raw hash-navigation command ownership");
+		assertSourceTokensInOrder(navigationSource, [
+			'import { useEffect } from "react";',
+			"export function useCampaignHashNavigation({",
+			'const hash = decodeURIComponent(window.location.hash || "");',
+			"const plan = getCampaignHashNavigationPlan({",
+			"executeCampaignHashNavigationPlan(plan, {",
+			'useListView: () => setNotesViewMode("list"),',
+			"const timer = window.setTimeout(() => scrollToHashTarget(), 120);",
+			"return () => window.clearTimeout(timer);",
+		], "Campaign page-model hash navigation");
+		assert.doesNotMatch(navigationSource, /useCampaignView|useCampaignPageRuntime|campaignApi|app\/model|shared\/model/);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [

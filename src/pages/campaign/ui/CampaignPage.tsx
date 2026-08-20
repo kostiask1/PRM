@@ -28,19 +28,18 @@ import CampaignPartialArchiveOverlay from "./components/CampaignPartialArchiveOv
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import "../../../assets/components/CampaignView.css";
 import useCampaignView from "../model/useCampaignView.ts";
+import { useCampaignHashNavigation } from "../model/useCampaignHashNavigation.ts";
 import { useCampaignPageRuntime } from "../model/CampaignPageRuntime.tsx";
 import { CampaignViewModel } from "../../../entities/campaign/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { getNotesForRender } from "../../../shared/lib/index.js";
-import { makeDomId, scrollToHashTarget } from "../../../shared/lib/index.js";
+import { makeDomId } from "../../../shared/lib/index.js";
 import type { DomainId } from "../../../entities/campaign/index.js";
 import type { CampaignPageCampaign } from "../model/contracts.ts";
 import {
 	filterCampaignSessions,
-	executeCampaignHashNavigationPlan,
 	getCampaignCharacterDropRequest,
 	getCampaignEntityAiIgnoredUpdate,
-	getCampaignHashNavigationPlan,
 	getCampaignPageCampaign,
 	getCampaignNotesViewModePlan,
 	getCampaignSectionState,
@@ -120,31 +119,8 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		setIsNpcsCollapsed,
 	} = view;
 
-	useEffect(() => {
-		const hash = decodeURIComponent(window.location.hash || "");
-		const plan = getCampaignHashNavigationPlan({
-			hash,
-			collapsed: {
-				notes: isNotesCollapsed,
-				characters: isCharactersCollapsed,
-				npc: isNpcsCollapsed,
-				locations: isLocationsCollapsed,
-			},
-		});
-		const sectionSetters = {
-			notes: setIsNotesCollapsed,
-			characters: setIsCharactersCollapsed,
-			npc: setIsNpcsCollapsed,
-			locations: setIsLocationsCollapsed,
-		};
-		executeCampaignHashNavigationPlan(plan, {
-			useListView: () => setNotesViewMode("list"),
-			expandSection: (target) => sectionSetters[target](false),
-		});
-		const timer = window.setTimeout(() => scrollToHashTarget(), 120);
-		return () => window.clearTimeout(timer);
-	}, [
-		campaign.slug,
+	useCampaignHashNavigation({
+		campaignSlug: campaign.slug,
 		isCharactersCollapsed,
 		isLocationsCollapsed,
 		isNotesCollapsed,
@@ -154,7 +130,8 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		setIsLocationsCollapsed,
 		setIsNotesCollapsed,
 		setIsNpcsCollapsed,
-	]);
+		setNotesViewMode,
+	});
 
 	useEffect(() => {
 		const handleCharacterDragDrop = (

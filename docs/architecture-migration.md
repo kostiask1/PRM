@@ -794,6 +794,8 @@ Next:
 - Phase 199 preserves mount cleanup ordering: clear a present focus timeout, then abort a present AI-edit controller. One added static regression brings the full suite to 485/485 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 200 by moving Encounter Page AI-model loading lifecycle from `EncounterPage.tsx` to private `model/useEncounterAiModelLoading.ts`. Raw `EncounterView` retains AI-editing/model state, setters, and the localized error policy.
 - Phase 200 preserves the open-edit/empty-model gate, feature-owned `loadAiModelOptions` call, and original effect dependencies. One added static regression brings the full suite to 486/486 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 201 by moving Campaign Page hash-navigation lifecycle from `CampaignPage.tsx` to private `model/useCampaignHashNavigation.ts`. Raw `CampaignView` retains campaign/section state, section setters, the notes-view setter, and persistence command ownership.
+- Phase 201 preserves hash decoding, navigation-plan construction/execution order, `120ms` delayed scroll/cleanup, and original effect dependencies. One added static regression brings the full suite to 487/487 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1018,6 +1020,9 @@ model while retaining raw focus-timeout and AI-edit-controller ref ownership at
 Phase 200 isolates Encounter Page AI-model loading lifecycle in private page
 model while retaining raw AI-editing/model state, setters, and localized error
 policy ownership at 486/486 tests.
+Phase 201 isolates Campaign Page hash-navigation lifecycle in private page
+model while retaining raw campaign/section state, setters, notes-view setter,
+and persistence command ownership at 487/487 tests.
 
 ### Provenance and transfer rule
 
@@ -1409,7 +1414,8 @@ Status: **In progress**
   Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests; Phase 194
   passes 480/480 tests; Phase 195 passes 481/481 tests; Phase 196 passes
   482/482 tests; Phase 197 passes 483/483 tests; Phase 198 passes 484/484
-  tests; Phase 199 passes 485/485 tests; Phase 200 passes 486/486 tests.
+  tests; Phase 199 passes 485/485 tests; Phase 200 passes 486/486 tests;
+  Phase 201 passes 487/487 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2802,6 +2808,24 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 200 is page-model lifecycle ownership only, not a new Encounter workflow.
 The full `npm test` gate passes 486/486 tests; architecture, performance, and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
+
+### Recovery R71 / Phase 201 - Campaign hash navigation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Campaign Page hash-navigation lifecycle into private
+  `pages/campaign/model/useCampaignHashNavigation.ts`.
+- [x] Keep raw `CampaignView` ownership of campaign/section state, section
+  setters, the notes-view setter, and persistence commands.
+- [x] Preserve hash decoding, navigation-plan construction/execution order,
+  the `120ms` delayed scroll/cleanup, and original dependencies.
+- [x] Keep the hook outside public page runtime/type entries without a runtime,
+  API, store, drag-drop, editor, archive, or campaign-workflow dependency.
+
+Phase 201 is page-model lifecycle ownership only, not a new Campaign workflow.
+The full `npm test` gate passes 487/487 tests; architecture, performance, and
 Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
 remains open for complete lint/typecheck.
 
