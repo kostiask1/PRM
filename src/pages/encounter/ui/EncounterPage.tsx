@@ -8,7 +8,6 @@ import {
 import {
 	Button,
 	DraggableList,
-	Notification,
 	Panel,
 } from "../../../shared/ui/index.js";
 import { BestiaryBrowser as Bestiary } from "../../../widgets/bestiary-browser/index.js";
@@ -56,6 +55,7 @@ import EncounterCharacterOverlays from "./components/EncounterCharacterOverlays.
 import EncounterDetail from "./components/EncounterDetail.tsx";
 import EncounterHeader from "./components/EncounterHeader.tsx";
 import EncounterMonsterRow from "./components/EncounterMonsterRow.tsx";
+import EncounterNotification from "./components/EncounterNotification.tsx";
 
 const EncounterRulesReferenceContent =
 	createRulesReferenceModalContentComponent({
@@ -211,16 +211,6 @@ function getEncounterViewPlayerCharacters(
 	view: EncounterViewModel,
 ): CampaignEntityRecord[] {
 	return view.playerCharacters || EMPTY_CAMPAIGN_ENTITIES;
-}
-
-function EncounterNotification({
-	message,
-	onClose,
-}: {
-	message: string | null;
-	onClose: () => void;
-}) {
-	return message ? <Notification message={message} onClose={onClose} /> : null;
 }
 
 function useEncounterRequestCleanup(

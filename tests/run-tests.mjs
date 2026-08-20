@@ -6554,6 +6554,56 @@ await run(
 );
 
 await run(
+	"Phase 198 isolates Encounter notification presentation",
+	async () => {
+		const {
+			encounterSource,
+			componentSource: notificationSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getEncounterPrivateComponentSources("EncounterNotification");
+		assert.match(
+			encounterSource,
+			/import EncounterNotification from "\.\/components\/EncounterNotification\.tsx";/,
+		);
+		assert.doesNotMatch(
+			encounterSource,
+			/interface EncounterNotificationProps|function EncounterNotification\(|\bNotification\b/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/EncounterNotification/,
+		);
+		assertSourceTokensInOrder(
+			encounterSource,
+			[
+				"function EncounterView() {",
+				"<EncounterNotification",
+				"message={view.notification}",
+				"onClose={() => view.setNotification(null)}",
+			],
+			"Encounter raw notification state and close ownership",
+		);
+		assertSourceTokensInOrder(
+			notificationSource,
+			[
+				'import { Notification } from "../../../../shared/ui/index.js";',
+				"interface EncounterNotificationProps {",
+				"message: string | null;",
+				"onClose: () => void;",
+				"export default function EncounterNotification({",
+				"return message ? <Notification message={message} onClose={onClose} /> : null;",
+			],
+			"Encounter private notification presentation",
+		);
+		assert.doesNotMatch(
+			notificationSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useEncounterView|useEncounterPageRuntime|EncounterViewModel|campaignApi|bestiaryApi|aiApi|settingsApi|\bapi\.|setNotification|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|EncounterPage/,
+		);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
