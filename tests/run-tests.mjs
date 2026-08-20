@@ -1739,6 +1739,18 @@ function getRequiredSourceMatch(source, pattern, message = String(pattern)) {
 	return match[0];
 }
 
+function getEncounterBestiaryOverlayParts(source) {
+	const overlay = getRequiredSourceMatch(
+		source,
+		/function EncounterBestiaryOverlay\([\s\S]*?(?=\r?\n\r?\nfunction EncounterNotification)/,
+	);
+	const tag = getRequiredSourceMatch(
+		overlay,
+		/<Bestiary(?=\s|>)[\s\S]*?\/>/,
+	);
+	return { overlay, tag };
+}
+
 function getRequiredSourceSlice(source, startToken, endToken) {
 	const startIndex = source.indexOf(startToken);
 	const endIndex = source.indexOf(endToken, startIndex);
@@ -2550,18 +2562,14 @@ await run(
 			encounterSource,
 			/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/\.\.\/widgets\/monster-stat-block\/index\.js";/,
 		);
-		const encounterBestiaryOverlay = encounterSource.match(
-			/function EncounterBestiaryOverlay\([\s\S]*?(?=\ninterface EncounterCharacterOverlaysProps)/,
-		)?.[0];
-		assert.ok(encounterBestiaryOverlay);
+		const {
+			overlay: encounterBestiaryOverlay,
+			tag: encounterBestiaryTag,
+		} = getEncounterBestiaryOverlayParts(encounterSource);
 		assert.match(
 			encounterBestiaryOverlay,
 			/if \(!open\) return null;\s*return \(\s*<Modal/,
 		);
-		const encounterBestiaryTag = encounterBestiaryOverlay.match(
-			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
-		)?.[0];
-		assert.ok(encounterBestiaryTag);
 		assert.match(
 			encounterBestiaryTag,
 			/\bAiAssistantPanel=\{AiAssistantPanel\}/,
@@ -2962,18 +2970,14 @@ await run(
 			/<\/div>\s*<AiAssistantPanel(?=\s|>)[\s\S]*?\/>\s*<\/div>\s*\);\s*\}/,
 		);
 
-		const encounterBestiaryOverlay = encounterSource.match(
-			/function EncounterBestiaryOverlay\([\s\S]*?(?=\ninterface EncounterCharacterOverlaysProps)/,
-		)?.[0];
-		assert.ok(encounterBestiaryOverlay);
+		const {
+			overlay: encounterBestiaryOverlay,
+			tag: encounterBestiaryTag,
+		} = getEncounterBestiaryOverlayParts(encounterSource);
 		assert.match(
 			encounterBestiaryOverlay,
 			/if \(!open\) return null;\s*return \(\s*<Modal/,
 		);
-		const encounterBestiaryTag = encounterBestiaryOverlay.match(
-			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
-		)?.[0];
-		assert.ok(encounterBestiaryTag);
 		assert.match(
 			encounterBestiaryTag,
 			/\bResponseModal=\{EncounterAiResponseModal\}/,
@@ -5652,6 +5656,201 @@ await run(
 		assert.doesNotMatch(
 			sceneCardSource,
 			/createNoteCardComponent|SessionNoteCard|EditableField|renderMentionText|useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|SessionViewModel|makeDomId|updateData|handleScene|toggleSceneCollapse|removeScene|getEncounterName|navigate|app\/model|shared\/model|\.\.\/model/,
+		);
+	},
+);
+
+await run(
+	"Phase 190 isolates Encounter character-overlay presentation",
+	async () => {
+		const [encounterSource, overlaysSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				fs.readFile(
+					"src/pages/encounter/ui/components/EncounterCharacterOverlays.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			encounterSource,
+			/import EncounterCharacterOverlays from "\.\/components\/EncounterCharacterOverlays\.tsx";/,
+		);
+		assert.doesNotMatch(
+			encounterSource,
+			/interface EncounterCharacterOverlaysProps|function EncounterCharacter(?:Overlays|PickerOverlay|CreateForm|List|EmptyState|ModalOverlay)/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/EncounterCharacterOverlays/,
+		);
+		assertSourceTokensInOrder(
+			encounterSource,
+			[
+				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
+				'return String(participant.instanceId || participant.id || "");',
+				"function EncounterView() {",
+				"const [modalCharacter, setModalCharacter] =",
+				"useState<EncounterViewParticipant | null>(null);",
+				"const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);",
+				"const [playerDraft, setPlayerDraft] = useState<PlayerDraft>(() =>",
+				"const [isPlayerSubmitting, setIsPlayerSubmitting] = useState(false);",
+				"const availablePlayerCharacters = useMemo(",
+				"getAvailableEncounterCharacters(",
+				"const handleCharacterChange =",
+				"view.updateEncounterCharacter(instanceId, nextCharacter);",
+				"setModalCharacter((current) =>",
+				"const resetPlayerCreateForm = () => {",
+				"setIsCreatingPlayer(false);",
+				"setPlayerDraft(createEmptyCharacterDraft() as PlayerDraft);",
+				"const closeCharacterPicker = () => {",
+				"if (isPlayerSubmitting) return;",
+				"resetPlayerCreateForm();",
+				"view.setShowCharacterPicker(false);",
+				"const startCreatePlayer = () => {",
+				"setIsCreatingPlayer(true);",
+				"const handleCreatePlayer = async () => {",
+				"buildCreateEntityPayload(ENCOUNTER_CHARACTER_DEFAULTS, playerDraft)",
+				"executeEncounterPlayerCreation({",
+				"<EncounterBestiaryOverlay",
+				"<EncounterCharacterOverlays",
+				"open={view.showCharacterPicker}",
+				"creating={isCreatingPlayer}",
+				"submitting={isPlayerSubmitting}",
+				"draft={playerDraft}",
+				"available={availablePlayerCharacters}",
+				"allCharacters={view.playerCharacters}",
+				"modalCharacter={modalCharacter}",
+				"campaignSlug={activeCampaign.slug}",
+				"onClosePicker={closeCharacterPicker}",
+				"onDraft={setPlayerDraft}",
+				"onCreate={handleCreatePlayer}",
+				"onReset={resetPlayerCreateForm}",
+				"onStartCreate={startCreatePlayer}",
+				"onAdd={view.handleAddCharacter}",
+				"onCloseCharacter={() => setModalCharacter(null)}",
+				"getModalCharacterOnChange={(character) =>",
+				"handleCharacterChange(getParticipantInstanceId(character))",
+				"<MonsterAiActionModal",
+			],
+			"Encounter raw character-picker state, identity, and workflow ownership",
+		);
+		assertSourceTokensInOrder(
+			overlaysSource,
+			[
+				'import type {',
+				"CampaignEntityRecord,",
+				"CharacterData,",
+				'} from "../../../../entities/campaign/index.js";',
+				'import { getEncounterCharacterDisplayName } from "../../../../entities/encounter/index.js";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { Button, Modal } from "../../../../shared/ui/index.js";',
+				'import {',
+				"CharacterCard,",
+				"type CharacterCardProps,",
+				'} from "../../../../widgets/campaign-entity-card/index.js";',
+				'import type { EncounterViewParticipant } from "../../model/contracts.ts";',
+				"type EncounterCharacterDraft = CharacterData & { firstName: string };",
+				"interface EncounterCharacterOverlaysProps {",
+				"open: boolean;",
+				"creating: boolean;",
+				"submitting: boolean;",
+				"draft: EncounterCharacterDraft;",
+				"available: CampaignEntityRecord[];",
+				"allCharacters: CampaignEntityRecord[];",
+				"modalCharacter: EncounterViewParticipant | null;",
+				"campaignSlug: string;",
+				"onClosePicker: () => void;",
+				"onDraft: (draft: EncounterCharacterDraft) => void;",
+				"onCreate: () => void;",
+				"onReset: () => void;",
+				"onStartCreate: () => void;",
+				"onAdd: (character: CampaignEntityRecord) => void;",
+				"onCloseCharacter: () => void;",
+				"getModalCharacterOnChange: (",
+				"character: EncounterViewParticipant,",
+				') => CharacterCardProps["onChange"];',
+				"export default function EncounterCharacterOverlays(",
+				"props: EncounterCharacterOverlaysProps,",
+				"<EncounterCharacterPickerOverlay {...props} />",
+				"<EncounterCharacterModalOverlay {...props} />",
+				"function EncounterCharacterPickerOverlay(props: EncounterCharacterOverlaysProps) {",
+				"if (!props.open) return null;",
+				"<Modal",
+				"onConfirm={() => {}}",
+				"props.creating ? lang.t(\"New character\") : lang.t(\"Choose player\")",
+				"onCancel={props.onClosePicker}",
+				"showFooter={false}",
+				'type="custom"',
+				'"EncounterCharacterPicker"',
+				"props.creating ? (",
+				"<EncounterCharacterCreateForm {...props} />",
+				"<EncounterCharacterList {...props} />",
+				"function EncounterCharacterCreateForm({",
+				"<CharacterCard",
+				"character={draft}",
+				"onChange={(_id, updated) => onDraft(updated as EncounterCharacterDraft)}",
+				"onDelete={() => {}}",
+				"onToggleCollapse={null}",
+				"campaignSlug={campaignSlug}",
+				'type="characters"',
+				'viewMode="modal"',
+				"showDeleteButton={false}",
+				"showHeader={false}",
+				"<Button",
+				'variant="primary"',
+				"onClick={onCreate}",
+				"disabled={submitting || !draft.firstName.trim()}",
+				'{lang.t("Create")}',
+				'variant="ghost"',
+				"onClick={onReset}",
+				"disabled={submitting}",
+				'{lang.t("Back")}',
+				"function EncounterCharacterList({",
+				'variant="create"',
+				'icon="plus"',
+				"onClick={onStartCreate}",
+				'"EncounterCharacterPicker__createBtn"',
+				'{lang.t("New character")}',
+				"available.length > 0 ? (",
+				"available.map((character) => (",
+				'type="button"',
+				"key={String(character.id || character.slug)}",
+				'"EncounterCharacterPicker__item"',
+				"onClick={() => onAdd(character)}",
+				"getEncounterCharacterDisplayName(character)",
+				"character.race, character.class",
+				"character.level",
+				'lang.t("Lvl. {level}", { level: character.level })',
+				"<EncounterCharacterEmptyState",
+				"hasCharacters={allCharacters.length > 0}",
+				"function EncounterCharacterEmptyState({",
+				"hasCharacters: boolean;",
+				'lang.t("All player characters are already in encounter.")',
+				'lang.t("No player characters found.")',
+				"function EncounterCharacterModalOverlay({",
+				"if (!modalCharacter) return null;",
+				"<Modal",
+				"onConfirm={() => {}}",
+				"title={getEncounterCharacterDisplayName(modalCharacter)}",
+				"onCancel={onCloseCharacter}",
+				"showFooter={false}",
+				'type="custom"',
+				"<CharacterCard",
+				"character={modalCharacter}",
+				"campaignSlug={campaignSlug}",
+				'type="characters"',
+				'viewMode="modal"',
+				"showDeleteButton={false}",
+				"onChange={getModalCharacterOnChange(modalCharacter)}",
+			],
+			"Encounter private character-overlay presentation",
+		);
+		assert.doesNotMatch(
+			overlaysSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useEncounterView|useEncounterPageRuntime|EncounterViewModel|\bview\b|campaignApi|bestiaryApi|aiApi|settingsApi|\bapi\.|buildCreateEntityPayload|createCampaignEntity|executeEncounterPlayerCreation|getParticipantInstanceId|handleCharacterChange|setModalCharacter|setIsCreatingPlayer|setPlayerDraft|setIsPlayerSubmitting|resetPlayerCreateForm|startCreatePlayer|handleCreatePlayer|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|EncounterPage/,
 		);
 	},
 );

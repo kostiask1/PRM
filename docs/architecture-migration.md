@@ -772,6 +772,8 @@ Next:
 - Phase 188 preserves always-visible actions, current-items bulk delegation, nonempty/empty presentation, ID keys, AI-control presentation, default drag behavior, type-bound commands, DOM identities, and all card workflows. One added static regression brings the full suite to 474/474 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 189 by moving Session Page SceneCard presentation from `SessionPage.tsx` to private `ui/components/SessionSceneCard.tsx`. Raw `SessionSceneItem` retains DOM identity, scene schema, eager encounter-name evaluation, every view callback, and the configured `SessionNoteCard` render slot; the leaf receives controlled presentation inputs.
 - Phase 189 preserves the private SceneCard/header/expanded-content/fields/notes/media composition, localized encounter fallback, disabled field history, and raw note-card callback binding. One added static regression brings the full suite to 475/475 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 190 by moving Encounter Page player-picker and character-modal presentation from `EncounterPage.tsx` to private `ui/components/EncounterCharacterOverlays.tsx`. Raw `EncounterView` retains player/modal state, available-list derivation, close/reset/start/create workflows, character-change handling, participant identity, and the injected modal-card callback factory.
+- Phase 190 preserves picker/modal null gates, picker create/list/empty composition, button actions, list key/meta policy, CharacterCard flags, and modal identity evaluation after its null gate. One added static regression brings the full suite to 476/476 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -962,6 +964,10 @@ Phase 189 isolates Session Page SceneCard presentation in private page UI while
 retaining raw `SessionSceneItem` DOM identity, schema, eager encounter-label
 evaluation, view callbacks, and configured note-card render slot at 475/475
 tests.
+Phase 190 isolates Encounter Page player-picker and character-modal presentation
+in private page UI while retaining raw player/modal state, available-list and
+workflow ownership, participant identity, character-change handling, and modal
+card callback factory at 476/476 tests.
 
 ### Provenance and transfer rule
 
@@ -1349,7 +1355,7 @@ Status: **In progress**
   Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests; Phase 185
   passes 471/471 tests; Phase 186 passes 472/472 tests; Phase 187 passes
   473/473 tests; Phase 188 passes 474/474 tests; Phase 189 passes 475/475
-  tests.
+  tests; Phase 190 passes 476/476 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2512,6 +2518,28 @@ Phase 189 is page-local scene-card presentation only, not a new Session
 workflow. The full `npm test` gate passes 475/475 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R60 / Phase 190 - Private Encounter character overlays
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Encounter Page player-picker and character-modal presentation into
+  private `pages/encounter/ui/components/EncounterCharacterOverlays.tsx`.
+- [x] Keep raw `EncounterView` ownership of player/modal state, available-player
+  list derivation, close/reset/start/create workflows, `handleCharacterChange`,
+  `getParticipantInstanceId`, and the injected `getModalCharacterOnChange`
+  factory.
+- [x] Pass controlled display values and explicit callbacks; preserve picker and
+  modal null gates, create/list/empty presentation, actions, list keys/meta,
+  CharacterCard flags, and identity evaluation only after the modal null gate.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, player, character, or
+  encounter-workflow dependency.
+
+Phase 190 is page-local character-overlay presentation only, not a new
+Encounter workflow. The full `npm test` gate passes 476/476 tests;
+architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
+remains closed and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

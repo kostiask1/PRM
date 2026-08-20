@@ -56,6 +56,7 @@ import {
 	createCampaignEntity,
 } from "../../../features/campaign-entity/index.js";
 import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";
+import EncounterCharacterOverlays from "./components/EncounterCharacterOverlays.tsx";
 import EncounterHeaderActions from "./components/EncounterHeaderActions.tsx";
 
 const EncounterRulesReferenceContent =
@@ -600,87 +601,6 @@ function EncounterBestiaryOverlay({
 				MonsterEditorModal={EncounterMonsterEditorModal}
 				onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}
 			/>
-		</Modal>
-	);
-}
-
-interface EncounterCharacterOverlaysProps {
-	open: boolean;
-	creating: boolean;
-	submitting: boolean;
-	draft: PlayerDraft;
-	available: CampaignEntityRecord[];
-	allCharacters: CampaignEntityRecord[];
-	modalCharacter: EncounterViewParticipant | null;
-	campaignSlug: string;
-	onClosePicker: () => void;
-	onDraft: (draft: PlayerDraft) => void;
-	onCreate: () => void;
-	onReset: () => void;
-	onStartCreate: () => void;
-	onAdd: (character: CampaignEntityRecord) => void;
-	onCloseCharacter: () => void;
-	onCharacterChange: EncounterDetailProps["onCharacterChange"];
-}
-
-function EncounterCharacterOverlays(props: EncounterCharacterOverlaysProps) {
-	return (
-		<>
-			<EncounterCharacterPickerOverlay {...props} />
-			<EncounterCharacterModalOverlay {...props} />
-		</>
-	);
-}
-
-function EncounterCharacterPickerOverlay(props: EncounterCharacterOverlaysProps) {
-	if (!props.open) return null;
-	return (
-		<Modal onConfirm={() => {}} title={props.creating ? lang.t("New character") : lang.t("Choose player")} onCancel={props.onClosePicker} showFooter={false} type="custom">
-			<div className="EncounterCharacterPicker">
-				{props.creating ? <EncounterCharacterCreateForm {...props} /> : <EncounterCharacterList {...props} />}
-			</div>
-		</Modal>
-	);
-}
-
-function EncounterCharacterCreateForm({ draft, submitting, campaignSlug, onDraft, onCreate, onReset }: EncounterCharacterOverlaysProps) {
-	return (
-		<div className="EncounterCharacterPicker__create">
-			<CharacterCard character={draft} onChange={(_id, updated) => onDraft(updated as PlayerDraft)} onDelete={() => {}} onToggleCollapse={null} campaignSlug={campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} showHeader={false} />
-			<div className="EncounterCharacterPicker__createActions">
-				<Button variant="primary" onClick={onCreate} disabled={submitting || !draft.firstName.trim()}>{lang.t("Create")}</Button>
-				<Button variant="ghost" onClick={onReset} disabled={submitting}>{lang.t("Back")}</Button>
-			</div>
-		</div>
-	);
-}
-
-function EncounterCharacterList({ available, allCharacters, onStartCreate, onAdd }: EncounterCharacterOverlaysProps) {
-	return (
-		<>
-			<Button variant="create" icon="plus" onClick={onStartCreate} className="EncounterCharacterPicker__createBtn">{lang.t("New character")}</Button>
-			{available.length > 0 ? available.map((character) => (
-				<button type="button" key={String(character.id || character.slug)} className="EncounterCharacterPicker__item" onClick={() => onAdd(character)}>
-					<span className="EncounterCharacterPicker__name">{getEncounterCharacterDisplayName(character)}</span>
-					<span className="EncounterCharacterPicker__meta">
-						{[character.race, character.class].filter(Boolean).join(" • ")}
-						{character.level ? ` • ${lang.t("Lvl. {level}", { level: character.level })}` : ""}
-					</span>
-				</button>
-			)) : <EncounterCharacterEmptyState hasCharacters={allCharacters.length > 0} />}
-		</>
-	);
-}
-
-function EncounterCharacterEmptyState({ hasCharacters }: { hasCharacters: boolean }) {
-	return <p className="muted">{hasCharacters ? lang.t("All player characters are already in encounter.") : lang.t("No player characters found.")}</p>;
-}
-
-function EncounterCharacterModalOverlay({ modalCharacter, campaignSlug, onCloseCharacter, onCharacterChange }: EncounterCharacterOverlaysProps) {
-	if (!modalCharacter) return null;
-	return (
-		<Modal onConfirm={() => {}} title={getEncounterCharacterDisplayName(modalCharacter)} onCancel={onCloseCharacter} showFooter={false} type="custom">
-			<CharacterCard character={modalCharacter} campaignSlug={campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} onChange={onCharacterChange(getParticipantInstanceId(modalCharacter))} />
 		</Modal>
 	);
 }
@@ -1362,7 +1282,9 @@ function EncounterView() {
 				onStartCreate={startCreatePlayer}
 				onAdd={view.handleAddCharacter}
 				onCloseCharacter={() => setModalCharacter(null)}
-				onCharacterChange={handleCharacterChange}
+				getModalCharacterOnChange={(character) =>
+					handleCharacterChange(getParticipantInstanceId(character))
+				}
 			/>
 
 			<MonsterAiActionModal

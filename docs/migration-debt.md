@@ -42,6 +42,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 187 | Completed page-local consolidation | Moved Session Page result-section presentation into private `pages/session/ui/components/SessionResultSection.tsx`. `SessionView` retains result coercion and persistence. | Keep the leaf private; preserve controlled value/command, localized textarea presentation, disabled history, event-to-value routing, raw coercion/update command, and no public page/runtime/store/API expansion. | 473/473 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 188 | Completed page-local consolidation | Moved paired Session NPC/location list shells into private `pages/session/ui/components/SessionEntitySection.tsx`. `SessionView` retains per-type entity persistence and card workflows. | Keep the leaf private; preserve controlled display/list/command/slot values, actions and list gates, current-items bulk delegation, ID/AI/default-drag policy, raw type-bound commands/cards/IDs, and no public page/runtime/store/API expansion. | 474/474 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 189 | Completed page-local consolidation | Moved Session Page SceneCard presentation into private `pages/session/ui/components/SessionSceneCard.tsx`. Raw `SessionSceneItem` retains DOM identity, schema, eager encounter-name evaluation, every view callback, and the `SessionNoteCard` factory/render slot. | Keep the leaf private; preserve controlled SceneCard/header/content/fields/notes/media presentation, disabled field history, localized encounter fallback, raw note-card callback binding, and no public page/runtime/store/API expansion. | 475/475 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 190 | Completed page-local consolidation | Moved Encounter Page player-picker and character-modal presentation into private `pages/encounter/ui/components/EncounterCharacterOverlays.tsx`. Raw `EncounterView` retains player/modal state, available-list derivation, close/reset/start/create workflows, character change/identity policy, and the modal-card callback factory. | Keep the leaf private; preserve picker/modal null gates, create/list/empty/modal presentation, actions, list keys/meta, CharacterCard flags, post-null identity evaluation, and no public page/runtime/store/API expansion. | 476/476 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -422,6 +423,18 @@ and the configured `SessionNoteCard` factory/render slot. The private leaf
 receives controlled presentation inputs and preserves SceneCard/header/
 expanded-content/fields/notes/media composition, disabled field history, and
 the localized encounter fallback. The expanded suite passes 475/475 tests;
+architecture, performance, and Ukrainian encoding checks pass. `MD-R02`
+remains closed; `MD-R04` remains verification-blocked until the declared local
+lint/typecheck tooling is available.
+
+Phase 190 moves Encounter Page player-picker and character-modal presentation
+into private `ui/components/EncounterCharacterOverlays.tsx`. Raw `EncounterView`
+retains player/modal state, the available-player list, close/reset/start/create
+workflows, `handleCharacterChange`, `getParticipantInstanceId`, and the injected
+modal-card callback factory. The private leaf receives controlled values and
+explicit callbacks while preserving picker/modal null gates, create/list/empty/
+modal presentation, actions, list keys/meta, CharacterCard flags, and identity
+evaluation after the modal null gate. The expanded suite passes 476/476 tests;
 architecture, performance, and Ukrainian encoding checks pass. `MD-R02`
 remains closed; `MD-R04` remains verification-blocked until the declared local
 lint/typecheck tooling is available.
