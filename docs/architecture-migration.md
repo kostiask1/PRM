@@ -764,6 +764,8 @@ Next:
 - Phase 184 preserves empty-list actions, section/list markup, raw duplicate-ID numbering and encounter-label evaluation, bulk/add/reorder behavior, key extraction, and direct render-slot delegation. One added static regression brings the full suite to 470/470 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 185 by moving Session Page floating checklist/search actions from `SessionPage.tsx` to private `ui/components/SessionFloatingActions.tsx`. The raw page retains search/checklist state and commands; the leaf receives controlled state, progress, and explicit callbacks.
 - Phase 185 preserves the unconditional trigger, tooltip/button/badge presentation, strict progress gate, and open-only search-modal mount. One added static regression brings the full suite to 471/471 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 186 by moving Session Page notes-section presentation from `SessionPage.tsx` to private `ui/components/SessionNotesSection.tsx`. The raw page retains every note persistence and card workflow; the leaf receives controlled note data, state, explicit commands, and a card render slot.
+- Phase 186 preserves the controlled no-data toggle and expanded gates, raw bulk source, sanitizing reorder persistence, Notes-feature virtual-note/key/AI-list policy, explicit false drag-event isolation, note-card identity/IDs/last-item evaluation, and callback order. One added static regression brings the full suite to 472/472 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -942,6 +944,9 @@ while retaining raw scene projection, persistence, and SceneCard workflow
 ownership at 470/470 tests.
 Phase 185 isolates Session Page floating checklist/search actions in private
 page UI while retaining raw state and command ownership at 471/471 tests.
+Phase 186 isolates Session Page notes-section presentation in private page UI
+while retaining raw note persistence and card workflow ownership at 472/472
+tests.
 
 ### Provenance and transfer rule
 
@@ -1327,7 +1332,7 @@ Status: **In progress**
   464/464 tests; Phase 179 passes 465/465 tests; Phase 180 passes 466/466
   tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests;
   Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests; Phase 185
-  passes 471/471 tests.
+  passes 471/471 tests; Phase 186 passes 472/472 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2404,6 +2409,27 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 185 is page-local floating-action presentation only, not a new Session
 workflow. The full `npm test` gate passes 471/471 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R56 / Phase 186 - Private Session notes-section presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Session Page notes-section presentation into private
+  `pages/session/ui/components/SessionNotesSection.tsx`.
+- [x] Keep `SessionView` ownership of note state, bulk/reorder persistence,
+  AI mutation, NoteCard factory/render slot, DOM identities, last-note
+  calculation, and all note-card callbacks.
+- [x] Pass controlled note data/state, explicit toggle/bulk/reorder/AI
+  commands, and a card slot; preserve the raw bulk source, controlled
+  no-data/expanded gates, shared Notes list policy, and false drag isolation.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, note-card, or AI
+  workflow dependency.
+
+Phase 186 is page-local notes-section presentation only, not a new Session
+workflow. The full `npm test` gate passes 472/472 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

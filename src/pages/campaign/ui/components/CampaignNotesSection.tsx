@@ -1,14 +1,13 @@
 import { Button, CollapseToggleButton, DraggableList } from "../../../../shared/ui/index.js";
 import {
-	AiContextIgnoreButton,
 	BulkCollapseButton,
 	createNoteCardComponent,
+	getAiIgnoredNoteListProps,
 } from "../../../../features/notes/ui/index.js";
 import { EditableField } from "../../../../features/editor/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
 import type { DomainId } from "../../../../entities/campaign/index.js";
 import {
-	getNoteRenderKey,
 	getNotesForRender,
 	lang,
 	makeDomId,
@@ -52,17 +51,9 @@ function CampaignNotesList({
 			className="CampaignView__notes"
 			onReorder={view.handleNotesReorder}
 			onDrop={view.finishTrackedReorder}
-			keyExtractor={(note, index) => getNoteRenderKey(note, index)}
-			isItemDraggable={(note) => !note._isVirtual}
-			isItemControlActive={(note) => Boolean(note._aiIgnored)}
-			renderItemControl={(note) =>
-				!note._isVirtual && (
-					<AiContextIgnoreButton
-						ignored={Boolean(note._aiIgnored)}
-						onToggle={(ignored) => onToggleIgnored(note.id, ignored)}
-					/>
-				)
-			}
+			{...getAiIgnoredNoteListProps(onToggleIgnored, {
+				isolateDragEvents: false,
+			})}
 			renderItem={(note, _isDragging, index) => (
 				<div id={makeDomId("campaign", "note", note.id)}>
 					<CampaignNoteCard

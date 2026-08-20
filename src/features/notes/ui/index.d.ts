@@ -9,6 +9,7 @@ export {
 export {
 	getAiIgnoredNoteListProps,
 	type AiIgnoredNoteListProps,
+	type AiIgnoredNoteListOptions,
 } from "./aiIgnoredNoteListProps.tsx";
 export { createNoteCardComponent } from "./NoteCard.tsx";
 export {

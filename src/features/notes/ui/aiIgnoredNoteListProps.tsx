@@ -12,13 +12,18 @@ export type AiIgnoredNoteListProps = Pick<
 	| "renderItemControl"
 >;
 
+export interface AiIgnoredNoteListOptions {
+	isolateDragEvents?: boolean;
+}
+
 function getAiIgnoredNoteListProps(
 	onNoteAiIgnoredChange?: (noteId: AiIgnoredNote["id"], ignored: boolean) => void,
+	options?: AiIgnoredNoteListOptions,
 ): AiIgnoredNoteListProps {
 	return {
 		keyExtractor: (note, index) => getNoteRenderKey(note, index),
 		isItemDraggable: isRealNote,
-		isolateDragEvents: true,
+		isolateDragEvents: options?.isolateDragEvents ?? true,
 		isItemControlActive: (note) => Boolean(note._aiIgnored),
 		renderItemControl: (note) =>
 			isRealNote(note) && (

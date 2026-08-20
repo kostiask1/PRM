@@ -18,7 +18,6 @@ import {
 	AiContextIgnoreButton,
 	BulkCollapseButton,
 	createNoteCardComponent,
-	getAiIgnoredNoteListProps,
 	useSimplifiedNotesEnabled,
 } from "../../../features/notes/ui/index.js";
 import TodoSection from "./components/TodoSection.tsx";
@@ -28,6 +27,7 @@ import SceneCardFields from "./components/SceneCardFields.tsx";
 import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
 import SessionFloatingActions from "./components/SessionFloatingActions.tsx";
+import SessionNotesSection from "./components/SessionNotesSection.tsx";
 import SessionScenesSection from "./components/SessionScenesSection.tsx";
 import SessionScopeImportOverlay from "./components/SessionScopeImportOverlay.tsx";
 import SceneNotes from "./components/SceneNotes.tsx";
@@ -46,7 +46,6 @@ import {
 } from "../../../entities/session/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	getNoteRenderKey,
 	getNotesForRender,
 	sanitizeNotesForSave,
 } from "../../../shared/lib/index.js";
@@ -92,10 +91,6 @@ function isSessionEntityId(value: unknown): value is string | number {
 }
 
 type SessionController = ReturnType<typeof useSessionView>;
-type RenderableSessionNote = SharedNote & {
-	_isVirtual?: boolean;
-	_renderKey?: string | number;
-};
 
 interface SessionScopedEntityModalProps {
 	view: SessionController;
@@ -230,70 +225,6 @@ function useSessionScopedEntityLinks(
 		view.sessionLocations,
 		view.sessionNpcs,
 	]);
-}
-
-interface SessionNotesSectionProps {
-	view: SessionController;
-	notes: readonly SharedNote[];
-	renderableNotes: RenderableSessionNote[];
-	hasData: boolean;
-	isCollapsed: boolean;
-	onBulkCollapse: (collapsed: boolean) => void;
-	onToggleAiIgnored: (noteId: SessionResourceId, ignored: boolean) => void;
-}
-
-function SessionNotesSection({
-	view,
-	notes,
-	renderableNotes,
-	hasData,
-	isCollapsed,
-	onBulkCollapse,
-	onToggleAiIgnored,
-}: SessionNotesSectionProps) {
-	return (
-		<TodoSection
-			title={lang.t("Notes")}
-			collapsed={isCollapsed}
-			onToggle={hasData ? () => view.handleToggleSectionCollapse("Notes") : undefined}
-			action={!isCollapsed && <BulkCollapseButton items={notes} onChange={onBulkCollapse} />}
-		>
-			{!isCollapsed && (
-				<DraggableList
-					items={renderableNotes}
-					className="SessionView__notes"
-					onReorder={(nextNotes) =>
-						view.updateData("notes", sanitizeNotesForSave(nextNotes))
-					}
-					keyExtractor={(note, index) => getNoteRenderKey(note, index)}
-					isItemDraggable={(note) => !note._isVirtual}
-					isItemControlActive={(note) => Boolean(note._aiIgnored)}
-					renderItemControl={(note) =>
-						!note._isVirtual && (
-							<AiContextIgnoreButton
-								ignored={Boolean(note._aiIgnored)}
-								onToggle={(ignored) => onToggleAiIgnored(note.id, ignored)}
-							/>
-						)
-					}
-					renderItem={(note, _isDragging, index) => (
-						<div id={makeDomId("session", "note", note.id)}>
-							<SessionNoteCard
-								note={note}
-								isLast={index === renderableNotes.length - 1}
-								campaignSlug={view.campaignSlug}
-								enableHistory={false}
-								onToggleCollapse={view.handleToggleNoteCollapse}
-								onTitleChange={view.handleNoteTitleChange}
-								onTextChange={view.handleNoteChange}
-								onDelete={view.handleDeleteNote}
-							/>
-						</div>
-					)}
-				/>
-			)}
-		</TodoSection>
-	);
 }
 
 interface SessionEntitySectionProps {
@@ -727,13 +658,30 @@ function SessionView() {
 				<div className="Panel__body">
 					<div className="SessionView__todoList">
 						<SessionNotesSection
-							view={view}
 							notes={viewModel.notes}
 							renderableNotes={sessionNotesForRender}
 							hasData={hasSessionNotesData}
 							isCollapsed={isSessionNotesCollapsed}
+							onToggle={() => view.handleToggleSectionCollapse("Notes")}
 							onBulkCollapse={handleBulkSessionNotesCollapse}
 							onToggleAiIgnored={toggleSessionNoteAiIgnored}
+							onReorder={(nextNotes) =>
+								view.updateData("notes", sanitizeNotesForSave(nextNotes))
+							}
+							renderItem={(note, _isDragging, index) => (
+								<div id={makeDomId("session", "note", note.id)}>
+									<SessionNoteCard
+										note={note}
+										isLast={index === sessionNotesForRender.length - 1}
+										campaignSlug={view.campaignSlug}
+										enableHistory={false}
+										onToggleCollapse={view.handleToggleNoteCollapse}
+										onTitleChange={view.handleNoteTitleChange}
+										onTextChange={view.handleNoteChange}
+										onDelete={view.handleDeleteNote}
+									/>
+								</div>
+							)}
 						/>
 						<SessionNpcSection
 							view={view}

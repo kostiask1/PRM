@@ -1755,9 +1755,13 @@ function readSourceJsxPropNames(tagSource) {
 }
 
 function assertSourceTokensInOrder(source, tokens, contractName) {
+	const normalizedSource = source.replace(/\r\n/g, "\n");
 	let previousIndex = -1;
 	for (const token of tokens) {
-		const tokenIndex = source.indexOf(token, previousIndex + 1);
+		const tokenIndex = normalizedSource.indexOf(
+			token.replace(/\r\n/g, "\n"),
+			previousIndex + 1,
+		);
 		assert.ok(
 			tokenIndex > previousIndex,
 			`${token} must retain ${contractName} order`,
@@ -5085,6 +5089,174 @@ await run(
 		assert.doesNotMatch(
 			actionsSource,
 			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|setIsChecklistOpen|setIsGlobalSearchOpen|updateData|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+		);
+	},
+);
+
+await run(
+	"Phase 186 isolates Session notes-section presentation",
+	async () => {
+		const [
+			sessionSource,
+			sectionSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			aiIgnoredListPropsSource,
+			notesUiTypeEntrySource,
+			campaignNotesSource,
+			sceneNotesSource,
+			campaignEntityNotesSource,
+		] = await Promise.all([
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionNotesSection.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/session/index.js", "utf8"),
+			fs.readFile("src/pages/session/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/notes/ui/aiIgnoredNoteListProps.tsx",
+				"utf8",
+			),
+			fs.readFile("src/features/notes/ui/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/pages/campaign/ui/components/CampaignNotesSection.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/session/ui/components/SceneNotes.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/campaign-entity-card/ui/CampaignEntityCardNotes.tsx",
+				"utf8",
+			),
+		]);
+
+		assert.match(
+			sessionSource,
+			/import SessionNotesSection from "\.\/components\/SessionNotesSection\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"const SessionNoteCard = createNoteCardComponent({",
+				"function SessionView() {",
+				"const hasSessionNotesData = hasSessionNoteContent(viewModel.notes);",
+				"const sessionNotesForRender = getNotesForRender(sessionNotes, {",
+				"const isSessionNotesCollapsed = getSessionSectionCollapsed(",
+				"const toggleSessionNoteAiIgnored = (",
+				"const handleBulkSessionNotesCollapse = (collapsed: boolean) => {",
+				'view.updateData(\n\t\t\t"notes",\n\t\t\t(viewModel.notes || []).map((note) => ({ ...note, collapsed })),\n\t\t\ttrue,',
+				"<SessionNotesSection",
+				"notes={viewModel.notes}",
+				"renderableNotes={sessionNotesForRender}",
+				"hasData={hasSessionNotesData}",
+				"isCollapsed={isSessionNotesCollapsed}",
+				'onToggle={() => view.handleToggleSectionCollapse("Notes")}',
+				"onBulkCollapse={handleBulkSessionNotesCollapse}",
+				"onToggleAiIgnored={toggleSessionNoteAiIgnored}",
+				"onReorder={(nextNotes) =>",
+				'view.updateData("notes", sanitizeNotesForSave(nextNotes))',
+				"renderItem={(note, _isDragging, index) => (",
+				'makeDomId("session", "note", note.id)',
+				"<SessionNoteCard",
+				"note={note}",
+				"isLast={index === sessionNotesForRender.length - 1}",
+				"campaignSlug={view.campaignSlug}",
+				"enableHistory={false}",
+				"onToggleCollapse={view.handleToggleNoteCollapse}",
+				"onTitleChange={view.handleNoteTitleChange}",
+				"onTextChange={view.handleNoteChange}",
+				"onDelete={view.handleDeleteNote}",
+				"<SessionNpcSection",
+			],
+			"Session raw note-state, persistence, AI mutation, and card workflow ownership",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/interface SessionNotesSectionProps|function SessionNotesSection/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionNotesSection/,
+		);
+		assertSourceTokensInOrder(
+			sectionSource,
+			[
+				'import type { ReactNode } from "react";',
+				"BulkCollapseButton,",
+				"getAiIgnoredNoteListProps,",
+				'import { lang, type SharedNote } from "../../../../shared/lib/index.js";',
+				'import { DraggableList } from "../../../../shared/ui/index.js";',
+				'import TodoSection from "./TodoSection.tsx";',
+				"type SessionNoteListItem = SharedNote & {",
+				"_aiIgnored?: boolean;",
+				"_isVirtual?: boolean;",
+				"_renderKey?: string | number;",
+				"interface SessionNotesSectionProps {",
+				"notes: readonly SharedNote[];",
+				"renderableNotes: readonly SessionNoteListItem[];",
+				"hasData: boolean;",
+				"isCollapsed: boolean;",
+				"onToggle: () => void;",
+				"onBulkCollapse: (collapsed: boolean) => void;",
+				"onToggleAiIgnored: (",
+				"onReorder: (notes: SessionNoteListItem[]) => void;",
+				"renderItem: (",
+				"export default function SessionNotesSection({",
+				"<TodoSection",
+				'title={lang.t("Notes")}',
+				"collapsed={isCollapsed}",
+				"onToggle={hasData ? onToggle : undefined}",
+				"action={",
+				"!isCollapsed && (",
+				"<BulkCollapseButton items={notes} onChange={onBulkCollapse} />",
+				"{!isCollapsed && (",
+				"<DraggableList",
+				"items={renderableNotes}",
+				'className="SessionView__notes"',
+				"onReorder={onReorder}",
+				"{...getAiIgnoredNoteListProps(onToggleAiIgnored, {",
+				"isolateDragEvents: false,",
+				"renderItem={renderItem}",
+			],
+			"Session private notes-section presentation",
+		);
+		assert.doesNotMatch(
+			sectionSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|updateData|sanitizeNotesForSave|getNoteRenderKey|makeDomId|SessionNoteCard|AiContextIgnoreButton|handleToggleSectionCollapse|toggleSessionNoteAiIgnored|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+		);
+		assertSourceTokensInOrder(
+			aiIgnoredListPropsSource,
+			[
+				"export interface AiIgnoredNoteListOptions {",
+				"isolateDragEvents?: boolean;",
+				"function getAiIgnoredNoteListProps(",
+				"options?: AiIgnoredNoteListOptions,",
+				"isolateDragEvents: options?.isolateDragEvents ?? true,",
+			],
+			"Notes reusable AI-ignored list drag-isolation policy",
+		);
+		assert.match(notesUiTypeEntrySource, /type AiIgnoredNoteListOptions/);
+		assertSourceTokensInOrder(
+			campaignNotesSource,
+			[
+				"function CampaignNotesList({",
+				"<DraggableList",
+				'items={notes}',
+				'className="CampaignView__notes"',
+				"onReorder={view.handleNotesReorder}",
+				"onDrop={view.finishTrackedReorder}",
+				"{...getAiIgnoredNoteListProps(onToggleIgnored, {",
+				"isolateDragEvents: false,",
+			],
+			"Campaign Notes explicit non-isolated drag behavior",
+		);
+		assert.match(
+			sceneNotesSource,
+			/\{\.\.\.getAiIgnoredNoteListProps\(onSceneNoteAiIgnoredChange\)\}/,
+		);
+		assert.match(
+			campaignEntityNotesSource,
+			/\{\.\.\.getAiIgnoredNoteListProps\(\(noteId, ignored\) => updateNotes\(/,
 		);
 	},
 );

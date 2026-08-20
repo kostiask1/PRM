@@ -38,6 +38,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 183 | Completed page-local consolidation | Moved Campaign Page entity-section presentation into private `pages/campaign/ui/components/CampaignEntitySection.tsx`. `CampaignView` retains per-type collapse/reorder persistence, drag policy, and card/control workflows. | Keep the leaf private; preserve section/drop-target/list presentation, controlled commands/slots, collapsed gates, bulk/reorder/drop/key policy, and raw state/persistence/workflow ownership without public page/runtime/store/API expansion. | 469/469 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 184 | Completed page-local consolidation | Moved Session Page scenes-section presentation into private `pages/session/ui/components/SessionScenesSection.tsx`. `SessionView` and raw `SessionSceneItem` retain scene projection/persistence and all SceneCard workflows. | Keep the leaf private; preserve empty-list actions, controlled commands/render slot, raw duplicate-ID numbering/encounter label/card callbacks, list gate/key policy, and no public page/runtime/store/API expansion. | 470/470 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 185 | Completed page-local consolidation | Moved Session Page floating checklist/search actions into private `pages/session/ui/components/SessionFloatingActions.tsx`. `SessionView` retains search/checklist state and commands. | Keep the leaf private; preserve controlled progress/search props, the trigger/tooltip/badge/search-modal gates, explicit callbacks, and no public page/runtime/store/API expansion. | 471/471 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 186 | Completed page-local consolidation | Moved Session Page notes-section presentation into private `pages/session/ui/components/SessionNotesSection.tsx`. `SessionView` retains note persistence, AI mutation, and NoteCard workflows. | Keep the leaf private; preserve controlled note data/state/slot commands, no-data and expanded gates, raw bulk/reorder/AI/ID/last-note policy, shared Notes list policy with false drag isolation, and no public page/runtime/store/API expansion. | 472/472 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -380,6 +381,17 @@ gate, and open-only search-modal lifecycle. The expanded suite passes 471/471
 tests; architecture, performance, and Ukrainian encoding checks pass.
 `MD-R02` remains closed; `MD-R04` remains verification-blocked until the
 declared local lint/typecheck tooling is available.
+
+Phase 186 moves Session Page notes-section presentation into private
+`ui/components/SessionNotesSection.tsx`. The raw page retains note state,
+bulk/reorder persistence, the AI mutation command, NoteCard factory/render
+slot, IDs, last-note calculation, and every card callback. The private leaf
+receives controlled notes/state, explicit commands, and a card slot while
+preserving raw bulk source, controlled no-data/expanded gates, shared Notes
+list policy, and false drag isolation. The expanded suite passes 472/472 tests;
+architecture, performance, and Ukrainian encoding checks pass. `MD-R02`
+remains closed; `MD-R04` remains verification-blocked until the declared local
+lint/typecheck tooling is available.
 
 ## Closed recovery items
 
