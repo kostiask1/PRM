@@ -6633,6 +6633,40 @@ await run(
 );
 
 await run(
+	"Phase 200 isolates Encounter AI-model loading in page model",
+	async () => {
+		const [encounterSource, loadingSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				fs.readFile("src/pages/encounter/model/useEncounterAiModelLoading.ts", "utf8"),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+		assert.match(encounterSource, /import \{ useEncounterAiModelLoading \} from "\.\.\/model\/useEncounterAiModelLoading\.ts";/);
+		assert.doesNotMatch(encounterSource, /function useEncounterAiModelLoading\(/);
+		assert.doesNotMatch(encounterSource, /loadAiModelOptions/);
+		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterAiModelLoading/);
+		assertSourceTokensInOrder(encounterSource, [
+			"function EncounterView() {",
+			"useEncounterAiModelLoading({",
+			"aiEditingMonster,",
+			"aiModelCount: aiModels.length,",
+			"onModels: setAiModels,",
+			"onSelectedModel: setSelectedAiModel,",
+		], "Encounter raw AI-model state ownership");
+		assertSourceTokensInOrder(loadingSource, [
+			'import { useEffect } from "react";',
+			"export function useEncounterAiModelLoading({",
+			"useEffect(() => {",
+			"if (!aiEditingMonster || aiModelCount > 0) return;",
+			"loadAiModelOptions({ setAiModels: onModels, setSelectedAiModel: onSelectedModel, onError });",
+			"}, [aiEditingMonster, aiModelCount]);",
+		], "Encounter page-model AI-model loading");
+		assert.doesNotMatch(loadingSource, /useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|settingsApi|app\/model|shared\/model/);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [

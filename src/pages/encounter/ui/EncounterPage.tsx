@@ -37,6 +37,7 @@ import {
 	LocationCard,
 } from "../../../widgets/campaign-entity-card/index.js";
 import useEncounterView from "../model/useEncounterView.ts";
+import { useEncounterAiModelLoading } from "../model/useEncounterAiModelLoading.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
 import "../../../assets/components/EncounterView.css";
 import { campaignApi } from "../../../entities/campaign/index.js";
@@ -88,7 +89,6 @@ import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
 } from "../../../features/ai/index.js";
-import { loadAiModelOptions } from "../../../features/ai/index.js";
 import {
 	createEmptyEncounterCharacterDraft as createEmptyCharacterDraft,
 	applyEncounterGeneratedMonsterResult,
@@ -228,26 +228,6 @@ function useEncounterHeaderDismissal(
 		return () => document.removeEventListener("pointerdown", handlePointerDown);
 	}, [isOpen, onClose]);
 }
-
-function useEncounterAiModelLoading({
-	aiEditingMonster,
-	aiModelCount,
-	onModels,
-	onSelectedModel,
-	onError,
-}: {
-	aiEditingMonster: EncounterViewParticipant | null;
-	aiModelCount: number;
-	onModels: (models: AiModelDescriptor[]) => void;
-	onSelectedModel: (updater: (current: string) => string) => void;
-	onError: (error: unknown) => void;
-}) {
-	useEffect(() => {
-		if (!aiEditingMonster || aiModelCount > 0) return;
-		loadAiModelOptions({ setAiModels: onModels, setSelectedAiModel: onSelectedModel, onError });
-	}, [aiEditingMonster, aiModelCount]);
-}
-
 
 function EncounterView() {
 	const {

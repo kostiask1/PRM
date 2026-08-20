@@ -792,6 +792,8 @@ Next:
 - Phase 198 preserves the truthy message null gate, shared Notification props, and sibling mount order. One added static regression brings the full suite to 484/484 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 199 by moving Encounter Page request-cleanup lifecycle from `EncounterPage.tsx` to private `model/useEncounterRequestCleanup.ts`. Raw `EncounterView` retains focus-timeout and AI-edit-controller ref ownership and passes them to the hook.
 - Phase 199 preserves mount cleanup ordering: clear a present focus timeout, then abort a present AI-edit controller. One added static regression brings the full suite to 485/485 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 200 by moving Encounter Page AI-model loading lifecycle from `EncounterPage.tsx` to private `model/useEncounterAiModelLoading.ts`. Raw `EncounterView` retains AI-editing/model state, setters, and the localized error policy.
+- Phase 200 preserves the open-edit/empty-model gate, feature-owned `loadAiModelOptions` call, and original effect dependencies. One added static regression brings the full suite to 486/486 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1013,6 +1015,9 @@ while retaining raw notification state and close/reset workflow ownership at
 Phase 199 isolates Encounter Page request-cleanup lifecycle in private page
 model while retaining raw focus-timeout and AI-edit-controller ref ownership at
 485/485 tests.
+Phase 200 isolates Encounter Page AI-model loading lifecycle in private page
+model while retaining raw AI-editing/model state, setters, and localized error
+policy ownership at 486/486 tests.
 
 ### Provenance and transfer rule
 
@@ -1404,7 +1409,7 @@ Status: **In progress**
   Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests; Phase 194
   passes 480/480 tests; Phase 195 passes 481/481 tests; Phase 196 passes
   482/482 tests; Phase 197 passes 483/483 tests; Phase 198 passes 484/484
-  tests; Phase 199 passes 485/485 tests.
+  tests; Phase 199 passes 485/485 tests; Phase 200 passes 486/486 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2778,6 +2783,25 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 199 is page-model lifecycle ownership only, not a new Encounter workflow.
 The full `npm test` gate passes 485/485 tests; architecture, performance, and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
+
+### Recovery R70 / Phase 200 - Encounter AI-model loading
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Encounter Page AI-model loading lifecycle into private
+  `pages/encounter/model/useEncounterAiModelLoading.ts`.
+- [x] Keep raw `EncounterView` ownership of AI-editing/model state, its
+  setters, and the localized error policy.
+- [x] Preserve the open-edit/empty-model gate, feature-owned
+  `loadAiModelOptions` call, and original effect dependencies.
+- [x] Keep the hook outside public page runtime/type entries without a runtime,
+  API, store, navigation, request-cancellation, header-dismissal, or
+  encounter-workflow dependency.
+
+Phase 200 is page-model lifecycle ownership only, not a new Encounter workflow.
+The full `npm test` gate passes 486/486 tests; architecture, performance, and
 Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
 remains open for complete lint/typecheck.
 
