@@ -776,6 +776,8 @@ Next:
 - Phase 190 preserves picker/modal null gates, picker create/list/empty composition, button actions, list key/meta policy, CharacterCard flags, and modal identity evaluation after its null gate. One added static regression brings the full suite to 476/476 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 191 by moving Encounter Page detail grid/single/stat-block presentation from `EncounterPage.tsx` to private `ui/components/EncounterDetail.tsx`. Raw `EncounterView` retains participant identity, display/selection/focus state, grid refs, callbacks, and image-override policy; the leaf receives those controlled dependencies.
 - Phase 191 preserves the grid's repeated ID evaluation, selection/ref/class policy, grid/single empty states, post-null selected-character callback evaluation, CharacterCard flags, and stat-block callback/image-override delegation. One added static regression brings the full suite to 477/477 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 192 by moving Encounter Page participant-row, combat-stats, HP-input, and action presentation from `EncounterPage.tsx` to private `ui/components/EncounterMonsterRow.tsx`. Raw `EncounterView` retains draft state, identity/selection/list-adapter policy, and select/HP handlers; the leaf receives narrow row-view commands.
+- Phase 192 preserves ID-to-character-to-name evaluation, undefined-draft HP display semantics, coercion/color, native input and stop-propagation action order, duplicate-by-monster identity, and the character delete-only path. One added static regression brings the full suite to 478/478 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -973,6 +975,9 @@ card callback factory at 476/476 tests.
 Phase 191 isolates Encounter Page detail grid/single/stat-block presentation in
 private page UI while retaining raw participant identity, state/ref/callback,
 and image-override ownership at 477/477 tests.
+Phase 192 isolates Encounter Page participant-row/combat-stats/HP-input/action
+presentation in private page UI while retaining raw draft, identity, selection,
+list-adapter, and select/HP workflow ownership at 478/478 tests.
 
 ### Provenance and transfer rule
 
@@ -1360,7 +1365,8 @@ Status: **In progress**
   Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests; Phase 185
   passes 471/471 tests; Phase 186 passes 472/472 tests; Phase 187 passes
   473/473 tests; Phase 188 passes 474/474 tests; Phase 189 passes 475/475
-  tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests.
+  tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests;
+  Phase 192 passes 478/478 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2565,6 +2571,29 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 191 is page-local Encounter-detail presentation only, not a new Encounter
 workflow. The full `npm test` gate passes 477/477 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R62 / Phase 192 - Private Encounter participant-row presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Encounter Page participant-row/combat-stats/HP-input/action
+  presentation into private
+  `pages/encounter/ui/components/EncounterMonsterRow.tsx`.
+- [x] Keep raw `EncounterView` ownership of `hpDrafts`, participant-ID policy,
+  selected-instance derivation, the `DraggableList` key/reorder/drop/render
+  adapter, and select/HP handlers; pass only narrow row-view commands.
+- [x] Preserve instance-ID → character classification → display-name evaluation,
+  undefined-draft semantics, HP coercion/color, native input event order,
+  stop-propagation-before-action order, duplicate-by-monster identity, and the
+  character delete-only action path.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, selection, HP, or
+  encounter-workflow dependency.
+
+Phase 192 is page-local participant-row presentation only, not a new Encounter
+workflow. The full `npm test` gate passes 478/478 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

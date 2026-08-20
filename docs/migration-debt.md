@@ -44,6 +44,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 189 | Completed page-local consolidation | Moved Session Page SceneCard presentation into private `pages/session/ui/components/SessionSceneCard.tsx`. Raw `SessionSceneItem` retains DOM identity, schema, eager encounter-name evaluation, every view callback, and the `SessionNoteCard` factory/render slot. | Keep the leaf private; preserve controlled SceneCard/header/content/fields/notes/media presentation, disabled field history, localized encounter fallback, raw note-card callback binding, and no public page/runtime/store/API expansion. | 475/475 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 190 | Completed page-local consolidation | Moved Encounter Page player-picker and character-modal presentation into private `pages/encounter/ui/components/EncounterCharacterOverlays.tsx`. Raw `EncounterView` retains player/modal state, available-list derivation, close/reset/start/create workflows, character change/identity policy, and the modal-card callback factory. | Keep the leaf private; preserve picker/modal null gates, create/list/empty/modal presentation, actions, list keys/meta, CharacterCard flags, post-null identity evaluation, and no public page/runtime/store/API expansion. | 476/476 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 191 | Completed page-local consolidation | Moved Encounter Page detail grid/single/stat-block presentation into private `pages/encounter/ui/components/EncounterDetail.tsx`. Raw `EncounterView` retains participant identity, state/ref/callbacks, and image-override policy. | Keep the leaf private; preserve repeated grid ID evaluation, selection/ref/class and empty-state policy, post-null character callback evaluation, CharacterCard flags, stat-block callback/override delegation, and no public page/runtime/store/API expansion. | 477/477 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 192 | Completed page-local consolidation | Moved Encounter Page participant-row/combat-stats/HP-input/action presentation into private `pages/encounter/ui/components/EncounterMonsterRow.tsx`. Raw `EncounterView` retains draft, participant-ID, selection, list-adapter, and select/HP-handler policy. | Keep the leaf private; preserve ID/character/name order, undefined-draft HP semantics, coercion/color, native event/action ordering, duplicate monster identity, character delete-only behavior, and no public page/runtime/store/API expansion. | 478/478 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -448,6 +449,19 @@ It preserves repeated grid ID evaluation, selection/ref/class and empty-state
 policy, CharacterCard flags, the selected-character null gate before identity/
 callback evaluation, and stat-block callback/image-override delegation. The
 expanded suite passes 477/477 tests; architecture, performance, and Ukrainian
+encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
+verification-blocked until the declared local lint/typecheck tooling is
+available.
+
+Phase 192 moves Encounter Page participant-row/combat-stats/HP-input/action
+presentation into private `ui/components/EncounterMonsterRow.tsx`. Raw
+`EncounterView` retains `hpDrafts`, participant-ID policy, selected-instance
+derivation, the `DraggableList` key/reorder/drop/render adapter, and select/HP
+handlers while the leaf receives narrow row-view commands. It preserves
+instance-ID → character classification → display-name evaluation, undefined
+draft semantics, HP coercion/color, native input and stop-propagation action
+order, duplicate-by-monster identity, and the character delete-only path. The
+expanded suite passes 478/478 tests; architecture, performance, and Ukrainian
 encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
