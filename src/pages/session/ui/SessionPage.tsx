@@ -1,6 +1,5 @@
 import {
 	useContext,
-	useEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -35,6 +34,7 @@ import {
 } from "../../../widgets/campaign-entity-card/index.js";
 import "../../../assets/components/SessionView.css";
 import useSessionView from "../model/useSessionView.ts";
+import { useSessionHashNavigation } from "../model/useSessionHashNavigation.ts";
 import {
 	SessionViewModel,
 	type SessionDomainId,
@@ -47,7 +47,6 @@ import {
 } from "../../../shared/lib/index.js";
 import {
 	makeDomId,
-	scrollToHashTarget,
 	shouldOpenInNewTabFromEvent,
 } from "../../../shared/lib/index.js";
 import {
@@ -59,7 +58,6 @@ import {
 import {
 	findEntityByName,
 } from "../../../entities/campaign/index.js";
-import type { SharedNote } from "../../../shared/lib/index.js";
 import type { SessionResourceId } from "../../../features/session-editor/index.js";
 import {
 	getSessionEncounterLinks,
@@ -67,7 +65,6 @@ import {
 	getSessionScopeImportPresentation,
 	getSessionSectionCollapsed,
 	hasSessionNoteContent,
-	shouldExpandSessionNotesFromHash,
 } from "../model/sessionPagePresentation.ts";
 import {
 	type SessionEntityType,
@@ -249,45 +246,6 @@ function getSessionViewList<T>(value: T[] | null | undefined): T[] {
 
 function getSessionPageDataRecord(session: SessionController["session"]) {
 	return session || {};
-}
-
-interface SessionHashNavigationOptions {
-	sessionId: string | null;
-	isSessionNotesCollapsed: boolean;
-	sessionNotesForRender: readonly SharedNote[];
-	sessionLocations: readonly SessionPageEntity[];
-	sessionNpcs: readonly SessionPageEntity[];
-	scenes: readonly SessionScene[];
-	onToggleSectionCollapse: (section: string) => void;
-}
-
-function useSessionHashNavigation({
-	sessionId,
-	isSessionNotesCollapsed,
-	sessionNotesForRender,
-	sessionLocations,
-	sessionNpcs,
-	scenes,
-	onToggleSectionCollapse,
-}: SessionHashNavigationOptions): void {
-	useEffect(() => {
-		if (shouldExpandSessionNotesFromHash(
-			window.location.hash,
-			isSessionNotesCollapsed,
-		)) {
-			onToggleSectionCollapse("Notes");
-		}
-		const timer = window.setTimeout(() => scrollToHashTarget(), 140);
-		return () => window.clearTimeout(timer);
-	}, [
-		isSessionNotesCollapsed,
-		onToggleSectionCollapse,
-		scenes,
-		sessionId,
-		sessionLocations,
-		sessionNotesForRender,
-		sessionNpcs,
-	]);
 }
 
 function SessionView() {

@@ -6706,6 +6706,50 @@ await run(
 );
 
 await run(
+	"Phase 202 isolates Session hash navigation in page model",
+	async () => {
+		const [sessionSource, navigationSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+				fs.readFile("src/pages/session/model/useSessionHashNavigation.ts", "utf8"),
+				fs.readFile("src/pages/session/index.js", "utf8"),
+				fs.readFile("src/pages/session/index.d.ts", "utf8"),
+			]);
+		assert.match(sessionSource, /import \{ useSessionHashNavigation \} from "\.\.\/model\/useSessionHashNavigation\.ts";/);
+		assert.doesNotMatch(sessionSource, /function useSessionHashNavigation\(/);
+		assert.doesNotMatch(sessionSource, /shouldExpandSessionNotesFromHash|scrollToHashTarget/);
+		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useSessionHashNavigation/);
+		assertSourceTokensInOrder(sessionSource, [
+			"const { handleToggleSectionCollapse } = view;",
+			"useSessionHashNavigation({",
+			"sessionId,",
+			"isSessionNotesCollapsed,",
+			"sessionNotesForRender,",
+			"sessionLocations: view.sessionLocations,",
+			"sessionNpcs: view.sessionNpcs,",
+			"scenes,",
+			"onToggleSectionCollapse: handleToggleSectionCollapse,",
+		], "Session raw hash-navigation command ownership");
+		assertSourceTokensInOrder(navigationSource, [
+			'import { useEffect } from "react";',
+			"export function useSessionHashNavigation({",
+			"if (shouldExpandSessionNotesFromHash(",
+			"onToggleSectionCollapse(\"Notes\");",
+			"const timer = window.setTimeout(() => scrollToHashTarget(), 140);",
+			"return () => window.clearTimeout(timer);",
+			"isSessionNotesCollapsed,",
+			"onToggleSectionCollapse,",
+			"scenes,",
+			"sessionId,",
+			"sessionLocations,",
+			"sessionNotesForRender,",
+			"sessionNpcs,",
+		], "Session page-model hash navigation");
+		assert.doesNotMatch(navigationSource, /useSessionView|useSessionPageRuntime|sessionApi|app\/model|shared\/model/);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [

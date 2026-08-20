@@ -796,6 +796,8 @@ Next:
 - Phase 200 preserves the open-edit/empty-model gate, feature-owned `loadAiModelOptions` call, and original effect dependencies. One added static regression brings the full suite to 486/486 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 201 by moving Campaign Page hash-navigation lifecycle from `CampaignPage.tsx` to private `model/useCampaignHashNavigation.ts`. Raw `CampaignView` retains campaign/section state, section setters, the notes-view setter, and persistence command ownership.
 - Phase 201 preserves hash decoding, navigation-plan construction/execution order, `120ms` delayed scroll/cleanup, and original effect dependencies. One added static regression brings the full suite to 487/487 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 202 by moving Session Page hash-navigation lifecycle from `SessionPage.tsx` to private `model/useSessionHashNavigation.ts`. Raw `SessionView` retains session state, rendered collections, and the section-toggle command.
+- Phase 202 preserves the Session-specific notes-expand predicate, `140ms` delayed scroll/cleanup, and original effect dependencies. One added static regression brings the full suite to 488/488 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1023,6 +1025,9 @@ policy ownership at 486/486 tests.
 Phase 201 isolates Campaign Page hash-navigation lifecycle in private page
 model while retaining raw campaign/section state, setters, notes-view setter,
 and persistence command ownership at 487/487 tests.
+Phase 202 isolates Session Page hash-navigation lifecycle in private page model
+while retaining raw session state, rendered collections, and section-toggle
+command ownership at 488/488 tests.
 
 ### Provenance and transfer rule
 
@@ -1415,7 +1420,7 @@ Status: **In progress**
   passes 480/480 tests; Phase 195 passes 481/481 tests; Phase 196 passes
   482/482 tests; Phase 197 passes 483/483 tests; Phase 198 passes 484/484
   tests; Phase 199 passes 485/485 tests; Phase 200 passes 486/486 tests;
-  Phase 201 passes 487/487 tests.
+  Phase 201 passes 487/487 tests; Phase 202 passes 488/488 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2826,6 +2831,25 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 201 is page-model lifecycle ownership only, not a new Campaign workflow.
 The full `npm test` gate passes 487/487 tests; architecture, performance, and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
+
+### Recovery R72 / Phase 202 - Session hash navigation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Session Page hash-navigation lifecycle into private
+  `pages/session/model/useSessionHashNavigation.ts`.
+- [x] Keep raw `SessionView` ownership of session state, rendered collections,
+  and the section-toggle command.
+- [x] Preserve the Session-specific notes-expand predicate, the `140ms`
+  delayed scroll/cleanup, and original dependencies.
+- [x] Keep the hook outside public page runtime/type entries without a runtime,
+  API, store, entity-link resolver, pointer-dismissal, editor, scope-import, or
+  session-workflow dependency.
+
+Phase 202 is page-model lifecycle ownership only, not a new Session workflow.
+The full `npm test` gate passes 488/488 tests; architecture, performance, and
 Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
 remains open for complete lint/typecheck.
 

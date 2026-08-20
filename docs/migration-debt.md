@@ -54,6 +54,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 199 | Completed page-model consolidation | Moved Encounter Page request-cleanup lifecycle into private `pages/encounter/model/useEncounterRequestCleanup.ts`. Raw `EncounterView` retains focus-timeout and AI-edit-controller ref ownership. | Keep the hook private; preserve mount cleanup ordering (clear timeout, then abort controller) and no public page/runtime/store/API expansion. | 485/485 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 200 | Completed page-model consolidation | Moved Encounter Page AI-model loading lifecycle into private `pages/encounter/model/useEncounterAiModelLoading.ts`. Raw `EncounterView` retains AI-editing/model state, setters, and localized error policy. | Keep the hook private; preserve the open-edit/empty-model gate, feature-owned loader call, original effect dependencies, and no public page/runtime/store/API expansion. | 486/486 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 201 | Completed page-model consolidation | Moved Campaign Page hash-navigation lifecycle into private `pages/campaign/model/useCampaignHashNavigation.ts`. Raw `CampaignView` retains campaign/section state, setters, notes-view setter, and persistence command ownership. | Keep the hook private; preserve hash decoding, plan construction/execution order, `120ms` delayed scroll/cleanup, original dependencies, and no public page/runtime/store/API expansion. | 487/487 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 202 | Completed page-model consolidation | Moved Session Page hash-navigation lifecycle into private `pages/session/model/useSessionHashNavigation.ts`. Raw `SessionView` retains session state, rendered collections, and section-toggle command ownership. | Keep the hook private; preserve the Session-specific notes-expand predicate, `140ms` delayed scroll/cleanup, original dependencies, and no public page/runtime/store/API expansion. | 488/488 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -569,6 +570,15 @@ The expanded suite passes 487/487 tests; architecture, performance, and
 Ukrainian encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
+
+Phase 202 moves Session Page hash-navigation lifecycle into private
+`model/useSessionHashNavigation.ts`. Raw `SessionView` retains session state,
+rendered collections, and the section-toggle command. The hook preserves the
+Session-specific notes-expand predicate, `140ms` delayed scroll/cleanup, and
+original dependencies. The expanded suite passes 488/488 tests; architecture,
+performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
+`MD-R04` remains verification-blocked until the declared local lint/typecheck
+tooling is available.
 
 ## Closed recovery items
 
