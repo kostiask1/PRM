@@ -4892,7 +4892,7 @@ await run(
 				"view.handleLocationChange(id, updated, options);",
 				"view.handleLocationNameBlur(id, updated, oldName, newName)",
 				"view.handleLocationDelete(id);",
-				"<CampaignPageDialogs",
+				"<CampaignPartialArchiveOverlay",
 			],
 			"Campaign raw entity state, persistence, and card workflow ownership",
 		);
@@ -6418,6 +6418,84 @@ await run(
 		assert.doesNotMatch(
 			headerSource,
 			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|useCampaignPageRuntime|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|CampaignPage/,
+		);
+	},
+);
+
+await run(
+	"Phase 196 isolates Campaign partial-archive overlay",
+	async () => {
+		const {
+			campaignSource,
+			componentSource: overlaySource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getCampaignPrivateComponentSources("CampaignPartialArchiveOverlay");
+
+		assert.match(
+			campaignSource,
+			/import CampaignPartialArchiveOverlay from "\.\/components\/CampaignPartialArchiveOverlay\.tsx";/,
+		);
+		assert.doesNotMatch(
+			campaignSource,
+			/import PartialArchiveModal|interface CampaignPageDialogsProps|function CampaignPageDialogs\(/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/CampaignPartialArchiveOverlay/,
+		);
+		assertSourceTokensInOrder(
+			campaignSource,
+			[
+				"function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {",
+				"const view = useCampaignView({ campaign });",
+				"const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);",
+				"const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);",
+				"const onCloseGlobalSearch = () => setIsGlobalSearchOpen(false);",
+				"{isGlobalSearchOpen && (",
+				"<GlobalSearchModal onCancel={onCloseGlobalSearch} />",
+				"<CampaignPartialArchiveOverlay",
+				"open={isPartialArchiveOpen}",
+				"onClose={() => setIsPartialArchiveOpen(false)}",
+				"onExport={(sections) => view.handleExportPartial(sections)}",
+				"onImport={(file, sections) => view.handleImportPartial(file, sections)}",
+			],
+			"Campaign raw search/modal state and archive-command ownership",
+		);
+		assertSourceTokensInOrder(
+			overlaySource,
+			[
+				'import { useState } from "react";',
+				'import type { CampaignPartialArchiveSection } from "../../../../entities/campaign/index.js";',
+				'import PartialArchiveModal from "./PartialArchiveModal.tsx";',
+				"interface CampaignPartialArchiveOverlayProps {",
+				"open: boolean;",
+				"onClose: () => void;",
+				"onExport: (",
+				"onImport: (",
+				"export default function CampaignPartialArchiveOverlay({",
+				"const [isBusy, setIsBusy] = useState(false);",
+				"const exportPartialArchive = async (",
+				"setIsBusy(true);",
+				"await onExport(sections);",
+				"setIsBusy(false);",
+				"const importPartialArchive = async (",
+				"setIsBusy(true);",
+				"await onImport(file, sections);",
+				"onClose();",
+				"setIsBusy(false);",
+				"if (!open) return null;",
+				"<PartialArchiveModal",
+				"isBusy={isBusy}",
+				"onCancel={onClose}",
+				"onExport={exportPartialArchive}",
+				"onImport={importPartialArchive}",
+			],
+			"Campaign private partial-archive overlay lifecycle and presentation",
+		);
+		assert.doesNotMatch(
+			overlaySource,
+			/useEffect|useMemo|useRef|useCallback|useContext|useCampaignView|useCampaignPageRuntime|CampaignViewController|handleExportPartial|handleImportPartial|GlobalSearchModal|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|CampaignPage/,
 		);
 	},
 );

@@ -24,7 +24,7 @@ import CampaignDescriptionSection from "./components/CampaignDescriptionSection.
 import CampaignEntitySection from "./components/CampaignEntitySection.tsx";
 import CampaignNotesSection from "./components/CampaignNotesSection.tsx";
 import CampaignSessionsSection from "./components/CampaignSessionsSection.tsx";
-import PartialArchiveModal from "./components/PartialArchiveModal.tsx";
+import CampaignPartialArchiveOverlay from "./components/CampaignPartialArchiveOverlay.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import "../../../assets/components/CampaignView.css";
 import useCampaignView from "../model/useCampaignView.ts";
@@ -34,7 +34,6 @@ import { lang } from "../../../shared/lib/index.js";
 import { getNotesForRender } from "../../../shared/lib/index.js";
 import { makeDomId, scrollToHashTarget } from "../../../shared/lib/index.js";
 import type { DomainId } from "../../../entities/campaign/index.js";
-import type { CampaignPartialArchiveSection } from "../../../entities/campaign/index.js";
 import type { CampaignPageCampaign } from "../model/contracts.ts";
 import {
 	filterCampaignSessions,
@@ -57,61 +56,6 @@ interface CampaignDragDropDetail {
 }
 
 type CampaignViewController = ReturnType<typeof useCampaignView>;
-
-interface CampaignPageDialogsProps {
-	view: CampaignViewController;
-	isGlobalSearchOpen: boolean;
-	onCloseGlobalSearch: () => void;
-	isPartialArchiveOpen: boolean;
-	onClosePartialArchive: () => void;
-}
-
-function CampaignPageDialogs({
-	view,
-	isGlobalSearchOpen,
-	onCloseGlobalSearch,
-	isPartialArchiveOpen,
-	onClosePartialArchive,
-}: CampaignPageDialogsProps) {
-	const [isPartialArchiveBusy, setIsPartialArchiveBusy] = useState(false);
-	const exportPartialArchive = async (
-		sections: CampaignPartialArchiveSection[],
-	) => {
-		setIsPartialArchiveBusy(true);
-		try {
-			await view.handleExportPartial(sections);
-		} finally {
-			setIsPartialArchiveBusy(false);
-		}
-	};
-	const importPartialArchive = async (
-		file: File,
-		sections: CampaignPartialArchiveSection[],
-	) => {
-		setIsPartialArchiveBusy(true);
-		try {
-			await view.handleImportPartial(file, sections);
-			onClosePartialArchive();
-		} finally {
-			setIsPartialArchiveBusy(false);
-		}
-	};
-	return (
-		<>
-			{isGlobalSearchOpen && (
-				<GlobalSearchModal onCancel={onCloseGlobalSearch} />
-			)}
-			{isPartialArchiveOpen && (
-				<PartialArchiveModal
-					isBusy={isPartialArchiveBusy}
-					onCancel={onClosePartialArchive}
-					onExport={exportPartialArchive}
-					onImport={importPartialArchive}
-				/>
-			)}
-		</>
-	);
-}
 
 function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const { navigateToSession } = useCampaignPageRuntime();
@@ -296,6 +240,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 			<div className="ListCard__title">{session.name}</div>
 		</ListCard>
 	);
+	const onCloseGlobalSearch = () => setIsGlobalSearchOpen(false);
 
 	return (
 		<Panel className="CampaignView">
@@ -530,12 +475,14 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 					</div>
 				</div>
 			</div>
-			<CampaignPageDialogs
-				view={view}
-				isGlobalSearchOpen={isGlobalSearchOpen}
-				onCloseGlobalSearch={() => setIsGlobalSearchOpen(false)}
-				isPartialArchiveOpen={isPartialArchiveOpen}
-				onClosePartialArchive={() => setIsPartialArchiveOpen(false)}
+			{isGlobalSearchOpen && (
+				<GlobalSearchModal onCancel={onCloseGlobalSearch} />
+			)}
+			<CampaignPartialArchiveOverlay
+				open={isPartialArchiveOpen}
+				onClose={() => setIsPartialArchiveOpen(false)}
+				onExport={(sections) => view.handleExportPartial(sections)}
+				onImport={(file, sections) => view.handleImportPartial(file, sections)}
 			/>
 		</Panel>
 	);

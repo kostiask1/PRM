@@ -784,6 +784,8 @@ Next:
 - Phase 194 preserves the `locations`-then-NPC branch, session-entity normalization, card keys and modal flags, forced expanded state, and delete-before-close ordering. One added static regression brings the full suite to 480/480 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 195 by moving Campaign Page header presentation from `CampaignPage.tsx` to private `ui/components/CampaignHeader.tsx`, forwarding private `CampaignHeaderActions`. Raw `CampaignView` retains campaign construction, state, modal triggers, and action commands; the leaf receives a narrow header view, `CampaignViewModel`, and controlled modal-open commands.
 - Phase 195 preserves the header/title/created-metadata hierarchy, rename tooltip/handler, undo/redo capability reads, direct action callbacks, action-menu forwarding, classes, and localized copy. One added static regression brings the full suite to 481/481 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 196 by moving Campaign Page partial-archive overlay lifecycle and presentation from `CampaignPage.tsx` to private `ui/components/CampaignPartialArchiveOverlay.tsx`. Raw `CampaignView` retains global-search/partial-archive state, search close, and archive commands; the leaf receives controlled open/close/export/import inputs.
+- Phase 196 preserves always-mounted busy state, the closed-overlay null gate, busy-before-await/finally reset, import success before close, `PartialArchiveModal` prop routing, and global-search placement. One added static regression brings the full suite to 482/482 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -993,6 +995,9 @@ lookup, ID guards, and change/delete/close workflow ownership at 480/480 tests.
 Phase 195 isolates Campaign Page header presentation in private page UI while
 retaining raw campaign construction, state, modal-trigger, and action-command
 ownership at 481/481 tests.
+Phase 196 isolates Campaign Page partial-archive overlay lifecycle/presentation
+in private page UI while retaining raw search/archive state and archive-command
+ownership at 482/482 tests.
 
 ### Provenance and transfer rule
 
@@ -1382,7 +1387,8 @@ Status: **In progress**
   473/473 tests; Phase 188 passes 474/474 tests; Phase 189 passes 475/475
   tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests;
   Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests; Phase 194
-  passes 480/480 tests; Phase 195 passes 481/481 tests.
+  passes 480/480 tests; Phase 195 passes 481/481 tests; Phase 196 passes
+  482/482 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2678,6 +2684,27 @@ Phase 195 is page-local Campaign-header presentation only, not a new Campaign
 workflow. The full `npm test` gate passes 481/481 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R66 / Phase 196 - Private Campaign partial-archive overlay
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Campaign Page partial-archive overlay lifecycle/presentation into
+  private `pages/campaign/ui/components/CampaignPartialArchiveOverlay.tsx`.
+- [x] Keep raw `CampaignView` ownership of global-search/partial-archive open
+  state, the search close callback, and direct archive commands.
+- [x] Pass the leaf only controlled open/close/export/import inputs; preserve
+  always-mounted busy state, closed-overlay null gate, busy-before-await/finally
+  reset, import success before close, `PartialArchiveModal` prop routing, and
+  global-search placement.
+- [x] Keep the component outside public page runtime/type entries without a
+  runtime, API, store, navigation, archive-command, or campaign-workflow
+  dependency.
+
+Phase 196 is page-local partial-archive overlay presentation only, not a new
+Campaign archive workflow. The full `npm test` gate passes 482/482 tests;
+architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
+remains closed and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 
