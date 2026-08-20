@@ -770,6 +770,8 @@ Next:
 - Phase 187 preserves the exact raw result coercion, textarea presentation, localized copy, disabled history, controlled value, and event-to-value callback routing. One added static regression brings the full suite to 473/473 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 188 by moving the paired Session NPC/location list shells from `SessionPage.tsx` to private `ui/components/SessionEntitySection.tsx`. The raw page retains entity persistence and cards; the leaf receives controlled display/list values, commands, and a card slot.
 - Phase 188 preserves always-visible actions, current-items bulk delegation, nonempty/empty presentation, ID keys, AI-control presentation, default drag behavior, type-bound commands, DOM identities, and all card workflows. One added static regression brings the full suite to 474/474 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 189 by moving Session Page SceneCard presentation from `SessionPage.tsx` to private `ui/components/SessionSceneCard.tsx`. Raw `SessionSceneItem` retains DOM identity, scene schema, eager encounter-name evaluation, every view callback, and the configured `SessionNoteCard` render slot; the leaf receives controlled presentation inputs.
+- Phase 189 preserves the private SceneCard/header/expanded-content/fields/notes/media composition, localized encounter fallback, disabled field history, and raw note-card callback binding. One added static regression brings the full suite to 475/475 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -956,6 +958,10 @@ while retaining raw result coercion and persistence ownership at 473/473 tests.
 Phase 188 isolates the paired Session NPC/location list shells in private page
 UI while retaining raw entity persistence and card workflow ownership at
 474/474 tests.
+Phase 189 isolates Session Page SceneCard presentation in private page UI while
+retaining raw `SessionSceneItem` DOM identity, schema, eager encounter-label
+evaluation, view callbacks, and configured note-card render slot at 475/475
+tests.
 
 ### Provenance and transfer rule
 
@@ -1342,7 +1348,8 @@ Status: **In progress**
   tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests;
   Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests; Phase 185
   passes 471/471 tests; Phase 186 passes 472/472 tests; Phase 187 passes
-  473/473 tests; Phase 188 passes 474/474 tests.
+  473/473 tests; Phase 188 passes 474/474 tests; Phase 189 passes 475/475
+  tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2481,6 +2488,28 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 188 is page-local entity-list presentation only, not a new Session
 workflow. The full `npm test` gate passes 474/474 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R59 / Phase 189 - Private Session scene-card presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Session Page SceneCard presentation into private
+  `pages/session/ui/components/SessionSceneCard.tsx`.
+- [x] Keep raw `SessionSceneItem` ownership of wrapper DOM identity,
+  `SessionViewModel.sceneSchema`, eager encounter-name evaluation, every view
+  callback, and the configured `SessionNoteCard` factory/render slot.
+- [x] Pass controlled scene/card values and callbacks plus the note-render
+  slot; preserve private SceneCard/header/expanded-content/fields/notes/media
+  composition, disabled field history, and the localized `New encounter`
+  fallback.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, note-card, or session
+  workflow dependency.
+
+Phase 189 is page-local scene-card presentation only, not a new Session
+workflow. The full `npm test` gate passes 475/475 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

@@ -17,18 +17,15 @@ import {
 	createNoteCardComponent,
 	useSimplifiedNotesEnabled,
 } from "../../../features/notes/ui/index.js";
-import SceneCardHeader from "./components/SceneCardHeader.tsx";
-import SceneCardMedia from "./components/SceneCardMedia.tsx";
-import SceneCardFields from "./components/SceneCardFields.tsx";
 import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
 import SessionEntitySection from "./components/SessionEntitySection.tsx";
 import SessionFloatingActions from "./components/SessionFloatingActions.tsx";
 import SessionNotesSection from "./components/SessionNotesSection.tsx";
 import SessionResultSection from "./components/SessionResultSection.tsx";
+import SessionSceneCard from "./components/SessionSceneCard.tsx";
 import SessionScenesSection from "./components/SessionScenesSection.tsx";
 import SessionScopeImportOverlay from "./components/SessionScopeImportOverlay.tsx";
-import SceneNotes from "./components/SceneNotes.tsx";
 import {
 	CharacterCard,
 	CreateCharacterButton,
@@ -77,7 +74,6 @@ import {
 	type SessionPageEntity,
 } from "../model/sessionEntityModel.ts";
 import { useSessionPageRuntime } from "../model/SessionPageRuntime.tsx";
-import type { SceneCardFieldDefinition } from "./components/SceneCardFields.tsx";
 
 const SessionNoteCard = createNoteCardComponent({
 	EditableField,
@@ -246,9 +242,18 @@ function SessionSceneItem({
 	onToggleNoteAiIgnored,
 	getEncounterName,
 }: SessionSceneItemProps) {
+	const onSceneNoteToggleCollapse = (noteId: SessionResourceId) =>
+		view.handleSceneToggleNoteCollapse(scene.id, noteId);
+	const onSceneNoteTitleChange = (noteId: SessionResourceId, title: string) =>
+		view.handleSceneNoteTitleChange(scene.id, noteId, title);
+	const onSceneNoteChange = (noteId: SessionResourceId, text: string) =>
+		view.handleSceneNoteChange(scene.id, noteId, text);
+	const onSceneNoteDelete = (noteId: SessionResourceId) =>
+		view.handleSceneDeleteNote(scene.id, noteId);
+
 	return (
 		<div id={makeDomId("session", "scene", scene.id)}>
-			<SceneCard
+			<SessionSceneCard
 				number={number}
 				scene={scene}
 				fields={SessionViewModel.sceneSchema}
@@ -269,25 +274,25 @@ function SessionSceneItem({
 				onToggleNotesCollapse={() =>
 					view.handleToggleSceneNotesCollapse(scene.id)
 				}
-				onSceneNoteTitleChange={(noteId, title) =>
-					view.handleSceneNoteTitleChange(scene.id, noteId, title)
-				}
-				onSceneNoteChange={(noteId, text) =>
-					view.handleSceneNoteChange(scene.id, noteId, text)
-				}
 				onSceneNotesReorder={(notes) =>
 					view.handleSceneNotesReorder(scene.id, notes)
 				}
 				onSceneNoteAiIgnoredChange={(noteId, ignored) =>
 					onToggleNoteAiIgnored(scene.id, noteId, ignored)
 				}
-				onSceneNoteToggleCollapse={(noteId) =>
-					view.handleSceneToggleNoteCollapse(scene.id, noteId)
-				}
-				onSceneNoteDelete={(noteId) =>
-					view.handleSceneDeleteNote(scene.id, noteId)
-				}
 				simplifiedNotesEnabled={simplifiedNotesEnabled}
+				renderNoteCard={(note, isLast) => (
+					<SessionNoteCard
+						note={note}
+						isLast={isLast}
+						campaignSlug={view.campaignSlug}
+						enableHistory={false}
+						onToggleCollapse={onSceneNoteToggleCollapse}
+						onTitleChange={onSceneNoteTitleChange}
+						onTextChange={onSceneNoteChange}
+						onDelete={onSceneNoteDelete}
+					/>
+				)}
 			/>
 		</div>
 	);
@@ -722,86 +727,3 @@ function SessionView() {
 }
 
 export default SessionView;
-
-interface SceneCardProps {
-	number: number;
-	scene: SessionScene;
-	fields: readonly SceneCardFieldDefinition[];
-	collapsed: boolean;
-	onToggle: () => void;
-	onRemove: () => void;
-	onOpenEncounter: (event: MouseEvent<HTMLButtonElement>) => void;
-	imageUrl?: string | null;
-	onImageChange: (imageUrl: string | null) => void;
-	campaignSlug?: string | null;
-	hasEncounter: boolean;
-	encounterName: string;
-	onUpdateField: (field: string, value: string) => void;
-	onToggleNotesCollapse: () => void;
-	onSceneNoteTitleChange: (noteId: SessionResourceId, title: string) => void;
-	onSceneNoteChange: (noteId: SessionResourceId, text: string) => void;
-	onSceneNotesReorder: (notes: SharedNote[]) => void;
-	onSceneNoteAiIgnoredChange: (
-		noteId: SessionResourceId,
-		ignored: boolean,
-	) => void;
-	onSceneNoteToggleCollapse: (noteId: SessionResourceId) => void;
-	onSceneNoteDelete: (noteId: SessionResourceId) => void;
-	simplifiedNotesEnabled: boolean;
-}
-
-function SceneCard(props: SceneCardProps) {
-	const encounterLabel = props.hasEncounter
-		? props.encounterName
-		: lang.t("New encounter");
-	return (
-		<div className="SceneCard">
-			<SceneCardHeader
-				number={props.number}
-				collapsed={props.collapsed}
-				onToggle={props.onToggle}
-				onOpenEncounter={props.onOpenEncounter}
-				onRemove={props.onRemove}
-				hasEncounter={props.hasEncounter}
-				encounterName={encounterLabel}
-			/>
-			{!props.collapsed && (
-				<div className="SceneCard__content">
-					<div className="SceneCard__text_side">
-						<SceneCardFields
-							fields={props.fields}
-							scene={props.scene}
-							enableHistory={false}
-							onUpdateField={props.onUpdateField}
-						/>
-						<SceneNotes
-							scene={props.scene}
-							simplifiedNotesEnabled={props.simplifiedNotesEnabled}
-							onSceneNoteAiIgnoredChange={props.onSceneNoteAiIgnoredChange}
-							onSceneNotesReorder={props.onSceneNotesReorder}
-							onToggleNotesCollapse={props.onToggleNotesCollapse}
-							renderNoteCard={(note, isLast) => (
-								<SessionNoteCard
-									note={note}
-									isLast={isLast}
-									campaignSlug={props.campaignSlug}
-									enableHistory={false}
-									onToggleCollapse={props.onSceneNoteToggleCollapse}
-									onTitleChange={props.onSceneNoteTitleChange}
-									onTextChange={props.onSceneNoteChange}
-									onDelete={props.onSceneNoteDelete}
-								/>
-							)}
-						/>
-					</div>
-					<SceneCardMedia
-						number={props.number}
-						imageUrl={props.imageUrl}
-						campaignSlug={props.campaignSlug}
-						onImageChange={props.onImageChange}
-					/>
-				</div>
-			)}
-		</div>
-	);
-}
