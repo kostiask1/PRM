@@ -51,6 +51,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 196 | Completed page-local consolidation | Moved Campaign Page partial-archive overlay lifecycle/presentation into private `pages/campaign/ui/components/CampaignPartialArchiveOverlay.tsx`. Raw `CampaignView` retains search/archive-open state, search close, and archive command ownership. | Keep the leaf private; preserve always-mounted busy state, null gate, await/finally and import-close ordering, modal props, global-search placement, and no public page/runtime/store/API expansion. | 482/482 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 197 | Completed page-local consolidation | Moved Encounter Page Bestiary overlay shell into private `pages/encounter/ui/components/EncounterBestiaryOverlay.tsx`. Raw `EncounterView` retains Bestiary composition, stable widget slots, monster-add command, and cast ownership. | Keep the leaf private; preserve closed-gated slot evaluation, custom modal props/title/no-op confirm, action forwarding, raw composition imports, sibling overlay order, and no public page/runtime/store/API expansion. | 483/483 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 198 | Completed page-local consolidation | Moved Encounter Page notification presentation into private `pages/encounter/ui/components/EncounterNotification.tsx`. Raw `EncounterView` retains notification state and close/reset command ownership. | Keep the leaf private; preserve truthy null gate, shared notification props, sibling mount order, and no public page/runtime/store/API expansion. | 484/484 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 199 | Completed page-model consolidation | Moved Encounter Page request-cleanup lifecycle into private `pages/encounter/model/useEncounterRequestCleanup.ts`. Raw `EncounterView` retains focus-timeout and AI-edit-controller ref ownership. | Keep the hook private; preserve mount cleanup ordering (clear timeout, then abort controller) and no public page/runtime/store/API expansion. | 485/485 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -529,6 +530,24 @@ expanded suite passes 483/483 tests; architecture, performance, and Ukrainian
 encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
+
+Phase 198 moves Encounter Page notification presentation into private
+`ui/components/EncounterNotification.tsx`. Raw `EncounterView` retains the
+notification state and its close/reset command. The leaf receives controlled
+message/close inputs, preserving the truthy null gate, shared notification
+props, and sibling mount order. The expanded suite passes 484/484 tests;
+architecture and Ukrainian encoding checks pass. `MD-R02` remains closed;
+`MD-R04` remains verification-blocked until the declared local lint/typecheck
+tooling is available.
+
+Phase 199 moves Encounter Page request-cleanup lifecycle into private
+`model/useEncounterRequestCleanup.ts`. Raw `EncounterView` retains ownership
+of the focus-timeout and AI-edit-controller refs and passes both to the hook.
+The hook preserves mount cleanup ordering: clear a present timeout, then abort
+a present controller. The expanded suite passes 485/485 tests; architecture,
+performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
+`MD-R04` remains verification-blocked until the declared local lint/typecheck
+tooling is available.
 
 ## Closed recovery items
 

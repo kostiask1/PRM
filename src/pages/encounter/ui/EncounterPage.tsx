@@ -37,6 +37,7 @@ import {
 	LocationCard,
 } from "../../../widgets/campaign-entity-card/index.js";
 import useEncounterView from "../model/useEncounterView.ts";
+import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
 import "../../../assets/components/EncounterView.css";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import {
@@ -211,16 +212,6 @@ function getEncounterViewPlayerCharacters(
 	view: EncounterViewModel,
 ): CampaignEntityRecord[] {
 	return view.playerCharacters || EMPTY_CAMPAIGN_ENTITIES;
-}
-
-function useEncounterRequestCleanup(
-	focusTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>,
-	aiEditControllerRef: RefObject<AbortController | null>,
-) {
-	useEffect(() => () => {
-		if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
-		aiEditControllerRef.current?.abort();
-	}, []);
 }
 
 function useEncounterHeaderDismissal(

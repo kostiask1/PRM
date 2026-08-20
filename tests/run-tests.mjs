@@ -6604,6 +6604,35 @@ await run(
 );
 
 await run(
+	"Phase 199 isolates Encounter request cleanup in page model",
+	async () => {
+		const [encounterSource, cleanupSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				fs.readFile("src/pages/encounter/model/useEncounterRequestCleanup.ts", "utf8"),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+		assert.match(encounterSource, /import \{ useEncounterRequestCleanup \} from "\.\.\/model\/useEncounterRequestCleanup\.ts";/);
+		assert.doesNotMatch(encounterSource, /function useEncounterRequestCleanup\(/);
+		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterRequestCleanup/);
+		assertSourceTokensInOrder(encounterSource, [
+			"function EncounterView() {",
+			"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
+		], "Encounter raw cleanup-ref ownership");
+		assertSourceTokensInOrder(cleanupSource, [
+			'import { useEffect, type RefObject } from "react";',
+			"export function useEncounterRequestCleanup(",
+			"useEffect(() => () => {",
+			"if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);",
+			"aiEditControllerRef.current?.abort();",
+			"}, []);",
+		], "Encounter page-model request cleanup");
+		assert.doesNotMatch(cleanupSource, /useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|aiApi|settingsApi|app\/model|shared\/model/);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [

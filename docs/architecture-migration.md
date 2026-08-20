@@ -790,6 +790,8 @@ Next:
 - Phase 197 preserves the closed-overlay gate before slot evaluation, custom Modal title/props/no-op confirm, action forwarding, raw composition imports, and sibling overlay order. One added static regression brings the full suite to 483/483 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 198 by moving Encounter Page notification presentation from `EncounterPage.tsx` to private `ui/components/EncounterNotification.tsx`. Raw `EncounterView` retains notification state and its close/reset command; the leaf receives controlled message/close inputs.
 - Phase 198 preserves the truthy message null gate, shared Notification props, and sibling mount order. One added static regression brings the full suite to 484/484 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 199 by moving Encounter Page request-cleanup lifecycle from `EncounterPage.tsx` to private `model/useEncounterRequestCleanup.ts`. Raw `EncounterView` retains focus-timeout and AI-edit-controller ref ownership and passes them to the hook.
+- Phase 199 preserves mount cleanup ordering: clear a present focus timeout, then abort a present AI-edit controller. One added static regression brings the full suite to 485/485 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1005,6 +1007,12 @@ ownership at 482/482 tests.
 Phase 197 isolates Encounter Page Bestiary overlay shell in private page UI
 while retaining raw Bestiary composition, stable widget slots, and monster-add
 workflow ownership at 483/483 tests.
+Phase 198 isolates Encounter Page notification presentation in private page UI
+while retaining raw notification state and close/reset workflow ownership at
+484/484 tests.
+Phase 199 isolates Encounter Page request-cleanup lifecycle in private page
+model while retaining raw focus-timeout and AI-edit-controller ref ownership at
+485/485 tests.
 
 ### Provenance and transfer rule
 
@@ -1395,7 +1403,8 @@ Status: **In progress**
   tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests;
   Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests; Phase 194
   passes 480/480 tests; Phase 195 passes 481/481 tests; Phase 196 passes
-  482/482 tests; Phase 197 passes 483/483 tests.
+  482/482 tests; Phase 197 passes 483/483 tests; Phase 198 passes 484/484
+  tests; Phase 199 passes 485/485 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2733,6 +2742,44 @@ Phase 197 is page-local Bestiary-overlay presentation only, not a new Encounter
 workflow. The full `npm test` gate passes 483/483 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R68 / Phase 198 - Private Encounter notification
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Encounter Page notification presentation into private
+  `pages/encounter/ui/components/EncounterNotification.tsx`.
+- [x] Keep raw `EncounterView` ownership of notification state and its
+  close/reset command.
+- [x] Pass the leaf only controlled message/close inputs; preserve the truthy
+  null gate, shared `Notification` props, and sibling mount order.
+- [x] Keep the component outside public page runtime/type entries without a
+  runtime, API, store, navigation, notification-state, or encounter-workflow
+  dependency.
+
+Phase 198 is page-local notification presentation only, not a new Encounter
+workflow. The full `npm test` gate passes 484/484 tests; architecture and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
+
+### Recovery R69 / Phase 199 - Encounter request cleanup
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move the Encounter Page request-cleanup lifecycle into private
+  `pages/encounter/model/useEncounterRequestCleanup.ts`.
+- [x] Keep raw `EncounterView` ownership of the focus-timeout and AI-edit
+  controller refs, passing them into the page-model hook.
+- [x] Preserve mount cleanup ordering: clear a present timeout, then abort a
+  present controller.
+- [x] Keep the hook outside public page runtime/type entries without a runtime,
+  API, store, navigation, AI-model-loading, header-dismissal, or encounter
+  workflow dependency.
+
+Phase 199 is page-model lifecycle ownership only, not a new Encounter workflow.
+The full `npm test` gate passes 485/485 tests; architecture, performance, and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 
