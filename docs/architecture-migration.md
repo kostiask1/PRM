@@ -798,6 +798,8 @@ Next:
 - Phase 201 preserves hash decoding, navigation-plan construction/execution order, `120ms` delayed scroll/cleanup, and original effect dependencies. One added static regression brings the full suite to 487/487 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 202 by moving Session Page hash-navigation lifecycle from `SessionPage.tsx` to private `model/useSessionHashNavigation.ts`. Raw `SessionView` retains session state, rendered collections, and the section-toggle command.
 - Phase 202 preserves the Session-specific notes-expand predicate, `140ms` delayed scroll/cleanup, and original effect dependencies. One added static regression brings the full suite to 488/488 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 203 by moving Campaign Page character-type drag-drop browser lifecycle from `CampaignPage.tsx` to private `model/useCampaignCharacterTypeDrop.ts`. Raw `CampaignView` retains view identity and the character-type drop command.
+- Phase 203 preserves target/drop-zone lookup, drop-plan construction, listener registration/removal, and the raw-view effect dependency. One added static regression brings the full suite to 489/489 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1028,6 +1030,9 @@ and persistence command ownership at 487/487 tests.
 Phase 202 isolates Session Page hash-navigation lifecycle in private page model
 while retaining raw session state, rendered collections, and section-toggle
 command ownership at 488/488 tests.
+Phase 203 isolates Campaign Page character-type drag-drop browser lifecycle in
+private page model while retaining raw view identity and character-type drop
+command ownership at 489/489 tests.
 
 ### Provenance and transfer rule
 
@@ -1420,7 +1425,8 @@ Status: **In progress**
   passes 480/480 tests; Phase 195 passes 481/481 tests; Phase 196 passes
   482/482 tests; Phase 197 passes 483/483 tests; Phase 198 passes 484/484
   tests; Phase 199 passes 485/485 tests; Phase 200 passes 486/486 tests;
-  Phase 201 passes 487/487 tests; Phase 202 passes 488/488 tests.
+  Phase 201 passes 487/487 tests; Phase 202 passes 488/488 tests; Phase 203
+  passes 489/489 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2850,6 +2856,24 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 202 is page-model lifecycle ownership only, not a new Session workflow.
 The full `npm test` gate passes 488/488 tests; architecture, performance, and
+Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
+remains open for complete lint/typecheck.
+
+### Recovery R73 / Phase 203 - Campaign character-type drag drop
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Campaign Page character-type drag-drop browser lifecycle into
+  private `pages/campaign/model/useCampaignCharacterTypeDrop.ts`.
+- [x] Keep raw `CampaignView` ownership of view identity and the
+  character-type drop command.
+- [x] Preserve target/drop-zone lookup, drop-plan construction, listener
+  registration/removal, and the raw-view effect dependency.
+- [x] Keep the hook outside public page runtime/type entries without a runtime,
+  API, store, editor, archive, or campaign-workflow dependency.
+
+Phase 203 is page-model lifecycle ownership only, not a new Campaign workflow.
+The full `npm test` gate passes 489/489 tests; architecture, performance, and
 Ukrainian encoding checks also pass. `MD-R02` remains closed and `MD-R04`
 remains open for complete lint/typecheck.
 

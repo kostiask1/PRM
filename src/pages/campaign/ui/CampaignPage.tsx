@@ -1,5 +1,4 @@
 import {
-	useEffect,
 	useMemo,
 	useState,
 } from "react";
@@ -28,6 +27,7 @@ import CampaignPartialArchiveOverlay from "./components/CampaignPartialArchiveOv
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import "../../../assets/components/CampaignView.css";
 import useCampaignView from "../model/useCampaignView.ts";
+import { useCampaignCharacterTypeDrop } from "../model/useCampaignCharacterTypeDrop.ts";
 import { useCampaignHashNavigation } from "../model/useCampaignHashNavigation.ts";
 import { useCampaignPageRuntime } from "../model/CampaignPageRuntime.tsx";
 import { CampaignViewModel } from "../../../entities/campaign/index.js";
@@ -38,21 +38,13 @@ import type { DomainId } from "../../../entities/campaign/index.js";
 import type { CampaignPageCampaign } from "../model/contracts.ts";
 import {
 	filterCampaignSessions,
-	getCampaignCharacterDropRequest,
 	getCampaignEntityAiIgnoredUpdate,
 	getCampaignPageCampaign,
 	getCampaignNotesViewModePlan,
 	getCampaignSectionState,
-	type CampaignCharacterDropPayload,
 	type CampaignNotesViewMode,
 	type CampaignSessionItem,
 } from "../model/campaignPagePresentation.ts";
-
-interface CampaignDragDropDetail {
-	payload?: CampaignCharacterDropPayload;
-	clientX: number;
-	clientY: number;
-}
 
 type CampaignViewController = ReturnType<typeof useCampaignView>;
 
@@ -133,36 +125,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		setNotesViewMode,
 	});
 
-	useEffect(() => {
-		const handleCharacterDragDrop = (
-			event: CustomEvent<CampaignDragDropDetail>,
-		) => {
-			const target = document.elementFromPoint(
-				event.detail.clientX,
-				event.detail.clientY,
-			);
-			const dropZone = target?.closest?.<HTMLElement>(
-				"[data-character-drop-type]",
-			);
-			const targetType = dropZone?.dataset.characterDropType;
-			const request = getCampaignCharacterDropRequest(
-				event.detail?.payload,
-				targetType,
-			);
-			if (request) view.handleCharacterTypeDrop(request);
-		};
-
-		window.addEventListener(
-			"prm-draggable-list-drop",
-			handleCharacterDragDrop as EventListener,
-		);
-		return () => {
-			window.removeEventListener(
-				"prm-draggable-list-drop",
-				handleCharacterDragDrop as EventListener,
-			);
-		};
-	}, [view]);
+	useCampaignCharacterTypeDrop({
+		viewDependency: view,
+		onCharacterTypeDrop: view.handleCharacterTypeDrop,
+	});
 
 	const handleNotesViewModeChange = (mode: CampaignNotesViewMode) => {
 		const plan = getCampaignNotesViewModePlan(mode, isNotesCollapsed);

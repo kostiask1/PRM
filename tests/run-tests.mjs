@@ -6750,6 +6750,38 @@ await run(
 );
 
 await run(
+	"Phase 203 isolates Campaign character drop lifecycle in page model",
+	async () => {
+		const [campaignSource, dropSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+				fs.readFile("src/pages/campaign/model/useCampaignCharacterTypeDrop.ts", "utf8"),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+		assert.match(campaignSource, /import \{ useCampaignCharacterTypeDrop \} from "\.\.\/model\/useCampaignCharacterTypeDrop\.ts";/);
+		assert.doesNotMatch(campaignSource, /handleCharacterDragDrop|getCampaignCharacterDropRequest|CampaignDragDropDetail/);
+		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useCampaignCharacterTypeDrop/);
+		assertSourceTokensInOrder(campaignSource, [
+			"useCampaignCharacterTypeDrop({",
+			"viewDependency: view,",
+			"onCharacterTypeDrop: view.handleCharacterTypeDrop,",
+		], "Campaign raw character-drop command ownership");
+		assertSourceTokensInOrder(dropSource, [
+			'import { useEffect } from "react";',
+			"export function useCampaignCharacterTypeDrop({",
+			"const target = document.elementFromPoint(",
+			'"[data-character-drop-type]",',
+			"const request = getCampaignCharacterDropRequest(",
+			"if (request) onCharacterTypeDrop(request);",
+			'"prm-draggable-list-drop",',
+			"}, [viewDependency]);",
+		], "Campaign page-model character-drop lifecycle");
+		assert.doesNotMatch(dropSource, /useCampaignView|useCampaignPageRuntime|campaignApi|app\/model|shared\/model/);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
