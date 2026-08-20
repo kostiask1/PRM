@@ -41,6 +41,7 @@ import { useEncounterAiModelLoading } from "../model/useEncounterAiModelLoading.
 import { useEncounterGridFocus } from "../model/useEncounterGridFocus.ts";
 import { useEncounterHpEditing } from "../model/useEncounterHpEditing.ts";
 import { useEncounterCharacterModal } from "../model/useEncounterCharacterModal.ts";
+import { useEncounterDisplaySettings } from "../model/useEncounterDisplaySettings.ts";
 import { useEncounterPlayerCreation } from "../model/useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
 import "../../../assets/components/EncounterView.css";
@@ -325,6 +326,7 @@ function EncounterView() {
 			setAiEditError(error instanceof Error ? error.message : lang.t("Failed to connect to AI."));
 		},
 	});
+	const displaySettings = useEncounterDisplaySettings({ patchUiSettings });
 
 	const renderContext = getEncounterRenderContext(view, campaign, sessionId);
 	if (!renderContext) return <EncounterLoading />;
@@ -562,21 +564,6 @@ function EncounterView() {
 
 
 
-	const updateEncounterViewMode = (mode: EncounterDisplayMode) => {
-		const nextMode = mode === "grid" ? "grid" : "single";
-		patchUiSettings({ encounterViewMode: nextMode });
-		api.updateSettings({ encounterViewMode: nextMode }).catch((error) => {
-			console.error("Failed to save encounter view mode setting", error);
-		});
-	};
-
-	const updateEncounterGridColumns = (columns: number) => {
-		const nextColumns = Math.min(4, Math.max(1, Number(columns) || 2));
-		patchUiSettings({ encounterGridColumns: nextColumns });
-		api.updateSettings({ encounterGridColumns: nextColumns }).catch((error) => {
-			console.error("Failed to save encounter grid columns setting", error);
-		});
-	};
 
 
 	const averageInitiativeTooltip = (
@@ -653,8 +640,8 @@ function EncounterView() {
 				weightedTooltip={weightedInitiativeTooltip}
 				metricsTooltip={encounterMetricsTooltip}
 				onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}
-				onDisplayMode={updateEncounterViewMode}
-				onGridColumns={updateEncounterGridColumns}
+				onDisplayMode={displaySettings.updateViewMode}
+				onGridColumns={displaySettings.updateGridColumns}
 			/>
 			<div className="Panel__body EncounterView__body">
 				<div className="EncounterView__main">
