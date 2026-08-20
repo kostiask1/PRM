@@ -3,7 +3,6 @@ import {
 	useMemo,
 	useRef,
 	useState,
-	type ReactNode,
 	type RefObject,
 } from "react";
 import {
@@ -12,7 +11,6 @@ import {
 	Modal,
 	Notification,
 	Panel,
-	Tooltip,
 } from "../../../shared/ui/index.js";
 import { BestiaryBrowser as Bestiary } from "../../../widgets/bestiary-browser/index.js";
 import {
@@ -56,7 +54,7 @@ import {
 import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";
 import EncounterCharacterOverlays from "./components/EncounterCharacterOverlays.tsx";
 import EncounterDetail from "./components/EncounterDetail.tsx";
-import EncounterHeaderActions from "./components/EncounterHeaderActions.tsx";
+import EncounterHeader from "./components/EncounterHeader.tsx";
 import EncounterMonsterRow from "./components/EncounterMonsterRow.tsx";
 
 const EncounterRulesReferenceContent =
@@ -76,7 +74,6 @@ const EncounterAiResponseModal = createAiResponseModalComponent({
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 import { lang } from "../../../shared/lib/index.js";
-import { renderMentionText } from "../../../features/entity-link/index.js";
 import {
 	isEncounterCharacterParticipant,
 } from "../../../entities/encounter/index.js";
@@ -214,101 +211,6 @@ function getEncounterViewPlayerCharacters(
 	view: EncounterViewModel,
 ): CampaignEntityRecord[] {
 	return view.playerCharacters || EMPTY_CAMPAIGN_ENTITIES;
-}
-
-interface EncounterHeaderProps {
-	view: EncounterViewModel;
-	displayMode: EncounterDisplayMode;
-	displayedMonsterCount: number;
-	gridColumns: number;
-	isActionsOpen: boolean;
-	actionsRef: RefObject<HTMLDivElement | null>;
-	averageTooltip: ReactNode;
-	maxTooltip: ReactNode;
-	weightedTooltip: ReactNode;
-	metricsTooltip: ReactNode;
-	onToggleActions: () => void;
-	onDisplayMode: (mode: EncounterDisplayMode) => void;
-	onGridColumns: (columns: number) => void;
-}
-
-function EncounterMetrics({
-	view,
-	averageTooltip,
-	maxTooltip,
-	weightedTooltip,
-}: Pick<
-	EncounterHeaderProps,
-	"view" | "averageTooltip" | "maxTooltip" | "weightedTooltip"
->) {
-	const participantCount = view.encounter?.monsters.length || 0;
-	const metrics: Array<[ReactNode, ReactNode, ReactNode, string]> = [
-		[lang.t("Avg initiative"), view.initiativeStats.average, averageTooltip, ""],
-		[lang.t("Max initiative"), view.initiativeStats.max, maxTooltip, ""],
-		[
-			lang.t("CR-weighted avg initiative"),
-			view.initiativeStats.weightedAverage,
-			weightedTooltip,
-			" EncounterViewMetric__accent",
-		],
-	];
-	return (
-		<div className="EncounterView__metrics">
-			<div className="EncounterViewMetric">
-				<span className="EncounterViewMetric__label">{lang.t("Participants")}</span>
-				<span className="EncounterViewMetric__value">{participantCount}</span>
-			</div>
-			{participantCount > 0 &&
-				metrics.map(([label, value, content, modifier]) => (
-					<div className={`EncounterViewMetric${modifier}`} key={String(label)}>
-						<Tooltip content={content} className="EncounterViewMetric__tooltip">
-							<span className="EncounterViewMetric__label">{label}</span>
-							<span className="EncounterViewMetric__value">{value}</span>
-						</Tooltip>
-					</div>
-				))}
-		</div>
-	);
-}
-
-function EncounterHeader({
-	view,
-	displayMode,
-	displayedMonsterCount,
-	gridColumns,
-	isActionsOpen,
-	actionsRef,
-	averageTooltip,
-	maxTooltip,
-	weightedTooltip,
-	metricsTooltip,
-	onToggleActions,
-	onDisplayMode,
-	onGridColumns,
-}: EncounterHeaderProps) {
-	return (
-		<div className="Panel__header">
-			<EncounterHeaderIdentity view={view} averageTooltip={averageTooltip} maxTooltip={maxTooltip} weightedTooltip={weightedTooltip} />
-			<EncounterHeaderActions {...{ view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns }} />
-		</div>
-	);
-}
-
-function EncounterHeaderIdentity({
-	view,
-	averageTooltip,
-	maxTooltip,
-	weightedTooltip,
-}: Pick<EncounterHeaderProps, "view" | "averageTooltip" | "maxTooltip" | "weightedTooltip">) {
-	return (
-		<div className="EncounterView__header">
-			<Button variant="ghost" size={Button.SIZES.SMALL} onClick={view.handleBack} icon="back" className="SessionView__backBtn" />
-			<Tooltip content={lang.t("Click to rename")}>
-				<h2 className="editable_title" onClick={view.handleRename}>{renderMentionText(view.encounter?.name || "")}</h2>
-			</Tooltip>
-			<EncounterMetrics {...{ view, averageTooltip, maxTooltip, weightedTooltip }} />
-		</div>
-	);
 }
 
 function EncounterBestiaryOverlay({

@@ -778,6 +778,8 @@ Next:
 - Phase 191 preserves the grid's repeated ID evaluation, selection/ref/class policy, grid/single empty states, post-null selected-character callback evaluation, CharacterCard flags, and stat-block callback/image-override delegation. One added static regression brings the full suite to 477/477 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 192 by moving Encounter Page participant-row, combat-stats, HP-input, and action presentation from `EncounterPage.tsx` to private `ui/components/EncounterMonsterRow.tsx`. Raw `EncounterView` retains draft state, identity/selection/list-adapter policy, and select/HP handlers; the leaf receives narrow row-view commands.
 - Phase 192 preserves ID-to-character-to-name evaluation, undefined-draft HP display semantics, coercion/color, native input and stop-propagation action order, duplicate-by-monster identity, and the character delete-only path. One added static regression brings the full suite to 478/478 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 193 by moving Encounter Page header, identity, and metrics presentation from `EncounterPage.tsx` to private `ui/components/EncounterHeader.tsx`, which forwards private `EncounterHeaderActions`. Raw `EncounterView` retains action-menu lifecycle, grid/display-settings persistence, inline toggle, and all tooltip-node construction; the leaf receives narrow unified view/action inputs.
+- Phase 193 preserves header order, direct method handlers, mention fallback, eager metric tuple construction, participant-count gating, metric key/classes, and existing private action-menu composition. One added static regression brings the full suite to 479/479 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -978,6 +980,9 @@ and image-override ownership at 477/477 tests.
 Phase 192 isolates Encounter Page participant-row/combat-stats/HP-input/action
 presentation in private page UI while retaining raw draft, identity, selection,
 list-adapter, and select/HP workflow ownership at 478/478 tests.
+Phase 193 isolates Encounter Page header/identity/metrics presentation in
+private page UI while retaining raw action-menu lifecycle, settings persistence,
+inline toggle, and tooltip-node ownership at 479/479 tests.
 
 ### Provenance and transfer rule
 
@@ -1366,7 +1371,7 @@ Status: **In progress**
   passes 471/471 tests; Phase 186 passes 472/472 tests; Phase 187 passes
   473/473 tests; Phase 188 passes 474/474 tests; Phase 189 passes 475/475
   tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests;
-  Phase 192 passes 478/478 tests.
+  Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2594,6 +2599,29 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 192 is page-local participant-row presentation only, not a new Encounter
 workflow. The full `npm test` gate passes 478/478 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R63 / Phase 193 - Private Encounter header presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Encounter Page header/identity/metrics presentation into private
+  `pages/encounter/ui/components/EncounterHeader.tsx`, forwarding the existing
+  private `EncounterHeaderActions`.
+- [x] Keep raw `EncounterView` ownership of action-menu open/ref/dismissal
+  lifecycle, grid/display settings persistence, the inline toggle, and four
+  unconditional tooltip ReactNodes.
+- [x] Pass the leaf a narrow unified view plus controlled display/action inputs;
+  preserve header order, direct view-method handlers, mention fallback, eager
+  metric tuple construction, participant-count gate, `String(label)` keys, and
+  metric/header classes.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, header-menu, settings, or
+  encounter-workflow dependency.
+
+Phase 193 is page-local Encounter-header presentation only, not a new Encounter
+workflow. The full `npm test` gate passes 479/479 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

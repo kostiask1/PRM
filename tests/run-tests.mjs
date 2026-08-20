@@ -6113,6 +6113,119 @@ await run(
 );
 
 await run(
+	"Phase 193 isolates Encounter header presentation",
+	async () => {
+		const {
+			encounterSource,
+			componentSource: headerSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getEncounterPrivateComponentSources("EncounterHeader");
+		assertEncounterPrivateComponentBoundary({
+			componentName: "EncounterHeader",
+			encounterSource,
+			rawDefinitionPattern:
+				/interface EncounterHeaderProps|function Encounter(?:Header|HeaderIdentity|Metrics)\(/,
+			runtimeEntrySource,
+			typeEntrySource,
+		});
+		assertSourceTokensInOrder(
+			encounterSource,
+			[
+				"function useEncounterHeaderDismissal(",
+				"function EncounterView() {",
+				"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
+				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
+				"useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));",
+				"const updateEncounterViewMode = (mode: EncounterDisplayMode) => {",
+				"patchUiSettings({ encounterViewMode: nextMode });",
+				"const updateEncounterGridColumns = (columns: number) => {",
+				"patchUiSettings({ encounterGridColumns: nextColumns });",
+				"const averageInitiativeTooltip = (",
+				'lang.t("Avg initiative")',
+				"const maxInitiativeTooltip = (",
+				'lang.t("Max initiative")',
+				"const weightedInitiativeTooltip = (",
+				'lang.t("CR-weighted avg initiative")',
+				"const encounterMetricsTooltip = (",
+				'lang.t("Combat encounters")',
+				"<EncounterHeader",
+				"view={view}",
+				"displayMode={effectiveDisplayMode}",
+				"displayedMonsterCount={displayedMonsterCount}",
+				"gridColumns={gridColumns}",
+				"isActionsOpen={isHeaderActionsOpen}",
+				"actionsRef={headerActionsRef}",
+				"averageTooltip={averageInitiativeTooltip}",
+				"maxTooltip={maxInitiativeTooltip}",
+				"weightedTooltip={weightedInitiativeTooltip}",
+				"metricsTooltip={encounterMetricsTooltip}",
+				"onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}",
+				"onDisplayMode={updateEncounterViewMode}",
+				"onGridColumns={updateEncounterGridColumns}",
+				"<DraggableList",
+			],
+			"Encounter raw header state, settings, and tooltip ownership",
+		);
+		assertSourceTokensInOrder(
+			headerSource,
+			[
+				'import type { ReactNode, RefObject } from "react";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import { Button, Tooltip } from "../../../../shared/ui/index.js";',
+				'import { renderMentionText } from "../../../../features/entity-link/index.js";',
+				'import type { EncounterViewModel } from "../../model/contracts.ts";',
+				'import EncounterHeaderActions from "./EncounterHeaderActions.tsx";',
+				'type EncounterDisplayMode = "grid" | "single";',
+				"type EncounterHeaderView = Pick<",
+				'| "encounter"',
+				'| "initiativeStats"',
+				'| "handleBack"',
+				'| "handleRename"',
+				'| "undoStack"',
+				'| "redoStack"',
+				'| "isSaving"',
+				'| "fileInputRef"',
+				'| "handleFileChange"',
+				'| "handleExport"',
+				'| "handleUndo"',
+				'| "handleRedo"',
+				"interface EncounterHeaderProps {",
+				"actionsRef: RefObject<HTMLDivElement | null>;",
+				"averageTooltip: ReactNode;",
+				"metricsTooltip: ReactNode;",
+				"export default function EncounterHeader({",
+				'"Panel__header"',
+				"<EncounterHeaderIdentity",
+				"<EncounterHeaderActions {...{ view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns }} />",
+				"function EncounterHeaderIdentity({",
+				"onClick={view.handleBack}",
+				'<Tooltip content={lang.t("Click to rename")}>',
+				"onClick={view.handleRename}",
+				'renderMentionText(view.encounter?.name || "")',
+				"<EncounterMetrics",
+				"function EncounterMetrics({",
+				"const participantCount = view.encounter?.monsters.length || 0;",
+				"const metrics: Array<[ReactNode, ReactNode, ReactNode, string]> = [",
+				'[lang.t("Avg initiative"), view.initiativeStats.average, averageTooltip, ""],',
+				'[lang.t("Max initiative"), view.initiativeStats.max, maxTooltip, ""],',
+				'lang.t("CR-weighted avg initiative"),',
+				'" EncounterViewMetric__accent",',
+				"participantCount > 0 &&",
+				"metrics.map(([label, value, content, modifier]) => (",
+				"key={String(label)}",
+				'"EncounterViewMetric__tooltip"',
+			],
+			"Encounter private header presentation",
+		);
+		assert.doesNotMatch(
+			headerSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|aiApi|settingsApi|\bapi\.|setIsHeaderActionsOpen|headerActionsRef|updateEncounterViewMode|updateEncounterGridColumns|patchUiSettings|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|EncounterPage/,
+		);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
@@ -6328,11 +6441,16 @@ await run(
 	async () => {
 		const [
 			encounterSource,
+			headerSource,
 			headerActionsSource,
 			runtimeEntrySource,
 			typeEntrySource,
 		] = await Promise.all([
 			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/encounter/ui/components/EncounterHeader.tsx",
+				"utf8",
+			),
 			fs.readFile(
 				"src/pages/encounter/ui/components/EncounterHeaderActions.tsx",
 				"utf8",
@@ -6343,14 +6461,28 @@ await run(
 
 		assert.match(
 			encounterSource,
-			/import EncounterHeaderActions from "\.\/components\/EncounterHeaderActions\.tsx";/,
+			/import EncounterHeader from "\.\/components\/EncounterHeader\.tsx";/,
+		);
+		assert.match(
+			headerSource,
+			/import EncounterHeaderActions from "\.\/EncounterHeaderActions\.tsx";/,
+		);
+		assert.doesNotMatch(
+			encounterSource,
+			/import EncounterHeaderActions from/,
+		);
+		assertSourceTokensInOrder(
+			headerSource,
+			[
+				"export default function EncounterHeader({",
+				"<EncounterHeaderIdentity",
+				"<EncounterHeaderActions {...{ view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns }} />",
+			],
+			"Encounter header composition forwarding to private actions",
 		);
 		assertSourceTokensInOrder(
 			encounterSource,
 			[
-				"function EncounterHeader({",
-				"<EncounterHeaderIdentity",
-				"<EncounterHeaderActions {...{ view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns }} />",
 				"function useEncounterHeaderDismissal(",
 				"if (!isOpen) return undefined;",
 				"if (!actionsRef.current?.contains(event.target as Node)) onClose();",
@@ -8311,7 +8443,7 @@ await run(
 			assert.deepEqual(mentionConsumers.sort(), [
 				"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
 				"src/pages/campaign/ui/components/CampaignNotesSection.tsx",
-				"src/pages/encounter/ui/EncounterPage.tsx",
+				"src/pages/encounter/ui/components/EncounterHeader.tsx",
 				"src/pages/encounter/ui/components/EncounterMonsterRow.tsx",
 				"src/pages/session/ui/SessionPage.tsx",
 				"src/pages/session/ui/components/SceneCardHeader.tsx",
