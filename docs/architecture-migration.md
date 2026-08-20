@@ -808,6 +808,8 @@ Next:
 - Phase 206 preserves per-instance draft replacement, absent-draft no-op, HP normalization, and delete-after-commit policy. One added static regression brings the full suite to 492/492 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 207 by moving Encounter Page character-modal state and synchronization from `EncounterPage.tsx` to private `model/useEncounterCharacterModal.ts`. Raw `EncounterView` retains participant-selection and update adapters.
 - Phase 207 preserves open/close, exact instance match, character projection, and participant-type override. One added static regression brings the full suite to 493/493 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 208 by moving Encounter display-settings patch/persistence from `EncounterPage.tsx` to private `model/useEncounterDisplaySettings.ts`. Raw `EncounterView` retains runtime patch adapter and header composition.
+- Phase 208 preserves mode/column normalization, patch-before-request order, and error logging. The full suite remains 493/493 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
