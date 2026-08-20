@@ -1765,6 +1765,20 @@ async function getEncounterPrivateComponentSources(componentName) {
 	return { encounterSource, componentSource, runtimeEntrySource, typeEntrySource };
 }
 
+async function getSessionPrivateComponentSources(componentName) {
+	const [sessionSource, componentSource, runtimeEntrySource, typeEntrySource] =
+		await Promise.all([
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				`src/pages/session/ui/components/${componentName}.tsx`,
+				"utf8",
+			),
+			fs.readFile("src/pages/session/index.js", "utf8"),
+			fs.readFile("src/pages/session/index.d.ts", "utf8"),
+		]);
+	return { sessionSource, componentSource, runtimeEntrySource, typeEntrySource };
+}
+
 function assertEncounterPrivateComponentBoundary({
 	componentName,
 	encounterSource,
@@ -5542,16 +5556,12 @@ await run(
 await run(
 	"Phase 189 isolates Session scene-card presentation",
 	async () => {
-		const [sessionSource, sceneCardSource, runtimeEntrySource, typeEntrySource] =
-			await Promise.all([
-				fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
-				fs.readFile(
-					"src/pages/session/ui/components/SessionSceneCard.tsx",
-					"utf8",
-				),
-				fs.readFile("src/pages/session/index.js", "utf8"),
-				fs.readFile("src/pages/session/index.d.ts", "utf8"),
-			]);
+		const {
+			sessionSource,
+			componentSource: sceneCardSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getSessionPrivateComponentSources("SessionSceneCard");
 
 		assert.match(
 			sessionSource,
@@ -6221,6 +6231,101 @@ await run(
 		assert.doesNotMatch(
 			headerSource,
 			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|aiApi|settingsApi|\bapi\.|setIsHeaderActionsOpen|headerActionsRef|updateEncounterViewMode|updateEncounterGridColumns|patchUiSettings|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|EncounterPage/,
+		);
+	},
+);
+
+await run(
+	"Phase 194 isolates Session scoped-entity modal presentation",
+	async () => {
+		const {
+			sessionSource,
+			componentSource: modalSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getSessionPrivateComponentSources("SessionScopedEntityModal");
+
+		assert.match(
+			sessionSource,
+			/import SessionScopedEntityModal from "\.\/components\/SessionScopedEntityModal\.tsx";/,
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/interface SessionScopedEntityModalProps|function SessionScoped(?:Entity|Location|Npc)Modal\(/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionScopedEntityModal/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"function isSessionEntityId(value: unknown): value is string | number {",
+				"function getCurrentSessionEntity(",
+				"function useSessionScopedEntityLinks(",
+				"if (modalState.scope !== \"session\") {",
+				"<SessionScopedEntityModal",
+				"type={modalState.type}",
+				"entity={getCurrentSessionEntity(view, modalState)}",
+				"campaignSlug={view.campaignSlug}",
+				"onLocationChange={(id, updatedEntity) => {",
+				"view.handleSessionLocationChange(id, updatedEntity);",
+				"onLocationDelete={(id) => {",
+				"view.handleSessionLocationDelete(id);",
+				"onClose();",
+				"onNpcChange={(id, updatedEntity) => {",
+				"view.handleSessionNpcChange(id, updatedEntity);",
+				"onNpcDelete={(id) => {",
+				"view.handleSessionNpcDelete(id);",
+				"onClose();",
+			],
+			"Session raw scoped-entity resolver and mutation ownership",
+		);
+		assertSourceTokensInOrder(
+			modalSource,
+			[
+				'import {',
+				"CharacterCard,",
+				"LocationCard,",
+				'} from "../../../../widgets/campaign-entity-card/index.js";',
+				'import { normalizeSessionEntity } from "../../model/sessionEntityModel.ts";',
+				"interface SessionScopedEntityModalProps {",
+				"type: string;",
+				"entity: Record<string, unknown>;",
+				"campaignSlug?: string | null;",
+				"onLocationChange: (",
+				"onLocationDelete: (id: string | number | undefined) => void;",
+				"onNpcChange: (",
+				"onNpcDelete: (id: string | number | undefined) => void;",
+				"export default function SessionScopedEntityModal({",
+				"if (type === \"locations\") {",
+				'const location = normalizeSessionEntity("locations", entity);',
+				"<LocationCard",
+				"key={location.id}",
+				"location={{ ...location, collapsed: false }}",
+				"onChange={onLocationChange}",
+				"onDelete={onLocationDelete}",
+				"onToggleCollapse={null}",
+				"campaignSlug={campaignSlug}",
+				"enableHistory={false}",
+				'viewMode="modal"',
+				'const npc = normalizeSessionEntity("npc", entity);',
+				"<CharacterCard",
+				"key={npc.id}",
+				"character={{ ...npc, collapsed: false }}",
+				"onChange={onNpcChange}",
+				"onDelete={onNpcDelete}",
+				"onToggleCollapse={null}",
+				"campaignSlug={campaignSlug}",
+				"enableHistory={false}",
+				'type="npc"',
+				'viewMode="modal"',
+			],
+			"Session private scoped-entity modal presentation",
+		);
+		assert.doesNotMatch(
+			modalSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|EntityLinkResolver|findEntityByName|getCurrentSessionEntity|isSessionEntityId|handleSession|onClose|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|SessionPage/,
 		);
 	},
 );

@@ -26,6 +26,7 @@ import SessionResultSection from "./components/SessionResultSection.tsx";
 import SessionSceneCard from "./components/SessionSceneCard.tsx";
 import SessionScenesSection from "./components/SessionScenesSection.tsx";
 import SessionScopeImportOverlay from "./components/SessionScopeImportOverlay.tsx";
+import SessionScopedEntityModal from "./components/SessionScopedEntityModal.tsx";
 import {
 	CharacterCard,
 	CreateCharacterButton,
@@ -69,7 +70,6 @@ import {
 	shouldExpandSessionNotesFromHash,
 } from "../model/sessionPagePresentation.ts";
 import {
-	normalizeSessionEntity,
 	type SessionEntityType,
 	type SessionPageEntity,
 } from "../model/sessionEntityModel.ts";
@@ -85,12 +85,6 @@ function isSessionEntityId(value: unknown): value is string | number {
 }
 
 type SessionController = ReturnType<typeof useSessionView>;
-
-interface SessionScopedEntityModalProps {
-	view: SessionController;
-	modalState: EntityLinkModalState;
-	onClose: () => void;
-}
 
 function getSessionScopedEntityLinks(view: SessionController) {
 	return [
@@ -119,71 +113,6 @@ function getCurrentSessionEntity(
 	) || modalState.entity;
 }
 
-function SessionScopedLocationModal({
-	view,
-	modalState,
-	onClose,
-}: SessionScopedEntityModalProps) {
-	const location = normalizeSessionEntity(
-		"locations",
-		getCurrentSessionEntity(view, modalState),
-	);
-	return (
-		<LocationCard
-			key={location.id}
-			location={{ ...location, collapsed: false }}
-			onChange={(id, updatedEntity) => {
-				if (isSessionEntityId(id)) {
-					view.handleSessionLocationChange(id, updatedEntity);
-				}
-			}}
-			onDelete={(id) => {
-				if (isSessionEntityId(id)) view.handleSessionLocationDelete(id);
-				onClose();
-			}}
-			onToggleCollapse={null}
-			campaignSlug={view.campaignSlug}
-			enableHistory={false}
-			viewMode="modal"
-		/>
-	);
-}
-
-function SessionScopedNpcModal({
-	view,
-	modalState,
-	onClose,
-}: SessionScopedEntityModalProps) {
-	const npc = normalizeSessionEntity(
-		"npc",
-		getCurrentSessionEntity(view, modalState),
-	);
-	return (
-		<CharacterCard
-			key={npc.id}
-			character={{ ...npc, collapsed: false }}
-			onChange={(id, updatedEntity) => {
-				if (isSessionEntityId(id)) view.handleSessionNpcChange(id, updatedEntity);
-			}}
-			onDelete={(id) => {
-				if (isSessionEntityId(id)) view.handleSessionNpcDelete(id);
-				onClose();
-			}}
-			onToggleCollapse={null}
-			campaignSlug={view.campaignSlug}
-			enableHistory={false}
-			type="npc"
-			viewMode="modal"
-		/>
-	);
-}
-
-function SessionScopedEntityModal(props: SessionScopedEntityModalProps) {
-	return props.modalState.type === "locations"
-		? <SessionScopedLocationModal {...props} />
-		: <SessionScopedNpcModal {...props} />;
-}
-
 function useSessionScopedEntityLinks(
 	view: SessionController,
 	parentEntityLinks: EntityLinkResolver | null,
@@ -202,9 +131,25 @@ function useSessionScopedEntityLinks(
 				}
 				return (
 					<SessionScopedEntityModal
-						view={view}
-						modalState={modalState}
-						onClose={onClose}
+						type={modalState.type}
+						entity={getCurrentSessionEntity(view, modalState)}
+						campaignSlug={view.campaignSlug}
+						onLocationChange={(id, updatedEntity) => {
+							if (isSessionEntityId(id)) {
+								view.handleSessionLocationChange(id, updatedEntity);
+							}
+						}}
+						onLocationDelete={(id) => {
+							if (isSessionEntityId(id)) view.handleSessionLocationDelete(id);
+							onClose();
+						}}
+						onNpcChange={(id, updatedEntity) => {
+							if (isSessionEntityId(id)) view.handleSessionNpcChange(id, updatedEntity);
+						}}
+						onNpcDelete={(id) => {
+							if (isSessionEntityId(id)) view.handleSessionNpcDelete(id);
+							onClose();
+						}}
 					/>
 				);
 			},

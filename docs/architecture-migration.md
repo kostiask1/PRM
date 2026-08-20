@@ -780,6 +780,8 @@ Next:
 - Phase 192 preserves ID-to-character-to-name evaluation, undefined-draft HP display semantics, coercion/color, native input and stop-propagation action order, duplicate-by-monster identity, and the character delete-only path. One added static regression brings the full suite to 478/478 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 193 by moving Encounter Page header, identity, and metrics presentation from `EncounterPage.tsx` to private `ui/components/EncounterHeader.tsx`, which forwards private `EncounterHeaderActions`. Raw `EncounterView` retains action-menu lifecycle, grid/display-settings persistence, inline toggle, and all tooltip-node construction; the leaf receives narrow unified view/action inputs.
 - Phase 193 preserves header order, direct method handlers, mention fallback, eager metric tuple construction, participant-count gating, metric key/classes, and existing private action-menu composition. One added static regression brings the full suite to 479/479 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 194 by moving Session Page session-scoped NPC/location modal card presentation from `SessionPage.tsx` to private `ui/components/SessionScopedEntityModal.tsx`. Raw `SessionView` retains the session-only resolver, current-entity lookup, ID guards, and all change/delete/close command adapters; the leaf receives controlled entity/type/card inputs.
+- Phase 194 preserves the `locations`-then-NPC branch, session-entity normalization, card keys and modal flags, forced expanded state, and delete-before-close ordering. One added static regression brings the full suite to 480/480 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -983,6 +985,9 @@ list-adapter, and select/HP workflow ownership at 478/478 tests.
 Phase 193 isolates Encounter Page header/identity/metrics presentation in
 private page UI while retaining raw action-menu lifecycle, settings persistence,
 inline toggle, and tooltip-node ownership at 479/479 tests.
+Phase 194 isolates Session Page session-scoped NPC/location modal card
+presentation in private page UI while retaining raw resolver/current-entity
+lookup, ID guards, and change/delete/close workflow ownership at 480/480 tests.
 
 ### Provenance and transfer rule
 
@@ -1371,7 +1376,8 @@ Status: **In progress**
   passes 471/471 tests; Phase 186 passes 472/472 tests; Phase 187 passes
   473/473 tests; Phase 188 passes 474/474 tests; Phase 189 passes 475/475
   tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests;
-  Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests.
+  Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests; Phase 194
+  passes 480/480 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2624,6 +2630,27 @@ Phase 193 is page-local Encounter-header presentation only, not a new Encounter
 workflow. The full `npm test` gate passes 479/479 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R64 / Phase 194 - Private Session scoped-entity modal presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Session Page session-scoped NPC/location modal card presentation
+  into private `pages/session/ui/components/SessionScopedEntityModal.tsx`.
+- [x] Keep raw `SessionView` ownership of the session-only resolver,
+  current-entity lookup, ID guards, and every change/delete/close command.
+- [x] Pass the leaf only the raw source entity, modal type, campaign slug, and
+  controlled card callbacks; preserve the `locations`-then-NPC branch,
+  normalizer, card keys/flags, forced expanded state, and delete-before-close
+  order.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, resolver, or entity-workflow
+  dependency.
+
+Phase 194 is page-local scoped-entity modal presentation only, not a new
+Session entity workflow. The full `npm test` gate passes 480/480 tests;
+architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
+remains closed and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 
