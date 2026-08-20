@@ -5721,15 +5721,12 @@ await run(
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
 				"function EncounterView() {",
-				"const [modalCharacter, setModalCharacter] =",
-				"useState<EncounterViewParticipant | null>(null);",
 				"const availablePlayerCharacters = useMemo(",
 				"getAvailableEncounterCharacters(",
 				"const playerCreation = useEncounterPlayerCreation({",
 				"onAdd: view.handleAddCharacter,",
-				"const handleCharacterChange =",
-				"view.updateEncounterCharacter(instanceId, nextCharacter);",
-				"setModalCharacter((current) =>",
+				"const characterModal = useEncounterCharacterModal({",
+				"onUpdate: view.updateEncounterCharacter,",
 				"<EncounterBestiaryOverlay",
 				"<EncounterCharacterOverlays",
 				"open={view.showCharacterPicker}",
@@ -5738,7 +5735,7 @@ await run(
 				"draft={playerCreation.draft}",
 				"available={availablePlayerCharacters}",
 				"allCharacters={view.playerCharacters}",
-				"modalCharacter={modalCharacter}",
+				"modalCharacter={characterModal.value}",
 				"campaignSlug={activeCampaign.slug}",
 				"onClosePicker={playerCreation.closePicker}",
 				"onDraft={playerCreation.setDraft}",
@@ -5746,9 +5743,9 @@ await run(
 				"onReset={playerCreation.reset}",
 				"onStartCreate={playerCreation.start}",
 				"onAdd={view.handleAddCharacter}",
-				"onCloseCharacter={() => setModalCharacter(null)}",
+				"onCloseCharacter={characterModal.close}",
 				"getModalCharacterOnChange={(character) =>",
-				"handleCharacterChange(getParticipantInstanceId(character))",
+				"characterModal.getOnChange(getParticipantInstanceId(character))",
 				"<MonsterAiActionModal",
 			],
 			"Encounter raw character-picker state, identity, and workflow ownership",
@@ -5894,8 +5891,8 @@ await run(
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
 				"function EncounterView() {",
-				"const handleCharacterChange =",
-				"view.updateEncounterCharacter(instanceId, nextCharacter);",
+				"const characterModal = useEncounterCharacterModal({",
+				"onUpdate: view.updateEncounterCharacter,",
 				"<EncounterDetail",
 				"displayMode={effectiveDisplayMode}",
 				"gridMonsters={gridMonsters}",
@@ -5909,7 +5906,7 @@ await run(
 				"onAiAction={handleMonsterAiAction}",
 				"onFieldEdit={openEditMonsterAction}",
 				"onTokenImageChange={handleMonsterTokenImageChange}",
-				"onCharacterChange={handleCharacterChange}",
+				"onCharacterChange={characterModal.getOnChange}",
 				"getMonsterImageOverride={view.getMonsterImageOverride}",
 				"<EncounterBestiaryOverlay",
 			],
@@ -6852,6 +6849,20 @@ await run("Phase 206 isolates Encounter HP editing in page model", async () => {
 		"resolveEncounterHpInputValue(draftValue, monster.currentHp)",
 		"delete next[instanceId];",
 	], "Encounter page-model HP editing");
+});
+
+await run("Phase 207 isolates Encounter character modal in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterCharacterModal.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterCharacterModal \} from "\.\.\/model\/useEncounterCharacterModal\.ts";/);
+	assert.doesNotMatch(page, /const handleCharacterChange|setModalCharacter/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterCharacterModal/);
+	assertSourceTokensInOrder(page, ["const characterModal = useEncounterCharacterModal({", "onUpdate: view.updateEncounterCharacter,", "onOpenCharacter: characterModal.open,", "onCharacterChange={characterModal.getOnChange}", "modalCharacter={characterModal.value}"], "Encounter raw character-modal composition");
+	assertSourceTokensInOrder(hook, ["export function useEncounterCharacterModal", "onUpdate(instanceId, nextCharacter);", 'participantType: "character"', "instanceId", "return { value, open, close, getOnChange }"], "Encounter page-model character modal");
 });
 
 await run(

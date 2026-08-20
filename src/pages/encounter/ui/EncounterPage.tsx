@@ -40,6 +40,7 @@ import useEncounterView from "../model/useEncounterView.ts";
 import { useEncounterAiModelLoading } from "../model/useEncounterAiModelLoading.ts";
 import { useEncounterGridFocus } from "../model/useEncounterGridFocus.ts";
 import { useEncounterHpEditing } from "../model/useEncounterHpEditing.ts";
+import { useEncounterCharacterModal } from "../model/useEncounterCharacterModal.ts";
 import { useEncounterPlayerCreation } from "../model/useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
 import "../../../assets/components/EncounterView.css";
@@ -106,7 +107,6 @@ import type {
 import type {
 	CampaignEntityRecord,
 	CampaignRecord,
-	CharacterData,
 } from "../../../entities/campaign/index.js";
 import { useEncounterPageRuntime } from "../model/EncounterPageRuntime.tsx";
 
@@ -226,8 +226,6 @@ function EncounterView() {
 	const campaign = runtimeCampaign as CampaignRecord | null;
 	const displayMode = getEncounterDisplayMode(encounterViewMode);
 	const gridColumns = getEncounterGridColumns(encounterGridColumns);
-	const [modalCharacter, setModalCharacter] =
-		useState<EncounterViewParticipant | null>(null);
 	const [aiActionMonster, setAiActionMonster] =
 		useState<EncounterViewParticipant | null>(null);
 	const [aiEditingMonster, setAiEditingMonster] =
@@ -311,6 +309,9 @@ function EncounterView() {
 	getInstanceId: getParticipantInstanceId,
 	onUpdate: view.updateMonsterHp,
 	});
+	const characterModal = useEncounterCharacterModal({
+		onUpdate: view.updateEncounterCharacter,
+	});
 
 	useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);
 	useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));
@@ -337,7 +338,7 @@ function EncounterView() {
 				effectiveDisplayMode,
 			),
 			{
-				onOpenCharacter: setModalCharacter,
+				onOpenCharacter: characterModal.open,
 				onSelect: view.setSelectedInstance,
 				onFocus: focusMonsterInGrid,
 			},
@@ -560,23 +561,6 @@ function EncounterView() {
 	};
 
 
-	const handleCharacterChange =
-		(instanceId: string) => (
-			_characterId: string | number | undefined,
-			nextCharacter: CharacterData,
-		) => {
-			view.updateEncounterCharacter(instanceId, nextCharacter);
-			setModalCharacter((current) =>
-				current?.instanceId === instanceId
-					? {
-							...current,
-							...nextCharacter,
-							participantType: "character",
-							instanceId,
-						}
-					: current,
-			);
-		};
 
 	const updateEncounterViewMode = (mode: EncounterDisplayMode) => {
 		const nextMode = mode === "grid" ? "grid" : "single";
@@ -728,7 +712,7 @@ function EncounterView() {
 						onAiAction={handleMonsterAiAction}
 						onFieldEdit={openEditMonsterAction}
 						onTokenImageChange={handleMonsterTokenImageChange}
-						onCharacterChange={handleCharacterChange}
+						onCharacterChange={characterModal.getOnChange}
 						getMonsterImageOverride={view.getMonsterImageOverride}
 					/>
 				</div>
@@ -757,7 +741,7 @@ function EncounterView() {
 				draft={playerCreation.draft}
 				available={availablePlayerCharacters}
 				allCharacters={view.playerCharacters}
-				modalCharacter={modalCharacter}
+				modalCharacter={characterModal.value}
 				campaignSlug={activeCampaign.slug}
 				onClosePicker={playerCreation.closePicker}
 				onDraft={playerCreation.setDraft}
@@ -765,9 +749,9 @@ function EncounterView() {
 				onReset={playerCreation.reset}
 				onStartCreate={playerCreation.start}
 				onAdd={view.handleAddCharacter}
-				onCloseCharacter={() => setModalCharacter(null)}
-				getModalCharacterOnChange={(character) =>
-					handleCharacterChange(getParticipantInstanceId(character))
+				onCloseCharacter={characterModal.close}
+					getModalCharacterOnChange={(character) =>
+						characterModal.getOnChange(getParticipantInstanceId(character))
 				}
 			/>
 
