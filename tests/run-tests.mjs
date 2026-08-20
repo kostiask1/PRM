@@ -1779,6 +1779,20 @@ async function getSessionPrivateComponentSources(componentName) {
 	return { sessionSource, componentSource, runtimeEntrySource, typeEntrySource };
 }
 
+async function getCampaignPrivateComponentSources(componentName) {
+	const [campaignSource, componentSource, runtimeEntrySource, typeEntrySource] =
+		await Promise.all([
+			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+			fs.readFile(
+				`src/pages/campaign/ui/components/${componentName}.tsx`,
+				"utf8",
+			),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+		]);
+	return { campaignSource, componentSource, runtimeEntrySource, typeEntrySource };
+}
+
 function assertEncounterPrivateComponentBoundary({
 	componentName,
 	encounterSource,
@@ -6331,6 +6345,84 @@ await run(
 );
 
 await run(
+	"Phase 195 isolates Campaign header presentation",
+	async () => {
+		const {
+			campaignSource,
+			componentSource: headerSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		} = await getCampaignPrivateComponentSources("CampaignHeader");
+
+		assert.match(
+			campaignSource,
+			/import CampaignHeader from "\.\/components\/CampaignHeader\.tsx";/,
+		);
+		assert.doesNotMatch(
+			campaignSource,
+			/import CampaignHeaderActions|interface CampaignHeaderProps|function CampaignHeader\(/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/CampaignHeader(?:Actions)?/,
+		);
+		assertSourceTokensInOrder(
+			campaignSource,
+			[
+				"function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {",
+				"const view = useCampaignView({ campaign });",
+				"const viewModel = new CampaignViewModel(campaign);",
+				"<CampaignHeader",
+				"view={view}",
+				"viewModel={viewModel}",
+				"onOpenSearch={() => setIsGlobalSearchOpen(true)}",
+				"onOpenPartialArchive={() => setIsPartialArchiveOpen(true)}",
+			],
+			"Campaign raw header workflow and modal-trigger ownership",
+		);
+		assertSourceTokensInOrder(
+			headerSource,
+			[
+				'import { Tooltip } from "../../../../shared/ui/index.js";',
+				'import type { CampaignViewModel } from "../../../../entities/campaign/index.js";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import CampaignHeaderActions from "./CampaignHeaderActions.tsx";',
+				"interface CampaignHeaderView {",
+				"handleRename: () => void;",
+				"redoStack: readonly unknown[];",
+				"handleDeleteCampaign: () => void;",
+				"interface CampaignHeaderProps {",
+				"view: CampaignHeaderView;",
+				"viewModel: CampaignViewModel;",
+				"onOpenSearch: () => void;",
+				"onOpenPartialArchive: () => void;",
+				"export default function CampaignHeader({",
+				'"Panel__header"',
+				'"CampaignView__header"',
+				'<Tooltip content={lang.t("Click to rename")}>',
+				"onClick={view.handleRename}",
+				"{viewModel.name}",
+				'{lang.t("Created")}: {viewModel.createdAtLabel}',
+				"<CampaignHeaderActions",
+				"canRedo={view.redoStack.length > 0}",
+				"canUndo={view.undoStack.length > 0}",
+				"onDelete={() => view.handleDeleteCampaign()}",
+				"onExport={() => view.handleExport()}",
+				"onOpenPartialArchive={onOpenPartialArchive}",
+				"onOpenSearch={onOpenSearch}",
+				"onRedo={view.handleRedo}",
+				"onUndo={view.handleUndo}",
+			],
+			"Campaign private header and action presentation",
+		);
+		assert.doesNotMatch(
+			headerSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|useCampaignPageRuntime|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|CampaignPage/,
+		);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [
@@ -6914,8 +7006,11 @@ await run(
 	"Phase 170 isolates Campaign header action presentation",
 	async () => {
 		const [
-			campaignSource,
-			headerActionsSource,
+			{
+				campaignSource,
+				componentSource: headerActionsSource,
+			},
+			{ componentSource: headerSource },
 			sessionSource,
 			sessionHeaderSource,
 			sessionHeaderActionsSource,
@@ -6923,11 +7018,8 @@ await run(
 			sharedTypeEntrySource,
 			undoRedoButtonsSource,
 		] = await Promise.all([
-			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
-			fs.readFile(
-				"src/pages/campaign/ui/components/CampaignHeaderActions.tsx",
-				"utf8",
-			),
+			getCampaignPrivateComponentSources("CampaignHeaderActions"),
+			getCampaignPrivateComponentSources("CampaignHeader"),
 			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
 			fs.readFile(
 				"src/pages/session/ui/components/SessionHeader.tsx",
@@ -6943,13 +7035,13 @@ await run(
 		]);
 
 		assert.match(
-			campaignSource,
-			/import CampaignHeaderActions from "\.\/components\/CampaignHeaderActions\.tsx";/,
+			headerSource,
+			/import CampaignHeaderActions from "\.\/CampaignHeaderActions\.tsx";/,
 		);
 		assertSourceTokensInOrder(
-			campaignSource,
+			headerSource,
 			[
-				"function CampaignHeader({",
+				"export default function CampaignHeader({",
 				'<div className="CampaignView__header">',
 				"view.handleRename",
 				"viewModel.createdAtLabel",
@@ -6964,6 +7056,10 @@ await run(
 				"onUndo={view.handleUndo}",
 			],
 			"Campaign header-action composition",
+		);
+		assert.doesNotMatch(
+			campaignSource,
+			/import CampaignHeaderActions|function CampaignHeader\(/,
 		);
 		assert.doesNotMatch(
 			campaignSource,

@@ -47,6 +47,7 @@ lineage and is not a migration baseline.
 | MD-R02 / Phase 192 | Completed page-local consolidation | Moved Encounter Page participant-row/combat-stats/HP-input/action presentation into private `pages/encounter/ui/components/EncounterMonsterRow.tsx`. Raw `EncounterView` retains draft, participant-ID, selection, list-adapter, and select/HP-handler policy. | Keep the leaf private; preserve ID/character/name order, undefined-draft HP semantics, coercion/color, native event/action ordering, duplicate monster identity, character delete-only behavior, and no public page/runtime/store/API expansion. | 478/478 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 193 | Completed page-local consolidation | Moved Encounter Page header/identity/metrics presentation into private `pages/encounter/ui/components/EncounterHeader.tsx`, forwarding private `EncounterHeaderActions`. Raw `EncounterView` retains menu lifecycle, settings persistence, inline toggle, and tooltip-node construction. | Keep the leaf private; preserve header order/direct handlers/mention fallback, eager metric tuples, count gate/key/classes, action-menu forwarding, and no public page/runtime/store/API expansion. | 479/479 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R02 / Phase 194 | Completed page-local consolidation | Moved Session Page session-scoped NPC/location modal card presentation into private `pages/session/ui/components/SessionScopedEntityModal.tsx`. Raw `SessionView` retains resolver/current-entity lookup, ID guards, and change/delete/close command ownership. | Keep the leaf private; preserve type branch, normalization, card identity/flags, forced expanded state, and delete-before-close ordering without public page/runtime/store/API expansion. | 480/480 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
+| MD-R02 / Phase 195 | Completed page-local consolidation | Moved Campaign Page header presentation into private `pages/campaign/ui/components/CampaignHeader.tsx`, forwarding private `CampaignHeaderActions`. Raw `CampaignView` retains campaign/state/modal-trigger/action command ownership. | Keep the leaf private; preserve header/title/metadata hierarchy, rename tooltip/handler, undo/redo/action forwarding, classes/copy, and no public page/runtime/store/API expansion. | 481/481 tests; architecture maintained; `MD-R02` remains closed; `MD-R04` remains open |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -490,6 +491,18 @@ expanded suite passes 480/480 tests; architecture, performance, and Ukrainian
 encoding checks pass. `MD-R02` remains closed; `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
+
+Phase 195 moves Campaign Page header presentation into private
+`ui/components/CampaignHeader.tsx`, forwarding the existing private
+`CampaignHeaderActions`. Raw `CampaignView` retains campaign construction,
+state, modal-trigger, and action-command ownership. The leaf receives a narrow
+header view, `CampaignViewModel`, and controlled modal-open commands while
+preserving the header/title/metadata hierarchy, rename tooltip/handler,
+undo/redo and direct action callbacks, action-menu forwarding, classes, and
+localized copy. The expanded suite passes 481/481 tests; architecture,
+performance, and Ukrainian encoding checks pass. `MD-R02` remains closed;
+`MD-R04` remains verification-blocked until the declared local lint/typecheck
+tooling is available.
 
 ## Closed recovery items
 

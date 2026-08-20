@@ -782,6 +782,8 @@ Next:
 - Phase 193 preserves header order, direct method handlers, mention fallback, eager metric tuple construction, participant-count gating, metric key/classes, and existing private action-menu composition. One added static regression brings the full suite to 479/479 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 194 by moving Session Page session-scoped NPC/location modal card presentation from `SessionPage.tsx` to private `ui/components/SessionScopedEntityModal.tsx`. Raw `SessionView` retains the session-only resolver, current-entity lookup, ID guards, and all change/delete/close command adapters; the leaf receives controlled entity/type/card inputs.
 - Phase 194 preserves the `locations`-then-NPC branch, session-entity normalization, card keys and modal flags, forced expanded state, and delete-before-close ordering. One added static regression brings the full suite to 480/480 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 195 by moving Campaign Page header presentation from `CampaignPage.tsx` to private `ui/components/CampaignHeader.tsx`, forwarding private `CampaignHeaderActions`. Raw `CampaignView` retains campaign construction, state, modal triggers, and action commands; the leaf receives a narrow header view, `CampaignViewModel`, and controlled modal-open commands.
+- Phase 195 preserves the header/title/created-metadata hierarchy, rename tooltip/handler, undo/redo capability reads, direct action callbacks, action-menu forwarding, classes, and localized copy. One added static regression brings the full suite to 481/481 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -988,6 +990,9 @@ inline toggle, and tooltip-node ownership at 479/479 tests.
 Phase 194 isolates Session Page session-scoped NPC/location modal card
 presentation in private page UI while retaining raw resolver/current-entity
 lookup, ID guards, and change/delete/close workflow ownership at 480/480 tests.
+Phase 195 isolates Campaign Page header presentation in private page UI while
+retaining raw campaign construction, state, modal-trigger, and action-command
+ownership at 481/481 tests.
 
 ### Provenance and transfer rule
 
@@ -1377,7 +1382,7 @@ Status: **In progress**
   473/473 tests; Phase 188 passes 474/474 tests; Phase 189 passes 475/475
   tests; Phase 190 passes 476/476 tests; Phase 191 passes 477/477 tests;
   Phase 192 passes 478/478 tests; Phase 193 passes 479/479 tests; Phase 194
-  passes 480/480 tests.
+  passes 480/480 tests; Phase 195 passes 481/481 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2651,6 +2656,28 @@ Phase 194 is page-local scoped-entity modal presentation only, not a new
 Session entity workflow. The full `npm test` gate passes 480/480 tests;
 architecture, performance, and Ukrainian encoding checks also pass. `MD-R02`
 remains closed and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R65 / Phase 195 - Private Campaign header presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Campaign Page header presentation into private
+  `pages/campaign/ui/components/CampaignHeader.tsx`, forwarding the existing
+  private `CampaignHeaderActions`.
+- [x] Keep raw `CampaignView` ownership of campaign construction, state,
+  modal triggers, and action commands.
+- [x] Pass the leaf a narrow header view, `CampaignViewModel`, and explicit
+  modal-open commands; preserve the title/created-metadata hierarchy, rename
+  tooltip/handler, undo/redo capability reads, direct action callbacks,
+  action-menu forwarding, classes, and localized copy.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, header-menu-state, or
+  campaign-workflow dependency.
+
+Phase 195 is page-local Campaign-header presentation only, not a new Campaign
+workflow. The full `npm test` gate passes 481/481 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
 
 ## Validation required for every phase
 

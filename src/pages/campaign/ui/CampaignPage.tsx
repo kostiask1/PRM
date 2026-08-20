@@ -6,7 +6,6 @@ import {
 import {
 	Button,
 	Panel,
-	Tooltip,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { ListCard } from "../../../shared/ui/index.js";
@@ -20,7 +19,7 @@ import {
 	CreateLocationButton,
 	LocationCard,
 } from "../../../widgets/campaign-entity-card/index.js";
-import CampaignHeaderActions from "./components/CampaignHeaderActions.tsx";
+import CampaignHeader from "./components/CampaignHeader.tsx";
 import CampaignDescriptionSection from "./components/CampaignDescriptionSection.tsx";
 import CampaignEntitySection from "./components/CampaignEntitySection.tsx";
 import CampaignNotesSection from "./components/CampaignNotesSection.tsx";
@@ -58,45 +57,6 @@ interface CampaignDragDropDetail {
 }
 
 type CampaignViewController = ReturnType<typeof useCampaignView>;
-
-interface CampaignHeaderProps {
-	view: CampaignViewController;
-	viewModel: CampaignViewModel;
-	onOpenSearch: () => void;
-	onOpenPartialArchive: () => void;
-}
-
-function CampaignHeader({
-	view,
-	viewModel,
-	onOpenSearch,
-	onOpenPartialArchive,
-}: CampaignHeaderProps) {
-	return (
-		<div className="Panel__header">
-			<div className="CampaignView__header">
-				<Tooltip content={lang.t("Click to rename")}>
-					<h2 className="editable_title" onClick={view.handleRename}>
-						{viewModel.name}
-					</h2>
-				</Tooltip>
-				<p className="muted">
-					{lang.t("Created")}: {viewModel.createdAtLabel}
-				</p>
-			</div>
-			<CampaignHeaderActions
-				canRedo={view.redoStack.length > 0}
-				canUndo={view.undoStack.length > 0}
-				onDelete={() => view.handleDeleteCampaign()}
-				onExport={() => view.handleExport()}
-				onOpenPartialArchive={onOpenPartialArchive}
-				onOpenSearch={onOpenSearch}
-				onRedo={view.handleRedo}
-				onUndo={view.handleUndo}
-			/>
-		</div>
-	);
-}
 
 interface CampaignPageDialogsProps {
 	view: CampaignViewController;
