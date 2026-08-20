@@ -1,0 +1,26 @@
+import { EditableField } from "../../../../features/editor/ui/index.js";
+import { lang } from "../../../../shared/lib/index.js";
+import TodoSection from "./TodoSection.tsx";
+
+interface SessionResultSectionProps {
+	value: string;
+	onChange: (value: string) => void;
+}
+
+export default function SessionResultSection({
+	value,
+	onChange,
+}: SessionResultSectionProps) {
+	return (
+		<TodoSection title={lang.t("Session result")}>
+			<EditableField
+				type="textarea"
+				className="field__result"
+				enableHistory={false}
+				placeholder={lang.t("Summary of what actually happened...")}
+				value={value}
+				onChange={(event) => onChange(event.target.value)}
+			/>
+		</TodoSection>
+	);
+}

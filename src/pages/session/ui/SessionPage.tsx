@@ -28,6 +28,7 @@ import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
 import SessionFloatingActions from "./components/SessionFloatingActions.tsx";
 import SessionNotesSection from "./components/SessionNotesSection.tsx";
+import SessionResultSection from "./components/SessionResultSection.tsx";
 import SessionScenesSection from "./components/SessionScenesSection.tsx";
 import SessionScopeImportOverlay from "./components/SessionScopeImportOverlay.tsx";
 import SceneNotes from "./components/SceneNotes.tsx";
@@ -711,16 +712,10 @@ function SessionView() {
 							)}
 						/>
 
-						<TodoSection title={lang.t("Session result")}>
-							<EditableField
-								type="textarea"
-								className="field__result"
-								enableHistory={false}
-								placeholder={lang.t("Summary of what actually happened...")}
+						<SessionResultSection
 							value={String(sessionData.result_text || "")}
-								onChange={(e) => view.updateData("result_text", e.target.value)}
-							/>
-						</TodoSection>
+							onChange={(value) => view.updateData("result_text", value)}
+						/>
 					</div>
 				</div>
 

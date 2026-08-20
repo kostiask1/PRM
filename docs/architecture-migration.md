@@ -766,6 +766,8 @@ Next:
 - Phase 185 preserves the unconditional trigger, tooltip/button/badge presentation, strict progress gate, and open-only search-modal mount. One added static regression brings the full suite to 471/471 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 186 by moving Session Page notes-section presentation from `SessionPage.tsx` to private `ui/components/SessionNotesSection.tsx`. The raw page retains every note persistence and card workflow; the leaf receives controlled note data, state, explicit commands, and a card render slot.
 - Phase 186 preserves the controlled no-data toggle and expanded gates, raw bulk source, sanitizing reorder persistence, Notes-feature virtual-note/key/AI-list policy, explicit false drag-event isolation, note-card identity/IDs/last-item evaluation, and callback order. One added static regression brings the full suite to 472/472 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 187 by moving Session Page result-section presentation from `SessionPage.tsx` to private `ui/components/SessionResultSection.tsx`. The raw page retains result coercion and persistence; the leaf receives a controlled value and command.
+- Phase 187 preserves the exact raw result coercion, textarea presentation, localized copy, disabled history, controlled value, and event-to-value callback routing. One added static regression brings the full suite to 473/473 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -947,6 +949,8 @@ page UI while retaining raw state and command ownership at 471/471 tests.
 Phase 186 isolates Session Page notes-section presentation in private page UI
 while retaining raw note persistence and card workflow ownership at 472/472
 tests.
+Phase 187 isolates Session Page result-section presentation in private page UI
+while retaining raw result coercion and persistence ownership at 473/473 tests.
 
 ### Provenance and transfer rule
 
@@ -1332,7 +1336,8 @@ Status: **In progress**
   464/464 tests; Phase 179 passes 465/465 tests; Phase 180 passes 466/466
   tests; Phase 181 passes 467/467 tests; Phase 182 passes 468/468 tests;
   Phase 183 passes 469/469 tests; Phase 184 passes 470/470 tests; Phase 185
-  passes 471/471 tests; Phase 186 passes 472/472 tests.
+  passes 471/471 tests; Phase 186 passes 472/472 tests; Phase 187 passes
+  473/473 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -2430,6 +2435,26 @@ Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
 
 Phase 186 is page-local notes-section presentation only, not a new Session
 workflow. The full `npm test` gate passes 472/472 tests; architecture,
+performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
+and `MD-R04` remains open for complete lint/typecheck.
+
+### Recovery R57 / Phase 187 - Private Session result-section presentation
+
+Status: **Completed** (complete lint/typecheck remains tracked under `MD-R04`)
+
+- [x] Move Session Page result-section presentation into private
+  `pages/session/ui/components/SessionResultSection.tsx`.
+- [x] Keep `SessionView` ownership of exact result-text coercion and the
+  `updateData` persistence command.
+- [x] Pass a controlled string and value command; preserve the localized
+  section/placeholder copy, textarea presentation, disabled history, and
+  event-to-value adapter.
+- [x] Keep the component outside public page runtime/type entries without a
+  hook, runtime, API, store, navigation, persistence, session-data, or editor
+  workflow dependency.
+
+Phase 187 is page-local result-section presentation only, not a new Session
+workflow. The full `npm test` gate passes 473/473 tests; architecture,
 performance, and Ukrainian encoding checks also pass. `MD-R02` remains closed
 and `MD-R04` remains open for complete lint/typecheck.
 

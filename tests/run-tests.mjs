@@ -4965,7 +4965,7 @@ await run(
 				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
 				"onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}",
 				"getEncounterName={getEncounterName}",
-				'<TodoSection title={lang.t("Session result")}>',
+				"<SessionResultSection",
 			],
 			"Session raw scene-card workflow and scene-list command ownership",
 		);
@@ -5257,6 +5257,75 @@ await run(
 		assert.match(
 			campaignEntityNotesSource,
 			/\{\.\.\.getAiIgnoredNoteListProps\(\(noteId, ignored\) => updateNotes\(/,
+		);
+	},
+);
+
+await run(
+	"Phase 187 isolates Session result-section presentation",
+	async () => {
+		const [sessionSource, sectionSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+				fs.readFile(
+					"src/pages/session/ui/components/SessionResultSection.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/session/index.js", "utf8"),
+				fs.readFile("src/pages/session/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			sessionSource,
+			/import SessionResultSection from "\.\/components\/SessionResultSection\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
+				"function SessionView() {",
+				"const sessionData = getSessionPageData(session);",
+				"if (!session) return null;",
+				"<SessionScenesSection",
+				"<SessionResultSection",
+				'value={String(sessionData.result_text || "")}',
+				'onChange={(value) => view.updateData("result_text", value)}',
+				"<SessionChecklistOverlay",
+			],
+			"Session raw result coercion and persistence ownership",
+		);
+		assert.doesNotMatch(
+			sessionSource,
+			/interface SessionResultSectionProps|function SessionResultSection/,
+		);
+		assert.doesNotMatch(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/SessionResultSection/,
+		);
+		assertSourceTokensInOrder(
+			sectionSource,
+			[
+				'import { EditableField } from "../../../../features/editor/ui/index.js";',
+				'import { lang } from "../../../../shared/lib/index.js";',
+				'import TodoSection from "./TodoSection.tsx";',
+				"interface SessionResultSectionProps {",
+				"value: string;",
+				"onChange: (value: string) => void;",
+				"export default function SessionResultSection({",
+				"<TodoSection",
+				'title={lang.t("Session result")}',
+				"<EditableField",
+				'type="textarea"',
+				'className="field__result"',
+				"enableHistory={false}",
+				'placeholder={lang.t("Summary of what actually happened...")}',
+				"value={value}",
+				"onChange={(event) => onChange(event.target.value)}",
+			],
+			"Session private result-section presentation",
+		);
+		assert.doesNotMatch(
+			sectionSource,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|sessionData|updateData|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
 		);
 	},
 );
