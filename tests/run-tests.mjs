@@ -6782,6 +6782,40 @@ await run(
 );
 
 await run(
+	"Phase 204 isolates Encounter grid focus in page model",
+	async () => {
+		const [encounterSource, focusSource, runtimeEntrySource, typeEntrySource] =
+			await Promise.all([
+				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				fs.readFile("src/pages/encounter/model/useEncounterGridFocus.ts", "utf8"),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+		assert.match(encounterSource, /import \{ useEncounterGridFocus \} from "\.\.\/model\/useEncounterGridFocus\.ts";/);
+		assert.doesNotMatch(encounterSource, /const setGridItemRef =|const focusMonsterInGrid =|gridItemRefs/);
+		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterGridFocus/);
+		assertSourceTokensInOrder(encounterSource, [
+			"} = useEncounterGridFocus(gridRepresentativeByInstanceId);",
+			"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
+			"onFocus: focusMonsterInGrid,",
+			"focusedMonsterId={focusedMonsterId}",
+			"setGridItemRef={setGridItemRef}",
+		], "Encounter raw grid-focus composition");
+		assertSourceTokensInOrder(focusSource, [
+			'import { useRef, useState } from "react";',
+			"export function useEncounterGridFocus(",
+			"const gridItemRefs = useRef(new Map<string, HTMLDivElement>());",
+			"representativeByInstanceId.get(instanceId) || instanceId;",
+			'node.scrollIntoView({ behavior: "auto", block: "center" });',
+			"if (focusTimeoutRef.current) {",
+			"clearTimeout(focusTimeoutRef.current);",
+			"}, 1800);",
+		], "Encounter page-model grid focus");
+		assert.doesNotMatch(focusSource, /useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|aiApi|app\/model|shared\/model/);
+	},
+);
+
+await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
 		const [

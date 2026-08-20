@@ -38,6 +38,7 @@ import {
 } from "../../../widgets/campaign-entity-card/index.js";
 import useEncounterView from "../model/useEncounterView.ts";
 import { useEncounterAiModelLoading } from "../model/useEncounterAiModelLoading.ts";
+import { useEncounterGridFocus } from "../model/useEncounterGridFocus.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
 import "../../../assets/components/EncounterView.css";
 import { campaignApi } from "../../../entities/campaign/index.js";
@@ -243,7 +244,6 @@ function EncounterView() {
 	const campaign = runtimeCampaign as CampaignRecord | null;
 	const displayMode = getEncounterDisplayMode(encounterViewMode);
 	const gridColumns = getEncounterGridColumns(encounterGridColumns);
-	const [focusedMonsterId, setFocusedMonsterId] = useState<string | null>(null);
 	const [modalCharacter, setModalCharacter] =
 		useState<EncounterViewParticipant | null>(null);
 	const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
@@ -274,8 +274,6 @@ function EncounterView() {
 		useState<EncounterViewParticipant | null>(null);
 	const aiDraftResponseRef = useRef<HTMLDivElement | null>(null);
 	const aiEditControllerRef = useRef<AbortController | null>(null);
-	const gridItemRefs = useRef(new Map<string, HTMLDivElement>());
-	const focusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const view = useEncounterView();
@@ -294,6 +292,12 @@ function EncounterView() {
 		view.selectedInstance,
 		gridRepresentativeByInstanceId,
 	);
+	const {
+		focusTimeoutRef,
+		focusedMonsterId,
+		focusMonsterInGrid,
+		setGridItemRef,
+	} = useEncounterGridFocus(gridRepresentativeByInstanceId);
 	const aiDraftDiffResources = useMemo(
 		() =>
 			buildDiffResources(aiDraftResponseEntry, {
@@ -332,32 +336,6 @@ function EncounterView() {
 	const renderContext = getEncounterRenderContext(view, campaign, sessionId);
 	if (!renderContext) return <EncounterLoading />;
 	const { campaign: activeCampaign, sessionId: activeSessionId, encounter } = renderContext;
-
-	const setGridItemRef = (instanceId: string, node: HTMLDivElement | null) => {
-		if (node) {
-			gridItemRefs.current.set(instanceId, node);
-		} else {
-			gridItemRefs.current.delete(instanceId);
-		}
-	};
-
-	const focusMonsterInGrid = (instanceId: string) => {
-		const representativeId =
-			gridRepresentativeByInstanceId.get(instanceId) || instanceId;
-		const node = gridItemRefs.current.get(representativeId);
-		if (node) {
-			node.scrollIntoView({ behavior: "auto", block: "center" });
-		}
-		setFocusedMonsterId(representativeId);
-		if (focusTimeoutRef.current) {
-			clearTimeout(focusTimeoutRef.current);
-		}
-		focusTimeoutRef.current = setTimeout(() => {
-			setFocusedMonsterId((current) =>
-				current === representativeId ? null : current,
-			);
-		}, 1800);
-	};
 
 	const handleSelectMonster = (monster: EncounterViewParticipant) => {
 		executeEncounterParticipantSelection(
