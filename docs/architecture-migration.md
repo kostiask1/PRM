@@ -846,6 +846,8 @@ Next:
 - Phase 225 preserves callback/effect order, campaign-reload reloading, mounted-only settings application, settings-sync filtering, theme application, and the localized campaign-load alert. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 226 by moving app campaign-completion confirmation, persistence, reload, and error flow into private `app/model/useCampaignCompletionToggle.ts`. `App.tsx` remains the sidebar callback composer.
 - Phase 226 preserves completion-plan/date-confirmation branching, update payload, reload-after-save, and the localized failure alert. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 227 by moving app mobile-sidebar state and lifecycle into private `app/model/useMobileSidebar.ts`. `App.tsx` remains the control/callback composer.
+- Phase 227 preserves route-close, body-class, Escape-listener, cleanup, state-setter semantics, and lifecycle ordering after navigation synchronization. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

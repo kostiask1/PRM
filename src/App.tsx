@@ -96,6 +96,7 @@ import {
 	useCampaignCompletionToggle,
 	type CampaignCompletionRecord,
 } from "./app/model/useCampaignCompletionToggle.ts";
+import { useMobileSidebar } from "./app/model/useMobileSidebar.ts";
 
 const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 	EntityLinkContext,
@@ -109,7 +110,6 @@ export default function App() {
 	const location = useLocation();
 	const routerNavigate = useNavigate();
 	const [isCTRLPressed, setCTRLPressed] = useState(false);
-	const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 	const modalState = useAppSelector((store) => store.modal);
 	const campaigns = useAppSelector(
 		(store) => store.campaigns.items as CampaignCompletionRecord[],
@@ -344,33 +344,9 @@ export default function App() {
 		syncNavigationFromPath(location.pathname);
 	}, [location.pathname]);
 
-	useEffect(() => {
-		setMobileSidebarOpen(false);
-	}, [location.pathname]);
-
-	useEffect(() => {
-		document.body.classList.toggle(
-			"is-mobile-sidebar-open",
-			isMobileSidebarOpen,
-		);
-
-		return () => {
-			document.body.classList.remove("is-mobile-sidebar-open");
-		};
-	}, [isMobileSidebarOpen]);
-
-	useEffect(() => {
-		if (!isMobileSidebarOpen) return;
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Escape") {
-				setMobileSidebarOpen(false);
-			}
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [isMobileSidebarOpen]);
+	const [isMobileSidebarOpen, setMobileSidebarOpen] = useMobileSidebar(
+		location.pathname,
+	);
 
 	useAppBootstrap({
 		dispatch,
