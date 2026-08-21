@@ -31,6 +31,36 @@ export interface EncounterParticipantSynchronization {
 	syncCustomBestiaryMonsters: () => Promise<void>;
 }
 
+interface CustomBestiarySynchronizationOptions {
+	encounter: EncounterEditorState | null;
+	selectedInstanceId?: string | null;
+	applyEncounterUpdate: ApplyEncounterUpdate;
+	onError?: (error: unknown, operation: ParticipantSyncOperation) => void;
+}
+
+async function executeCustomBestiarySynchronization({
+	encounter,
+	selectedInstanceId,
+	applyEncounterUpdate,
+	onError,
+}: CustomBestiarySynchronizationOptions): Promise<void> {
+	if (!encounter?.monsters?.length) return;
+	try {
+		const customMonsters = await bestiaryApi.getCustomBestiaryData();
+		const result = synchronizeCustomMonsterParticipants(
+			encounter,
+			customMonsters || [],
+		);
+		if (!result.changed || !result.encounter) return;
+		applyEncounterUpdate(result.encounter, {
+			pushUndo: false,
+			preferredId: selectedInstanceId || null,
+		});
+	} catch (error) {
+		onError?.(error, "sync-custom-bestiary");
+	}
+}
+
 export function useEncounterParticipantSynchronization({
 	campaignSlug,
 	encounter,
@@ -78,21 +108,12 @@ export function useEncounterParticipantSynchronization({
 	);
 
 	const syncCustomBestiaryMonsters = useCallback(async (): Promise<void> => {
-		if (!encounter?.monsters?.length) return;
-		try {
-			const customMonsters = await bestiaryApi.getCustomBestiaryData();
-			const result = synchronizeCustomMonsterParticipants(
-				encounter,
-				customMonsters || [],
-			);
-			if (!result.changed || !result.encounter) return;
-			applyEncounterUpdate(result.encounter, {
-				pushUndo: false,
-				preferredId: selectedInstanceId || null,
-			});
-		} catch (error) {
-			onError?.(error, "sync-custom-bestiary");
-		}
+		await executeCustomBestiarySynchronization({
+			encounter,
+			selectedInstanceId,
+			applyEncounterUpdate,
+			onError,
+		});
 	}, [applyEncounterUpdate, encounter, onError, selectedInstanceId]);
 
 	useEffect(() => {
