@@ -5746,7 +5746,7 @@ await run(
 				"onCloseCharacter={characterModal.close}",
 				"getModalCharacterOnChange={(character) =>",
 				"characterModal.getOnChange(getParticipantInstanceId(character))",
-				"<MonsterAiActionModal",
+				"<EncounterMonsterActionModals",
 			],
 			"Encounter raw character-picker state, identity, and workflow ownership",
 		);
@@ -6935,8 +6935,8 @@ await run("Phase 209 isolates Encounter monster field editing in page model", as
 		"const monsterFieldEditing = useEncounterMonsterFieldEditing({",
 		"onUpdateMonster: view.updateMonsterFromAi,",
 		"onFieldEdit={monsterFieldEditing.openAction}",
-		"aiActionMonster={monsterFieldEditing.actionMonster as BestiaryMonster | null}",
-		"onChoose={monsterFieldEditing.chooseAction}",
+		"fieldActionMonster={monsterFieldEditing.actionMonster}",
+		"onFieldChoose={monsterFieldEditing.chooseAction}",
 		"editingMonster={monsterFieldEditing.editingMonster}",
 		"onSave={monsterFieldEditing.save}",
 	], "Encounter raw monster-field-editing composition");
@@ -6999,9 +6999,9 @@ await run("Phase 211 isolates Encounter monster AI action transitions in page mo
 		"onStartEditing: aiEditor.start,",
 		"targetInstanceId: monsterAiAction.targetInstanceId,",
 		"onAiAction={monsterAiAction.openAction}",
-		"aiActionMonster={monsterAiAction.actionMonster as BestiaryMonster | null}",
-		"onCancel={monsterAiAction.closeAction}",
-		"onChoose={monsterAiAction.chooseAction}",
+		"aiActionMonster={monsterAiAction.actionMonster}",
+		"onAiCancel={monsterAiAction.closeAction}",
+		"onAiChoose={monsterAiAction.chooseAction}",
 	], "Encounter raw monster-AI action composition");
 	assertSourceTokensInOrder(hook, [
 		"export function useEncounterMonsterAiAction(options: Options)",

@@ -828,6 +828,8 @@ Next:
 - Phase 216 preserves unconditional tooltip construction and localized copy order, participant-count gating, initiative values, and header/action forwarding. The full suite reaches 502/502 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 217 by moving Encounter participant selection and token-image update adapters from `EncounterPage.tsx` to private `model/useEncounterMonsterInteractions.ts`. Raw `EncounterView` retains selected state, character modal, grid focus, and update commands through injected dependencies.
 - Phase 217 preserves selection-plan/execution ordering, selected-ID/display-mode forwarding, the missing-instance token no-op, and exact image forwarding. The full suite reaches 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 218 by moving the paired Encounter AI/field action-modal composition from `EncounterPage.tsx` to private `ui/components/EncounterMonsterActionModals.tsx`. Raw `EncounterView` retains action state, transition commands, and editor/persistence workflows.
+- Phase 218 preserves action identity, custom-source global-edit gating, local-edit availability, localized labels, field-edit title/icon, and callback forwarding. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1103,6 +1105,9 @@ functional-toggle ownership at 502/502 tests.
 Phase 217 isolates Encounter participant selection and token-image update
 adapters in private page model while retaining raw selected state, character
 modal, grid focus, and update commands at 503/503 tests.
+Phase 218 moves paired Encounter AI/field action-modal composition into private
+page UI while retaining raw action state, transitions, and editor/persistence
+workflows at 503/503 tests.
 
 ### Provenance and transfer rule
 
@@ -1501,7 +1506,7 @@ Status: **In progress**
   passes 496/496 tests; Phase 211 passes 497/497 tests; Phase 212 passes
   498/498 tests; Phase 213 passes 499/499 tests; Phase 214 passes 500/500 tests;
   Phase 215 passes 501/501 tests; Phase 216 passes 502/502 tests; Phase 217
-  passes 503/503 tests.
+  passes 503/503 tests; Phase 218 passes 503/503 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 

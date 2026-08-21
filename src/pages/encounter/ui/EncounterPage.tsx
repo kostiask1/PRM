@@ -9,9 +9,6 @@ import {
 	Panel,
 } from "../../../shared/ui/index.js";
 import { BestiaryBrowser as Bestiary } from "../../../widgets/bestiary-browser/index.js";
-import {
-	MonsterAiActionModal,
-} from "../../../features/ai-edit-monster/index.js";
 import { createAiResponseModalComponent } from "../../../widgets/ai-response-modal/index.js";
 import { AiAssistantPanel } from "../../../widgets/ai-assistant/index.js";
 import { createMonsterEditorModalComponent } from "../../../widgets/monster-editor-modal/index.js";
@@ -50,6 +47,7 @@ import EncounterBestiaryOverlay from "./components/EncounterBestiaryOverlay.tsx"
 import EncounterCharacterOverlays from "./components/EncounterCharacterOverlays.tsx";
 import EncounterDetail from "./components/EncounterDetail.tsx";
 import EncounterHeader from "./components/EncounterHeader.tsx";
+import EncounterMonsterActionModals from "./components/EncounterMonsterActionModals.tsx";
 import EncounterMonsterRow from "./components/EncounterMonsterRow.tsx";
 import EncounterNotification from "./components/EncounterNotification.tsx";
 
@@ -83,7 +81,6 @@ import {
 	getAvailableEncounterCharacters,
 	getEncounterGridProjection,
 	getEncounterRenderContext,
-	isCustomBestiarySource as isCustomSource,
 	resolveEncounterHpInputValue as resolveHpInputValue,
 } from "../model/encounterPagePresentation.ts";
 import type {
@@ -149,12 +146,6 @@ function getOptionalParticipantId(
 	participant: EncounterViewParticipant | null,
 ): string | undefined {
 	return participant ? getParticipantInstanceId(participant) : undefined;
-}
-
-function getOptionalMonsterSource(
-	participant: EncounterViewParticipant | null,
-): unknown {
-	return participant ? participant.source : undefined;
 }
 
 function getEncounterViewParticipants(
@@ -438,23 +429,13 @@ function EncounterView() {
 				}
 			/>
 
-			<MonsterAiActionModal
-				aiActionMonster={monsterAiAction.actionMonster as BestiaryMonster | null}
-				showLocalEdit={true}
-				showGlobalEdit={isCustomSource(getOptionalMonsterSource(monsterAiAction.actionMonster))}
-				targetLabel={lang.t("Encounter creature")}
-				onCancel={monsterAiAction.closeAction}
-				onChoose={monsterAiAction.chooseAction}
-			/>
-			<MonsterAiActionModal
-				aiActionMonster={monsterFieldEditing.actionMonster as BestiaryMonster | null}
-				showLocalEdit={true}
-				showGlobalEdit={isCustomSource(getOptionalMonsterSource(monsterFieldEditing.actionMonster))}
-				targetLabel={lang.t("Encounter creature")}
-				title={lang.t("Edit creature")}
-				actionIcon="edit"
-				onCancel={monsterFieldEditing.closeAction}
-				onChoose={monsterFieldEditing.chooseAction}
+			<EncounterMonsterActionModals
+				aiActionMonster={monsterAiAction.actionMonster}
+				fieldActionMonster={monsterFieldEditing.actionMonster}
+				onAiCancel={monsterAiAction.closeAction}
+				onAiChoose={monsterAiAction.chooseAction}
+				onFieldCancel={monsterFieldEditing.closeAction}
+				onFieldChoose={monsterFieldEditing.chooseAction}
 			/>
 			<EncounterBestiaryAiModals
 				ResponseModal={EncounterAiResponseModal}
