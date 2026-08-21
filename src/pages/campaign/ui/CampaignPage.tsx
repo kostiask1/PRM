@@ -30,6 +30,7 @@ import useCampaignView from "../model/useCampaignView.ts";
 import { useCampaignCharacterTypeDrop } from "../model/useCampaignCharacterTypeDrop.ts";
 import { useCampaignHashNavigation } from "../model/useCampaignHashNavigation.ts";
 import { useCampaignNotesControls } from "../model/useCampaignNotesControls.ts";
+import { getCampaignEntitySectionControls } from "../model/campaignEntitySectionControls.ts";
 import { useCampaignPageRuntime } from "../model/CampaignPageRuntime.tsx";
 import { CampaignViewModel } from "../../../entities/campaign/index.js";
 import { lang } from "../../../shared/lib/index.js";
@@ -113,6 +114,33 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		onFinishTrackedReorder: view.finishTrackedReorder,
 		onSetNotesCollapsed: view.setIsNotesCollapsed,
 		onTriggerSave: view.triggerSave,
+	});
+	const characterSectionControls = getCampaignEntitySectionControls({
+		type: "characters",
+		hasData: hasCharactersData,
+		isCollapsed: isCharactersCollapsed,
+		onSetCollapsed: view.setIsCharactersCollapsed,
+		onTriggerSave: view.triggerSave,
+		onReorder: view.handleCharactersReorder,
+		onPersistReorder: view.persistEntitiesReorder,
+	});
+	const npcSectionControls = getCampaignEntitySectionControls({
+		type: "npc",
+		hasData: hasNpcsData,
+		isCollapsed: isNpcsCollapsed,
+		onSetCollapsed: view.setIsNpcsCollapsed,
+		onTriggerSave: view.triggerSave,
+		onReorder: view.handleNpcsReorder,
+		onPersistReorder: view.persistEntitiesReorder,
+	});
+	const locationSectionControls = getCampaignEntitySectionControls({
+		type: "locations",
+		hasData: hasLocationsData,
+		isCollapsed: isLocationsCollapsed,
+		onSetCollapsed: view.setIsLocationsCollapsed,
+		onTriggerSave: view.triggerSave,
+		onReorder: view.handleLocationsReorder,
+		onPersistReorder: view.persistEntitiesReorder,
 	});
 
 	useCampaignHashNavigation({
@@ -231,21 +259,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 									entityType="characters"
 								/>
 							}
-							onToggle={() => {
-								if (!hasCharactersData) return;
-								const next = !isCharactersCollapsed;
-								view.setIsCharactersCollapsed(next);
-								view.triggerSave({ isCharactersCollapsed: next });
-							}}
-							onBulkCollapse={(items, collapsed) => {
-								const nextItems = items.map((item) => ({ ...item, collapsed }));
-								view.handleCharactersReorder(nextItems);
-								view.persistEntitiesReorder("characters", nextItems);
-							}}
+							onToggle={characterSectionControls.onToggle}
+							onBulkCollapse={characterSectionControls.onBulkCollapse}
 							onReorder={view.handleCharactersReorder}
-							onReorderDrop={(items) =>
-								view.persistEntitiesReorder("characters", items)
-							}
+							onReorderDrop={characterSectionControls.onReorderDrop}
 							dragData={(character) => ({
 								kind: "campaign-character",
 								sourceType: "characters",
@@ -291,19 +308,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 									entityType="npc"
 								/>
 							}
-							onToggle={() => {
-								if (!hasNpcsData) return;
-								const next = !isNpcsCollapsed;
-								view.setIsNpcsCollapsed(next);
-								view.triggerSave({ isNpcsCollapsed: next });
-							}}
-							onBulkCollapse={(items, collapsed) => {
-								const nextItems = items.map((item) => ({ ...item, collapsed }));
-								view.handleNpcsReorder(nextItems);
-								view.persistEntitiesReorder("npc", nextItems);
-							}}
+							onToggle={npcSectionControls.onToggle}
+							onBulkCollapse={npcSectionControls.onBulkCollapse}
 							onReorder={view.handleNpcsReorder}
-							onReorderDrop={(items) => view.persistEntitiesReorder("npc", items)}
+							onReorderDrop={npcSectionControls.onReorderDrop}
 							dragData={(npc) => ({
 								kind: "campaign-character",
 								sourceType: "npc",
@@ -352,21 +360,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							isCollapsed={isLocationsCollapsed}
 							listClassName="CampaignView__locations"
 							actions={<CreateLocationButton campaignSlug={campaign.slug} />}
-							onToggle={() => {
-								if (!hasLocationsData) return;
-								const next = !isLocationsCollapsed;
-								view.setIsLocationsCollapsed(next);
-								view.triggerSave({ isLocationsCollapsed: next });
-							}}
-							onBulkCollapse={(items, collapsed) => {
-								const nextItems = items.map((item) => ({ ...item, collapsed }));
-								view.handleLocationsReorder(nextItems);
-								view.persistEntitiesReorder("locations", nextItems);
-							}}
+							onToggle={locationSectionControls.onToggle}
+							onBulkCollapse={locationSectionControls.onBulkCollapse}
 							onReorder={view.handleLocationsReorder}
-							onReorderDrop={(items) =>
-								view.persistEntitiesReorder("locations", items)
-							}
+							onReorderDrop={locationSectionControls.onReorderDrop}
 							isItemControlActive={(location) =>
 								Boolean(location._aiIgnored)
 							}
