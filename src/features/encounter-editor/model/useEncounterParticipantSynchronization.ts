@@ -61,6 +61,13 @@ async function executeCustomBestiarySynchronization({
 	}
 }
 
+function loadParticipantEntitySources(campaignSlug: string) {
+	return Promise.all([
+		campaignApi.getEntities(campaignSlug, "characters"),
+		campaignApi.getEntities(campaignSlug, "npc"),
+	]);
+}
+
 export function useEncounterParticipantSynchronization({
 	campaignSlug,
 	encounter,
@@ -80,10 +87,7 @@ export function useEncounterParticipantSynchronization({
 
 	useEffect(() => {
 		let active = true;
-		Promise.all([
-			campaignApi.getEntities(campaignSlug, "characters"),
-			campaignApi.getEntities(campaignSlug, "npc"),
-		])
+		loadParticipantEntitySources(campaignSlug)
 			.then(([characters, npcs]) => {
 				if (!active) return;
 				const safeCharacters = Array.isArray(characters) ? characters : [];

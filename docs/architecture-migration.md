@@ -838,6 +838,8 @@ Next:
 - Phase 221 preserves the loading guard, model/selection effects, log-before-update order, `Error.message` precedence, and fallback. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 222 by moving Encounter custom-Bestiary refresh transport, merge-result handling, and error routing into private `executeCustomBestiarySynchronization` in `features/encounter-editor/model/useEncounterParticipantSynchronization.ts`. The hook remains the React callback/effect adapter.
 - Phase 222 preserves the empty-monster guard, source load -> typed synchronization -> unchanged guard -> non-undoing update order, selected-ID fallback, and error routing. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 223 by moving Encounter paired character/NPC source transport into private `loadParticipantEntitySources` in `features/encounter-editor/model/useEncounterParticipantSynchronization.ts`. The hook remains the lifecycle/state adapter.
+- Phase 223 preserves simultaneous request creation and ordering, the active guard before payload normalization, player/image-map updates, and error routing. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
