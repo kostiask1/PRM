@@ -174,6 +174,8 @@ export interface EncounterGridProjection {
 	representativeByInstanceId: Map<string, string>;
 }
 
+export type EncounterDisplayMode = "grid" | "single";
+
 export interface EncounterPlayerCreationLifecycle {
 	request(): Promise<CampaignEntityRecord | null>;
 	onRefresh(): void;
@@ -190,6 +192,26 @@ export function getEncounterRenderContext(
 ) {
 	if (!view.encounter || !campaign || !sessionId) return null;
 	return { encounter: view.encounter, campaign, sessionId };
+}
+
+export function getEncounterSelectedGridId(
+	selected: EncounterViewParticipant | null,
+	representatives: Map<string, string>,
+): string | null {
+	if (!selected) return null;
+	const instanceId = String(selected.instanceId || selected.id || "");
+	return representatives.get(instanceId) || instanceId;
+}
+
+export function getEncounterLayout(
+	displayMode: EncounterDisplayMode,
+	gridColumns: number,
+	monsterCount: number,
+) {
+	return {
+		displayMode: monsterCount === 1 ? "single" as const : displayMode,
+		gridColumns: Math.max(1, Math.min(gridColumns, monsterCount || 1)),
+	};
 }
 
 export function applyEncounterGeneratedMonsterResult(

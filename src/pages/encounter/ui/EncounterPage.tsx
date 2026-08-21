@@ -81,7 +81,9 @@ import {
 import {
 	getAvailableEncounterCharacters,
 	getEncounterGridProjection,
+	getEncounterLayout,
 	getEncounterRenderContext,
+	getEncounterSelectedGridId,
 	resolveEncounterHpInputValue as resolveHpInputValue,
 } from "../model/encounterPagePresentation.ts";
 import type {
@@ -93,8 +95,6 @@ import type {
 	CampaignRecord,
 } from "../../../entities/campaign/index.js";
 import { useEncounterPageRuntime } from "../model/EncounterPageRuntime.tsx";
-
-type EncounterDisplayMode = "grid" | "single";
 
 const EMPTY_ENCOUNTER_PARTICIPANTS: EncounterViewParticipant[] = [];
 const EMPTY_CAMPAIGN_ENTITIES: CampaignEntityRecord[] = [];
@@ -121,26 +121,6 @@ function getEncounterDisplayMode(value: unknown): EncounterDisplayMode {
 
 function getEncounterGridColumns(value: unknown): number {
 	return Number(value) || 2;
-}
-
-function getSelectedGridId(
-	selected: EncounterViewParticipant | null,
-	representatives: Map<string, string>,
-): string | null {
-	if (!selected) return null;
-	const instanceId = getParticipantInstanceId(selected);
-	return representatives.get(instanceId) || instanceId;
-}
-
-function getEncounterLayout(
-	displayMode: EncounterDisplayMode,
-	gridColumns: number,
-	monsterCount: number,
-) {
-	return {
-		displayMode: monsterCount === 1 ? "single" as const : displayMode,
-		gridColumns: Math.max(1, Math.min(gridColumns, monsterCount || 1)),
-	};
 }
 
 function getOptionalParticipantId(
@@ -191,7 +171,7 @@ function EncounterView() {
 		};
 	}, [encounterParticipants]);
 
-	const selectedGridInstanceId = getSelectedGridId(
+	const selectedGridInstanceId = getEncounterSelectedGridId(
 		view.selectedInstance,
 		gridRepresentativeByInstanceId,
 	);
