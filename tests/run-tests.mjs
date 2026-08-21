@@ -5903,7 +5903,7 @@ await run(
 				"campaignSlug={activeCampaign.slug}",
 				"getParticipantInstanceId={getParticipantInstanceId}",
 				"setGridItemRef={setGridItemRef}",
-				"onAiAction={handleMonsterAiAction}",
+				"onAiAction={monsterAiAction.openAction}",
 				"onFieldEdit={monsterFieldEditing.openAction}",
 				"onTokenImageChange={handleMonsterTokenImageChange}",
 				"onCharacterChange={characterModal.getOnChange}",
@@ -6948,6 +6948,42 @@ await run("Phase 210 isolates Encounter header dismissal in page model", async (
 		'return () => document.removeEventListener("pointerdown", handlePointerDown);',
 		"}, [isOpen, onClose]);",
 	], "Encounter page-model header-dismissal lifecycle");
+	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
+
+await run("Phase 211 isolates Encounter monster AI action transitions in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterMonsterAiAction.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterMonsterAiAction \} from "\.\.\/model\/useEncounterMonsterAiAction\.ts";/);
+	assert.doesNotMatch(page, /const (handleMonsterAiAction|closeMonsterAiAction|chooseMonsterAiAction)|\[aiActionMonster, setAiActionMonster\]|\[aiTargetInstanceId, setAiTargetInstanceId\]/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiAction/);
+	assertSourceTokensInOrder(page, [
+		"const monsterAiAction = useEncounterMonsterAiAction({",
+		"isEditing: isAiEditingMonster,",
+		"setAiEditMode(mode);",
+		"setAiEditingMonster(monster);",
+		"targetInstanceId: monsterAiAction.targetInstanceId,",
+		"onAiAction={monsterAiAction.openAction}",
+		"aiActionMonster={monsterAiAction.actionMonster as BestiaryMonster | null}",
+		"onCancel={monsterAiAction.closeAction}",
+		"onChoose={monsterAiAction.chooseAction}",
+	], "Encounter raw monster-AI action composition");
+	assertSourceTokensInOrder(hook, [
+		"export function useEncounterMonsterAiAction(options: Options)",
+		"if (!monster?.name) return;",
+		"setTargetInstanceId(monster.instanceId || null);",
+		"setActionMonster(monster);",
+		"if (options.isEditing) return;",
+		'if (action === "image-prompt") return;',
+		"const mode = action;",
+		"if (!actionMonster) return;",
+		"setActionMonster(null);",
+		"options.onStartEditing(target, mode);",
+	], "Encounter page-model monster-AI action lifecycle");
 	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 });
 
