@@ -13567,7 +13567,7 @@ await run(
 			appSource,
 			[
 				"const campaigns = useAppSelector(",
-				"(store) => store.campaigns.items as AppCampaign[]",
+				"(store) => store.campaigns.items as CampaignCompletionRecord[]",
 				"const monsterStatBlockCommands = useMemo<",
 				"openModal(config) {",
 				"return openModalRequest(config);",

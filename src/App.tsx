@@ -75,17 +75,10 @@ import {
 	setRulesReferenceHistoryIndexAction,
 	setRulesReferenceModalOpenAction,
 } from "./shared/model/index.js";
-import type { CampaignRecord } from "./entities/campaign/index.js";
 import {
 	getAppErrorMessage,
-	getCampaignCompletionPlan,
 	isEditableAppTarget,
 } from "./app/model/appShellPresentation.ts";
-
-interface AppCampaign extends CampaignRecord {
-	completed?: boolean;
-	completedAt?: string | null;
-}
 
 import { initRealtimeSync } from "./app/realtime/index.js";
 import {
@@ -99,6 +92,10 @@ import {
 	useAppSelector,
 } from "./app/model/index.js";
 import { useAppBootstrap } from "./app/model/useAppBootstrap.ts";
+import {
+	useCampaignCompletionToggle,
+	type CampaignCompletionRecord,
+} from "./app/model/useCampaignCompletionToggle.ts";
 
 const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 	EntityLinkContext,
@@ -115,7 +112,7 @@ export default function App() {
 	const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 	const modalState = useAppSelector((store) => store.modal);
 	const campaigns = useAppSelector(
-		(store) => store.campaigns.items as AppCampaign[],
+		(store) => store.campaigns.items as CampaignCompletionRecord[],
 	);
 	const campaignsReloadVersion = useAppSelector(
 		(store) => store.campaigns.reloadVersion,
@@ -381,46 +378,7 @@ export default function App() {
 		currentTheme,
 		syncEvent,
 	});
-
-	const handleToggleCampaignStatus = async (campaign: AppCampaign) => {
-		const completion = getCampaignCompletionPlan(
-			campaign,
-			new Date(),
-			(date) => date.toLocaleDateString(),
-		);
-		let completedAt = completion.completedAt;
-
-		if (completion.requiresDateConfirmation) {
-				const confirmUpdate = await dispatch(
-					confirm({
-						title: lang.t("Update completion date"),
-						message: lang.t(
-							"Campaign was already completed on {date}. Update completion date to today?",
-							{ date: completion.previousDateLabel },
-						),
-					}),
-				);
-				if (confirmUpdate) completedAt = completion.nextCompletedAt;
-		} else if (completion.completed) {
-			completedAt = completion.nextCompletedAt;
-		}
-
-		try {
-			await api.updateCampaign(campaign.slug, {
-				completed: completion.completed,
-				completedAt,
-			});
-			dispatch(requestCampaignsReloadAction());
-		} catch (err) {
-			console.error("Failed to toggle campaign status", err);
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Failed to update campaign status"),
-				}),
-			);
-		}
-	};
+	const handleToggleCampaignStatus = useCampaignCompletionToggle(dispatch);
 
 	const openCreateCampaignModal = () => {
 		const handleClose = () => closeActiveModal();
