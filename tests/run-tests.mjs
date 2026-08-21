@@ -6987,6 +6987,25 @@ await run("Phase 211 isolates Encounter monster AI action transitions in page mo
 	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 });
 
+await run("Phase 212 moves Encounter render context into page presentation", async () => {
+	const [page, presentation] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/encounterPagePresentation.ts", "utf8"),
+	]);
+	assert.match(page, /getEncounterRenderContext,/);
+	assert.doesNotMatch(page, /function getEncounterRenderContext/);
+	assertSourceTokensInOrder(page, [
+		"const renderContext = getEncounterRenderContext(view, campaign, sessionId);",
+		"if (!renderContext) return <EncounterLoading />;",
+		"const { campaign: activeCampaign, sessionId: activeSessionId, encounter } = renderContext;",
+	], "Encounter raw render-context composition");
+	assertSourceTokensInOrder(presentation, [
+		"export function getEncounterRenderContext(",
+		"if (!view.encounter || !campaign || !sessionId) return null;",
+		"return { encounter: view.encounter, campaign, sessionId };",
+	], "Encounter page-model render-context projection");
+});
+
 await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {

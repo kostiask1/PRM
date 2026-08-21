@@ -1,5 +1,6 @@
 import type {
 	CampaignEntityRecord,
+	CampaignRecord,
 	CharacterData,
 } from "../../../entities/campaign/index.js";
 import { MonsterStatBlockModel } from "../../../entities/bestiary/index.js";
@@ -20,6 +21,7 @@ import { getFirstGeneratedMonster } from "../../../features/ai-edit-monster/mode
 import type {
 	EncounterSyncEvent,
 	EncounterUpdateOptions,
+	EncounterViewModel,
 	EncounterViewParticipant,
 	EncounterViewSession,
 	EncounterViewState,
@@ -179,6 +181,15 @@ export interface EncounterPlayerCreationLifecycle {
 	onReset(): void;
 	onError(error: unknown): void;
 	onComplete(): void;
+}
+
+export function getEncounterRenderContext(
+	view: EncounterViewModel,
+	campaign: CampaignRecord | null,
+	sessionId: string | null,
+) {
+	if (!view.encounter || !campaign || !sessionId) return null;
+	return { encounter: view.encounter, campaign, sessionId };
 }
 
 export function applyEncounterGeneratedMonsterResult(

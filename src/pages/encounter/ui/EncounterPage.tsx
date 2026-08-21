@@ -91,6 +91,7 @@ import {
 	getAvailableEncounterCharacters,
 	getEncounterGridProjection,
 	getEncounterParticipantSelectionPlan,
+	getEncounterRenderContext,
 	isCustomBestiarySource as isCustomSource,
 	resolveEncounterHpInputValue as resolveHpInputValue,
 } from "../model/encounterPagePresentation.ts";
@@ -711,15 +712,6 @@ function EncounterLoading() {
 			<div className="Panel__body">{lang.t("Loading...")}</div>
 		</Panel>
 	);
-}
-
-function getEncounterRenderContext(
-	view: EncounterViewModel,
-	campaign: CampaignRecord | null,
-	sessionId: string | null,
-) {
-	if (!view.encounter || !campaign || !sessionId) return null;
-	return { encounter: view.encounter, campaign, sessionId };
 }
 
 export default EncounterView;
