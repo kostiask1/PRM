@@ -812,6 +812,8 @@ Next:
 - Phase 208 preserves mode/column normalization, patch-before-request order, and error logging. The full suite reaches 494/494 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 209 by moving Encounter local/global monster field-edit state and save orchestration from `EncounterPage.tsx` to private `model/useEncounterMonsterFieldEditing.ts`. Raw `EncounterView` retains API/runtime/view adapters, localization, and modal/detail composition.
 - Phase 209 preserves the character/ID guard, `none` edit-plan exit, action close before editor state, local-vs-persistent update options, and refresh/close/error ordering. The full suite reaches 495/495 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 210 by moving the distinct Encounter header pointer-dismissal lifecycle from `EncounterPage.tsx` to private `model/useEncounterHeaderDismissal.ts`. Raw `EncounterView` retains header ref/open state and the close adapter.
+- Phase 210 preserves open-only registration, the `Node` containment check, outside-only close, and `pointerdown` cleanup. The full suite reaches 496/496 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1062,6 +1064,9 @@ adapter and header composition at 494/494 tests. Phase 209 isolates Encounter
 local/global monster field-edit state and save orchestration in private page
 model while retaining raw API/runtime/view adapters, localization, and
 modal/detail composition at 495/495 tests.
+Phase 210 isolates the distinct Encounter header pointer-dismissal lifecycle in
+private page model while retaining raw header ref/open state and its close
+adapter at 496/496 tests.
 
 ### Provenance and transfer rule
 
@@ -1456,7 +1461,8 @@ Status: **In progress**
   tests; Phase 199 passes 485/485 tests; Phase 200 passes 486/486 tests;
   Phase 201 passes 487/487 tests; Phase 202 passes 488/488 tests; Phase 203
   passes 489/489 tests; Phase 204 passes 490/490 tests; Phase 205 passes 491/491 tests; Phase 206 passes 492/492 tests; Phase 207 passes 493/493 tests;
-  Phase 208 passes 494/494 tests; Phase 209 passes 495/495 tests.
+  Phase 208 passes 494/494 tests; Phase 209 passes 495/495 tests; Phase 210
+  passes 496/496 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 

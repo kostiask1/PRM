@@ -6112,7 +6112,7 @@ await run(
 		assertSourceTokensInOrder(
 			encounterSource,
 			[
-				"function useEncounterHeaderDismissal(",
+				'import { useEncounterHeaderDismissal } from "../model/useEncounterHeaderDismissal.ts";',
 				"function EncounterView() {",
 				"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
 				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
@@ -6924,6 +6924,33 @@ await run("Phase 209 isolates Encounter monster field editing in page model", as
 	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 });
 
+await run("Phase 210 isolates Encounter header dismissal in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterHeaderDismissal.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterHeaderDismissal \} from "\.\.\/model\/useEncounterHeaderDismissal\.ts";/);
+	assert.doesNotMatch(page, /function useEncounterHeaderDismissal|document\.addEventListener\("pointerdown"/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterHeaderDismissal/);
+	assertSourceTokensInOrder(page, [
+		"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
+		"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
+		"useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));",
+	], "Encounter raw header-dismissal composition");
+	assertSourceTokensInOrder(hook, [
+		'import { useEffect, type RefObject } from "react";',
+		"export function useEncounterHeaderDismissal(",
+		"if (!isOpen) return undefined;",
+		"if (!actionsRef.current?.contains(event.target as Node)) onClose();",
+		'document.addEventListener("pointerdown", handlePointerDown);',
+		'return () => document.removeEventListener("pointerdown", handlePointerDown);',
+		"}, [isOpen, onClose]);",
+	], "Encounter page-model header-dismissal lifecycle");
+	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
+
 await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
@@ -7182,11 +7209,7 @@ await run(
 		assertSourceTokensInOrder(
 			encounterSource,
 			[
-				"function useEncounterHeaderDismissal(",
-				"if (!isOpen) return undefined;",
-				"if (!actionsRef.current?.contains(event.target as Node)) onClose();",
-				'document.addEventListener("pointerdown", handlePointerDown);',
-				'return () => document.removeEventListener("pointerdown", handlePointerDown);',
+				'import { useEncounterHeaderDismissal } from "../model/useEncounterHeaderDismissal.ts";',
 				"function EncounterView() {",
 				"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
 				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",

@@ -1,9 +1,7 @@
 import {
-	useEffect,
 	useMemo,
 	useRef,
 	useState,
-	type RefObject,
 } from "react";
 import {
 	Button,
@@ -38,6 +36,7 @@ import { useEncounterGridFocus } from "../model/useEncounterGridFocus.ts";
 import { useEncounterHpEditing } from "../model/useEncounterHpEditing.ts";
 import { useEncounterCharacterModal } from "../model/useEncounterCharacterModal.ts";
 import { useEncounterDisplaySettings } from "../model/useEncounterDisplaySettings.ts";
+import { useEncounterHeaderDismissal } from "../model/useEncounterHeaderDismissal.ts";
 import { useEncounterMonsterFieldEditing } from "../model/useEncounterMonsterFieldEditing.ts";
 import { useEncounterPlayerCreation } from "../model/useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
@@ -179,21 +178,6 @@ function getEncounterViewPlayerCharacters(
 	view: EncounterViewModel,
 ): CampaignEntityRecord[] {
 	return view.playerCharacters || EMPTY_CAMPAIGN_ENTITIES;
-}
-
-function useEncounterHeaderDismissal(
-	isOpen: boolean,
-	actionsRef: RefObject<HTMLDivElement | null>,
-	onClose: () => void,
-) {
-	useEffect(() => {
-		if (!isOpen) return undefined;
-		const handlePointerDown = (event: PointerEvent) => {
-			if (!actionsRef.current?.contains(event.target as Node)) onClose();
-		};
-		document.addEventListener("pointerdown", handlePointerDown);
-		return () => document.removeEventListener("pointerdown", handlePointerDown);
-	}, [isOpen, onClose]);
 }
 
 function EncounterView() {
