@@ -6862,6 +6862,33 @@ await run("Phase 207 isolates Encounter character modal in page model", async ()
 	assertSourceTokensInOrder(hook, ["export function useEncounterCharacterModal", "onUpdate(instanceId, nextCharacter);", 'participantType: "character"', "instanceId", "return { value, open, close, getOnChange }"], "Encounter page-model character modal");
 });
 
+await run("Phase 208 isolates Encounter display settings in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterDisplaySettings.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterDisplaySettings \} from "\.\.\/model\/useEncounterDisplaySettings\.ts";/);
+	assert.doesNotMatch(page, /const updateEncounterViewMode|const updateEncounterGridColumns|api\.updateSettings\(\{ encounter(?:ViewMode|GridColumns)/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterDisplaySettings/);
+	assertSourceTokensInOrder(page, [
+		"const displaySettings = useEncounterDisplaySettings({ patchUiSettings });",
+		"onDisplayMode={displaySettings.updateViewMode}",
+		"onGridColumns={displaySettings.updateGridColumns}",
+	], "Encounter raw display-settings composition");
+	assertSourceTokensInOrder(hook, [
+		"export function useEncounterDisplaySettings",
+		'const nextMode = mode === "grid" ? "grid" : "single";',
+		"patchUiSettings({ encounterViewMode: nextMode });",
+		"settingsApi.updateSettings({ encounterViewMode: nextMode }).catch",
+		"const nextColumns = Math.min(4, Math.max(1, Number(columns) || 2));",
+		"patchUiSettings({ encounterGridColumns: nextColumns });",
+		"settingsApi.updateSettings({ encounterGridColumns: nextColumns }).catch",
+	], "Encounter page-model display settings");
+	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
+
 await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {
