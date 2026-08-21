@@ -848,6 +848,8 @@ Next:
 - Phase 226 preserves completion-plan/date-confirmation branching, update payload, reload-after-save, and the localized failure alert. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 227 by moving app mobile-sidebar state and lifecycle into private `app/model/useMobileSidebar.ts`. `App.tsx` remains the control/callback composer.
 - Phase 227 preserves route-close, body-class, Escape-listener, cleanup, state-setter semantics, and lifecycle ordering after navigation synchronization. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 228 by moving Campaign page notes display state plus AI-ignore, view-mode, and bulk-collapse orchestration into private `pages/campaign/model/useCampaignNotesControls.ts`. `CampaignView` remains the persistence-command owner.
+- Phase 228 preserves note mapping, view-mode plan then setter/save order, bulk reorder then finish order, and the hash-navigation setter. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

@@ -29,6 +29,7 @@ import "../../../assets/components/CampaignView.css";
 import useCampaignView from "../model/useCampaignView.ts";
 import { useCampaignCharacterTypeDrop } from "../model/useCampaignCharacterTypeDrop.ts";
 import { useCampaignHashNavigation } from "../model/useCampaignHashNavigation.ts";
+import { useCampaignNotesControls } from "../model/useCampaignNotesControls.ts";
 import { useCampaignPageRuntime } from "../model/CampaignPageRuntime.tsx";
 import { CampaignViewModel } from "../../../entities/campaign/index.js";
 import { lang } from "../../../shared/lib/index.js";
@@ -40,9 +41,7 @@ import {
 	filterCampaignSessions,
 	getCampaignEntityAiIgnoredUpdate,
 	getCampaignPageCampaign,
-	getCampaignNotesViewModePlan,
 	getCampaignSectionState,
-	type CampaignNotesViewMode,
 	type CampaignSessionItem,
 } from "../model/campaignPagePresentation.ts";
 
@@ -53,8 +52,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const view = useCampaignView({ campaign });
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
-	const [notesViewMode, setNotesViewMode] =
-		useState<CampaignNotesViewMode>("list");
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
@@ -73,13 +70,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const notesForRender = getNotesForRender(view.notes || [], {
 		simplifiedNotes: simplifiedNotesEnabled,
 	});
-	const toggleCampaignNoteAiIgnored = (noteId: DomainId, ignored: boolean) => {
-		view.handleNotesReorder(
-			view.notes.map((note) =>
-				note.id === noteId ? { ...note, _aiIgnored: ignored } : note,
-			),
-		);
-	};
 	const toggleCampaignEntityAiIgnored = (
 		type: "npc" | "locations",
 		entityId: DomainId | undefined,
@@ -110,6 +100,20 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		setIsNotesCollapsed,
 		setIsNpcsCollapsed,
 	} = view;
+	const {
+		notesViewMode,
+		setNotesViewMode,
+		handleNotesViewModeChange,
+		handleBulkNotesCollapse,
+		toggleCampaignNoteAiIgnored,
+	} = useCampaignNotesControls({
+		notes: view.notes,
+		isNotesCollapsed,
+		onNotesReorder: view.handleNotesReorder,
+		onFinishTrackedReorder: view.finishTrackedReorder,
+		onSetNotesCollapsed: view.setIsNotesCollapsed,
+		onTriggerSave: view.triggerSave,
+	});
 
 	useCampaignHashNavigation({
 		campaignSlug: campaign.slug,
@@ -130,18 +134,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		onCharacterTypeDrop: view.handleCharacterTypeDrop,
 	});
 
-	const handleNotesViewModeChange = (mode: CampaignNotesViewMode) => {
-		const plan = getCampaignNotesViewModePlan(mode, isNotesCollapsed);
-		setNotesViewMode(plan.viewMode);
-		if (!plan.collapsePatch) return;
-		view.setIsNotesCollapsed(plan.collapsePatch.isNotesCollapsed);
-		view.triggerSave(plan.collapsePatch);
-	};
-
-	const handleBulkNotesCollapse = (collapsed: boolean) => {
-		view.handleNotesReorder(view.notes.map((note) => ({ ...note, collapsed })));
-		view.finishTrackedReorder();
-	};
 	const toggleCampaignDescription = () => {
 		if (!hasDescriptionData) return;
 		const next = !isDescriptionCollapsed;
