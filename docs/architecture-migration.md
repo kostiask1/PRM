@@ -809,7 +809,9 @@ Next:
 - Completed Phase 207 by moving Encounter Page character-modal state and synchronization from `EncounterPage.tsx` to private `model/useEncounterCharacterModal.ts`. Raw `EncounterView` retains participant-selection and update adapters.
 - Phase 207 preserves open/close, exact instance match, character projection, and participant-type override. One added static regression brings the full suite to 493/493 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 208 by moving Encounter display-settings patch/persistence from `EncounterPage.tsx` to private `model/useEncounterDisplaySettings.ts`. Raw `EncounterView` retains runtime patch adapter and header composition.
-- Phase 208 preserves mode/column normalization, patch-before-request order, and error logging. The full suite remains 493/493 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Phase 208 preserves mode/column normalization, patch-before-request order, and error logging. The full suite reaches 494/494 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 209 by moving Encounter local/global monster field-edit state and save orchestration from `EncounterPage.tsx` to private `model/useEncounterMonsterFieldEditing.ts`. Raw `EncounterView` retains API/runtime/view adapters, localization, and modal/detail composition.
+- Phase 209 preserves the character/ID guard, `none` edit-plan exit, action close before editor state, local-vs-persistent update options, and refresh/close/error ordering. The full suite reaches 495/495 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1052,6 +1054,14 @@ composition at 491/491 tests.
 Phase 206 isolates Encounter Page HP draft/edit lifecycle in private page model
 while retaining raw participant identity and update-adapter ownership at 492/492
 tests.
+Phase 207 isolates Encounter Page character-modal state and synchronization in
+private page model while retaining raw participant-selection and update-adapter
+ownership at 493/493 tests. Phase 208 isolates Encounter display-settings
+patch/persistence in private page model while retaining raw runtime patch
+adapter and header composition at 494/494 tests. Phase 209 isolates Encounter
+local/global monster field-edit state and save orchestration in private page
+model while retaining raw API/runtime/view adapters, localization, and
+modal/detail composition at 495/495 tests.
 
 ### Provenance and transfer rule
 
@@ -1445,7 +1455,8 @@ Status: **In progress**
   482/482 tests; Phase 197 passes 483/483 tests; Phase 198 passes 484/484
   tests; Phase 199 passes 485/485 tests; Phase 200 passes 486/486 tests;
   Phase 201 passes 487/487 tests; Phase 202 passes 488/488 tests; Phase 203
-  passes 489/489 tests; Phase 204 passes 490/490 tests; Phase 205 passes 491/491 tests; Phase 206 passes 492/492 tests.
+  passes 489/489 tests; Phase 204 passes 490/490 tests; Phase 205 passes 491/491 tests; Phase 206 passes 492/492 tests; Phase 207 passes 493/493 tests;
+  Phase 208 passes 494/494 tests; Phase 209 passes 495/495 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 

@@ -5904,7 +5904,7 @@ await run(
 				"getParticipantInstanceId={getParticipantInstanceId}",
 				"setGridItemRef={setGridItemRef}",
 				"onAiAction={handleMonsterAiAction}",
-				"onFieldEdit={openEditMonsterAction}",
+				"onFieldEdit={monsterFieldEditing.openAction}",
 				"onTokenImageChange={handleMonsterTokenImageChange}",
 				"onCharacterChange={characterModal.getOnChange}",
 				"getMonsterImageOverride={view.getMonsterImageOverride}",
@@ -6886,6 +6886,41 @@ await run("Phase 208 isolates Encounter display settings in page model", async (
 		"patchUiSettings({ encounterGridColumns: nextColumns });",
 		"settingsApi.updateSettings({ encounterGridColumns: nextColumns }).catch",
 	], "Encounter page-model display settings");
+	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
+
+await run("Phase 209 isolates Encounter monster field editing in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterMonsterFieldEditing.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterMonsterFieldEditing \} from "\.\.\/model\/useEncounterMonsterFieldEditing\.ts";/);
+	assert.doesNotMatch(page, /const (openEditMonsterAction|closeEditMonsterAction|chooseEditMonsterAction|closeEditMonsterFields|saveEditedMonsterFields)|fieldEditingMonster|editActionMonster|getEditingMonster/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterFieldEditing/);
+	assertSourceTokensInOrder(page, [
+		"const monsterFieldEditing = useEncounterMonsterFieldEditing({",
+		"onUpdateMonster: view.updateMonsterFromAi,",
+		"onFieldEdit={monsterFieldEditing.openAction}",
+		"aiActionMonster={monsterFieldEditing.actionMonster as BestiaryMonster | null}",
+		"onChoose={monsterFieldEditing.chooseAction}",
+		"editingMonster={monsterFieldEditing.editingMonster}",
+		"onSave={monsterFieldEditing.save}",
+	], "Encounter raw monster-field-editing composition");
+	assertSourceTokensInOrder(hook, [
+		"export function useEncounterMonsterFieldEditing(options: Options)",
+		"if (!monster?.instanceId || isEncounterCharacterParticipant(monster))",
+		"getMonsterFieldEditPlan(",
+		'if (plan.kind === "none") return;',
+		"setActionMonster(null);",
+		"getMonsterFieldSavePlan(",
+		"await executeMonsterFieldSavePlan(",
+		"{ localOverride: true, preserveCurrentHp: false },",
+		"{ preserveCurrentHp: false },",
+		"onRefresh: options.refreshEntities,",
+		"onClose: closeEditor,",
+	], "Encounter page-model monster-field-editing lifecycle");
 	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 });
 
