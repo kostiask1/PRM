@@ -6996,7 +6996,7 @@ await run("Phase 212 moves Encounter render context into page presentation", asy
 	assertSourceTokensInOrder(page, [
 		"const renderContext = getEncounterRenderContext(view, campaign, sessionId);",
 		"if (!renderContext) return <EncounterLoading />;",
-		"const { campaign: activeCampaign, sessionId: activeSessionId, encounter } = renderContext;",
+		"const { campaign: activeCampaign, encounter } = renderContext;",
 	], "Encounter raw render-context composition");
 	assertSourceTokensInOrder(presentation, [
 		"export function getEncounterRenderContext(",
@@ -7069,7 +7069,7 @@ await run("Phase 214 isolates Encounter monster AI editor session state in page 
 		"onStartEditing: aiEditor.start,",
 		"aiEditor.setIsEditing(true);",
 		"aiEditor.setError(\"\");",
-		"aiEditor.completeSuccess();",
+		"onSuccess: aiEditor.completeSuccess,",
 		"aiEditingMonster={aiEditor.editingMonster as BestiaryMonster | null}",
 		"onCancelEdit={aiEditor.close}",
 		"onInstructionsChange={aiEditor.setInstructions}",
@@ -7088,6 +7088,51 @@ await run("Phase 214 isolates Encounter monster AI editor session state in page 
 		"return {",
 		"completeSuccess,",
 	], "Encounter page-model monster-AI editor lifecycle");
+	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
+
+await run("Phase 215 isolates Encounter monster AI generation lifecycle in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterMonsterAiGeneration.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterMonsterAiGeneration \} from "\.\.\/model\/useEncounterMonsterAiGeneration\.ts";/);
+	assert.doesNotMatch(page, /const (cancelAiEditCustomMonsterRequest|saveAiEditedCustomMonster)|buildMonsterAiRequestPayload|executeMonsterAiRequest|getMonsterAiGenerationPlan|applyEncounterGeneratedMonsterResult/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiGeneration/);
+	assertSourceTokensInOrder(page, [
+		"const aiGeneration = useEncounterMonsterAiGeneration({",
+		"controllerRef: aiEditControllerRef,",
+		"targetInstanceId: monsterAiAction.targetInstanceId,",
+		"monster: aiEditor.editingMonster,",
+		"onDraftMode: aiDraft.setMode,",
+		"onDraftEntry: aiDraft.setEntry,",
+		"aiEditor.setIsEditing(true);",
+		"onSuccess: aiEditor.completeSuccess,",
+		"onComplete: () => aiEditor.setIsEditing(false),",
+		"onCancelEditRequest={aiGeneration.cancel}",
+		"onSaveEdit={aiGeneration.save}",
+	], "Encounter raw monster-AI generation composition");
+	assertSourceTokensInOrder(hook, [
+		"export function useEncounterMonsterAiGeneration(options: Options)",
+		"options.controllerRef.current?.abort();",
+		"if (!options.monster?.name) return;",
+		"getMonsterAiGenerationPlan(",
+		"if (plan.validationError)",
+		"options.onStart();",
+		"const controller = new AbortController();",
+		"options.controllerRef.current = controller;",
+		"await executeMonsterAiRequest(controller, {",
+		"options.api.generateAi(",
+		"buildMonsterAiRequestPayload({",
+		"applyEncounterGeneratedMonsterResult(",
+		"options.onSuccess();",
+		"onError: options.onError,",
+		"if (options.controllerRef.current === controller)",
+		"options.controllerRef.current = null;",
+		"options.onComplete();",
+	], "Encounter page-model monster-AI generation lifecycle");
 	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 });
 
