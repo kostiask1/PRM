@@ -92,6 +92,7 @@ const FSD_PUBLIC_ENTRY_PATH_PATTERN = new RegExp(
 const SETTINGS_FEATURE_PATH_PREFIX = "src/features/settings/";
 const NOTES_FEATURE_PATH_PREFIX = "src/features/notes/";
 const PLAYER_QUESTIONS_FEATURE_PATH_PREFIX = "src/features/player-questions/";
+const CAMPAIGN_CREATE_FEATURE_PATH_PREFIX = "src/features/campaign-create/";
 const CAMPAIGN_ENTITY_FEATURE_PATH_PREFIX = "src/features/campaign-entity/";
 const ENCOUNTER_EDITOR_FEATURE_PATH_PREFIX = "src/features/encounter-editor/";
 const RULES_REFERENCE_FEATURE_PATH_PREFIX = "src/features/rules-reference/";
@@ -555,6 +556,16 @@ const PLAYER_QUESTIONS_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule(
 		"Player Questions must receive app-global dice state and requests through its injected runtime and may not import shared/model or app/model directly.",
 });
 
+const CAMPAIGN_CREATE_RUNTIME_FACADE_RULE =
+	createInjectedRuntimeStoreFacadeRule({
+		featurePathPrefix: CAMPAIGN_CREATE_FEATURE_PATH_PREFIX,
+		description:
+			"Require Campaign Create to receive app-global modal, reload, navigation, and notification effects through injected commands.",
+		messageId: "injectedRuntime",
+		message:
+			"Campaign Create must receive app-global modal, reload, navigation, and notification effects through its injected runtime and may not import shared/model or app/model directly.",
+	});
+
 const CAMPAIGN_ENTITY_STORE_FACADE_RULE =
 	createInjectedRuntimeStoreFacadeRule({
 		featurePathPrefix: CAMPAIGN_ENTITY_FEATURE_PATH_PREFIX,
@@ -743,6 +754,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"settings-store-facade": SETTINGS_STORE_FACADE_RULE,
 		"notes-store-facade": NOTES_STORE_FACADE_RULE,
 		"player-questions-store-facade": PLAYER_QUESTIONS_STORE_FACADE_RULE,
+		"campaign-create-runtime-facade": CAMPAIGN_CREATE_RUNTIME_FACADE_RULE,
 		"campaign-entity-store-facade": CAMPAIGN_ENTITY_STORE_FACADE_RULE,
 		"encounter-editor-store-facade": ENCOUNTER_EDITOR_STORE_FACADE_RULE,
 		"rules-reference-store-facade": RULES_REFERENCE_STORE_FACADE_RULE,

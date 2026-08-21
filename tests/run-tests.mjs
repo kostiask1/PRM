@@ -830,6 +830,10 @@ import {
 	isEditableAppTarget,
 } from "../src/app/model/appShellPresentation.ts";
 import {
+	executeCampaignArchiveImport,
+	executeCampaignCreation,
+} from "../src/features/campaign-create/model/campaignCreation.ts";
+import {
 	actionEntriesToText,
 	actionFromText,
 	addMonsterAction,
@@ -1483,6 +1487,8 @@ const FSD_NOTES_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/notes-store-facade";
 const FSD_PLAYER_QUESTIONS_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/player-questions-store-facade";
+const FSD_CAMPAIGN_CREATE_RUNTIME_FACADE_RULE_ID =
+	"fsd-boundaries/campaign-create-runtime-facade";
 const FSD_CAMPAIGN_ENTITY_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/campaign-entity-store-facade";
 const FSD_ENCOUNTER_EDITOR_STORE_FACADE_RULE_ID =
@@ -22137,6 +22143,212 @@ await run("app shell policies normalize settings, mentions, and campaign complet
 	assert.equal(getAppErrorMessage({ message: "unsafe" }, "Невідомо"), "Невідомо");
 	assert.equal(getAppErrorMessage(new Error("Помилка"), "Невідомо"), "Помилка");
 });
+
+await run(
+	"campaign creation feature owns create/import orchestration through injected commands",
+	async () => {
+		const calls = [];
+		let createFailure = null;
+		let importFailure = null;
+		let createResult = { slug: "new-campaign" };
+		const commands = {
+			createCampaign: async (name) => {
+				calls.push(["create", name]);
+				if (createFailure) throw createFailure;
+				return createResult;
+			},
+			importCampaign: async (file) => {
+				calls.push(["import", file]);
+				if (importFailure) throw importFailure;
+			},
+			requestCampaignsReload: () => calls.push(["reload"]),
+			closeModal: () => calls.push(["close"]),
+			navigateToCampaign: (slug) => calls.push(["navigate", slug]),
+			reportError: (error) => calls.push(["error", error]),
+			getCreateError: (error) => {
+				calls.push(["get-create-error", error]);
+				return { title: "Create", message: "create failed" };
+			},
+			getImportError: (error) => {
+				calls.push(["get-import-error", error]);
+				return { title: "Import", message: "import failed" };
+			},
+		};
+
+		await executeCampaignCreation("  New campaign  ", commands);
+		assert.deepEqual(calls, [
+			["create", "New campaign"],
+			["reload"],
+			["close"],
+			["navigate", "new-campaign"],
+		]);
+
+		calls.length = 0;
+		await executeCampaignCreation("  ", commands);
+		assert.deepEqual(calls, []);
+
+		calls.length = 0;
+		createFailure = new Error("create transport failed");
+		await executeCampaignCreation("New campaign", commands);
+		assert.deepEqual(calls, [
+			["create", "New campaign"],
+			["get-create-error", createFailure],
+			["error", { title: "Create", message: "create failed" }],
+		]);
+
+		calls.length = 0;
+		createFailure = null;
+		createResult = null;
+		await executeCampaignCreation("New campaign", commands);
+		assert.equal(calls[0][0], "create");
+		assert.equal(calls[1][0], "get-create-error");
+		assert.deepEqual(calls[2], [
+			"error",
+			{ title: "Create", message: "create failed" },
+		]);
+
+		const archive = { name: "campaign.prma" };
+		calls.length = 0;
+		createResult = { slug: "new-campaign" };
+		await executeCampaignArchiveImport(archive, commands);
+		assert.deepEqual(calls, [
+			["import", archive],
+			["reload"],
+			["close"],
+		]);
+
+		calls.length = 0;
+		importFailure = new Error("import transport failed");
+		await executeCampaignArchiveImport(archive, commands);
+		assert.deepEqual(calls, [
+			["import", archive],
+			["get-import-error", importFailure],
+			["error", { title: "Import", message: "import failed" }],
+		]);
+
+		const [
+			appSource,
+			modelSource,
+			hookSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			eslintSource,
+		] = await Promise.all([
+				fs.readFile("src/App.tsx", "utf8"),
+				fs.readFile(
+					"src/features/campaign-create/model/campaignCreation.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/features/campaign-create/model/useCampaignCreationModal.tsx",
+					"utf8",
+				),
+				fs.readFile("src/features/campaign-create/index.js", "utf8"),
+				fs.readFile("src/features/campaign-create/index.d.ts", "utf8"),
+				fs.readFile("eslint.config.js", "utf8"),
+			]);
+		assert.match(
+			appSource,
+			/import \{ useCampaignCreationModal \} from "\.\/features\/campaign-create\/index\.js";/,
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const handleToggleCampaignStatus = useCampaignCompletionToggle(dispatch);",
+				"const openCreateCampaignModal = useCampaignCreationModal({",
+				"openModal: openModalRequest,",
+				"closeModal: closeActiveModal,",
+				"createCampaign: campaignApi.createCampaign,",
+				'importCampaign: (file) => backupApi.importArchive(file, "campaign"),',
+				"requestCampaignsReload: () => dispatch(requestCampaignsReloadAction()),",
+				"navigateToCampaign: (slug) => navigateTo(slug),",
+				"reportError: (error) => dispatch(alert(error)),",
+				"onCreateCampaign={() => {",
+				"openCreateCampaignModal();",
+			],
+			"App injects campaign-creation runtime commands",
+		);
+		assert.doesNotMatch(
+			appSource,
+			/CreateCampaignModalContent|const openCreateCampaignModal = \(\) =>|api\.createCampaign|api\.importArchive|getAppErrorMessage/,
+		);
+		assertSourceTokensInOrder(
+			modelSource,
+			[
+				"export interface CampaignCreationCommands {",
+				"export async function executeCampaignCreation(",
+				"if (!name?.trim()) return;",
+				"const newCampaign = await commands.createCampaign(name.trim());",
+				'throw new Error("Campaign creation returned no result");',
+				"commands.requestCampaignsReload();",
+				"commands.closeModal();",
+				"commands.navigateToCampaign(newCampaign.slug);",
+				"commands.reportError(commands.getCreateError(error));",
+				"export async function executeCampaignArchiveImport(",
+				"await commands.importCampaign(file);",
+				"commands.requestCampaignsReload();",
+				"commands.closeModal();",
+				"commands.reportError(commands.getImportError(error));",
+			],
+			"Campaign creation command sequencing",
+		);
+		assertSourceTokensInOrder(
+			hookSource,
+			[
+				'import { useCallback, type ReactNode } from "react";',
+				'import CreateCampaignModalContent from "../ui/CreateCampaignModalContent.tsx";',
+				"export function useCampaignCreationModal({",
+				"const handleClose = () => closeModal();",
+				"const commands = {",
+				"getCreateError: (error) => ({",
+				"getImportError: (error) => ({",
+				"openModal({",
+				'title: lang.t("New campaign"),',
+				"showFooter: false,",
+				"<CreateCampaignModalContent",
+				"onClose={handleClose}",
+				"executeCampaignCreation(name, commands)",
+				"executeCampaignArchiveImport(file, commands)",
+			],
+			"Campaign creation feature modal composition",
+		);
+		assert.match(
+			`${runtimeEntrySource}\n${typeEntrySource}`,
+			/useCampaignCreationModal/,
+		);
+		assert.doesNotMatch(
+			`${modelSource}\n${hookSource}`,
+			/app\/model|shared\/model|campaignApi|backupApi/,
+		);
+		for (const source of [
+			'import { appStore } from "../../../app/model/index.js";',
+			'import { requestCampaignsReloadAction } from "../../../shared/model/index.js";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/campaign-create/model/useCampaignCreationModal.tsx",
+				FSD_CAMPAIGN_CREATE_RUNTIME_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_CAMPAIGN_CREATE_RUNTIME_FACADE_RULE_ID,
+			);
+		}
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { lang } from "../../../shared/lib/index.js";',
+				"src/features/campaign-create/model/useCampaignCreationModal.tsx",
+				FSD_CAMPAIGN_CREATE_RUNTIME_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/features\/campaign-create\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/campaign-create-runtime-facade': 'error',/,
+		);
+	},
+);
 
 await run("campaign page presentation narrows routes, sessions, and card notes", () => {
 	assert.equal(getCampaignPageCampaign(null), null);

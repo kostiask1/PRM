@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { campaignApi } from "./entities/campaign/index.js";
 import { backupApi } from "./features/backup/index.js";
-
-const api = { ...campaignApi, ...backupApi };
 import {
 	DiceRequestRuntimeProvider,
 	type DiceRequestRuntime,
@@ -46,7 +44,7 @@ import {
 	EntityModal,
 	openEntityLinkModal,
 } from "./features/entity-link/index.js";
-import { CreateCampaignModalContent } from "./features/campaign-create/index.js";
+import { useCampaignCreationModal } from "./features/campaign-create/index.js";
 import {
 	RulesReferenceModalHost,
 	RulesReferenceModalRuntimeProvider,
@@ -76,7 +74,6 @@ import {
 	setRulesReferenceModalOpenAction,
 } from "./shared/model/index.js";
 import {
-	getAppErrorMessage,
 	isEditableAppTarget,
 } from "./app/model/appShellPresentation.ts";
 
@@ -355,51 +352,15 @@ export default function App() {
 		syncEvent,
 	});
 	const handleToggleCampaignStatus = useCampaignCompletionToggle(dispatch);
-
-	const openCreateCampaignModal = () => {
-		const handleClose = () => closeActiveModal();
-		openModalRequest({
-			title: lang.t("New campaign"),
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<CreateCampaignModalContent
-					onClose={handleClose}
-					onCreateCampaign={async (name) => {
-						if (!name?.trim()) return;
-						try {
-							const newCampaign = await api.createCampaign(name.trim());
-							if (!newCampaign) throw new Error("Campaign creation returned no result");
-							dispatch(requestCampaignsReloadAction());
-							handleClose();
-							navigateTo(newCampaign.slug);
-						} catch (err) {
-							dispatch(
-								alert({
-									title: lang.t("Error"),
-									message: getAppErrorMessage(err, lang.t("Failed to create campaign")),
-								}),
-							);
-						}
-					}}
-					onImportCampaign={async (file) => {
-						try {
-							await api.importArchive(file, "campaign");
-							dispatch(requestCampaignsReloadAction());
-							handleClose();
-						} catch (err) {
-							dispatch(
-								alert({
-									title: lang.t("Import error"),
-									message: getAppErrorMessage(err, lang.t("Failed to import campaign")),
-								}),
-							);
-						}
-					}}
-				/>
-			),
-		});
-	};
+	const openCreateCampaignModal = useCampaignCreationModal({
+		openModal: openModalRequest,
+		closeModal: closeActiveModal,
+		createCampaign: campaignApi.createCampaign,
+		importCampaign: (file) => backupApi.importArchive(file, "campaign"),
+		requestCampaignsReload: () => dispatch(requestCampaignsReloadAction()),
+		navigateToCampaign: (slug) => navigateTo(slug),
+		reportError: (error) => dispatch(alert(error)),
+	});
 
 	return (
 		<ImageGalleryRuntimeHost>

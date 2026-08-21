@@ -677,6 +677,12 @@ export default [
     },
   },
   {
+    files: ['src/features/campaign-create/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/campaign-create-runtime-facade': 'error',
+    },
+  },
+  {
     files: ['src/features/campaign-entity/**/*.{js,jsx,ts,tsx}'],
     rules: {
       'fsd-boundaries/campaign-entity-store-facade': 'error',
