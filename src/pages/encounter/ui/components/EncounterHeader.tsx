@@ -30,10 +30,6 @@ interface EncounterHeaderProps {
 	gridColumns: number;
 	isActionsOpen: boolean;
 	actionsRef: RefObject<HTMLDivElement | null>;
-	averageTooltip: ReactNode;
-	maxTooltip: ReactNode;
-	weightedTooltip: ReactNode;
-	metricsTooltip: ReactNode;
 	onToggleActions: () => void;
 	onDisplayMode: (mode: EncounterDisplayMode) => void;
 	onGridColumns: (columns: number) => void;
@@ -46,20 +42,85 @@ export default function EncounterHeader({
 	gridColumns,
 	isActionsOpen,
 	actionsRef,
-	averageTooltip,
-	maxTooltip,
-	weightedTooltip,
-	metricsTooltip,
 	onToggleActions,
 	onDisplayMode,
 	onGridColumns,
 }: EncounterHeaderProps) {
+	const { averageTooltip, maxTooltip, weightedTooltip, metricsTooltip } =
+		getEncounterHeaderTooltips(view);
 	return (
 		<div className="Panel__header">
 			<EncounterHeaderIdentity view={view} averageTooltip={averageTooltip} maxTooltip={maxTooltip} weightedTooltip={weightedTooltip} />
 			<EncounterHeaderActions {...{ view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns }} />
 		</div>
 	);
+}
+
+function getEncounterHeaderTooltips(
+	view: Pick<EncounterViewModel, "encounter" | "initiativeStats">,
+) {
+	const participantCount = view.encounter?.monsters.length || 0;
+	return {
+		averageTooltip: (
+			<div>
+				<div className="Tooltip__title">{lang.t("Avg initiative")}</div>
+				<div className="Tooltip__text">
+					{lang.t(
+						"Expected initiative for each participant is 10.5 + Dexterity modifier. Arithmetic average across all participants. Best for regular encounters with roughly equal threats.",
+					)}
+				</div>
+			</div>
+		),
+		maxTooltip: (
+			<div>
+				<div className="Tooltip__title">{lang.t("Max initiative")}</div>
+				<div className="Tooltip__text">
+					{lang.t(
+						"Expected initiative is calculated as 10.5 + Dexterity modifier for each participant, then the highest value is shown. Best for deadly encounters with a BBEG.",
+					)}
+				</div>
+			</div>
+		),
+		weightedTooltip: (
+			<div>
+				<div className="Tooltip__title">
+					{lang.t("CR-weighted avg initiative")}
+				</div>
+				<div className="Tooltip__text">
+					{lang.t(
+						"Each participant's expected initiative is multiplied by CR + 1, then divided by the sum of those weights. Best for balanced battles with a boss.",
+					)}
+				</div>
+			</div>
+		),
+		metricsTooltip: (
+			<div className="EncounterView__metricsTooltip">
+				<div className="Tooltip__title">{lang.t("Combat encounters")}</div>
+				<div className="EncounterView__metricsTooltipList">
+					<div className="EncounterView__metricsTooltipRow">
+						<span>{lang.t("Participants")}</span>
+						<strong>{participantCount}</strong>
+					</div>
+					{participantCount > 0 && (
+						<>
+							<div className="EncounterView__metricsTooltipRow">
+								<span>{lang.t("Avg initiative")}</span>
+								<strong>{view.initiativeStats.average}</strong>
+							</div>
+							<div className="EncounterView__metricsTooltipRow">
+								<span>{lang.t("Max initiative")}</span>
+								<strong>{view.initiativeStats.max}</strong>
+							</div>
+							<div className="EncounterView__metricsTooltipRow">
+								<span>{lang.t("CR-weighted avg initiative")}</span>
+								<strong>{view.initiativeStats.weightedAverage}</strong>
+							</div>
+						</>
+					)}
+				</div>
+			</div>
+		),
+	};
 }
 
 function EncounterHeaderIdentity({

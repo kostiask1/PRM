@@ -6118,14 +6118,6 @@ await run(
 				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
 				"useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));",
 				"const displaySettings = useEncounterDisplaySettings({ patchUiSettings });",
-				"const averageInitiativeTooltip = (",
-				'lang.t("Avg initiative")',
-				"const maxInitiativeTooltip = (",
-				'lang.t("Max initiative")',
-				"const weightedInitiativeTooltip = (",
-				'lang.t("CR-weighted avg initiative")',
-				"const encounterMetricsTooltip = (",
-				'lang.t("Combat encounters")',
 				"<EncounterHeader",
 				"view={view}",
 				"displayMode={effectiveDisplayMode}",
@@ -6133,16 +6125,12 @@ await run(
 				"gridColumns={gridColumns}",
 				"isActionsOpen={isHeaderActionsOpen}",
 				"actionsRef={headerActionsRef}",
-				"averageTooltip={averageInitiativeTooltip}",
-				"maxTooltip={maxInitiativeTooltip}",
-				"weightedTooltip={weightedInitiativeTooltip}",
-				"metricsTooltip={encounterMetricsTooltip}",
 				"onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}",
 				"onDisplayMode={displaySettings.updateViewMode}",
 				"onGridColumns={displaySettings.updateGridColumns}",
 				"<DraggableList",
 			],
-			"Encounter raw header state, settings, and tooltip ownership",
+			"Encounter raw header state and settings ownership",
 		);
 		assertSourceTokensInOrder(
 			headerSource,
@@ -6169,12 +6157,23 @@ await run(
 				'| "handleRedo"',
 				"interface EncounterHeaderProps {",
 				"actionsRef: RefObject<HTMLDivElement | null>;",
-				"averageTooltip: ReactNode;",
-				"metricsTooltip: ReactNode;",
 				"export default function EncounterHeader({",
+				"const { averageTooltip, maxTooltip, weightedTooltip, metricsTooltip } =",
+				"getEncounterHeaderTooltips(view);",
 				'"Panel__header"',
 				"<EncounterHeaderIdentity",
 				"<EncounterHeaderActions {...{ view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns }} />",
+				"function getEncounterHeaderTooltips(",
+				"const participantCount = view.encounter?.monsters.length || 0;",
+				"averageTooltip: (",
+				'lang.t("Avg initiative")',
+				"maxTooltip: (",
+				'lang.t("Max initiative")',
+				"weightedTooltip: (",
+				'lang.t("CR-weighted avg initiative")',
+				"metricsTooltip: (",
+				'lang.t("Combat encounters")',
+				"participantCount > 0 &&",
 				"function EncounterHeaderIdentity({",
 				"onClick={view.handleBack}",
 				'<Tooltip content={lang.t("Click to rename")}>',
@@ -6201,6 +6200,34 @@ await run(
 		);
 	},
 );
+
+await run("Phase 216 moves Encounter header tooltip presentation to its private component", async () => {
+	const [page, header, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/ui/components/EncounterHeader.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.doesNotMatch(page, /const (averageInitiativeTooltip|maxInitiativeTooltip|weightedInitiativeTooltip|encounterMetricsTooltip)/);
+	assert.doesNotMatch(page, /(averageTooltip|maxTooltip|weightedTooltip|metricsTooltip)=\{/);
+	assert.doesNotMatch(`${entry}\n${types}`, /EncounterHeader/);
+	assertSourceTokensInOrder(header, [
+		"export default function EncounterHeader({",
+		"const { averageTooltip, maxTooltip, weightedTooltip, metricsTooltip } =",
+		"getEncounterHeaderTooltips(view);",
+		"<EncounterHeaderIdentity",
+		"metricsTooltip,",
+		"function getEncounterHeaderTooltips(",
+		"const participantCount = view.encounter?.monsters.length || 0;",
+		"averageTooltip: (",
+		"maxTooltip: (",
+		"weightedTooltip: (",
+		"metricsTooltip: (",
+		"participantCount > 0 &&",
+		"function EncounterHeaderIdentity({",
+	], "Encounter private header tooltip presentation");
+	assert.doesNotMatch(header, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
 
 await run(
 	"Phase 194 isolates Session scoped-entity modal presentation",

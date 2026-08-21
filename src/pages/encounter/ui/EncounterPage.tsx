@@ -341,71 +341,6 @@ function EncounterView() {
 		if (!monster?.instanceId) return;
 		view.updateMonsterImage(monster.instanceId, imageUrl);
 	};
-
-
-
-
-
-	const averageInitiativeTooltip = (
-		<div>
-			<div className="Tooltip__title">{lang.t("Avg initiative")}</div>
-			<div className="Tooltip__text">
-				{lang.t(
-					"Expected initiative for each participant is 10.5 + Dexterity modifier. Arithmetic average across all participants. Best for regular encounters with roughly equal threats.",
-				)}
-			</div>
-		</div>
-	);
-	const maxInitiativeTooltip = (
-		<div>
-			<div className="Tooltip__title">{lang.t("Max initiative")}</div>
-			<div className="Tooltip__text">
-				{lang.t(
-					"Expected initiative is calculated as 10.5 + Dexterity modifier for each participant, then the highest value is shown. Best for deadly encounters with a BBEG.",
-				)}
-			</div>
-		</div>
-	);
-	const weightedInitiativeTooltip = (
-		<div>
-			<div className="Tooltip__title">
-				{lang.t("CR-weighted avg initiative")}
-			</div>
-			<div className="Tooltip__text">
-				{lang.t(
-					"Each participant's expected initiative is multiplied by CR + 1, then divided by the sum of those weights. Best for balanced battles with a boss.",
-				)}
-			</div>
-		</div>
-	);
-	const encounterMetricsTooltip = (
-		<div className="EncounterView__metricsTooltip">
-			<div className="Tooltip__title">{lang.t("Combat encounters")}</div>
-			<div className="EncounterView__metricsTooltipList">
-				<div className="EncounterView__metricsTooltipRow">
-					<span>{lang.t("Participants")}</span>
-					<strong>{encounter.monsters.length}</strong>
-				</div>
-				{encounter.monsters.length > 0 && (
-					<>
-						<div className="EncounterView__metricsTooltipRow">
-							<span>{lang.t("Avg initiative")}</span>
-							<strong>{view.initiativeStats.average}</strong>
-						</div>
-						<div className="EncounterView__metricsTooltipRow">
-							<span>{lang.t("Max initiative")}</span>
-							<strong>{view.initiativeStats.max}</strong>
-						</div>
-						<div className="EncounterView__metricsTooltipRow">
-							<span>{lang.t("CR-weighted avg initiative")}</span>
-							<strong>{view.initiativeStats.weightedAverage}</strong>
-						</div>
-					</>
-				)}
-			</div>
-		</div>
-	);
-
 	return (
 		<Panel className="EncounterView">
 			<EncounterHeader
@@ -415,10 +350,6 @@ function EncounterView() {
 				gridColumns={gridColumns}
 				isActionsOpen={isHeaderActionsOpen}
 				actionsRef={headerActionsRef}
-				averageTooltip={averageInitiativeTooltip}
-				maxTooltip={maxInitiativeTooltip}
-				weightedTooltip={weightedInitiativeTooltip}
-				metricsTooltip={encounterMetricsTooltip}
 				onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}
 				onDisplayMode={displaySettings.updateViewMode}
 				onGridColumns={displaySettings.updateGridColumns}

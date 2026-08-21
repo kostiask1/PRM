@@ -824,6 +824,8 @@ Next:
 - Phase 214 preserves start/reset, in-flight close guard, success reset, and model selection. The full suite reaches 500/500 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 215 by moving Encounter AI generation, cancellation, and result lifecycle from `EncounterPage.tsx` to private `model/useEncounterMonsterAiGeneration.ts`. Raw `EncounterView` retains its AbortController ref, runtime dependencies/effects, localized adapters, and modal composition.
 - Phase 215 preserves name and generation-plan exits, start/reset/controller ordering, request payload, draft/local update routing, conditional active-controller cleanup, and error/finally ordering. The full suite reaches 501/501 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 216 by moving all four Encounter header tooltip ReactNodes from `EncounterPage.tsx` to private `ui/components/EncounterHeader.tsx`. Raw `EncounterView` retains menu state/ref/dismissal, settings persistence, and the functional toggle.
+- Phase 216 preserves unconditional tooltip construction and localized copy order, participant-count gating, initiative values, and header/action forwarding. The full suite reaches 502/502 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1093,6 +1095,9 @@ Phase 215 isolates Encounter AI generation, cancellation, and result lifecycle
 in private page model while retaining raw AbortController-ref ownership,
 runtime dependencies/effects, localized adapters, and modal composition at
 501/501 tests.
+Phase 216 moves all four Encounter header tooltip ReactNodes into private page
+UI while retaining raw menu state/ref/dismissal, settings persistence, and
+functional-toggle ownership at 502/502 tests.
 
 ### Provenance and transfer rule
 
@@ -1490,7 +1495,7 @@ Status: **In progress**
   Phase 208 passes 494/494 tests; Phase 209 passes 495/495 tests; Phase 210
   passes 496/496 tests; Phase 211 passes 497/497 tests; Phase 212 passes
   498/498 tests; Phase 213 passes 499/499 tests; Phase 214 passes 500/500 tests;
-  Phase 215 passes 501/501 tests.
+  Phase 215 passes 501/501 tests; Phase 216 passes 502/502 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
