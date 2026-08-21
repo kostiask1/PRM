@@ -14,7 +14,6 @@ import {
 	buildMonsterAiRequestPayload,
 	executeMonsterAiRequest,
 	getMonsterAiGenerationPlan,
-	type MonsterAiEditMode,
 } from "../../../features/ai-edit-monster/index.js";
 import { createAiResponseModalComponent } from "../../../widgets/ai-response-modal/index.js";
 import { AiAssistantPanel } from "../../../widgets/ai-assistant/index.js";
@@ -35,6 +34,7 @@ import { useEncounterDisplaySettings } from "../model/useEncounterDisplaySetting
 import { useEncounterHeaderDismissal } from "../model/useEncounterHeaderDismissal.ts";
 import { useEncounterMonsterAiAction } from "../model/useEncounterMonsterAiAction.ts";
 import { useEncounterMonsterAiDraft } from "../model/useEncounterMonsterAiDraft.ts";
+import { useEncounterMonsterAiEditor } from "../model/useEncounterMonsterAiEditor.ts";
 import { useEncounterMonsterFieldEditing } from "../model/useEncounterMonsterFieldEditing.ts";
 import { useEncounterPlayerCreation } from "../model/useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
@@ -75,7 +75,6 @@ import {
 	buildDiffResources,
 	type AiHistoryEntry,
 	type AiHistoryResource,
-	type AiModelDescriptor,
 } from "../../../features/ai/index.js";
 import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
@@ -188,14 +187,6 @@ function EncounterView() {
 	const campaign = runtimeCampaign as CampaignRecord | null;
 	const displayMode = getEncounterDisplayMode(encounterViewMode);
 	const gridColumns = getEncounterGridColumns(encounterGridColumns);
-	const [aiEditingMonster, setAiEditingMonster] =
-		useState<EncounterViewParticipant | null>(null);
-	const [aiEditMode, setAiEditMode] = useState<MonsterAiEditMode>("edit");
-	const [aiEditInstructions, setAiEditInstructions] = useState("");
-	const [aiEditError, setAiEditError] = useState("");
-	const [isAiEditingMonster, setIsAiEditingMonster] = useState(false);
-	const [aiModels, setAiModels] = useState<AiModelDescriptor[]>([]);
-	const [selectedAiModel, setSelectedAiModel] = useState("");
 	const aiDraftResponseRef = useRef<HTMLDivElement | null>(null);
 	const aiEditControllerRef = useRef<AbortController | null>(null);
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
@@ -253,28 +244,24 @@ function EncounterView() {
 	const characterModal = useEncounterCharacterModal({
 		onUpdate: view.updateEncounterCharacter,
 	});
+	const aiEditor = useEncounterMonsterAiEditor();
 
 	useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);
 	useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));
 	useEncounterAiModelLoading({
-		aiEditingMonster,
-		aiModelCount: aiModels.length,
-		onModels: setAiModels,
-		onSelectedModel: setSelectedAiModel,
+		aiEditingMonster: aiEditor.editingMonster,
+		aiModelCount: aiEditor.models.length,
+		onModels: aiEditor.setModels,
+		onSelectedModel: aiEditor.setSelectedModel,
 		onError: (error) => {
 			console.error("Failed to load AI models", error);
-			setAiEditError(error instanceof Error ? error.message : lang.t("Failed to connect to AI."));
+			aiEditor.setError(error instanceof Error ? error.message : lang.t("Failed to connect to AI."));
 		},
 	});
 	const displaySettings = useEncounterDisplaySettings({ patchUiSettings });
 	const monsterAiAction = useEncounterMonsterAiAction({
-		isEditing: isAiEditingMonster,
-		onStartEditing: (monster, mode) => {
-			setAiEditMode(mode);
-			setAiEditingMonster(monster);
-			setAiEditInstructions("");
-			setAiEditError("");
-		},
+		isEditing: aiEditor.isEditing,
+		onStartEditing: aiEditor.start,
 	});
 	const monsterFieldEditing = useEncounterMonsterFieldEditing({
 		api,
@@ -334,63 +321,53 @@ function EncounterView() {
 		view.updateMonsterImage(monster.instanceId, imageUrl);
 	};
 
-	const closeAiEditCustomMonster = () => {
-		if (isAiEditingMonster) return;
-		setAiEditingMonster(null);
-		setAiEditMode("edit");
-		setAiEditInstructions("");
-		setAiEditError("");
-	};
-
 	const cancelAiEditCustomMonsterRequest = () => {
 		aiEditControllerRef.current?.abort();
 	};
 
 	const saveAiEditedCustomMonster = async () => {
-		if (!aiEditingMonster?.name) return;
+		if (!aiEditor.editingMonster?.name) return;
 		const plan = getMonsterAiGenerationPlan(
-			aiEditMode,
-			aiEditInstructions,
-			aiEditingMonster,
+			aiEditor.mode,
+			aiEditor.instructions,
+			aiEditor.editingMonster,
 			lang.t,
 		);
 		if (plan.validationError) {
-			setAiEditError(plan.validationError);
+			aiEditor.setError(plan.validationError);
 			return;
 		}
 
-		setIsAiEditingMonster(true);
-		setAiEditError("");
+		aiEditor.setIsEditing(true);
+		aiEditor.setError("");
 		const controller = new AbortController();
 		aiEditControllerRef.current = controller;
 		await executeMonsterAiRequest(controller, {
 			request: (signal) => api.generateAi(
 				buildMonsterAiRequestPayload({
 					plan,
-					modelName: selectedAiModel,
+					modelName: aiEditor.selectedModel,
 					campaignSlug: activeCampaign.slug,
 					sessionId: activeSessionId,
 					encounterId: encounter.id,
-					monster: aiEditingMonster,
+					monster: aiEditor.editingMonster,
 					targetInstanceId: monsterAiAction.targetInstanceId,
 					language: currentLanguage,
 				}),
 				{ signal },
 			),
 			onResult: (data) => {
-				applyEncounterGeneratedMonsterResult(data, aiEditingMonster, plan.draftMode, monsterAiAction.targetInstanceId, {
+				applyEncounterGeneratedMonsterResult(data, aiEditor.editingMonster, plan.draftMode, monsterAiAction.targetInstanceId, {
 					onDraftMode: aiDraft.setMode,
 					onDraftEntry: aiDraft.setEntry,
 					onMonsterUpdate: view.updateMonsterFromAi,
 				});
-				setAiEditingMonster(null);
-				setAiEditMode("edit");
-				setAiEditInstructions("");
+				aiEditor.completeSuccess();
 			},
-			onError: setAiEditError,
+			onError: aiEditor.setError,
 			onComplete: () => {
 				if (aiEditControllerRef.current === controller) aiEditControllerRef.current = null;
-				setIsAiEditingMonster(false);
+				aiEditor.setIsEditing(false);
 			},
 		});
 	};
@@ -598,31 +575,31 @@ function EncounterView() {
 				aiDraftDiffResources={aiDraftDiffResources}
 				aiDraftResponseEntry={aiDraft.entry}
 				aiDraftResponseRef={aiDraftResponseRef}
-				aiEditingMonster={aiEditingMonster as BestiaryMonster | null}
-				aiEditError={aiEditError}
-				aiEditInstructions={aiEditInstructions}
-				aiEditMode={aiEditMode}
-				aiModels={aiModels}
+				aiEditingMonster={aiEditor.editingMonster as BestiaryMonster | null}
+				aiEditError={aiEditor.error}
+				aiEditInstructions={aiEditor.instructions}
+				aiEditMode={aiEditor.mode}
+				aiModels={aiEditor.models}
 				getDiffResourceState={getDiffResourceState}
 				getHistoryChangeSummary={getHistoryChangeSummary}
-				isAiEditingMonster={isAiEditingMonster}
+				isAiEditingMonster={aiEditor.isEditing}
 				isRestoringAiResponse={aiDraft.isRestoring}
 				onApplyDraft={(entry) => aiDraft.restore(entry, "apply")}
 				onApplyDraftResource={(entry, resourceIds) =>
 					aiDraft.restore(entry, "apply", { resourceIds })
 				}
 				onCancelDraft={aiDraft.close}
-				onCancelEdit={closeAiEditCustomMonster}
+				onCancelEdit={aiEditor.close}
 				onCancelEditRequest={cancelAiEditCustomMonsterRequest}
-				onInstructionsChange={setAiEditInstructions}
-				onModelChange={setSelectedAiModel}
+				onInstructionsChange={aiEditor.setInstructions}
+				onModelChange={aiEditor.setSelectedModel}
 				onSaveDraftChanges={aiDraft.save}
 				onSaveEdit={saveAiEditedCustomMonster}
 				onUndoDraft={(entry) => aiDraft.restore(entry, "undo")}
 				onUndoDraftResource={(entry, resourceIds) =>
 					aiDraft.restore(entry, "undo", { resourceIds })
 				}
-				selectedAiModel={selectedAiModel}
+				selectedAiModel={aiEditor.selectedModel}
 			/>
 			<EncounterMonsterEditorModal
 				editingMonster={monsterFieldEditing.editingMonster}

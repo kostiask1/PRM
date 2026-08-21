@@ -6622,11 +6622,11 @@ await run(
 		assertSourceTokensInOrder(encounterSource, [
 			"function EncounterView() {",
 			"useEncounterAiModelLoading({",
-			"aiEditingMonster,",
-			"aiModelCount: aiModels.length,",
-			"onModels: setAiModels,",
-			"onSelectedModel: setSelectedAiModel,",
-		], "Encounter raw AI-model state ownership");
+			"aiEditingMonster: aiEditor.editingMonster,",
+			"aiModelCount: aiEditor.models.length,",
+			"onModels: aiEditor.setModels,",
+			"onSelectedModel: aiEditor.setSelectedModel,",
+		], "Encounter raw AI-model loading composition");
 		assertSourceTokensInOrder(loadingSource, [
 			'import { useEffect } from "react";',
 			"export function useEncounterAiModelLoading({",
@@ -6963,9 +6963,8 @@ await run("Phase 211 isolates Encounter monster AI action transitions in page mo
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiAction/);
 	assertSourceTokensInOrder(page, [
 		"const monsterAiAction = useEncounterMonsterAiAction({",
-		"isEditing: isAiEditingMonster,",
-		"setAiEditMode(mode);",
-		"setAiEditingMonster(monster);",
+		"isEditing: aiEditor.isEditing,",
+		"onStartEditing: aiEditor.start,",
 		"targetInstanceId: monsterAiAction.targetInstanceId,",
 		"onAiAction={monsterAiAction.openAction}",
 		"aiActionMonster={monsterAiAction.actionMonster as BestiaryMonster | null}",
@@ -7050,6 +7049,45 @@ await run("Phase 213 isolates Encounter monster AI draft lifecycle in page model
 		"setEntry(null);",
 		"setMode(\"global\");",
 	], "Encounter page-model monster-AI draft lifecycle");
+	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
+
+await run("Phase 214 isolates Encounter monster AI editor session state in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterMonsterAiEditor.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterMonsterAiEditor \} from "\.\.\/model\/useEncounterMonsterAiEditor\.ts";/);
+	assert.doesNotMatch(page, /const closeAiEditCustomMonster|\[aiEditingMonster, setAiEditingMonster\]|\[aiEditMode, setAiEditMode\]|\[aiEditInstructions, setAiEditInstructions\]|\[aiEditError, setAiEditError\]|\[isAiEditingMonster, setIsAiEditingMonster\]|\[aiModels, setAiModels\]|\[selectedAiModel, setSelectedAiModel\]/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiEditor/);
+	assertSourceTokensInOrder(page, [
+		"const aiEditor = useEncounterMonsterAiEditor();",
+		"aiEditingMonster: aiEditor.editingMonster,",
+		"isEditing: aiEditor.isEditing,",
+		"onStartEditing: aiEditor.start,",
+		"aiEditor.setIsEditing(true);",
+		"aiEditor.setError(\"\");",
+		"aiEditor.completeSuccess();",
+		"aiEditingMonster={aiEditor.editingMonster as BestiaryMonster | null}",
+		"onCancelEdit={aiEditor.close}",
+		"onInstructionsChange={aiEditor.setInstructions}",
+		"onModelChange={aiEditor.setSelectedModel}",
+	], "Encounter raw monster-AI editor composition");
+	assertSourceTokensInOrder(hook, [
+		"export function useEncounterMonsterAiEditor()",
+		"setMode(nextMode);",
+		"setEditingMonster(monster);",
+		"setInstructions(\"\");",
+		"setError(\"\");",
+		"if (isEditing) return;",
+		"setEditingMonster(null);",
+		"setMode(\"edit\");",
+		"const completeSuccess = () => {",
+		"return {",
+		"completeSuccess,",
+	], "Encounter page-model monster-AI editor lifecycle");
 	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 });
 
