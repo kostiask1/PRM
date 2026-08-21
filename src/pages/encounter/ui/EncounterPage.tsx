@@ -50,6 +50,7 @@ import EncounterHeader from "./components/EncounterHeader.tsx";
 import EncounterMonsterActionModals from "./components/EncounterMonsterActionModals.tsx";
 import EncounterMonsterRow from "./components/EncounterMonsterRow.tsx";
 import EncounterNotification from "./components/EncounterNotification.tsx";
+import EncounterParticipantList from "./components/EncounterParticipantList.tsx";
 
 const EncounterRulesReferenceContent =
 	createRulesReferenceModalContentComponent({
@@ -332,32 +333,13 @@ function EncounterView() {
 			/>
 			<div className="Panel__body EncounterView__body">
 				<div className="EncounterView__main">
-					<div className="EncounterView__list">
-						<div className="EncounterView__addActions">
-							<Button
-								variant="create"
-								onClick={() => view.setShowBestiary(true)}
-								icon="plus"
-								className="EncounterView__addBtn"
-							>
-								{lang.t("Add monster")}
-							</Button>
-							<Button
-								variant="ghost"
-								onClick={() => view.setShowCharacterPicker(true)}
-								icon="user"
-								className="EncounterView__addBtn"
-							>
-								{lang.t("Add player")}
-							</Button>
-						</div>
-
-						<DraggableList
-							items={encounter.monsters}
-							onReorder={view.handleReorderMonsters}
-							onDrop={view.handleMonstersDrop}
-							keyExtractor={(m) => m.instanceId || String(m.id || m.name || "")}
-							renderItem={(monster, isDragging) => (
+					<EncounterParticipantList
+						monsters={encounter.monsters}
+						onOpenBestiary={() => view.setShowBestiary(true)}
+						onOpenCharacterPicker={() => view.setShowCharacterPicker(true)}
+						onReorder={view.handleReorderMonsters}
+						onDrop={view.handleMonstersDrop}
+						renderRow={(monster, isDragging) => (
 								<EncounterMonsterRow
 									monster={monster}
 									isDragging={isDragging}
@@ -370,8 +352,7 @@ function EncounterView() {
 									getParticipantInstanceId={getParticipantInstanceId}
 								/>
 							)}
-						/>
-					</div>
+					/>
 
 					<EncounterDetail
 						displayMode={effectiveDisplayMode}

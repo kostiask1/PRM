@@ -830,6 +830,8 @@ Next:
 - Phase 217 preserves selection-plan/execution ordering, selected-ID/display-mode forwarding, the missing-instance token no-op, and exact image forwarding. The full suite reaches 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 218 by moving the paired Encounter AI/field action-modal composition from `EncounterPage.tsx` to private `ui/components/EncounterMonsterActionModals.tsx`. Raw `EncounterView` retains action state, transition commands, and editor/persistence workflows.
 - Phase 218 preserves action identity, custom-source global-edit gating, local-edit availability, localized labels, field-edit title/icon, and callback forwarding. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 219 by moving Encounter participant-list chrome and `DraggableList` presentation from `EncounterPage.tsx` to private `ui/components/EncounterParticipantList.tsx`. Raw `EncounterView` retains add/reorder/drop commands and the row render bindings.
+- Phase 219 preserves list classes, localized buttons, key extraction, callback forwarding/order, and the injected row slot. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
