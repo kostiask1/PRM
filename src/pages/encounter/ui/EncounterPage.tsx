@@ -11,12 +11,9 @@ import {
 import { BestiaryBrowser as Bestiary } from "../../../widgets/bestiary-browser/index.js";
 import {
 	MonsterAiActionModal,
-	applyMonsterAiDraftSaveResult,
 	buildMonsterAiRequestPayload,
 	executeMonsterAiRequest,
 	getMonsterAiGenerationPlan,
-	getMonsterAiDraftSavePlan,
-	getMonsterAiRestoreRequestPlan,
 	type MonsterAiEditMode,
 } from "../../../features/ai-edit-monster/index.js";
 import { createAiResponseModalComponent } from "../../../widgets/ai-response-modal/index.js";
@@ -37,6 +34,7 @@ import { useEncounterCharacterModal } from "../model/useEncounterCharacterModal.
 import { useEncounterDisplaySettings } from "../model/useEncounterDisplaySettings.ts";
 import { useEncounterHeaderDismissal } from "../model/useEncounterHeaderDismissal.ts";
 import { useEncounterMonsterAiAction } from "../model/useEncounterMonsterAiAction.ts";
+import { useEncounterMonsterAiDraft } from "../model/useEncounterMonsterAiDraft.ts";
 import { useEncounterMonsterFieldEditing } from "../model/useEncounterMonsterFieldEditing.ts";
 import { useEncounterPlayerCreation } from "../model/useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
@@ -85,8 +83,6 @@ import {
 } from "../../../features/ai/index.js";
 import {
 	applyEncounterGeneratedMonsterResult,
-	applyEncounterMonsterRestoreResult,
-	executeEncounterAiRestoreRequest,
 	executeEncounterParticipantSelection,
 	getAvailableEncounterCharacters,
 	getEncounterGridProjection,
@@ -105,10 +101,7 @@ import type {
 } from "../../../entities/campaign/index.js";
 import { useEncounterPageRuntime } from "../model/EncounterPageRuntime.tsx";
 
-type EncounterDraftMode = "local" | "global";
 type EncounterDisplayMode = "grid" | "single";
-type RestoreMode = "apply" | "undo";
-type RestoreOptions = { resourceIds?: string[] };
 
 const EMPTY_ENCOUNTER_PARTICIPANTS: EncounterViewParticipant[] = [];
 const EMPTY_CAMPAIGN_ENTITIES: CampaignEntityRecord[] = [];
@@ -203,11 +196,6 @@ function EncounterView() {
 	const [isAiEditingMonster, setIsAiEditingMonster] = useState(false);
 	const [aiModels, setAiModels] = useState<AiModelDescriptor[]>([]);
 	const [selectedAiModel, setSelectedAiModel] = useState("");
-	const [aiDraftResponseEntry, setAiDraftResponseEntry] =
-		useState<AiHistoryEntry | null>(null);
-	const [aiDraftMode, setAiDraftMode] =
-		useState<EncounterDraftMode>("global");
-	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
 	const aiDraftResponseRef = useRef<HTMLDivElement | null>(null);
 	const aiEditControllerRef = useRef<AbortController | null>(null);
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
@@ -234,15 +222,6 @@ function EncounterView() {
 		focusMonsterInGrid,
 		setGridItemRef,
 	} = useEncounterGridFocus(gridRepresentativeByInstanceId);
-	const aiDraftDiffResources = useMemo(
-		() =>
-			buildDiffResources(aiDraftResponseEntry, {
-					added: lang.t("Added"),
-					deleted: lang.t("Deleted"),
-					modified: lang.t("Modified"),
-			}),
-		[aiDraftResponseEntry],
-	);
 	const displayedMonsterCount = gridMonsters.length;
 	const {
 		displayMode: effectiveDisplayMode,
@@ -307,6 +286,26 @@ function EncounterView() {
 		showMessage,
 		onUpdateMonster: view.updateMonsterFromAi,
 	});
+	const aiDraft = useEncounterMonsterAiDraft({
+		api,
+		campaignSlug: campaign?.slug || "",
+		targetInstanceId: monsterAiAction.targetInstanceId,
+		onLocalUpdate: view.handleAiUpdate,
+		onMonsterUpdate: view.updateMonsterFromAi,
+		onError: (error) => showMessage({
+			title: lang.t("AI history error"),
+			message: error instanceof Error ? error.message : lang.t("Unknown error"),
+		}),
+	});
+	const aiDraftDiffResources = useMemo(
+		() =>
+			buildDiffResources(aiDraft.entry, {
+				added: lang.t("Added"),
+				deleted: lang.t("Deleted"),
+				modified: lang.t("Modified"),
+			}),
+		[aiDraft.entry],
+	);
 
 	const renderContext = getEncounterRenderContext(view, campaign, sessionId);
 	if (!renderContext) return <EncounterLoading />;
@@ -380,8 +379,8 @@ function EncounterView() {
 			),
 			onResult: (data) => {
 				applyEncounterGeneratedMonsterResult(data, aiEditingMonster, plan.draftMode, monsterAiAction.targetInstanceId, {
-					onDraftMode: setAiDraftMode,
-					onDraftEntry: setAiDraftResponseEntry,
+					onDraftMode: aiDraft.setMode,
+					onDraftEntry: aiDraft.setEntry,
 					onMonsterUpdate: view.updateMonsterFromAi,
 				});
 				setAiEditingMonster(null);
@@ -394,72 +393,6 @@ function EncounterView() {
 				setIsAiEditingMonster(false);
 			},
 		});
-	};
-
-	const saveAiDraftResponseChanges = async (
-		resources: Array<Pick<AiHistoryResource, "id" | "after">>,
-	) => {
-		const plan = getMonsterAiDraftSavePlan(
-			aiDraftResponseEntry?.id,
-			aiDraftMode,
-			activeCampaign.slug,
-			resources,
-		);
-		if (!plan) return null;
-		const updatedEntry = await api.updateAiResponse(
-			plan.scope,
-			plan.entryId,
-			{ resources: plan.resources },
-		);
-		return applyMonsterAiDraftSaveResult(plan, updatedEntry, setAiDraftResponseEntry);
-	};
-
-	const restoreAiDraftResponse = async (
-		entry: AiHistoryEntry | null = aiDraftResponseEntry,
-		mode: RestoreMode = "apply",
-		options: RestoreOptions = {},
-	) => {
-		const plan = getMonsterAiRestoreRequestPlan(
-			entry?.id,
-			isRestoringAiResponse,
-			aiDraftMode,
-			activeCampaign.slug,
-			mode,
-			options.resourceIds,
-		);
-		if (!plan || !entry) return;
-		setIsRestoringAiResponse(true);
-		const restore = {
-			apply: api.applyAiResponse,
-			undo: api.undoAiResponse,
-		}[plan.action];
-		await executeEncounterAiRestoreRequest({
-			request: () => restore(plan.scope, plan.entryId, { resourceIds: plan.resourceIds }),
-			onResult: (result) => applyEncounterMonsterRestoreResult(
-				result,
-				entry,
-				aiDraftMode,
-				plan.action,
-				plan.resourceIds,
-				monsterAiAction.targetInstanceId,
-				{
-					onEntry: setAiDraftResponseEntry,
-					onLocalUpdate: view.handleAiUpdate,
-					onMonsterUpdate: view.updateMonsterFromAi,
-				},
-			),
-			onError: (error) => showMessage({
-					title: lang.t("AI history error"),
-					message: error instanceof Error ? error.message : lang.t("Unknown error"),
-			}),
-			onComplete: () => setIsRestoringAiResponse(false),
-		});
-	};
-
-	const closeAiDraftResponse = () => {
-		if (isRestoringAiResponse) return;
-		setAiDraftResponseEntry(null);
-		setAiDraftMode("global");
 	};
 
 
@@ -663,7 +596,7 @@ function EncounterView() {
 			<EncounterBestiaryAiModals
 				ResponseModal={EncounterAiResponseModal}
 				aiDraftDiffResources={aiDraftDiffResources}
-				aiDraftResponseEntry={aiDraftResponseEntry}
+				aiDraftResponseEntry={aiDraft.entry}
 				aiDraftResponseRef={aiDraftResponseRef}
 				aiEditingMonster={aiEditingMonster as BestiaryMonster | null}
 				aiEditError={aiEditError}
@@ -673,21 +606,21 @@ function EncounterView() {
 				getDiffResourceState={getDiffResourceState}
 				getHistoryChangeSummary={getHistoryChangeSummary}
 				isAiEditingMonster={isAiEditingMonster}
-				isRestoringAiResponse={isRestoringAiResponse}
-				onApplyDraft={(entry) => restoreAiDraftResponse(entry, "apply")}
+				isRestoringAiResponse={aiDraft.isRestoring}
+				onApplyDraft={(entry) => aiDraft.restore(entry, "apply")}
 				onApplyDraftResource={(entry, resourceIds) =>
-					restoreAiDraftResponse(entry, "apply", { resourceIds })
+					aiDraft.restore(entry, "apply", { resourceIds })
 				}
-				onCancelDraft={closeAiDraftResponse}
+				onCancelDraft={aiDraft.close}
 				onCancelEdit={closeAiEditCustomMonster}
 				onCancelEditRequest={cancelAiEditCustomMonsterRequest}
 				onInstructionsChange={setAiEditInstructions}
 				onModelChange={setSelectedAiModel}
-				onSaveDraftChanges={saveAiDraftResponseChanges}
+				onSaveDraftChanges={aiDraft.save}
 				onSaveEdit={saveAiEditedCustomMonster}
-				onUndoDraft={(entry) => restoreAiDraftResponse(entry, "undo")}
+				onUndoDraft={(entry) => aiDraft.restore(entry, "undo")}
 				onUndoDraftResource={(entry, resourceIds) =>
-					restoreAiDraftResponse(entry, "undo", { resourceIds })
+					aiDraft.restore(entry, "undo", { resourceIds })
 				}
 				selectedAiModel={selectedAiModel}
 			/>

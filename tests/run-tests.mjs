@@ -7006,6 +7006,53 @@ await run("Phase 212 moves Encounter render context into page presentation", asy
 	], "Encounter page-model render-context projection");
 });
 
+await run("Phase 213 isolates Encounter monster AI draft lifecycle in page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterMonsterAiDraft.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterMonsterAiDraft \} from "\.\.\/model\/useEncounterMonsterAiDraft\.ts";/);
+	assert.doesNotMatch(page, /const (saveAiDraftResponseChanges|restoreAiDraftResponse|closeAiDraftResponse)|\[aiDraftResponseEntry, setAiDraftResponseEntry\]|\[aiDraftMode, setAiDraftMode\]|\[isRestoringAiResponse, setIsRestoringAiResponse\]/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiDraft/);
+	assertSourceTokensInOrder(page, [
+		"const aiDraft = useEncounterMonsterAiDraft({",
+		'campaignSlug: campaign?.slug || "",',
+		"targetInstanceId: monsterAiAction.targetInstanceId,",
+		"onLocalUpdate: view.handleAiUpdate,",
+		"onMonsterUpdate: view.updateMonsterFromAi,",
+		"buildDiffResources(aiDraft.entry,",
+		"onDraftMode: aiDraft.setMode,",
+		"onDraftEntry: aiDraft.setEntry,",
+		"aiDraftResponseEntry={aiDraft.entry}",
+		"isRestoringAiResponse={aiDraft.isRestoring}",
+		"onCancelDraft={aiDraft.close}",
+		"onSaveDraftChanges={aiDraft.save}",
+	], "Encounter raw monster-AI draft composition");
+	assertSourceTokensInOrder(hook, [
+		"export function useEncounterMonsterAiDraft(options: Options)",
+		"entry?.id,",
+		"options.campaignSlug,",
+		"options.api.updateAiResponse(",
+		"return applyMonsterAiDraftSaveResult(plan, updatedEntry, setEntry);",
+		"draftEntry?.id,",
+		"isRestoring,",
+		"if (!plan || !draftEntry) return;",
+		"setIsRestoring(true);",
+		"await executeEncounterAiRestoreRequest({",
+		"onEntry: setEntry,",
+		"onLocalUpdate: options.onLocalUpdate,",
+		"onMonsterUpdate: options.onMonsterUpdate,",
+		"onError: options.onError,",
+		"onComplete: () => setIsRestoring(false),",
+		"if (isRestoring) return;",
+		"setEntry(null);",
+		"setMode(\"global\");",
+	], "Encounter page-model monster-AI draft lifecycle");
+	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
+
 await run(
 	"Phase 179 isolates Session checklist-overlay presentation",
 	async () => {

@@ -818,6 +818,8 @@ Next:
 - Phase 211 preserves the name guard, target-ID update before opening, in-flight close guard, image-prompt no-op, and close-before-editor transition. The full suite reaches 497/497 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 212 by moving Encounter render-context projection from `EncounterPage.tsx` to private `model/encounterPagePresentation.ts`. Raw `EncounterView` retains loading presentation and all workflows.
 - Phase 212 preserves encounter → campaign → session guard order, the second encounter read in the result, and raw loading guard/deconstruction order. The full suite reaches 498/498 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 213 by moving Encounter AI draft save/restore/close state and lifecycle from `EncounterPage.tsx` to private `model/useEncounterMonsterAiDraft.ts`. Raw `EncounterView` retains AI generation, modal composition, localized history-error adapter, and diff presentation.
+- Phase 213 preserves plan guards, API request/result/error/finally ordering, target identity, local/global update routing, and restore close guard. The full suite reaches 499/499 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1077,6 +1079,9 @@ localization, and composition at 497/497 tests.
 Phase 212 moves Encounter render-context projection into private page
 presentation while retaining raw loading presentation and workflow ownership at
 498/498 tests.
+Phase 213 isolates Encounter AI draft save/restore/close state and lifecycle
+in private page model while retaining raw AI generation, modal composition,
+localized history-error adapter, and diff presentation at 499/499 tests.
 
 ### Provenance and transfer rule
 
@@ -1473,7 +1478,7 @@ Status: **In progress**
   passes 489/489 tests; Phase 204 passes 490/490 tests; Phase 205 passes 491/491 tests; Phase 206 passes 492/492 tests; Phase 207 passes 493/493 tests;
   Phase 208 passes 494/494 tests; Phase 209 passes 495/495 tests; Phase 210
   passes 496/496 tests; Phase 211 passes 497/497 tests; Phase 212 passes
-  498/498 tests.
+  498/498 tests; Phase 213 passes 499/499 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
