@@ -11,19 +11,16 @@ import {
 	Panel,
 	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
-import { EditableField } from "../../../features/editor/ui/index.js";
-import {
-	createNoteCardComponent,
-	useSimplifiedNotesEnabled,
-} from "../../../features/notes/ui/index.js";
+import { useSimplifiedNotesEnabled } from "../../../features/notes/ui/index.js";
 import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
 import SessionEntitySection from "./components/SessionEntitySection.tsx";
 import SessionFloatingActions from "./components/SessionFloatingActions.tsx";
 import SessionNotesSection from "./components/SessionNotesSection.tsx";
 import SessionResultSection from "./components/SessionResultSection.tsx";
-import SessionSceneCard from "./components/SessionSceneCard.tsx";
 import SessionScenesSection from "./components/SessionScenesSection.tsx";
+import SessionNoteCard from "./components/SessionNoteCard.tsx";
+import SessionSceneItem from "./components/SessionSceneItem.tsx";
 import SessionScopeImportOverlay from "./components/SessionScopeImportOverlay.tsx";
 import SessionScopedEntityModal from "./components/SessionScopedEntityModal.tsx";
 import {
@@ -51,7 +48,6 @@ import {
 } from "../../../shared/lib/index.js";
 import {
 	EntityLinkResolverContext,
-	renderMentionText,
 	type EntityLinkModalState,
 	type EntityLinkResolver,
 } from "../../../features/entity-link/index.js";
@@ -71,11 +67,6 @@ import {
 	type SessionPageEntity,
 } from "../model/sessionEntityModel.ts";
 import { useSessionPageRuntime } from "../model/SessionPageRuntime.tsx";
-
-const SessionNoteCard = createNoteCardComponent({
-	EditableField,
-	renderMentionText,
-});
 
 function isSessionEntityId(value: unknown): value is string | number {
 	return typeof value === "string" || typeof value === "number";
@@ -161,83 +152,6 @@ function useSessionScopedEntityLinks(
 		view.sessionLocations,
 		view.sessionNpcs,
 	]);
-}
-
-interface SessionSceneItemProps {
-	view: SessionController;
-	scene: SessionScene;
-	number: number;
-	simplifiedNotesEnabled: boolean;
-	onToggleNoteAiIgnored: (
-		sceneId: SessionResourceId,
-		noteId: SessionResourceId,
-		ignored: boolean,
-	) => void;
-	getEncounterName: (scene: SessionScene) => string;
-}
-
-function SessionSceneItem({
-	view,
-	scene,
-	number,
-	simplifiedNotesEnabled,
-	onToggleNoteAiIgnored,
-	getEncounterName,
-}: SessionSceneItemProps) {
-	const onSceneNoteToggleCollapse = (noteId: SessionResourceId) =>
-		view.handleSceneToggleNoteCollapse(scene.id, noteId);
-	const onSceneNoteTitleChange = (noteId: SessionResourceId, title: string) =>
-		view.handleSceneNoteTitleChange(scene.id, noteId, title);
-	const onSceneNoteChange = (noteId: SessionResourceId, text: string) =>
-		view.handleSceneNoteChange(scene.id, noteId, text);
-	const onSceneNoteDelete = (noteId: SessionResourceId) =>
-		view.handleSceneDeleteNote(scene.id, noteId);
-
-	return (
-		<div id={makeDomId("session", "scene", scene.id)}>
-			<SessionSceneCard
-				number={number}
-				scene={scene}
-				fields={SessionViewModel.sceneSchema}
-				collapsed={Boolean(scene.collapsed)}
-				onToggle={() => view.toggleSceneCollapse(scene.id)}
-				onRemove={() => view.removeScene(scene.id)}
-				onOpenEncounter={(event) => view.handleOpenEncounter(scene, event)}
-				imageUrl={scene.imageUrl}
-				onImageChange={(imageUrl) =>
-					view.updateScene(scene.id, "imageUrl", imageUrl, true)
-				}
-				campaignSlug={view.campaignSlug}
-				hasEncounter={Boolean(scene.encounterId)}
-				encounterName={getEncounterName(scene)}
-				onUpdateField={(field, value) =>
-					view.updateScene(scene.id, field, value)
-				}
-				onToggleNotesCollapse={() =>
-					view.handleToggleSceneNotesCollapse(scene.id)
-				}
-				onSceneNotesReorder={(notes) =>
-					view.handleSceneNotesReorder(scene.id, notes)
-				}
-				onSceneNoteAiIgnoredChange={(noteId, ignored) =>
-					onToggleNoteAiIgnored(scene.id, noteId, ignored)
-				}
-				simplifiedNotesEnabled={simplifiedNotesEnabled}
-				renderNoteCard={(note, isLast) => (
-					<SessionNoteCard
-						note={note}
-						isLast={isLast}
-						campaignSlug={view.campaignSlug}
-						enableHistory={false}
-						onToggleCollapse={onSceneNoteToggleCollapse}
-						onTitleChange={onSceneNoteTitleChange}
-						onTextChange={onSceneNoteChange}
-						onDelete={onSceneNoteDelete}
-					/>
-				)}
-			/>
-		</div>
-	);
 }
 
 function getSessionViewList<T>(value: T[] | null | undefined): T[] {
@@ -580,13 +494,26 @@ function SessionView() {
 							onAddScene={view.addScene}
 							onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}
 							renderScene={(scene) => (
-								<SessionSceneItem
-									view={view}
-									scene={scene}
-									number={scenes.findIndex((item) => item.id === scene.id) + 1}
-									simplifiedNotesEnabled={simplifiedNotesEnabled}
-									onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}
-									getEncounterName={getEncounterName}
+							<SessionSceneItem
+								scene={scene}
+								number={scenes.findIndex((item) => item.id === scene.id) + 1}
+								campaignSlug={view.campaignSlug}
+								simplifiedNotesEnabled={simplifiedNotesEnabled}
+								onToggle={view.toggleSceneCollapse}
+								onRemove={view.removeScene}
+								onOpenEncounter={view.handleOpenEncounter}
+								onImageChange={(sceneId, imageUrl) =>
+									view.updateScene(sceneId, "imageUrl", imageUrl, true)
+								}
+								onUpdateField={view.updateScene}
+								onToggleNotesCollapse={view.handleToggleSceneNotesCollapse}
+								onNotesReorder={view.handleSceneNotesReorder}
+								onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}
+								onToggleNoteCollapse={view.handleSceneToggleNoteCollapse}
+								onNoteTitleChange={view.handleSceneNoteTitleChange}
+								onNoteChange={view.handleSceneNoteChange}
+								onNoteDelete={view.handleSceneDeleteNote}
+								getEncounterName={getEncounterName}
 								/>
 							)}
 						/>

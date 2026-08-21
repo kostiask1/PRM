@@ -4946,11 +4946,21 @@ await run(
 await run(
 	"Phase 184 isolates Session scenes-section presentation",
 	async () => {
-		const [sessionSource, sectionSource, runtimeEntrySource, typeEntrySource] =
+		const [
+			sessionSource,
+			sectionSource,
+			sceneItemSource,
+			runtimeEntrySource,
+			typeEntrySource,
+		] =
 			await Promise.all([
 				fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
 				fs.readFile(
 					"src/pages/session/ui/components/SessionScenesSection.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/session/ui/components/SessionSceneItem.tsx",
 					"utf8",
 				),
 				fs.readFile("src/pages/session/index.js", "utf8"),
@@ -4961,48 +4971,62 @@ await run(
 			sessionSource,
 			/import SessionScenesSection from "\.\/components\/SessionScenesSection\.tsx";/,
 		);
-		assertSourceTokensInOrder(
+		assert.match(
 			sessionSource,
+			/import SessionSceneItem from "\.\/components\/SessionSceneItem\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			sceneItemSource,
 			[
 				"interface SessionSceneItemProps {",
-				"view: SessionController;",
 				"scene: SessionScene;",
 				"number: number;",
+				"campaignSlug: string;",
 				"simplifiedNotesEnabled: boolean;",
+				"onToggle: (sceneId: SessionResourceId) => void;",
 				"onToggleNoteAiIgnored: (",
 				"getEncounterName: (scene: SessionScene) => string;",
 				"function SessionSceneItem({",
 				"const onSceneNoteToggleCollapse = (noteId: SessionResourceId) =>",
-				"view.handleSceneToggleNoteCollapse(scene.id, noteId);",
+				"onToggleNoteCollapse(scene.id, noteId);",
 				"const onSceneNoteTitleChange = (noteId: SessionResourceId, title: string) =>",
-				"view.handleSceneNoteTitleChange(scene.id, noteId, title);",
+				"onNoteTitleChange(scene.id, noteId, title);",
 				"const onSceneNoteChange = (noteId: SessionResourceId, text: string) =>",
-				"view.handleSceneNoteChange(scene.id, noteId, text);",
+				"onNoteChange(scene.id, noteId, text);",
 				"const onSceneNoteDelete = (noteId: SessionResourceId) =>",
-				"view.handleSceneDeleteNote(scene.id, noteId);",
+				"onNoteDelete(scene.id, noteId);",
 				'<div id={makeDomId("session", "scene", scene.id)}>',
 				"<SessionSceneCard",
 				"number={number}",
 				"fields={SessionViewModel.sceneSchema}",
 				"collapsed={Boolean(scene.collapsed)}",
-				"onToggle={() => view.toggleSceneCollapse(scene.id)}",
-				"onRemove={() => view.removeScene(scene.id)}",
-				"onOpenEncounter={(event) => view.handleOpenEncounter(scene, event)}",
-				'view.updateScene(scene.id, "imageUrl", imageUrl, true)',
-				"campaignSlug={view.campaignSlug}",
+				"onToggle={() => onToggle(scene.id)}",
+				"onRemove={() => onRemove(scene.id)}",
+				"onOpenEncounter={(event) => onOpenEncounter(scene, event)}",
+				"onImageChange(scene.id, imageUrl)",
+				"campaignSlug={campaignSlug}",
 				"hasEncounter={Boolean(scene.encounterId)}",
 				"encounterName={getEncounterName(scene)}",
-				"view.updateScene(scene.id, field, value)",
-				"view.handleToggleSceneNotesCollapse(scene.id)",
-				"view.handleSceneNotesReorder(scene.id, notes)",
+				"onUpdateField(scene.id, field, value)",
+				"onToggleNotesCollapse(scene.id)",
+				"onNotesReorder(scene.id, notes)",
 				"onToggleNoteAiIgnored(scene.id, noteId, ignored)",
-				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
 				"renderNoteCard={(note, isLast) => (",
 				"<SessionNoteCard",
 				"onToggleCollapse={onSceneNoteToggleCollapse}",
 				"onTitleChange={onSceneNoteTitleChange}",
 				"onTextChange={onSceneNoteChange}",
 				"onDelete={onSceneNoteDelete}",
+			],
+			"Session private scene-item workflow binding",
+		);
+		assert.doesNotMatch(
+			sceneItemSource,
+			/useSessionView|SessionController|\bview\b|useState|useRef|useEffect|useMemo|useCallback|useContext|SessionPageRuntime|app\/model|shared\/model/,
+		);
+		assertSourceTokensInOrder(
+			sessionSource,
+			[
 				"function SessionView() {",
 				"const handleBulkScenesCollapse = (collapsed: boolean) => {",
 				'view.updateData(\n\t\t\t"scenes",\n\t\t\tscenes.map((scene) => ({ ...scene, collapsed })),\n\t\t\ttrue,',
@@ -5015,11 +5039,23 @@ await run(
 				'onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}',
 				"renderScene={(scene) => (",
 				"<SessionSceneItem",
-				"view={view}",
 				"scene={scene}",
 				"number={scenes.findIndex((item) => item.id === scene.id) + 1}",
+				"campaignSlug={view.campaignSlug}",
 				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
+				"onToggle={view.toggleSceneCollapse}",
+				"onRemove={view.removeScene}",
+				"onOpenEncounter={view.handleOpenEncounter}",
+				"onImageChange={(sceneId, imageUrl) =>",
+				'view.updateScene(sceneId, "imageUrl", imageUrl, true)',
+				"onUpdateField={view.updateScene}",
+				"onToggleNotesCollapse={view.handleToggleSceneNotesCollapse}",
+				"onNotesReorder={view.handleSceneNotesReorder}",
 				"onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}",
+				"onToggleNoteCollapse={view.handleSceneToggleNoteCollapse}",
+				"onNoteTitleChange={view.handleSceneNoteTitleChange}",
+				"onNoteChange={view.handleSceneNoteChange}",
+				"onNoteDelete={view.handleSceneDeleteNote}",
 				"getEncounterName={getEncounterName}",
 				"<SessionResultSection",
 			],
@@ -5154,6 +5190,7 @@ await run(
 	async () => {
 		const [
 			sessionSource,
+			sessionNoteCardSource,
 			sectionSource,
 			runtimeEntrySource,
 			typeEntrySource,
@@ -5164,6 +5201,10 @@ await run(
 			campaignEntityNotesSource,
 		] = await Promise.all([
 			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionNoteCard.tsx",
+				"utf8",
+			),
 			fs.readFile(
 				"src/pages/session/ui/components/SessionNotesSection.tsx",
 				"utf8",
@@ -5190,10 +5231,18 @@ await run(
 			sessionSource,
 			/import SessionNotesSection from "\.\/components\/SessionNotesSection\.tsx";/,
 		);
+		assert.match(
+			sessionSource,
+			/import SessionNoteCard from "\.\/components\/SessionNoteCard\.tsx";/,
+		);
+		assert.match(
+			sessionNoteCardSource,
+			/const SessionNoteCard = createNoteCardComponent\(\{\s*EditableField,\s*renderMentionText,\s*\}\);/,
+		);
 		assertSourceTokensInOrder(
 			sessionSource,
 			[
-				"const SessionNoteCard = createNoteCardComponent({",
+				'import SessionNoteCard from "./components/SessionNoteCard.tsx";',
 				"function SessionView() {",
 				"const hasSessionNotesData = hasSessionNoteContent(viewModel.notes);",
 				"const sessionNotesForRender = getNotesForRender(sessionNotes, {",
@@ -5556,8 +5605,20 @@ await run(
 			runtimeEntrySource,
 			typeEntrySource,
 		} = await getSessionPrivateComponentSources("SessionSceneCard");
+		const sceneItemSource = await fs.readFile(
+			"src/pages/session/ui/components/SessionSceneItem.tsx",
+			"utf8",
+		);
 
 		assert.match(
+			sceneItemSource,
+			/import SessionSceneCard from "\.\/SessionSceneCard\.tsx";/,
+		);
+		assert.match(
+			sessionSource,
+			/import SessionSceneItem from "\.\/components\/SessionSceneItem\.tsx";/,
+		);
+		assert.doesNotMatch(
 			sessionSource,
 			/import SessionSceneCard from "\.\/components\/SessionSceneCard\.tsx";/,
 		);
@@ -5574,55 +5635,59 @@ await run(
 			/SessionSceneCard/,
 		);
 		assertSourceTokensInOrder(
-			sessionSource,
+			sceneItemSource,
 			[
-				"const SessionNoteCard = createNoteCardComponent({",
-				"EditableField,",
-				"renderMentionText,",
+				'import SessionNoteCard from "./SessionNoteCard.tsx";',
+				'import SessionSceneCard from "./SessionSceneCard.tsx";',
 				"function SessionSceneItem({",
 				"const onSceneNoteToggleCollapse = (noteId: SessionResourceId) =>",
-				"view.handleSceneToggleNoteCollapse(scene.id, noteId);",
+				"onToggleNoteCollapse(scene.id, noteId);",
 				"const onSceneNoteTitleChange = (noteId: SessionResourceId, title: string) =>",
-				"view.handleSceneNoteTitleChange(scene.id, noteId, title);",
+				"onNoteTitleChange(scene.id, noteId, title);",
 				"const onSceneNoteChange = (noteId: SessionResourceId, text: string) =>",
-				"view.handleSceneNoteChange(scene.id, noteId, text);",
+				"onNoteChange(scene.id, noteId, text);",
 				"const onSceneNoteDelete = (noteId: SessionResourceId) =>",
-				"view.handleSceneDeleteNote(scene.id, noteId);",
+				"onNoteDelete(scene.id, noteId);",
 				'<div id={makeDomId("session", "scene", scene.id)}>',
 				"<SessionSceneCard",
 				"number={number}",
 				"scene={scene}",
 				"fields={SessionViewModel.sceneSchema}",
 				"collapsed={Boolean(scene.collapsed)}",
-				"onToggle={() => view.toggleSceneCollapse(scene.id)}",
-				"onRemove={() => view.removeScene(scene.id)}",
-				"onOpenEncounter={(event) => view.handleOpenEncounter(scene, event)}",
-				'view.updateScene(scene.id, "imageUrl", imageUrl, true)',
-				"campaignSlug={view.campaignSlug}",
+				"onToggle={() => onToggle(scene.id)}",
+				"onRemove={() => onRemove(scene.id)}",
+				"onOpenEncounter={(event) => onOpenEncounter(scene, event)}",
+				"onImageChange(scene.id, imageUrl)",
+				"campaignSlug={campaignSlug}",
 				"hasEncounter={Boolean(scene.encounterId)}",
 				"encounterName={getEncounterName(scene)}",
-				"view.updateScene(scene.id, field, value)",
-				"view.handleToggleSceneNotesCollapse(scene.id)",
-				"view.handleSceneNotesReorder(scene.id, notes)",
+				"onUpdateField(scene.id, field, value)",
+				"onToggleNotesCollapse(scene.id)",
+				"onNotesReorder(scene.id, notes)",
 				"onToggleNoteAiIgnored(scene.id, noteId, ignored)",
 				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
 				"renderNoteCard={(note, isLast) => (",
 				"<SessionNoteCard",
 				"note={note}",
 				"isLast={isLast}",
-				"campaignSlug={view.campaignSlug}",
+				"campaignSlug={campaignSlug}",
 				"enableHistory={false}",
 				"onToggleCollapse={onSceneNoteToggleCollapse}",
 				"onTitleChange={onSceneNoteTitleChange}",
 				"onTextChange={onSceneNoteChange}",
 				"onDelete={onSceneNoteDelete}",
 			],
-			"Session raw scene-card adapter and note-card workflow ownership",
+			"Session private scene-item adapter and note-card workflow binding",
 		);
 		assert.equal(
 			Array.from(sessionSource.matchAll(/<SessionNoteCard(?=\s|>)/g)).length,
-			2,
-			"Session Page retains exactly the session-note and scene-card render-slot NoteCard call sites",
+			1,
+			"Session Page retains its session-note NoteCard call site",
+		);
+		assert.equal(
+			Array.from(sceneItemSource.matchAll(/<SessionNoteCard(?=\s|>)/g)).length,
+			1,
+			"Session scene-item retains its scene-note render-slot NoteCard call site",
 		);
 		assertSourceTokensInOrder(
 			sceneCardSource,
@@ -7570,11 +7635,16 @@ await run(
 	async () => {
 		const [
 			sessionSource,
+			sceneItemSource,
 			sceneNotesSource,
 			runtimeEntrySource,
 			typeEntrySource,
 		] = await Promise.all([
 			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/session/ui/components/SessionSceneItem.tsx",
+				"utf8",
+			),
 			fs.readFile(
 				"src/pages/session/ui/components/SceneNotes.tsx",
 				"utf8",
@@ -7584,38 +7654,41 @@ await run(
 		]);
 
 		assertSourceTokensInOrder(
-			sessionSource,
+			sceneItemSource,
 			[
-				"const SessionNoteCard = createNoteCardComponent({",
-				"EditableField,",
-				"renderMentionText,",
+				'import SessionNoteCard from "./SessionNoteCard.tsx";',
 				"function SessionSceneItem({",
 				"const onSceneNoteToggleCollapse = (noteId: SessionResourceId) =>",
-				"view.handleSceneToggleNoteCollapse(scene.id, noteId);",
+				"onToggleNoteCollapse(scene.id, noteId);",
 				"const onSceneNoteTitleChange = (noteId: SessionResourceId, title: string) =>",
-				"view.handleSceneNoteTitleChange(scene.id, noteId, title);",
+				"onNoteTitleChange(scene.id, noteId, title);",
 				"const onSceneNoteChange = (noteId: SessionResourceId, text: string) =>",
-				"view.handleSceneNoteChange(scene.id, noteId, text);",
+				"onNoteChange(scene.id, noteId, text);",
 				"const onSceneNoteDelete = (noteId: SessionResourceId) =>",
-				"view.handleSceneDeleteNote(scene.id, noteId);",
+				"onNoteDelete(scene.id, noteId);",
 				"<SessionSceneCard",
 				"renderNoteCard={(note, isLast) => (",
 				"<SessionNoteCard",
 				"note={note}",
 				"isLast={isLast}",
-				"campaignSlug={view.campaignSlug}",
+				"campaignSlug={campaignSlug}",
 				"enableHistory={false}",
 				"onToggleCollapse={onSceneNoteToggleCollapse}",
 				"onTitleChange={onSceneNoteTitleChange}",
 				"onTextChange={onSceneNoteChange}",
 				"onDelete={onSceneNoteDelete}",
 			],
-			"Session raw scene-card note-card render-slot composition",
+			"Session private scene-item note-card render-slot composition",
 		);
 		assert.equal(
 			Array.from(sessionSource.matchAll(/<SessionNoteCard(?=\s|>)/g)).length,
-			2,
-			"Session NoteCard factory remains configured once with a session-note and scene-card render-slot call site",
+			1,
+			"Session Page retains its session-note NoteCard call site",
+		);
+		assert.equal(
+			Array.from(sceneItemSource.matchAll(/<SessionNoteCard(?=\s|>)/g)).length,
+			1,
+			"Session scene-item retains its scene-note render-slot NoteCard call site",
 		);
 		assert.doesNotMatch(
 			sessionSource,
@@ -8968,10 +9041,10 @@ await run(
 				uses: 1,
 			},
 			{
-				path: "src/pages/session/ui/SessionPage.tsx",
+				path: "src/pages/session/ui/components/SessionNoteCard.tsx",
 				symbol: "SessionNoteCard",
-				anchor: "function isSessionEntityId",
-				uses: 2,
+				anchor: "export default SessionNoteCard;",
+				uses: 0,
 			},
 			{
 				path: "src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
@@ -9427,9 +9500,9 @@ await run(
 				"src/pages/campaign/ui/components/CampaignNotesSection.tsx",
 				"src/pages/encounter/ui/components/EncounterHeader.tsx",
 				"src/pages/encounter/ui/components/EncounterMonsterRow.tsx",
-				"src/pages/session/ui/SessionPage.tsx",
 				"src/pages/session/ui/components/SceneCardHeader.tsx",
 				"src/pages/session/ui/components/SessionHeader.tsx",
+				"src/pages/session/ui/components/SessionNoteCard.tsx",
 				"src/pages/session/ui/components/SessionScopeImportOverlay.tsx",
 				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
 				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
