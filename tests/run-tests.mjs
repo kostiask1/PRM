@@ -12805,7 +12805,7 @@ await run(
 			"App-owned Campaign Entity Modal runtime",
 		);
 		const campaignEntityModalRuntimeSource = appSource.match(
-			/const campaignEntityModalRuntime[\s\S]*?(?=^\tconst loadCampaigns)/m,
+			/const campaignEntityModalRuntime[\s\S]*?(?=^\tuseAppBootstrap\()/m,
 		)?.[0];
 		assert.ok(campaignEntityModalRuntimeSource);
 		assert.doesNotMatch(

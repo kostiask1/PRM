@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { campaignApi } from "./entities/campaign/index.js";
 import { backupApi } from "./features/backup/index.js";
-import { settingsApi } from "./features/settings/index.js";
 
-const api = { ...campaignApi, ...backupApi, ...settingsApi };
+const api = { ...campaignApi, ...backupApi };
 import {
 	DiceRequestRuntimeProvider,
 	type DiceRequestRuntime,
@@ -75,18 +74,12 @@ import {
 	refreshEntitiesAction,
 	setRulesReferenceHistoryIndexAction,
 	setRulesReferenceModalOpenAction,
-	setLanguageAction,
-	setCampaignsAction,
-	setUiSettingsAction,
 } from "./shared/model/index.js";
 import type { CampaignRecord } from "./entities/campaign/index.js";
-import type { SettingsPayload } from "./features/settings/index.js";
 import {
 	getAppErrorMessage,
-	getAppSettingsProjection,
 	getCampaignCompletionPlan,
 	isEditableAppTarget,
-	isSettingsSyncEvent,
 } from "./app/model/appShellPresentation.ts";
 
 interface AppCampaign extends CampaignRecord {
@@ -94,8 +87,6 @@ interface AppCampaign extends CampaignRecord {
 	completedAt?: string | null;
 }
 
-type IsMounted = () => boolean;
-import { applyTheme } from "./features/settings/index.js";
 import { initRealtimeSync } from "./app/realtime/index.js";
 import {
 	closeActiveModal,
@@ -107,6 +98,7 @@ import {
 	useAppDispatch,
 	useAppSelector,
 } from "./app/model/index.js";
+import { useAppBootstrap } from "./app/model/useAppBootstrap.ts";
 
 const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 	EntityLinkContext,
@@ -316,43 +308,6 @@ export default function App() {
 		],
 	);
 
-	const loadCampaigns = useCallback(async () => {
-		try {
-			const data = await api.listCampaigns();
-			dispatch(setCampaignsAction(data));
-		} catch (err) {
-			console.error("Failed to load campaigns", err);
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Failed to load campaigns"),
-				}),
-			);
-		}
-	}, [dispatch]);
-
-	const applySettingsToStore = useCallback(
-		(settings: SettingsPayload) => {
-			const projection = getAppSettingsProjection(settings);
-			dispatch(setLanguageAction(projection.language));
-			dispatch(setUiSettingsAction(projection.ui));
-		},
-		[dispatch],
-	);
-
-	const loadSettings = useCallback(
-		async (isMounted: IsMounted, errorMessage: string) => {
-			try {
-				const settings = await api.getSettings();
-				if (!isMounted() || !settings) return;
-				applySettingsToStore(settings);
-			} catch (error) {
-				console.error(errorMessage, error);
-			}
-		},
-		[applySettingsToStore],
-	);
-
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (isEditableAppTarget(e.target)) return;
@@ -420,35 +375,12 @@ export default function App() {
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [isMobileSidebarOpen]);
 
-	useEffect(() => {
-		loadCampaigns();
-	}, [loadCampaigns, campaignsReloadVersion]);
-
-	useEffect(() => {
-		applyTheme(currentTheme);
-	}, [currentTheme]);
-
-	useEffect(() => {
-		let isMounted = true;
-		loadSettings(() => isMounted, "Failed to load settings");
-
-		return () => {
-			isMounted = false;
-		};
-	}, [loadSettings]);
-
-	useEffect(() => {
-		if (!isSettingsSyncEvent(syncEvent)) return;
-
-		let isMounted = true;
-		loadSettings(
-			() => isMounted,
-			"Failed to reload settings after sync event",
-		);
-		return () => {
-			isMounted = false;
-		};
-	}, [loadSettings, syncEvent]);
+	useAppBootstrap({
+		dispatch,
+		campaignsReloadVersion,
+		currentTheme,
+		syncEvent,
+	});
 
 	const handleToggleCampaignStatus = async (campaign: AppCampaign) => {
 		const completion = getCampaignCompletionPlan(

@@ -842,6 +842,8 @@ Next:
 - Phase 223 preserves simultaneous request creation and ordering, the active guard before payload normalization, player/image-map updates, and error routing. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 224 by moving the Session page's note-card factory and scene-item renderer into private `ui/components/SessionNoteCard.tsx` and `SessionSceneItem.tsx`. `SessionView` remains the composition and mutation owner.
 - Phase 224 preserves scene/note callback binding, DOM IDs, schema and encounter forwarding, and simplified-note mode. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 225 by moving app campaign/settings hydration and theme synchronization into private `app/model/useAppBootstrap.ts`. `App.tsx` remains the runtime/provider composition owner.
+- Phase 225 preserves callback/effect order, campaign-reload reloading, mounted-only settings application, settings-sync filtering, theme application, and the localized campaign-load alert. The full suite remains 503/503 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
