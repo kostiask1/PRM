@@ -221,10 +221,8 @@ function EncounterView() {
 		aiModelCount: aiEditor.models.length,
 		onModels: aiEditor.setModels,
 		onSelectedModel: aiEditor.setSelectedModel,
-		onError: (error) => {
-			console.error("Failed to load AI models", error);
-			aiEditor.setError(error instanceof Error ? error.message : lang.t("Failed to connect to AI."));
-		},
+		fallbackError: lang.t("Failed to connect to AI."),
+		onError: aiEditor.setError,
 	});
 	const displaySettings = useEncounterDisplaySettings({ patchUiSettings });
 	const monsterAiAction = useEncounterMonsterAiAction({

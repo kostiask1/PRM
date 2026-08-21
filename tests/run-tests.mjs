@@ -6659,13 +6659,19 @@ await run(
 			"aiModelCount: aiEditor.models.length,",
 			"onModels: aiEditor.setModels,",
 			"onSelectedModel: aiEditor.setSelectedModel,",
+			'fallbackError: lang.t("Failed to connect to AI."),',
+			"onError: aiEditor.setError,",
 		], "Encounter raw AI-model loading composition");
 		assertSourceTokensInOrder(loadingSource, [
 			'import { useEffect } from "react";',
 			"export function useEncounterAiModelLoading({",
 			"useEffect(() => {",
 			"if (!aiEditingMonster || aiModelCount > 0) return;",
-			"loadAiModelOptions({ setAiModels: onModels, setSelectedAiModel: onSelectedModel, onError });",
+			"loadAiModelOptions({",
+			"setAiModels: onModels,",
+			"setSelectedAiModel: onSelectedModel,",
+			'console.error("Failed to load AI models", error);',
+			"onError(error instanceof Error ? error.message : fallbackError);",
 			"}, [aiEditingMonster, aiModelCount]);",
 		], "Encounter page-model AI-model loading");
 		assert.doesNotMatch(loadingSource, /useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|settingsApi|app\/model|shared\/model/);
