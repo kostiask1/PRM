@@ -34,6 +34,7 @@ import { useEncounterMonsterAiDraft } from "../model/useEncounterMonsterAiDraft.
 import { useEncounterMonsterAiEditor } from "../model/useEncounterMonsterAiEditor.ts";
 import { useEncounterMonsterAiGeneration } from "../model/useEncounterMonsterAiGeneration.ts";
 import { useEncounterMonsterFieldEditing } from "../model/useEncounterMonsterFieldEditing.ts";
+import { useEncounterMonsterInteractions } from "../model/useEncounterMonsterInteractions.ts";
 import { useEncounterPlayerCreation } from "../model/useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "../model/useEncounterRequestCleanup.ts";
 import "../../../assets/components/EncounterView.css";
@@ -79,10 +80,8 @@ import {
 	getLocalizedDiffResourceState,
 } from "../../../features/ai/index.js";
 import {
-	executeEncounterParticipantSelection,
 	getAvailableEncounterCharacters,
 	getEncounterGridProjection,
-	getEncounterParticipantSelectionPlan,
 	getEncounterRenderContext,
 	isCustomBestiarySource as isCustomSource,
 	resolveEncounterHpInputValue as resolveHpInputValue,
@@ -314,33 +313,19 @@ function EncounterView() {
 		onSuccess: aiEditor.completeSuccess,
 		onComplete: () => aiEditor.setIsEditing(false),
 	});
+	const monsterInteractions = useEncounterMonsterInteractions({
+		selectedInstanceId: view.selectedInstance?.instanceId,
+		displayMode: effectiveDisplayMode,
+		onOpenCharacter: characterModal.open,
+		onSelect: view.setSelectedInstance,
+		onFocus: focusMonsterInGrid,
+		onTokenImageUpdate: view.updateMonsterImage,
+	});
 
 	const renderContext = getEncounterRenderContext(view, campaign, sessionId);
 	if (!renderContext) return <EncounterLoading />;
 	const { campaign: activeCampaign, encounter } = renderContext;
 
-	const handleSelectMonster = (monster: EncounterViewParticipant) => {
-		executeEncounterParticipantSelection(
-			getEncounterParticipantSelectionPlan(
-				monster,
-				view.selectedInstance?.instanceId,
-				effectiveDisplayMode,
-			),
-			{
-				onOpenCharacter: characterModal.open,
-				onSelect: view.setSelectedInstance,
-				onFocus: focusMonsterInGrid,
-			},
-		);
-	};
-
-	const handleMonsterTokenImageChange = (
-		monster: EncounterViewParticipant,
-		imageUrl: string | null,
-	) => {
-		if (!monster?.instanceId) return;
-		view.updateMonsterImage(monster.instanceId, imageUrl);
-	};
 	return (
 		<Panel className="EncounterView">
 			<EncounterHeader
@@ -388,7 +373,7 @@ function EncounterView() {
 								hpDrafts={hpEditing.drafts}
 									selectedInstanceId={getOptionalParticipantId(view.selectedInstance)}
 									view={view}
-									onSelect={handleSelectMonster}
+									onSelect={monsterInteractions.select}
 								onHpChange={hpEditing.onChange}
 								onHpBlur={hpEditing.onBlur}
 									getParticipantInstanceId={getParticipantInstanceId}
@@ -409,7 +394,7 @@ function EncounterView() {
 						setGridItemRef={setGridItemRef}
 						onAiAction={monsterAiAction.openAction}
 						onFieldEdit={monsterFieldEditing.openAction}
-						onTokenImageChange={handleMonsterTokenImageChange}
+						onTokenImageChange={monsterInteractions.updateTokenImage}
 						onCharacterChange={characterModal.getOnChange}
 						getMonsterImageOverride={view.getMonsterImageOverride}
 					/>

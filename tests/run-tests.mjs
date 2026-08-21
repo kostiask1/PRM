@@ -5905,7 +5905,7 @@ await run(
 				"setGridItemRef={setGridItemRef}",
 				"onAiAction={monsterAiAction.openAction}",
 				"onFieldEdit={monsterFieldEditing.openAction}",
-				"onTokenImageChange={handleMonsterTokenImageChange}",
+				"onTokenImageChange={monsterInteractions.updateTokenImage}",
 				"onCharacterChange={characterModal.getOnChange}",
 				"getMonsterImageOverride={view.getMonsterImageOverride}",
 				"<EncounterBestiaryOverlay",
@@ -5994,8 +5994,13 @@ await run(
 				"function EncounterView() {",
 				"const hpEditing = useEncounterHpEditing({",
 				"onUpdate: view.updateMonsterHp,",
-				"const handleSelectMonster = (monster: EncounterViewParticipant) => {",
-				"executeEncounterParticipantSelection(",
+				"const monsterInteractions = useEncounterMonsterInteractions({",
+				"selectedInstanceId: view.selectedInstance?.instanceId,",
+				"displayMode: effectiveDisplayMode,",
+				"onOpenCharacter: characterModal.open,",
+				"onSelect: view.setSelectedInstance,",
+				"onFocus: focusMonsterInGrid,",
+				"onTokenImageUpdate: view.updateMonsterImage,",
 				"<DraggableList",
 				"items={encounter.monsters}",
 				"onReorder={view.handleReorderMonsters}",
@@ -6008,13 +6013,13 @@ await run(
 				"hpDrafts={hpEditing.drafts}",
 				"selectedInstanceId={getOptionalParticipantId(view.selectedInstance)}",
 				"view={view}",
-				"onSelect={handleSelectMonster}",
+				"onSelect={monsterInteractions.select}",
 				"onHpChange={hpEditing.onChange}",
 				"onHpBlur={hpEditing.onBlur}",
 				"getParticipantInstanceId={getParticipantInstanceId}",
 				"<EncounterDetail",
 			],
-			"Encounter raw monster-row state, handlers, and drag policy",
+			"Encounter raw monster-row state, interaction adapter, and drag policy",
 		);
 		assertSourceTokensInOrder(
 			monsterRowSource,
@@ -7160,6 +7165,45 @@ await run("Phase 215 isolates Encounter monster AI generation lifecycle in page 
 		"options.controllerRef.current = null;",
 		"options.onComplete();",
 	], "Encounter page-model monster-AI generation lifecycle");
+	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
+});
+
+await run("Phase 217 isolates Encounter monster interactions in a page model", async () => {
+	const [page, hook, entry, types] = await Promise.all([
+		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		fs.readFile("src/pages/encounter/model/useEncounterMonsterInteractions.ts", "utf8"),
+		fs.readFile("src/pages/encounter/index.js", "utf8"),
+		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+	]);
+	assert.match(page, /import \{ useEncounterMonsterInteractions \} from "\.\.\/model\/useEncounterMonsterInteractions\.ts";/);
+	assert.doesNotMatch(page, /const (handleSelectMonster|handleMonsterTokenImageChange)|executeEncounterParticipantSelection|getEncounterParticipantSelectionPlan/);
+	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterInteractions/);
+	assertSourceTokensInOrder(page, [
+		"const monsterInteractions = useEncounterMonsterInteractions({",
+		"selectedInstanceId: view.selectedInstance?.instanceId,",
+		"displayMode: effectiveDisplayMode,",
+		"onOpenCharacter: characterModal.open,",
+		"onSelect: view.setSelectedInstance,",
+		"onFocus: focusMonsterInGrid,",
+		"onTokenImageUpdate: view.updateMonsterImage,",
+		"onSelect={monsterInteractions.select}",
+		"onTokenImageChange={monsterInteractions.updateTokenImage}",
+	], "Encounter raw monster-interaction composition");
+	assertSourceTokensInOrder(hook, [
+		"export function useEncounterMonsterInteractions(options: Options)",
+		"const select = (monster: EncounterViewParticipant) => {",
+		"executeEncounterParticipantSelection(",
+		"getEncounterParticipantSelectionPlan(",
+		"options.selectedInstanceId,",
+		"options.displayMode,",
+		"onOpenCharacter: options.onOpenCharacter,",
+		"onSelect: options.onSelect,",
+		"onFocus: options.onFocus,",
+		"const updateTokenImage = (",
+		"if (!monster?.instanceId) return;",
+		"options.onTokenImageUpdate(monster.instanceId, imageUrl);",
+		"return { select, updateTokenImage };",
+	], "Encounter page-model monster interactions");
 	assert.doesNotMatch(hook, /useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/);
 });
 
