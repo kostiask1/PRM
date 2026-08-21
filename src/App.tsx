@@ -1,15 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { campaignApi } from "./entities/campaign/index.js";
 import { backupApi } from "./features/backup/index.js";
-import {
-	DiceRequestRuntimeProvider,
-	type DiceRequestRuntime,
-} from "./features/dice/index.js";
-import {
-	AiAttachmentAlertRuntimeProvider,
-	type AiAttachmentAlertRuntime,
-} from "./features/ai/ui/index.js";
+import { DiceRequestRuntimeProvider } from "./features/dice/index.js";
+import { AiAttachmentAlertRuntimeProvider } from "./features/ai/ui/index.js";
 import MainContent from "./app/routing/MainContent.tsx";
 import CampaignEntityCreationRuntimeHost from "./app/ui/CampaignEntityCreationRuntimeHost.tsx";
 import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
@@ -21,23 +15,16 @@ import {
 	CharacterCard,
 	LocationCard,
 } from "./widgets/campaign-entity-card/index.js";
-import {
-	CampaignEntityModalProvider,
-	type CampaignEntityModalRuntime,
-} from "./widgets/campaign-entity-modal/index.js";
+import { CampaignEntityModalProvider } from "./widgets/campaign-entity-modal/index.js";
 import { Icon, Modal } from "./shared/ui/index.js";
 import { Sidebar } from "./widgets/sidebar/index.js";
 import {
 	EditableFieldEntityLinkProvider,
 	EditorMentionPickerRuntimeProvider,
 	type EditableFieldEntityLinkRuntime,
-	type EditorMentionPickerRuntime,
 } from "./features/editor/ui/index.js";
 import { SimplifiedNotesProvider } from "./features/notes/ui/index.js";
-import {
-	RulesReferenceRuntimeProvider,
-	type RulesReferenceRuntime,
-} from "./features/rules-reference/index.js";
+import { RulesReferenceRuntimeProvider } from "./features/rules-reference/index.js";
 import {
 	EntityLinkContext,
 	EntityLinkResolverContext,
@@ -48,30 +35,19 @@ import { useCampaignCreationModal } from "./features/campaign-create/index.js";
 import {
 	RulesReferenceModalHost,
 	RulesReferenceModalRuntimeProvider,
-	type RulesReferenceModalRuntime,
 } from "./widgets/rules-reference-modal/index.js";
 import {
 	MonsterStatBlock,
 	MonsterStatBlockRuntimeProvider,
-	type MonsterStatBlockRuntime,
 } from "./widgets/monster-stat-block/index.js";
 import {
 	SpellsBrowser,
 	SpellsBrowserRuntimeProvider,
-	type SpellsBrowserRuntime,
 } from "./widgets/spells-browser/index.js";
 import { lang } from "./shared/lib/index.js";
 import {
 	alert,
-	confirm,
-	openMentionPickerAction,
-	recordRulesReferenceHistoryEntryAction,
-	requestDiceRollAction,
 	requestCampaignsReloadAction,
-	requestRulesReferenceNavigationAction,
-	refreshEntitiesAction,
-	setRulesReferenceHistoryIndexAction,
-	setRulesReferenceModalOpenAction,
 } from "./shared/model/index.js";
 import {
 	isEditableAppTarget,
@@ -79,21 +55,15 @@ import {
 
 import { initRealtimeSync } from "./app/realtime/index.js";
 import {
-	closeActiveModal,
 	navigateTo,
-	openModalRequest,
 	resolveModalRequest,
 	setRouterNavigate,
 	syncNavigationFromPath,
-	useAppDispatch,
-	useAppSelector,
 } from "./app/model/index.js";
 import { useAppBootstrap } from "./app/model/useAppBootstrap.ts";
-import {
-	useCampaignCompletionToggle,
-	type CampaignCompletionRecord,
-} from "./app/model/useCampaignCompletionToggle.ts";
+import { useCampaignCompletionToggle } from "./app/model/useCampaignCompletionToggle.ts";
 import { useMobileSidebar } from "./app/model/useMobileSidebar.ts";
+import { useAppRuntimes } from "./app/model/useAppRuntimes.ts";
 
 const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 	EntityLinkContext,
@@ -103,204 +73,30 @@ const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 }) satisfies EditableFieldEntityLinkRuntime;
 
 export default function App() {
-	const dispatch = useAppDispatch();
 	const location = useLocation();
 	const routerNavigate = useNavigate();
 	const [isCTRLPressed, setCTRLPressed] = useState(false);
-	const modalState = useAppSelector((store) => store.modal);
-	const campaigns = useAppSelector(
-		(store) => store.campaigns.items as CampaignCompletionRecord[],
-	);
-	const campaignsReloadVersion = useAppSelector(
-		(store) => store.campaigns.reloadVersion,
-	);
-	const { activeCampaignSlug } = useAppSelector((store) => store.navigation);
-	const currentLanguage = useAppSelector(
-		(store) => store.localization.language,
-	);
-	const currentTheme = useAppSelector((store) => store.ui.theme);
-	const simplifiedNotesEnabled = useAppSelector(
-		(store) => store.ui.simplifiedNotes,
-	);
-	const syncEvent = useAppSelector((store) => store.sync.event);
-	const spellsBrowserUseSearchDebounce = useAppSelector(
-		(store) => store.ui.useSearchDebounce !== false,
-	);
-	const spellsBrowserActiveCampaign = useAppSelector(
-		(store) => store.active.campaign,
-	);
-	const spellsBrowserGlobalIgnoreSourcesList = useAppSelector(
-		(store) => store.ui.ignoreSourcesList,
-	);
-	const rulesReferenceModalNavigationRequest = useAppSelector(
-		(store) => store.rulesReference.navigationRequest,
-	);
-	const rulesReferenceModalNavigationHistory = useAppSelector(
-		(store) => store.rulesReference.history,
-	);
-	const rulesReferenceModalIsOpen = useAppSelector(
-		(store) => store.rulesReference.isOpen,
-	);
-	const rulesReferenceRuntime = useMemo<RulesReferenceRuntime>(
-		() => ({
-			navigate(tab, name) {
-				dispatch(requestRulesReferenceNavigationAction(tab, name));
-			},
-			reportError(error) {
-				dispatch(alert(error));
-			},
-		}),
-		[dispatch],
-	);
-	const aiAttachmentAlertRuntime = useMemo<AiAttachmentAlertRuntime>(
-		() => ({
-			showAlert(copy) {
-				dispatch(alert({ title: copy.title, message: copy.message }));
-			},
-		}),
-		[dispatch],
-	);
-	const editorMentionPickerRuntime = useMemo<EditorMentionPickerRuntime>(
-		() => ({
-			openMentionPicker(request) {
-				dispatch(openMentionPickerAction(request));
-			},
-		}),
-		[dispatch],
-	);
-	const diceRequestRuntime = useMemo<DiceRequestRuntime>(
-		() => ({
-			requestRoll(payload) {
-				dispatch(requestDiceRollAction(payload));
-			},
-		}),
-		[dispatch],
-	);
-	const campaignEntityModalRuntime = useMemo<CampaignEntityModalRuntime>(
-		() => ({
-			requestConfirmation(payload) {
-				return dispatch(confirm(payload));
-			},
-			refreshEntities() {
-				dispatch(refreshEntitiesAction());
-			},
-		}),
-		[dispatch],
-	);
-	const monsterStatBlockCommands = useMemo<
-		Pick<
-			MonsterStatBlockRuntime,
-			| "openModal"
-			| "reportError"
-			| "requestCampaignsReload"
-			| "closeModal"
-			| "requestDiceRoll"
-		>
-	>(
-		() => ({
-			openModal(config) {
-				return openModalRequest(config);
-			},
-			reportError(error) {
-				dispatch(alert(error));
-			},
-			requestCampaignsReload() {
-				dispatch(requestCampaignsReloadAction());
-			},
-			closeModal(value) {
-				closeActiveModal(value);
-			},
-			requestDiceRoll(formula) {
-				dispatch(requestDiceRollAction(formula));
-			},
-		}),
-		[dispatch],
-	);
-	const monsterStatBlockRuntime = useMemo<MonsterStatBlockRuntime>(
-		() => ({
-			campaigns,
-			...monsterStatBlockCommands,
-		}),
-		[campaigns, monsterStatBlockCommands],
-	);
-	const spellsBrowserCommands = useMemo<
-		Pick<
-			SpellsBrowserRuntime,
-			"replaceCampaigns" | "setGlobalIgnoreSourcesList" | "reportError"
-		>
-	>(
-		() => ({
-			replaceCampaigns(nextCampaigns) {
-				dispatch(setCampaignsAction(nextCampaigns));
-			},
-			setGlobalIgnoreSourcesList(ignoreSourcesList) {
-				dispatch(setUiSettingsAction({ ignoreSourcesList }));
-			},
-			reportError(error) {
-				dispatch(alert(error));
-			},
-		}),
-		[dispatch],
-	);
-	const spellsBrowserRuntime = useMemo<SpellsBrowserRuntime>(
-		() => ({
-			useSearchDebounce: spellsBrowserUseSearchDebounce,
-			activeCampaignSlug,
-			activeCampaign: spellsBrowserActiveCampaign,
-			globalIgnoreSourcesList: spellsBrowserGlobalIgnoreSourcesList,
-			...spellsBrowserCommands,
-		}),
-		[
-			activeCampaignSlug,
-			spellsBrowserActiveCampaign,
-			spellsBrowserCommands,
-			spellsBrowserGlobalIgnoreSourcesList,
-			spellsBrowserUseSearchDebounce,
-		],
-	);
-	const rulesReferenceModalCommands = useMemo<
-		Pick<
-			RulesReferenceModalRuntime,
-			| "openModal"
-			| "reportError"
-			| "setModalOpen"
-			| "recordHistoryEntry"
-			| "setHistoryIndex"
-		>
-	>(
-		() => ({
-			openModal(config) {
-				return openModalRequest(config);
-			},
-			reportError(error) {
-				dispatch(alert(error));
-			},
-			setModalOpen(isOpen) {
-				dispatch(setRulesReferenceModalOpenAction(isOpen));
-			},
-			recordHistoryEntry(tabId, name) {
-				dispatch(recordRulesReferenceHistoryEntryAction(tabId, name));
-			},
-			setHistoryIndex(index) {
-				dispatch(setRulesReferenceHistoryIndexAction(index));
-			},
-		}),
-		[dispatch],
-	);
-	const rulesReferenceModalRuntime = useMemo<RulesReferenceModalRuntime>(
-		() => ({
-			navigationRequest: rulesReferenceModalNavigationRequest,
-			navigationHistory: rulesReferenceModalNavigationHistory,
-			isOpen: rulesReferenceModalIsOpen,
-			...rulesReferenceModalCommands,
-		}),
-		[
-			rulesReferenceModalCommands,
-			rulesReferenceModalIsOpen,
-			rulesReferenceModalNavigationHistory,
-			rulesReferenceModalNavigationRequest,
-		],
-	);
+	const {
+		dispatch,
+		modalState,
+		campaigns,
+		campaignsReloadVersion,
+		activeCampaignSlug,
+		currentLanguage,
+		currentTheme,
+		simplifiedNotesEnabled,
+		syncEvent,
+		rulesReferenceRuntime,
+		aiAttachmentAlertRuntime,
+		editorMentionPickerRuntime,
+		diceRequestRuntime,
+		campaignEntityModalRuntime,
+		monsterStatBlockRuntime,
+		spellsBrowserRuntime,
+		rulesReferenceModalRuntime,
+		openModal,
+		closeModal,
+	} = useAppRuntimes();
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -353,8 +149,8 @@ export default function App() {
 	});
 	const handleToggleCampaignStatus = useCampaignCompletionToggle(dispatch);
 	const openCreateCampaignModal = useCampaignCreationModal({
-		openModal: openModalRequest,
-		closeModal: closeActiveModal,
+		openModal,
+		closeModal,
 		createCampaign: campaignApi.createCampaign,
 		importCampaign: (file) => backupApi.importArchive(file, "campaign"),
 		requestCampaignsReload: () => dispatch(requestCampaignsReloadAction()),

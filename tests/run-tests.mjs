@@ -10076,6 +10076,94 @@ await run(
 );
 
 await run(
+	"Phase 231 moves App global runtime assembly into the private app model",
+	async () => {
+		const [appSource, runtimesSource, appRuntimeEntry, appRuntimeTypes] =
+			await Promise.all([
+				fs.readFile("src/App.tsx", "utf8"),
+				fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
+				fs.readFile("src/app/model/index.js", "utf8"),
+				fs.readFile("src/app/model/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			appSource,
+			/import \{ useAppRuntimes \} from "\.\/app\/model\/useAppRuntimes\.ts";/,
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const [isCTRLPressed, setCTRLPressed] = useState(false);",
+				"const {",
+				"dispatch,",
+				"modalState,",
+				"campaigns,",
+				"campaignsReloadVersion,",
+				"activeCampaignSlug,",
+				"rulesReferenceRuntime,",
+				"aiAttachmentAlertRuntime,",
+				"editorMentionPickerRuntime,",
+				"diceRequestRuntime,",
+				"campaignEntityModalRuntime,",
+				"monsterStatBlockRuntime,",
+				"spellsBrowserRuntime,",
+				"rulesReferenceModalRuntime,",
+				"openModal,",
+				"closeModal,",
+				"} = useAppRuntimes();",
+				"useEffect(() => {",
+				"useAppBootstrap({",
+				"const openCreateCampaignModal = useCampaignCreationModal({",
+				"openModal,",
+				"closeModal,",
+			],
+			"App root runtime composition order",
+		);
+		assert.doesNotMatch(
+			appSource,
+			/useAppDispatch|useAppSelector|useMemo\(|rulesReferenceModalCommands|spellsBrowserCommands|monsterStatBlockCommands/,
+		);
+		assertSourceTokensInOrder(
+			runtimesSource,
+			[
+				'import { useMemo } from "react";',
+				'from "./appStore.ts";',
+				"export function useAppRuntimes() {",
+				"const dispatch = useAppDispatch();",
+				"const modalState = useAppSelector((store) => store.modal);",
+				"const campaigns = useAppSelector(",
+				"const campaignsReloadVersion = useAppSelector(",
+				"const rulesReferenceRuntime = useMemo<RulesReferenceRuntime>(",
+				"const aiAttachmentAlertRuntime = useMemo<AiAttachmentAlertRuntime>(",
+				"const editorMentionPickerRuntime = useMemo<EditorMentionPickerRuntime>(",
+				"const diceRequestRuntime = useMemo<DiceRequestRuntime>(",
+				"const campaignEntityModalRuntime = useMemo<CampaignEntityModalRuntime>(",
+				"const monsterStatBlockCommands = useMemo<",
+				"const monsterStatBlockRuntime = useMemo<MonsterStatBlockRuntime>(",
+				"const spellsBrowserCommands = useMemo<",
+				"dispatch(setCampaignsAction(nextCampaigns));",
+				"dispatch(setUiSettingsAction({ ignoreSourcesList }));",
+				"const spellsBrowserRuntime = useMemo<SpellsBrowserRuntime>(",
+				"const rulesReferenceModalCommands = useMemo<",
+				"const rulesReferenceModalRuntime = useMemo<RulesReferenceModalRuntime>(",
+				"return {",
+				"openModal: openModalRequest,",
+				"closeModal: closeActiveModal,",
+			],
+			"app-owned global runtime assembly",
+		);
+		assert.doesNotMatch(
+			runtimesSource,
+			/useEffect|useState|App\.tsx|appShellPresentation|shared\/model\/appStore/,
+		);
+		assert.doesNotMatch(
+			`${appRuntimeEntry}\n${appRuntimeTypes}`,
+			/useAppRuntimes/,
+		);
+	},
+);
+
+await run(
 	"Phase 137 gives Settings an injected Sidebar runtime instead of direct global-store access",
 	async () => {
 		const [
@@ -10335,6 +10423,7 @@ await run(
 			typeEntry,
 			noteCardSource,
 			appSource,
+			appRuntimeSource,
 			characterCardSource,
 			locationCardSource,
 			campaignPageSource,
@@ -10350,6 +10439,7 @@ await run(
 			fs.readFile("src/features/notes/ui/index.d.ts", "utf8"),
 			fs.readFile("src/features/notes/ui/NoteCard.tsx", "utf8"),
 			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 			fs.readFile(
 				"src/widgets/campaign-entity-card/ui/CharacterCard.tsx",
 				"utf8",
@@ -10414,7 +10504,7 @@ await run(
 		);
 
 		assert.match(
-			appSource,
+			appRuntimeSource,
 			/const simplifiedNotesEnabled = useAppSelector\(\s*\(store\) => store\.ui\.simplifiedNotes,\s*\);/,
 		);
 		assertSourceTokensInOrder(
@@ -11062,6 +11152,7 @@ await run(
 			runtimeEntry,
 			typeEntry,
 			appSource,
+			appRuntimeSource,
 			sidebarSource,
 			eslintSource,
 		] = await Promise.all([
@@ -11076,6 +11167,7 @@ await run(
 			fs.readFile("src/features/rules-reference/index.js", "utf8"),
 			fs.readFile("src/features/rules-reference/index.d.ts", "utf8"),
 			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 			fs.readFile("src/widgets/sidebar/ui/Sidebar.tsx", "utf8"),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
@@ -11139,7 +11231,7 @@ await run(
 			"Rules Reference runtime error and navigation order",
 		);
 		assertSourceTokensInOrder(
-			appSource,
+			`${appRuntimeSource}\n${appSource}`,
 			[
 				"const rulesReferenceRuntime = useMemo<RulesReferenceRuntime>(",
 				"navigate(tab, name) {",
@@ -11258,6 +11350,7 @@ await run(
 			featureTypeEntry,
 			generationLifecycleSource,
 			appSource,
+			appRuntimeSource,
 			eslintSource,
 		] = await Promise.all([
 			fs.readFile(
@@ -11277,6 +11370,7 @@ await run(
 				"utf8",
 			),
 			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
@@ -11358,7 +11452,7 @@ await run(
 			"AI generation lifecycle request identity",
 		);
 		assertSourceTokensInOrder(
-			appSource,
+			`${appRuntimeSource}\n${appSource}`,
 			[
 				"const aiAttachmentAlertRuntime = useMemo<AiAttachmentAlertRuntime>(",
 				"showAlert(copy) {",
@@ -11453,6 +11547,7 @@ await run(
 			uiEntry,
 			uiTypeEntry,
 			appSource,
+			appRuntimeSource,
 			eslintSource,
 		] = await Promise.all([
 			fs.readFile(
@@ -11469,6 +11564,7 @@ await run(
 			fs.readFile("src/features/editor/ui/index.js", "utf8"),
 			fs.readFile("src/features/editor/ui/index.d.ts", "utf8"),
 			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
@@ -11570,7 +11666,7 @@ await run(
 			"EditableField mention picker selection lifecycle",
 		);
 		assertSourceTokensInOrder(
-			appSource,
+			`${appRuntimeSource}\n${appSource}`,
 			[
 				"const editorMentionPickerRuntime = useMemo<EditorMentionPickerRuntime>(",
 				"openMentionPicker(request) {",
@@ -11859,6 +11955,7 @@ await run(
 			featureEntry,
 			featureTypeEntry,
 			appSource,
+			appRuntimeSource,
 			eslintSource,
 		] = await Promise.all([
 			fs.readFile("src/features/dice/ui/DiceRuntime.tsx", "utf8"),
@@ -11868,6 +11965,7 @@ await run(
 			fs.readFile("src/features/dice/index.js", "utf8"),
 			fs.readFile("src/features/dice/index.d.ts", "utf8"),
 			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
@@ -11958,7 +12056,7 @@ await run(
 		);
 		assert.doesNotMatch(hostSource, /requestDiceRollAction/);
 		assertSourceTokensInOrder(
-			appSource,
+			`${appRuntimeSource}\n${appSource}`,
 			[
 				"const diceRequestRuntime = useMemo<DiceRequestRuntime>(",
 				"requestRoll(payload) {",
@@ -12740,7 +12838,14 @@ await run(
 await run(
 	"Phase 149 gives Campaign Entity Modal an injected mutation runtime",
 	async () => {
-		const [providerSource, widgetEntry, widgetTypeEntry, appSource, eslintSource] =
+		const [
+			providerSource,
+			widgetEntry,
+			widgetTypeEntry,
+			appSource,
+			appRuntimeSource,
+			eslintSource,
+		] =
 			await Promise.all([
 				fs.readFile(
 					"src/widgets/campaign-entity-modal/ui/CampaignEntityModalProvider.tsx",
@@ -12749,6 +12854,7 @@ await run(
 				fs.readFile("src/widgets/campaign-entity-modal/index.js", "utf8"),
 				fs.readFile("src/widgets/campaign-entity-modal/index.d.ts", "utf8"),
 				fs.readFile("src/App.tsx", "utf8"),
+				fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 				fs.readFile("eslint.config.js", "utf8"),
 			]);
 
@@ -12841,7 +12947,7 @@ await run(
 			/\[CharacterCard, LocationCard, campaignSlug, parentEntityLinks, runtime\],\s*\);/,
 		);
 		assertSourceTokensInOrder(
-			appSource,
+			`${appRuntimeSource}\n${appSource}`,
 			[
 				"const campaignEntityModalRuntime = useMemo<CampaignEntityModalRuntime>(",
 				"requestConfirmation(payload) {",
@@ -12853,8 +12959,8 @@ await run(
 			],
 			"App-owned Campaign Entity Modal runtime",
 		);
-		const campaignEntityModalRuntimeSource = appSource.match(
-			/const campaignEntityModalRuntime[\s\S]*?(?=^\tuseAppBootstrap\()/m,
+		const campaignEntityModalRuntimeSource = appRuntimeSource.match(
+			/const campaignEntityModalRuntime[\s\S]*?(?=^\tconst monsterStatBlockCommands)/m,
 		)?.[0];
 		assert.ok(campaignEntityModalRuntimeSource);
 		assert.doesNotMatch(
@@ -12947,6 +13053,7 @@ await run(
 			widgetEntry,
 			widgetTypeEntry,
 			appSource,
+			appRuntimeSource,
 			eslintSource,
 		] = await Promise.all([
 			fs.readFile(
@@ -12968,6 +13075,7 @@ await run(
 			fs.readFile("src/widgets/rules-reference-modal/index.js", "utf8"),
 			fs.readFile("src/widgets/rules-reference-modal/index.d.ts", "utf8"),
 			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
@@ -13119,7 +13227,7 @@ await run(
 			/\[MonsterStatBlock, SpellsBrowser, isOpen, navigationRequest, openModal\]/,
 		);
 		assertSourceTokensInOrder(
-			appSource,
+			`${appRuntimeSource}\n${appSource}`,
 			[
 				"const rulesReferenceModalNavigationRequest = useAppSelector(",
 				"(store) => store.rulesReference.navigationRequest",
@@ -13151,7 +13259,7 @@ await run(
 			],
 			"App-owned Rules Reference Modal runtime",
 		);
-		const rulesReferenceModalCommandsSource = appSource.match(
+		const rulesReferenceModalCommandsSource = appRuntimeSource.match(
 			/const rulesReferenceModalCommands[\s\S]*?(?=^\tconst rulesReferenceModalRuntime)/m,
 		)?.[0];
 		assert.ok(rulesReferenceModalCommandsSource);
@@ -13241,6 +13349,7 @@ await run(
 			widgetTypeEntry,
 			rulesReferenceCompositionSource,
 			appSource,
+			appRuntimeSource,
 			eslintSource,
 		] = await Promise.all([
 			fs.readFile(
@@ -13258,6 +13367,7 @@ await run(
 				"utf8",
 			),
 			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
@@ -13346,7 +13456,7 @@ await run(
 		assert.doesNotMatch(rulesReferenceSpellsSlotSource, /runtime/i);
 
 		assertSourceTokensInOrder(
-			appSource,
+			`${appRuntimeSource}\n${appSource}`,
 			[
 				"const spellsBrowserUseSearchDebounce = useAppSelector(",
 				"(store) => store.ui.useSearchDebounce !== false",
@@ -13376,7 +13486,7 @@ await run(
 			],
 			"App-owned Spells Browser runtime",
 		);
-		const spellsBrowserCommandsSource = appSource.match(
+		const spellsBrowserCommandsSource = appRuntimeSource.match(
 			/const spellsBrowserCommands[\s\S]*?(?=^\tconst spellsBrowserRuntime)/m,
 		)?.[0];
 		assert.ok(spellsBrowserCommandsSource);
@@ -13465,6 +13575,7 @@ await run(
 			aiResponseCompositionSource,
 			bestiaryCompositionSource,
 			appSource,
+			appRuntimeSource,
 			eslintSource,
 		] = await Promise.all([
 			fs.readFile(
@@ -13490,6 +13601,7 @@ await run(
 				"utf8",
 			),
 			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/model/useAppRuntimes.ts", "utf8"),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
@@ -13613,7 +13725,7 @@ await run(
 		}
 
 		assertSourceTokensInOrder(
-			appSource,
+			`${appRuntimeSource}\n${appSource}`,
 			[
 				"const campaigns = useAppSelector(",
 				"(store) => store.campaigns.items as CampaignCompletionRecord[]",
@@ -13640,7 +13752,7 @@ await run(
 			],
 			"App-owned Monster Stat Block runtime",
 		);
-		const monsterStatBlockCommandsSource = appSource.match(
+		const monsterStatBlockCommandsSource = appRuntimeSource.match(
 			/const monsterStatBlockCommands[\s\S]*?(?=^\tconst monsterStatBlockRuntime)/m,
 		)?.[0];
 		assert.ok(monsterStatBlockCommandsSource);
@@ -22256,8 +22368,8 @@ await run(
 			[
 				"const handleToggleCampaignStatus = useCampaignCompletionToggle(dispatch);",
 				"const openCreateCampaignModal = useCampaignCreationModal({",
-				"openModal: openModalRequest,",
-				"closeModal: closeActiveModal,",
+				"openModal,",
+				"closeModal,",
 				"createCampaign: campaignApi.createCampaign,",
 				'importCampaign: (file) => backupApi.importArchive(file, "campaign"),',
 				"requestCampaignsReload: () => dispatch(requestCampaignsReloadAction()),",
