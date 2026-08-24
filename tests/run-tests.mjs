@@ -11077,6 +11077,49 @@ await run(
 );
 
 await run(
+	"Phase 288 isolates Campaign graph viewport coordination in a private page hook",
+	async () => {
+		const [graphSource, viewportSource, pageEntry, pageTypes] = await Promise.all([
+			fs.readFile("src/pages/campaign/ui/components/CampaignNotesGraph.tsx", "utf8"),
+			fs.readFile("src/pages/campaign/ui/components/useCampaignGraphViewport.ts", "utf8"),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+		]);
+
+		assertSourceTokensInOrder(graphSource, [
+			'import { useCampaignGraphViewport } from "./useCampaignGraphViewport.ts";',
+			"const { requestFilterRelayout, handleRelayout } = useCampaignGraphViewport({",
+			"campaignSlug: campaign.slug,",
+			"visibleEdges: visibleGraph.edges,",
+			"hasManualPositionsRef,",
+			"requestFilterRelayout();",
+		]);
+		assert.doesNotMatch(
+			graphSource,
+			/fittedNodeTopologyRef|shouldRelayoutForFilterRef|shouldFitCampaignGraphTopology|layoutCampaignGraph/,
+		);
+		assertSourceTokensInOrder(viewportSource, [
+			"export function useCampaignGraphViewport",
+			"const fittedNodeTopologyRef = useRef",
+			"const shouldRelayoutForFilterRef = useRef(false)",
+			"fittedNodeTopologyRef.current = null;",
+			"if (!shouldRelayoutForFilterRef.current) return undefined;",
+			"duration: 360",
+			"if (!shouldFitCampaignGraphTopology({",
+			"hasFittedTopology: fittedNodeTopologyRef.current === nodeTopologyKey,",
+			"const requestFilterRelayout = useCallback",
+			"const handleRelayout = useCallback",
+			"duration: 520",
+		]);
+		assert.doesNotMatch(
+			viewportSource,
+			/useCampaignPageRuntime|buildCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(`${pageEntry}\n${pageTypes}`, /useCampaignGraphViewport/);
+	},
+);
+
+await run(
 	"Phase 287 isolates Campaign graph Flow interactions in a private page hook",
 	async () => {
 		const [graphSource, interactionsSource, pageEntry, pageTypes] = await Promise.all([

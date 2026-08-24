@@ -19,7 +19,6 @@ import {
 import {
 	buildCampaignGraph,
 	normalizeGraphName,
-	layoutCampaignGraph,
 } from "../../graph.js";
 import {
 	DEFAULT_CAMPAIGN_GRAPH_FILTERS,
@@ -35,7 +34,6 @@ import {
 	getCampaignGraphRelationLabel,
 	getCampaignGraphTypeCounts,
 	getVisibleCampaignGraph,
-	shouldFitCampaignGraphTopology,
 	type CampaignGraphEnabledFilters,
 	type CampaignGraphFilterId,
 } from "../../model/campaignGraphPresentation.ts";
@@ -72,6 +70,7 @@ import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";
 import { useCampaignGraphFlowEdges } from "./useCampaignGraphFlowEdges.ts";
 import { useCampaignGraphFlowInteractions } from "./useCampaignGraphFlowInteractions.ts";
 import { useCampaignGraphFlowNodeProjection } from "./useCampaignGraphFlowNodeProjection.ts";
+import { useCampaignGraphViewport } from "./useCampaignGraphViewport.ts";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
 
@@ -162,9 +161,7 @@ export default function CampaignNotesGraph({
 		useState<ReactFlowInstance<CampaignFlowNode, CampaignFlowEdge> | null>(null);
 	const [flowNodes, setFlowNodes, onFlowNodesChange] =
 		useNodesState<CampaignFlowNode>([]);
-	const fittedNodeTopologyRef = useRef<string | null>(null);
 	const hasManualPositionsRef = useRef(false);
-	const shouldRelayoutForFilterRef = useRef(false);
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const {
 		currentLanguage,
@@ -288,7 +285,6 @@ export default function CampaignNotesGraph({
 		setSelectedNodeId(null);
 		setHoveredNodeId(null);
 		hasManualPositionsRef.current = false;
-		fittedNodeTopologyRef.current = null;
 	}, [campaign.slug]);
 
 	useCampaignGraphFlowNodeProjection({
@@ -307,32 +303,18 @@ export default function CampaignNotesGraph({
 		hasManualPositionsRef,
 	});
 
-	useEffect(() => {
-		if (!shouldRelayoutForFilterRef.current) return undefined;
-		shouldRelayoutForFilterRef.current = false;
-
-		const nextPositions = layoutCampaignGraph(
-			visibleGraph.nodes,
-			visibleGraph.edges,
-		);
-		setFlowNodes((currentNodes) =>
-			currentNodes.map((node) =>
-				nextPositions[node.id]
-					? { ...node, position: nextPositions[node.id] }
-					: node,
-			),
-		);
-
-		const frame = requestAnimationFrame(() => {
-			flowInstance?.fitView({ padding: 0.16, duration: 360 });
-		});
-		return () => cancelAnimationFrame(frame);
-	}, [
+	const { requestFilterRelayout, handleRelayout } = useCampaignGraphViewport({
+		campaignSlug: campaign.slug,
 		flowInstance,
 		setFlowNodes,
-		visibleGraph.edges,
-		visibleGraph.nodes,
-	]);
+		visibleNodes: visibleGraph.nodes,
+		visibleEdges: visibleGraph.edges,
+		flowNodeCount: flowNodes.length,
+		graphNodeCount: graph.nodes.length,
+		flowNodeTopologyKey,
+		nodeTopologyKey,
+		hasManualPositionsRef,
+	});
 
 	const flowEdges = useCampaignGraphFlowEdges({
 		flowNodes,
@@ -340,53 +322,6 @@ export default function CampaignNotesGraph({
 		visibleEdgeIds: visibleGraph.visibleEdgeIds,
 		focusedNodeId,
 	});
-
-	useEffect(() => {
-		if (!shouldFitCampaignGraphTopology({
-			hasFlowInstance: Boolean(flowInstance),
-			flowNodeCount: flowNodes.length,
-			graphNodeCount: graph.nodes.length,
-			flowNodeTopologyKey,
-			nodeTopologyKey,
-			hasManualPositions: hasManualPositionsRef.current,
-			hasFittedTopology: fittedNodeTopologyRef.current === nodeTopologyKey,
-		})) {
-			return undefined;
-		}
-		fittedNodeTopologyRef.current = nodeTopologyKey;
-		const frame = requestAnimationFrame(() => {
-			flowInstance?.fitView({ padding: 0.16, duration: 520 });
-		});
-		return () => cancelAnimationFrame(frame);
-	}, [
-		flowInstance,
-		flowNodeTopologyKey,
-		flowNodes.length,
-		graph.nodes.length,
-		nodeTopologyKey,
-	]);
-
-	const handleRelayout = useCallback(() => {
-		hasManualPositionsRef.current = false;
-		const nextPositions = layoutCampaignGraph(
-			visibleGraph.nodes,
-			visibleGraph.edges,
-		);
-		setFlowNodes((currentNodes) =>
-			currentNodes.map((node) => ({
-				...node,
-				position: nextPositions[node.id] || node.position,
-			})),
-		);
-		requestAnimationFrame(() => {
-			flowInstance?.fitView({ padding: 0.16, duration: 520 });
-		});
-	}, [
-		flowInstance,
-		setFlowNodes,
-		visibleGraph.edges,
-		visibleGraph.nodes,
-	]);
 
 	const { handleNodeDragStop, handleFlowNodesChange } =
 		useCampaignGraphFlowInteractions({
@@ -397,7 +332,7 @@ export default function CampaignNotesGraph({
 		});
 
 	const toggleFilter = (filterId: CampaignGraphFilterId) => {
-		shouldRelayoutForFilterRef.current = true;
+		requestFilterRelayout();
 		setEnabledFilters((previous) => ({
 			...previous,
 			[filterId]: !previous[filterId],
