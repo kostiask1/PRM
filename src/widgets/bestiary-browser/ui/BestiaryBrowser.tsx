@@ -40,12 +40,6 @@ import {
 	normalizeSourceCode,
 } from "../../../entities/reference/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
-import {
-	addUndoSnapshot,
-	clearRedoStack,
-	createRedoTransition,
-	createUndoTransition,
-} from "../../../shared/lib/index.js";
 import { downloadJsonFile } from "../../../shared/lib/index.js";
 import "../../../assets/components/Bestiary.css";
 import { lang } from "../../../shared/lib/index.js";
@@ -57,7 +51,6 @@ import {
 	getBestiaryInitialSelectionScrollPlan,
 	getBestiaryFieldEditStartPlan,
 	getBestiarySelectionPlan,
-	getCustomBestiaryUpdatePlan,
 	getCreateBasedMonsterPlan,
 	getCustomMonsterDeleteStartPlan,
 	getEditedCustomMonsterPayload,
@@ -74,7 +67,6 @@ import {
 	replaceDeletedCustomMonsterList,
 	sortBestiaryMonsters,
 	type BestiarySortOrder,
-	type CustomBestiaryUpdateOptions,
 	type MonsterReference,
 } from "../model.js";
 import type {
@@ -85,6 +77,7 @@ import type {
 import { useBestiaryBrowserRuntime } from "./BestiaryBrowserRuntime.tsx";
 import { useBestiaryDataLoading } from "../model/useBestiaryDataLoading.ts";
 import { useBestiaryAiWorkflows } from "../model/useBestiaryAiWorkflows.ts";
+import { useBestiaryCustomMonsterHistory } from "../model/useBestiaryCustomMonsterHistory.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -102,11 +95,6 @@ function getDiffResourceState(resource: AiHistoryResource): string {
 
 function getErrorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error && error.message ? error.message : fallback;
-}
-
-interface ApplyCustomMonsterListOptions {
-	selectedName?: string;
-	clearSelection?: boolean;
 }
 
 export interface BestiaryBrowserProps {
@@ -187,8 +175,6 @@ export default function BestiaryBrowser({
 	const [fieldEditingMode, setFieldEditingMode] = useState<"edit" | "create-based">("edit");
 	const [fieldEditingOriginalMonster, setFieldEditingOriginalMonster] =
 		useState<BestiaryMonster | null>(null);
-	const [undoStack, setUndoStack] = useState<BestiaryMonster[][]>([]);
-	const [redoStack, setRedoStack] = useState<BestiaryMonster[][]>([]);
 	const listRef = useRef<ReactList>(null);
 	const selectedMonsterRef = useRef<BestiaryMonster | null>(null);
 	const aiDraftResponseRef = useRef<HTMLDivElement>(null);
@@ -260,44 +246,24 @@ export default function BestiaryBrowser({
 		return sortBestiaryMonsters(monsters, sortOrder);
 	}, [monsters, sortOrder]);
 
-	const customMonsters = useMemo(
-		() => allMonsters.filter((monster) => isCustomSource(monster.source)),
-		[allMonsters],
-	);
-
-	const pushCustomUndoSnapshot = (snapshot: BestiaryMonster[]) => {
-		setUndoStack((current) =>
-			addUndoSnapshot(current, snapshot, cloneCustomMonsters),
-		);
-		setRedoStack(clearRedoStack());
-	};
-
-	const pushCustomUndo = () => {
-		pushCustomUndoSnapshot(customMonsters);
-	};
-
-	const applyCustomMonsterList = (
-		nextCustomMonsters: BestiaryMonster[],
-		options: ApplyCustomMonsterListOptions = {},
-	) => {
-		const selectedName = options.selectedName;
-		const nextSelected = selectedName
-			? nextCustomMonsters.find((monster) => monster.name === selectedName)
-			: null;
-		setAllMonsters((current) => [
-			...current.filter((item) => !isCustomSource(item.source)),
-			...nextCustomMonsters,
-		]);
-		if (nextSelected) {
-			shouldAutoSelectMonsterRef.current = false;
-			selectedMonsterRef.current = nextSelected;
-			setSelectedMonster(nextSelected);
-		} else if (options.clearSelection) {
-			shouldAutoSelectMonsterRef.current = false;
-			selectedMonsterRef.current = null;
-			setSelectedMonster(null);
-		}
-	};
+	const {
+		customMonsters,
+		handleCustomBestiaryUpdate,
+		handleRedo,
+		handleUndo,
+		pushCustomUndoSnapshot,
+		redoStack,
+		restoreCustomMonsters,
+		undoStack,
+	} = useBestiaryCustomMonsterHistory({
+		allMonsters,
+		selectedMonsterRef,
+		setAllMonsters,
+		setReloadToken,
+		setSelectedMonster,
+		shouldAutoSelectMonsterRef,
+		showMessage,
+	});
 
 	const selectMonster = useCallback(
 		(monster: BestiaryMonster | null) => {
@@ -342,81 +308,6 @@ export default function BestiaryBrowser({
 			setGlobalIgnoreSourcesList,
 		],
 	);
-
-	const restoreCustomMonsters = async (
-		nextCustomMonsters: BestiaryMonster[],
-		options: ApplyCustomMonsterListOptions = {},
-	): Promise<BestiaryMonster[]> => {
-		const updated = await api.replaceCustomBestiaryMonsters(nextCustomMonsters);
-		const normalized = Array.isArray(updated) ? updated : [];
-		applyCustomMonsterList(normalized, options);
-		return normalized;
-	};
-
-	const handleUndo = async () => {
-		if (undoStack.length === 0) return;
-		const transition = createUndoTransition({
-			undoStack,
-			redoStack,
-			current: customMonsters,
-			clone: cloneCustomMonsters,
-		});
-		if (!transition.target) return;
-		try {
-			await restoreCustomMonsters(transition.target, { clearSelection: true });
-			setUndoStack(transition.undoStack);
-			setRedoStack(transition.redoStack);
-		} catch (err) {
-			showMessage({
-				title: lang.t("Undo error"),
-				message: getErrorMessage(err, lang.t("Unknown error")),
-			});
-		}
-	};
-
-	const handleRedo = async () => {
-		if (redoStack.length === 0) return;
-		const transition = createRedoTransition({
-			undoStack,
-			redoStack,
-			current: customMonsters,
-			clone: cloneCustomMonsters,
-		});
-		if (!transition.target) return;
-		try {
-			await restoreCustomMonsters(transition.target, { clearSelection: true });
-			setRedoStack(transition.redoStack);
-			setUndoStack(transition.undoStack);
-		} catch (err) {
-			showMessage({
-				title: lang.t("Redo error"),
-				message: getErrorMessage(err, lang.t("Unknown error")),
-			});
-		}
-	};
-
-	const handleCustomBestiaryUpdate = (
-		updated: unknown,
-		options: CustomBestiaryUpdateOptions = {},
-	) => {
-		const plan = getCustomBestiaryUpdatePlan(updated, options);
-		if (plan.trackUndo) {
-			pushCustomUndo();
-		}
-
-		shouldAutoSelectMonsterRef.current = false;
-		if (plan.hasUpdatedMonsters) {
-			setAllMonsters((current) => [
-				...current.filter((item) => !isCustomSource(item.source)),
-				...plan.updatedMonsters,
-			]);
-		}
-		if (plan.nextSelectedMonster) {
-			selectedMonsterRef.current = plan.nextSelectedMonster;
-			setSelectedMonster(plan.nextSelectedMonster);
-		}
-		setReloadToken((value) => value + 1);
-	};
 
 	useBestiaryDataLoading({
 		hasLoadedInitialMonstersRef,

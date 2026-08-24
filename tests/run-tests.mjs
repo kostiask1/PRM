@@ -8135,8 +8135,7 @@ await run(
 		assertSourceTokensInOrder(
 			browserSource,
 			[
-				"const handleUndo = async () => {",
-				"const handleRedo = async () => {",
+				"} = useBestiaryCustomMonsterHistory({",
 				"const handleExportCustomMonsters = () => {",
 				"const handleImportCustomMonsters = async (",
 				"const bestiaryActions = (",
@@ -10570,7 +10569,7 @@ await run(
 			browserSource,
 			[
 				"const syncEvent = useMemo(",
-				"const handleRedo = async () => {",
+				"} = useBestiaryCustomMonsterHistory({",
 				"useBestiaryDataLoading({",
 				"pendingSyncSelectionRef,",
 				"shouldAutoSelectMonsterRef,",
@@ -10604,6 +10603,76 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useBestiaryDataLoading/,
+		);
+	},
+);
+
+await run(
+	"Phase 239 isolates Bestiary custom-monster history in the private widget model",
+	async () => {
+		const [browserSource, historySource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/useBestiaryCustomMonsterHistory.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			browserSource,
+			/import { useBestiaryCustomMonsterHistory } from "\.\.\/model\/useBestiaryCustomMonsterHistory\.ts";/,
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/const \[undoStack|const \[redoStack|const pushCustomUndoSnapshot|const pushCustomUndo =|const applyCustomMonsterList|const restoreCustomMonsters|const handleUndo|const handleRedo|const handleCustomBestiaryUpdate|addUndoSnapshot|clearRedoStack|createUndoTransition|createRedoTransition/,
+		);
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				"const displayedMonsters = useMemo(() => {",
+				"const {\n\t\tcustomMonsters,",
+				"} = useBestiaryCustomMonsterHistory({",
+				"selectedMonsterRef,",
+				"shouldAutoSelectMonsterRef,",
+				"useBestiaryDataLoading({",
+				"onCustomBestiaryUpdate: handleCustomBestiaryUpdate,",
+			],
+			"Bestiary browser custom-history delegation",
+		);
+		assertSourceTokensInOrder(
+			historySource,
+			[
+				"export function useBestiaryCustomMonsterHistory({",
+				"const [undoStack, setUndoStack] = useState<BestiaryMonster[][]>([]);",
+				"const customMonsters = useMemo(",
+				"const pushCustomUndoSnapshot = (snapshot: BestiaryMonster[]) => {",
+				"addUndoSnapshot(current, snapshot, cloneCustomMonsters)",
+				"const restoreCustomMonsters = async (",
+				"bestiaryApi.replaceCustomBestiaryMonsters(",
+				"const handleUndo = async () => {",
+				"const transition = createUndoTransition({",
+				"const handleRedo = async () => {",
+				"const transition = createRedoTransition({",
+				"const handleCustomBestiaryUpdate = (",
+				"return {",
+				"restoreCustomMonsters,",
+			],
+			"Bestiary private custom-history coordination",
+		);
+		assert.doesNotMatch(
+			historySource,
+			/useBestiaryBrowserRuntime|campaignApi|aiApi|settingsApi|app\/model|shared\/model|<BestiaryContent|<BestiaryAiModals/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryCustomMonsterHistory/,
 		);
 	},
 );
