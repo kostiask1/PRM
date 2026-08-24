@@ -1,28 +1,24 @@
 import {
-	useMemo,
 	useRef,
 	useState,
 } from "react";
-import { lang } from "../../../shared/lib/index.js";
 import type { CampaignRecord } from "../../../entities/campaign/index.js";
 import type {
 	EncounterViewParticipant,
 } from "./contracts.ts";
+import { lang } from "../../../shared/lib/index.js";
 import {
-	getAvailableEncounterCharacters,
 	getEncounterRenderContext,
 } from "./encounterPagePresentation.ts";
 import { useEncounterPageRuntime } from "./EncounterPageRuntime.tsx";
 import { useEncounterAiModelLoading } from "./useEncounterAiModelLoading.ts";
-import { useEncounterCharacterModal } from "./useEncounterCharacterModal.ts";
 import { useEncounterDisplaySettings } from "./useEncounterDisplaySettings.ts";
 import { useEncounterHeaderDismissal } from "./useEncounterHeaderDismissal.ts";
-import { useEncounterHpEditing } from "./useEncounterHpEditing.ts";
 import { useEncounterMonsterAiEditor } from "./useEncounterMonsterAiEditor.ts";
 import { useEncounterMonsterInteractions } from "./useEncounterMonsterInteractions.ts";
 import { useEncounterMonsterAiWorkflows } from "./useEncounterMonsterAiWorkflows.ts";
 import { useEncounterPageDisplayProjection } from "./useEncounterPageDisplayProjection.ts";
-import { useEncounterPlayerCreation } from "./useEncounterPlayerCreation.ts";
+import { useEncounterPageParticipantEditing } from "./useEncounterPageParticipantEditing.ts";
 import { useEncounterRequestCleanup } from "./useEncounterRequestCleanup.ts";
 import useEncounterView from "./useEncounterView.ts";
 
@@ -62,34 +58,14 @@ export function useEncounterPageController() {
 		gridColumns,
 		view,
 	});
-	const availablePlayerCharacters = useMemo(
-		() => getAvailableEncounterCharacters(
-			displayProjection.encounterParticipants,
-			displayProjection.playerCharacters,
-		),
-		[
-			displayProjection.encounterParticipants,
-			displayProjection.playerCharacters,
-		],
-	);
-	const playerCreation = useEncounterPlayerCreation({
+	const participantEditing = useEncounterPageParticipantEditing({
 		campaignSlug: campaign?.slug || "",
-		onAdd: view.handleAddCharacter,
-		onClosePicker: () => view.setShowCharacterPicker(false),
+		encounterParticipants: displayProjection.encounterParticipants,
+		getParticipantInstanceId,
+		playerCharacters: displayProjection.playerCharacters,
 		refreshEntities,
 		showMessage,
-		messages: {
-			errorTitle: lang.t("Error"),
-			missingName: lang.t("Name is required to create an entry."),
-			failedCreation: lang.t("Failed to create entity."),
-		},
-	});
-	const hpEditing = useEncounterHpEditing({
-		getInstanceId: getParticipantInstanceId,
-		onUpdate: view.updateMonsterHp,
-	});
-	const characterModal = useEncounterCharacterModal({
-		onUpdate: view.updateEncounterCharacter,
+		view,
 	});
 	const aiEditor = useEncounterMonsterAiEditor();
 
@@ -135,14 +111,12 @@ export function useEncounterPageController() {
 		aiDraftResponseRef,
 		aiEditor,
 		aiGeneration,
-		availablePlayerCharacters,
-		characterModal,
+		...participantEditing,
 		displaySettings,
 		...displayProjection,
 		getParticipantInstanceId,
 		gridColumns,
 		headerActionsRef,
-		hpEditing,
 		isHeaderActionsOpen,
 		monsterAiAction,
 		monsterFieldEditing,

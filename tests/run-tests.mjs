@@ -1746,13 +1746,17 @@ function getRequiredSourceMatch(source, pattern, message = String(pattern)) {
 }
 
 async function getEncounterPageCompositionSource() {
-	const [displayProjectionSource, controllerSource, workflowsSource, contentSource] = await Promise.all([
+	const [displayProjectionSource, controllerSource, participantEditingSource, workflowsSource, contentSource] = await Promise.all([
 		fs.readFile(
 			"src/pages/encounter/model/useEncounterPageDisplayProjection.ts",
 			"utf8",
 		),
 		fs.readFile(
 			"src/pages/encounter/model/useEncounterPageController.ts",
+			"utf8",
+		),
+		fs.readFile(
+			"src/pages/encounter/model/useEncounterPageParticipantEditing.ts",
 			"utf8",
 		),
 		fs.readFile(
@@ -1764,7 +1768,7 @@ async function getEncounterPageCompositionSource() {
 			"utf8",
 		),
 	]);
-	return `${displayProjectionSource}\n${controllerSource}\n${workflowsSource}\n${contentSource}`;
+	return `${displayProjectionSource}\n${controllerSource}\n${participantEditingSource}\n${workflowsSource}\n${contentSource}`;
 }
 
 async function getEncounterPrivateComponentSources(componentName) {
@@ -5857,12 +5861,13 @@ await run(
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
 				"export function useEncounterPageController() {",
+				"const participantEditing = useEncounterPageParticipantEditing({",
 				"const availablePlayerCharacters = useMemo(",
 				"getAvailableEncounterCharacters(",
 				"const playerCreation = useEncounterPlayerCreation({",
-				"onAdd: view.handleAddCharacter,",
+				"onAdd: options.view.handleAddCharacter,",
 				"const characterModal = useEncounterCharacterModal({",
-				"onUpdate: view.updateEncounterCharacter,",
+				"onUpdate: options.view.updateEncounterCharacter,",
 				"<EncounterBestiaryOverlay",
 				"<EncounterCharacterOverlays",
 				"open={view.showCharacterPicker}",
@@ -6027,8 +6032,9 @@ await run(
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
 				"export function useEncounterPageController() {",
+				"const participantEditing = useEncounterPageParticipantEditing({",
 				"const characterModal = useEncounterCharacterModal({",
-				"onUpdate: view.updateEncounterCharacter,",
+				"onUpdate: options.view.updateEncounterCharacter,",
 				"<EncounterDetail",
 				"displayMode={effectiveDisplayMode}",
 				"gridMonsters={gridMonsters}",
@@ -6128,8 +6134,6 @@ await run(
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
 				"export function useEncounterPageController() {",
-				"const hpEditing = useEncounterHpEditing({",
-				"onUpdate: view.updateMonsterHp,",
 				"const monsterInteractions = useEncounterMonsterInteractions({",
 				"selectedInstanceId: view.selectedInstance?.instanceId,",
 				"displayMode: displayProjection.effectiveDisplayMode,",
@@ -6137,6 +6141,8 @@ await run(
 				"onSelect: view.setSelectedInstance,",
 				"onFocus: displayProjection.focusMonsterInGrid,",
 				"onTokenImageUpdate: view.updateMonsterImage,",
+				"const hpEditing = useEncounterHpEditing({",
+				"onUpdate: options.view.updateMonsterHp,",
 				"<EncounterParticipantList",
 				"monsters={encounter.monsters}",
 				"onOpenBestiary={() => view.setShowBestiary(true)}",
@@ -6977,9 +6983,10 @@ await run(
 		assert.doesNotMatch(encounterSource, /executeEncounterPlayerCreation|buildCreateEntityPayload|createEmptyEncounterCharacterDraft|const handleCreatePlayer/);
 		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterPlayerCreation/);
 		assertSourceTokensInOrder(encounterSource, [
+			"const participantEditing = useEncounterPageParticipantEditing({",
 			"const playerCreation = useEncounterPlayerCreation({",
-			"onAdd: view.handleAddCharacter,",
-			"onClosePicker: () => view.setShowCharacterPicker(false),",
+			"onAdd: options.view.handleAddCharacter,",
+			"onClosePicker: () => options.view.setShowCharacterPicker(false),",
 			"creating={playerCreation.creating}",
 			"onCreate={playerCreation.submit}",
 		], "Encounter raw player-creation composition");
@@ -7009,8 +7016,9 @@ await run("Phase 206 isolates Encounter HP editing in page model", async () => {
 	assert.doesNotMatch(page, /const handleHpInputChange|const handleHpInputBlur|setHpDrafts/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterHpEditing/);
 	assertSourceTokensInOrder(page, [
+		"const participantEditing = useEncounterPageParticipantEditing({",
 		"const hpEditing = useEncounterHpEditing({",
-		"onUpdate: view.updateMonsterHp,",
+		"onUpdate: options.view.updateMonsterHp,",
 		"hpDrafts={hpEditing.drafts}",
 		"onHpChange={hpEditing.onChange}",
 		"onHpBlur={hpEditing.onBlur}",
@@ -7033,7 +7041,7 @@ await run("Phase 207 isolates Encounter character modal in page model", async ()
 	assert.match(page, /import \{ useEncounterCharacterModal \} from "\.\/useEncounterCharacterModal\.ts";/);
 	assert.doesNotMatch(page, /const handleCharacterChange|setModalCharacter/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterCharacterModal/);
-	assertSourceTokensInOrder(page, ["const characterModal = useEncounterCharacterModal({", "onUpdate: view.updateEncounterCharacter,", "onOpenCharacter: characterModal.open,", "onCharacterChange={characterModal.getOnChange}", "modalCharacter={characterModal.value}"], "Encounter raw character-modal composition");
+	assertSourceTokensInOrder(page, ["const participantEditing = useEncounterPageParticipantEditing({", "onOpenCharacter: characterModal.open,", "const characterModal = useEncounterCharacterModal({", "onUpdate: options.view.updateEncounterCharacter,", "onCharacterChange={characterModal.getOnChange}", "modalCharacter={characterModal.value}"], "Encounter raw character-modal composition");
 	assertSourceTokensInOrder(hook, ["export function useEncounterCharacterModal", "onUpdate(instanceId, nextCharacter);", 'participantType: "character"', "instanceId", "return { value, open, close, getOnChange }"], "Encounter page-model character modal");
 });
 
@@ -10234,7 +10242,7 @@ await run(
 				"export function useEncounterPageController() {",
 				"} = useEncounterPageRuntime();",
 				"const view = useEncounterView();",
-				"const playerCreation = useEncounterPlayerCreation({",
+				"const participantEditing = useEncounterPageParticipantEditing({",
 				"useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);",
 				"const displaySettings = useEncounterDisplaySettings({ patchUiSettings });",
 				"} = useEncounterMonsterAiWorkflows({",
@@ -10430,7 +10438,7 @@ await run(
 				"export function useEncounterPageController() {",
 				"const view = useEncounterView();",
 				"const displayProjection = useEncounterPageDisplayProjection({",
-				"const availablePlayerCharacters = useMemo(",
+				"const participantEditing = useEncounterPageParticipantEditing({",
 				"useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);",
 				"displayMode: displayProjection.effectiveDisplayMode,",
 				"onFocus: displayProjection.focusMonsterInGrid,",
@@ -10461,6 +10469,73 @@ await run(
 		assert.doesNotMatch(
 			`${pageEntry}\n${pageTypes}`,
 			/useEncounterPageDisplayProjection/,
+		);
+	},
+);
+
+await run(
+	"Phase 236 isolates Encounter participant-editing coordination in the private page model",
+	async () => {
+		const [controllerSource, participantEditingSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/encounter/model/useEncounterPageController.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/encounter/model/useEncounterPageParticipantEditing.ts",
+					"utf8",
+				),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			controllerSource,
+			/import \{ useEncounterPageParticipantEditing \} from "\.\/useEncounterPageParticipantEditing\.ts";/,
+		);
+		assert.doesNotMatch(
+			controllerSource,
+			/getAvailableEncounterCharacters|useEncounterPlayerCreation|useEncounterHpEditing|useEncounterCharacterModal/,
+		);
+		assertSourceTokensInOrder(
+			controllerSource,
+			[
+				"const view = useEncounterView();",
+				"const displayProjection = useEncounterPageDisplayProjection({",
+				"const participantEditing = useEncounterPageParticipantEditing({",
+				"const aiEditor = useEncounterMonsterAiEditor();",
+				"const monsterInteractions = useEncounterMonsterInteractions({",
+				"...participantEditing,",
+			],
+			"Encounter controller participant-editing delegation",
+		);
+		assertSourceTokensInOrder(
+			participantEditingSource,
+			[
+				'import { useMemo } from "react";',
+				'import { lang } from "../../../shared/lib/index.js";',
+				"export function useEncounterPageParticipantEditing(options: Options) {",
+				"const availablePlayerCharacters = useMemo(",
+				"getAvailableEncounterCharacters(",
+				"const playerCreation = useEncounterPlayerCreation({",
+				"onAdd: options.view.handleAddCharacter,",
+				"const hpEditing = useEncounterHpEditing({",
+				"onUpdate: options.view.updateMonsterHp,",
+				"const characterModal = useEncounterCharacterModal({",
+				"onUpdate: options.view.updateEncounterCharacter,",
+				"return {",
+				"playerCreation,",
+			],
+			"Encounter private participant-editing coordination",
+		);
+		assert.doesNotMatch(
+			participantEditingSource,
+			/useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|aiApi|settingsApi|app\/model|shared\/model/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/useEncounterPageParticipantEditing/,
 		);
 	},
 );
