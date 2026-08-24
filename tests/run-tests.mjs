@@ -11016,6 +11016,88 @@ await run(
 );
 
 await run(
+	"Phase 257 isolates Bestiary AI draft restore policy in the private widget model",
+	async () => {
+		const [
+			browserModelSource,
+			aiDraftRestoreSource,
+			widgetEntry,
+			modelEntry,
+			modelTypes,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/model/bestiaryBrowserAiDraftRestore.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+			fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+			fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+		]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				"export {",
+				"executeAiDraftRestore,",
+				"getAiDraftRestoreResultPlan,",
+				"getAiDraftRestoreStartPlan,",
+				"preserveAiDraftResourceMetadata,",
+				'from "./bestiaryBrowserAiDraftRestore.ts";',
+				"export type {",
+				"AiDraftRestoreExecutionOutcome,",
+				"AiDraftRestoreMode,",
+				"AiDraftRestorePayload,",
+				"AiDraftRestoreResultPlan,",
+				"AiDraftRestoreStartPlan,",
+				"AiDraftRestoreUpdatePlan,",
+				"ExecuteAiDraftRestoreOptions,",
+			],
+			"Bestiary AI draft restore compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function getAiDraftRestoreStartPlan|function getAiDraftRestoreResultPlan|function requestAiDraftRestore|function applyAiDraftRestoreResult|function preserveAiDraftResourceMetadata/,
+		);
+		assertSourceTokensInOrder(
+			aiDraftRestoreSource,
+			[
+				'import type { BestiaryMonster } from "../../../entities/bestiary/index.js";',
+				"import type {",
+				"AiHistoryEntry,",
+				"AiHistoryResource,",
+				"AiHistoryRestoreResult,",
+				'from "../../../features/ai/index.js";',
+				'import { getFirstChangedMonsterName } from "../../../features/ai/index.js";',
+				"export type AiDraftRestoreMode",
+				"export interface AiDraftRestoreStartPlan",
+				"export interface AiDraftRestoreUpdatePlan",
+				"export interface AiDraftRestoreResultPlan",
+				"export interface AiDraftRestorePayload",
+				"export interface ExecuteAiDraftRestoreOptions",
+				"export type AiDraftRestoreExecutionOutcome",
+				"export function getAiDraftRestoreStartPlan",
+				"export function getAiDraftRestoreResultPlan",
+				"export async function executeAiDraftRestore",
+				"export function preserveAiDraftResourceMetadata",
+			],
+			"Bestiary private AI draft restore model",
+		);
+		assert.doesNotMatch(
+			aiDraftRestoreSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserAiDraftRestore/,
+		);
+	},
+);
+
+await run(
 	"Phase 256 isolates Bestiary AI request policy in the private widget model",
 	async () => {
 		const [browserModelSource, aiRequestSource, widgetEntry, modelEntry, modelTypes] =
@@ -11244,10 +11326,6 @@ await run(
 		assertSourceTokensInOrder(
 			browserModelSource,
 			[
-				"import {\n\tgetMonsterListFromResponse,",
-				"type CustomBestiaryUpdateOptions,",
-				"type CustomBestiaryUpdatePlan,",
-				'from "./bestiaryBrowserCustomData.ts";',
 				"export {\n\tgetCustomBestiaryUpdatePlan,",
 				"getCustomMonsterDeleteStartPlan,",
 				"getMonsterListFromResponse,",
@@ -11385,10 +11463,6 @@ await run(
 		assertSourceTokensInOrder(
 			browserModelSource,
 			[
-				"import {\n\tcloneCustomMonsters,",
-				"customMonsterListsEqual,",
-				"type MonsterReference,",
-				"from \"./bestiaryBrowserSelection.ts\";",
 				"export {\n\tcloneCustomMonsters,",
 				"getBestiaryInitialSelectionScrollPlan,",
 				"getBestiarySelectionPlan,",
