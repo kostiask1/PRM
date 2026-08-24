@@ -10649,7 +10649,8 @@ await run(
 				"onRefreshEntities: refreshEntities,",
 				"showGeneratedPrompt,",
 				"upsertResponseHistoryEntry,",
-				"const generate = async (",
+				"const {\n\t\tcanCancelGenerate,",
+				"} = useAiAssistantGeneration({",
 			],
 			"AI Assistant generated-result delegation",
 		);
@@ -10683,6 +10684,103 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useAiAssistantGeneratedResult/,
+		);
+	},
+);
+
+await run(
+	"Phase 244 isolates AI Assistant generation and retry lifecycle in the private widget model",
+	async () => {
+		const [panelSource, generationSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/ai-assistant/model/useAiAssistantGeneration.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			panelSource,
+			/import \{ useAiAssistantGeneration \} from "\.\.\/model\/useAiAssistantGeneration\.ts";/,
+		);
+		assert.doesNotMatch(
+			panelSource,
+			/const \[generationLifecycle|activeGenerateControllerRef|nextGenerationRequestIdRef|const generate = async|const retryResponseHistoryEntry|buildAiGenerationRequest|executeAiGeneration|executeAiHistoryRetry/,
+		);
+		assertSourceTokensInOrder(
+			panelSource,
+			[
+				"const { handleGeneratedAiData } = useAiAssistantGeneratedResult({",
+				"const {\n\t\tcanCancelGenerate,",
+				"} = useAiAssistantGeneration({",
+				"attachedFiles,",
+				"attachedImages,",
+				"buildRetryPlan,",
+				"contextConfig,",
+				"currentLanguage,",
+				"deleteAiResponse: api.deleteAiResponse,",
+				"generateAi: api.generateAi,",
+				"handleGeneratedAiData,",
+				"historyCampaign: aiHistoryCampaign,",
+				"isContextLoading,",
+				"onApiKeyMissing: () => setIsApiKeyMissing(true),",
+				"onError: setError,",
+				"showMessage,",
+				"closeGeneratedPrompt,",
+				"const loading = isContextLoading || isGenerationPending;",
+				"return () => {",
+				"cancelGenerateRequest();",
+			],
+			"AI Assistant generation-lifecycle delegation",
+		);
+		assertSourceTokensInOrder(
+			generationSource,
+			[
+				"export function useAiAssistantGeneration({",
+				"const [generationLifecycle, dispatchGenerationLifecycle] = useReducer(",
+				"const activeGenerateControllerRef = useRef<AbortController | null>(null);",
+				"const nextGenerationRequestIdRef = useRef(0);",
+				"const [canCancelGenerate, setCanCancelGenerate] = useState(false);",
+				"const loading =",
+				"const cancelGenerateRequest = () => {",
+				"activeGenerateControllerRef.current?.abort();",
+				"const generate = async (",
+				"const { requestType, shouldParseResponse, payload } =",
+				"buildAiGenerationRequest({",
+				"cancelGenerateRequest();",
+				"dispatchGenerationLifecycle({ type: \"start-generation\", requestId });",
+				"await executeAiGeneration({",
+				"onFailedHistoryEntry: upsertResponseHistoryEntry,",
+				"onApiKeyMissing: () => {",
+				"onApiKeyMissing();",
+				"onFailed: (failure) => {",
+				"formatAiGenerationFailureAlert(",
+				"const retryResponseHistoryEntry = async (",
+				"const plan = buildRetryPlan(entry, {",
+				"dispatchGenerationLifecycle({ type: \"start-retry\", requestId });",
+				"await executeAiHistoryRetry({",
+				"onFailedEntryDeleted: (responses) => {",
+				"if (selectedResponseId === entry.id) {",
+				"const failure = getAiHistoryRetryFailure(error, lang.t(\"Status\"));",
+				"return {",
+				"isGenerationPending: isAiGenerationPending(generationLifecycle),",
+			],
+			"AI Assistant private generation and retry lifecycle",
+		);
+		assert.doesNotMatch(
+			generationSource,
+			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useAiAssistantGeneration/,
 		);
 	},
 );
@@ -15330,10 +15428,10 @@ await run(
 				"applyUpdatedData: applyUpdatedAiData,",
 				"onRequestCampaignReload: requestCampaignReload,",
 				"onRefreshEntities: refreshEntities,",
-				"onFailed: (failure) => {",
-				"showMessage({",
-				"onFailed: (error) => {",
-				"showMessage({",
+				"} = useAiAssistantGeneration({",
+				"deleteAiResponse: api.deleteAiResponse,",
+				"generateAi: api.generateAi,",
+				"showMessage,",
 			],
 			"AI Assistant injected runtime and preserved generation/history flow",
 		);

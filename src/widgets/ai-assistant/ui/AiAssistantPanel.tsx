@@ -5,8 +5,6 @@ import {
 	isValidElement,
 	useEffect,
 	useMemo,
-	useReducer,
-	useRef,
 	useState,
 	type ReactNode,
 } from "react";
@@ -16,17 +14,9 @@ import { sessionApi } from "../../../entities/session/index.js";
 import { bestiaryApi } from "../../../entities/bestiary/index.js";
 import {
 	aiApi,
-	aiGenerationLifecycleReducer,
 	buildAiTokenEstimate,
-	buildAiGenerationRequest,
 	createAiHistoryWorkflow,
-	executeAiGeneration,
-	executeAiHistoryRetry,
-	formatAiGenerationFailureAlert,
-	getAiHistoryRetryFailure,
 	hasHistoryChanges,
-	initialAiGenerationLifecycle,
-	isAiGenerationPending,
 	isFailedHistoryEntry,
 	useAiImagePromptData,
 	type AiHistoryEntry,
@@ -52,8 +42,8 @@ import { useAiImagePromptController } from "../model/useAiImagePromptController.
 import { useAiImagePromptState } from "../model/useAiImagePromptState.ts";
 import { useAiAssistantModelAccess } from "../model/useAiAssistantModelAccess.ts";
 import { useAiAssistantGeneratedResult } from "../model/useAiAssistantGeneratedResult.ts";
+import { useAiAssistantGeneration } from "../model/useAiAssistantGeneration.ts";
 import { useAiAssistantUpdatedData } from "../model/useAiAssistantUpdatedData.ts";
-import type { ImagePromptTarget } from "../model/imagePromptPicker.ts";
 import { lang } from "../../../shared/lib/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
 import { formatBytes } from "../../../shared/lib/index.js";
@@ -165,13 +155,6 @@ async function getAiContextSession(
 	return session ? { ...session, fileName: session.fileName || fileName } : null;
 }
 
-interface GenerateOptions {
-	forceParseAIResponse?: boolean | null;
-	imageTarget?: ImagePromptTarget | null;
-	imagePromptBasePromptOverride?: string;
-	userInstructionsOverride?: string | null;
-}
-
 const optional = <T,>(value: T | null | undefined): T | undefined =>
 	value ?? undefined;
 
@@ -237,10 +220,6 @@ export default function AiAssistantPanel({
 
 	const [isOpen, setIsOpen] = useState(false);
 	const [isContextModalOpen, setIsContextModalOpen] = useState(false);
-	const [generationLifecycle, dispatchGenerationLifecycle] = useReducer(
-		aiGenerationLifecycleReducer,
-		initialAiGenerationLifecycle,
-	);
 	const [useContext, setUseContext] = useState(true);
 	const [error, setError] = useState("");
 	const [userInstructions, setUserInstructions] = useState("");
@@ -312,8 +291,6 @@ export default function AiAssistantPanel({
 		getEntities: api.getEntities,
 		getSession: getAiContextSession,
 	});
-	const loading =
-		isContextLoading || isAiGenerationPending(generationLifecycle);
 	const {
 		customMonsters: imagePromptCustomMonsters,
 		isLoading: isImagePromptDataLoading,
@@ -329,15 +306,6 @@ export default function AiAssistantPanel({
 		getSession: getAiContextSession,
 		getCustomBestiaryData: api.getCustomBestiaryData,
 	});
-	const activeGenerateControllerRef = useRef<AbortController | null>(null);
-	const nextGenerationRequestIdRef = useRef(0);
-	const [canCancelGenerate, setCanCancelGenerate] = useState(false);
-	const cancelGenerateRequest = () => {
-		activeGenerateControllerRef.current?.abort();
-		activeGenerateControllerRef.current = null;
-		setCanCancelGenerate(false);
-	};
-
 	const {
 		aiModels,
 		apiKeyInput,
@@ -445,159 +413,46 @@ export default function AiAssistantPanel({
 		upsertResponseHistoryEntry,
 	});
 
-	const generate = async (
-		type: string | null = null,
-		targetSceneId: string | number | null = null,
-		{
-			forceParseAIResponse = null,
-			imageTarget = null,
-			imagePromptBasePromptOverride = undefined,
-			userInstructionsOverride = null,
-		}: GenerateOptions = {},
-	): Promise<void> => {
-		const { requestType, shouldParseResponse, payload } =
-			buildAiGenerationRequest({
-				type,
-				isBestiary,
-				isEncounter,
-				isCampaign,
-				forceParseAIResponse,
-				parseAIResponse,
-				selectedModel,
-				userInstructions,
-				userInstructionsOverride,
-				initialRoute,
-				targetSceneId,
-				imageTarget,
-				attachedImages,
-				attachedFiles,
-				imagePromptBasePromptOverride,
-				generateCharacters,
-				generateNpcs,
-				generateLocations,
-				generateEncounters,
-				generateCustomMonsters,
-				useContext,
-				contextConfig,
-				currentLanguage,
-			});
-		cancelGenerateRequest();
-		const controller = new AbortController();
-		const requestId = (nextGenerationRequestIdRef.current += 1);
-		activeGenerateControllerRef.current = controller;
-		setCanCancelGenerate(true);
-		dispatchGenerationLifecycle({ type: "start-generation", requestId });
-		setError("");
-
-		try {
-			await executeAiGeneration({
-				payload,
-				signal: controller.signal,
-				generateAi: api.generateAi,
-				onSucceeded: (data) => {
-					handleGeneratedAiData({
-						data,
-						requestType,
-						shouldParseResponse,
-					});
-					dispatchGenerationLifecycle({ type: "succeed", requestId });
-				},
-				onCancelled: () => {
-					dispatchGenerationLifecycle({ type: "cancel", requestId });
-				},
-				onFailedHistoryEntry: upsertResponseHistoryEntry,
-				onApiKeyMissing: () => {
-					dispatchGenerationLifecycle({ type: "fail", requestId });
-				setIsApiKeyMissing(true);
-				setError("");
-				},
-				onFailed: (failure) => {
-					dispatchGenerationLifecycle({ type: "fail", requestId });
-					setError(
-						failure.message || lang.t("Failed to connect to AI."),
-					);
-					showMessage({
-						title: lang.t("AI error"),
-						message: formatAiGenerationFailureAlert(
-							failure,
-							lang.t("Status"),
-						),
-					});
-				},
-			});
-		} finally {
-			if (activeGenerateControllerRef.current === controller) {
-				activeGenerateControllerRef.current = null;
-				setCanCancelGenerate(false);
-			}
-		}
-	};
-
-	const retryResponseHistoryEntry = async (
-		entry: AiHistoryEntry,
-	): Promise<void> => {
-		const plan = buildRetryPlan(entry, {
-			isLoading: loading,
-			isBestiary,
-			historyCampaign: aiHistoryCampaign,
-		});
-		if (!plan) return;
-
-		cancelGenerateRequest();
-		const controller = new AbortController();
-		const requestId = (nextGenerationRequestIdRef.current += 1);
-		activeGenerateControllerRef.current = controller;
-		setCanCancelGenerate(true);
-		dispatchGenerationLifecycle({ type: "start-retry", requestId });
-		setError("");
-
-		try {
-			await executeAiHistoryRetry({
-				plan,
-				signal: controller.signal,
-				deleteAiResponse: api.deleteAiResponse,
-				generateAi: api.generateAi,
-				onFailedEntryDeleted: (responses) => {
-					setResponseHistory(responses);
-					refreshResponseHistoryStats();
-					if (selectedResponseId === entry.id) {
-						closeGeneratedPrompt();
-					}
-				},
-				onSucceeded: (data) => {
-					handleGeneratedAiData({
-						data,
-						requestType: plan.requestType,
-						shouldParseResponse: plan.shouldParseResponse,
-						clearPromptOnApplied: false,
-					});
-					dispatchGenerationLifecycle({ type: "succeed", requestId });
-				},
-				onCancelled: () => {
-					dispatchGenerationLifecycle({ type: "cancel", requestId });
-				},
-				onFailed: (error) => {
-					const failure = getAiHistoryRetryFailure(error, lang.t("Status"));
-					dispatchGenerationLifecycle({ type: "fail", requestId });
-					if (failure.historyEntry) {
-						upsertResponseHistoryEntry(failure.historyEntry);
-					}
-					setError(
-						failure.message || lang.t("Failed to connect to AI."),
-					);
-					showMessage({
-						title: lang.t("AI error"),
-						message: failure.alertMessage,
-					});
-				},
-			});
-		} finally {
-			if (activeGenerateControllerRef.current === controller) {
-				activeGenerateControllerRef.current = null;
-				setCanCancelGenerate(false);
-			}
-		}
-	};
+	const {
+		canCancelGenerate,
+		cancelGenerateRequest,
+		generate,
+		isGenerationPending,
+		retryResponseHistoryEntry,
+	} = useAiAssistantGeneration({
+		attachedFiles,
+		attachedImages,
+		buildRetryPlan,
+		contextConfig,
+		currentLanguage,
+		deleteAiResponse: api.deleteAiResponse,
+		generateAi: api.generateAi,
+		generateCharacters,
+		generateCustomMonsters,
+		generateEncounters,
+		generateLocations,
+		generateNpcs,
+		handleGeneratedAiData,
+		historyCampaign: aiHistoryCampaign,
+		initialRoute,
+		isBestiary,
+		isCampaign,
+		isContextLoading,
+		isEncounter,
+		onApiKeyMissing: () => setIsApiKeyMissing(true),
+		onError: setError,
+		parseAIResponse,
+		refreshResponseHistoryStats,
+		selectedResponseId,
+		selectedModel,
+		setResponseHistory,
+		showMessage,
+		closeGeneratedPrompt,
+		upsertResponseHistoryEntry,
+		useContext,
+		userInstructions,
+	});
+	const loading = isContextLoading || isGenerationPending;
 
 	const routePresentation = {
 		isBestiary,
