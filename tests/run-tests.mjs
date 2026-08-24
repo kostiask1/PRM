@@ -2319,12 +2319,17 @@ await run(
 	async () => {
 		const [
 			bestiarySource,
+			bestiaryBrowserModalsSource,
 			encounterSource,
 			monsterFieldModalSource,
 			aiDraftModalSource,
 		] = await Promise.all([
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowserModals.tsx",
 				"utf8",
 			),
 			getEncounterPageCompositionSource(),
@@ -2365,18 +2370,18 @@ await run(
 			/export interface BestiaryBrowserProps\s*\{[\s\S]*?\bResponseModal: AiResponseModalComponent;\s*MonsterEditorModal: ComponentType<\s*Pick<\s*MonsterFieldEditModalProps,\s*"editingMonster"\s*\|\s*"onCancel"\s*\|\s*"onSave"\s*>\s*>;/,
 		);
 
-		const modalComposition = bestiarySource.match(
-			/const bestiaryModals\s*=\s*\(\s*<>\s*([\s\S]*?)\s*<\/>\s*\);/,
-		)?.[1];
-		assert.ok(modalComposition);
-		assert.match(modalComposition, /^\s*<MonsterEditorModal\b/);
 		assert.match(
-			modalComposition,
-			/<BestiaryAiModals[\s\S]*?\bResponseModal=\{ResponseModal\}/,
+			bestiarySource,
+			/<BestiaryBrowserModals[\s\S]*?\bResponseModal=\{ResponseModal\}/,
+		);
+		assert.match(bestiaryBrowserModalsSource, /^\s*<MonsterEditorModal\b/m);
+		assert.match(
+			bestiaryBrowserModalsSource,
+			/<BestiaryAiModals \{\.\.\.aiModalsProps\} \/>/,
 		);
 		assert.match(
 			bestiarySource,
-			/return \(\s*<>\s*\{bestiaryContent\}\s*\{bestiaryModals\}\s*<\/>\s*\);/,
+			/return \(\s*<>\s*\{bestiaryContent\}\s*<BestiaryBrowserModals/,
 		);
 
 		const encounterBestiaryTag = encounterSource.match(
@@ -8793,6 +8798,7 @@ await run(
 			draftSource,
 			editSource,
 			bestiarySource,
+			bestiaryBrowserModalsSource,
 			compositionSource,
 			bestiaryTypeEntry,
 		] = await Promise.all([
@@ -8813,6 +8819,10 @@ await run(
 			),
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowserModals.tsx",
 				"utf8",
 			),
 			fs.readFile(
@@ -8870,13 +8880,12 @@ await run(
 			bestiarySource,
 			/export interface BestiaryBrowserProps \{\s*BestiaryAiModals: BestiaryAiModalsSlot;/,
 		);
-		const browserModalComposition = getRequiredSourceSlice(
+		assert.match(
 			bestiarySource,
-			"const bestiaryModals = (",
-			"return (",
+			/import \{ BestiaryBrowserModals \} from "\.\/BestiaryBrowserModals\.tsx";/,
 		);
 		assertSourceTokensInOrder(
-			browserModalComposition,
+			bestiaryBrowserModalsSource,
 			[
 				"<MonsterEditorModal",
 				"<MonsterAiActionModal",
@@ -8885,8 +8894,8 @@ await run(
 			"Bestiary modal composition",
 		);
 		assert.match(
-			browserModalComposition,
-			/<BestiaryAiModals[\s\S]*?\bResponseModal=\{ResponseModal\}/,
+			bestiaryBrowserModalsSource,
+			/<BestiaryAiModals \{\.\.\.aiModalsProps\} \/>/,
 		);
 
 		assert.match(
@@ -11016,6 +11025,64 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useAiAssistantRouteState/,
+		);
+	},
+);
+
+await run(
+	"Phase 269 isolates Bestiary modal composition in a private UI component",
+	async () => {
+		const [browserSource, modalsSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowserModals.tsx",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { BestiaryBrowserModals } from "./BestiaryBrowserModals.tsx";',
+				"<BestiaryBrowserModals",
+				"BestiaryAiModals={BestiaryAiModals}",
+				"MonsterEditorModal={MonsterEditorModal}",
+				"onApplyDraft={(entry) => restoreAiDraftResponse(entry, \"apply\")}",
+				"onUndoDraft={(entry) => restoreAiDraftResponse(entry, \"undo\")}",
+			],
+			"Bestiary browser composes its private modal host",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/<MonsterEditorModal|<MonsterAiActionModal|<BestiaryAiModals\b/,
+		);
+		assertSourceTokensInOrder(
+			modalsSource,
+			[
+				"export interface BestiaryBrowserModalsProps",
+				"export function BestiaryBrowserModals",
+				"<MonsterEditorModal",
+				"<MonsterAiActionModal",
+				"showGlobalEdit={isCustomSource(aiActionMonster?.source)}",
+				"showImagePromptAction",
+				"<BestiaryAiModals {...aiModalsProps} />",
+			],
+			"Bestiary private modal host",
+		);
+		assert.doesNotMatch(
+			modalsSource,
+			/useBestiaryBrowserRuntime|campaignApi|bestiaryApi|aiApi|settingsApi|app\/model|shared\/model|BestiaryBrowserProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/BestiaryBrowserModals/,
 		);
 	},
 );

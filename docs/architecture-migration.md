@@ -930,6 +930,8 @@ Next:
 - Phase 267 preserves selection-plan identity guards, explicit-selection auto-disablement, ref-before-state-update ordering, initial scroll key guards, animation-frame cleanup, and no public widget entry expansion. The full suite passes 540/540 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 268 by moving Bestiary favorite-toggle orchestration into private `widgets/bestiary-browser/ui/useBestiaryFavoriteToggle.ts`. `BestiaryBrowser.tsx` retains UI orchestration.
 - Phase 268 preserves source string coercion, favorite-list replacement, failure logging, injected API transport, and no public widget entry expansion. The full suite passes 541/541 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 269 by moving Bestiary editor/action/draft modal composition into private `widgets/bestiary-browser/ui/BestiaryBrowserModals.tsx`. `BestiaryBrowser.tsx` retains UI orchestration.
+- Phase 269 preserves field-editor callbacks, custom-source global-edit visibility, AI modal prop routing, apply/undo resource callbacks, and no public widget entry expansion. The full suite passes 542/542 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

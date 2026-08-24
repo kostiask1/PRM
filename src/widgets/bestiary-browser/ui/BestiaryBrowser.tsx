@@ -20,7 +20,6 @@ import type {
 import type { AiResponseModalComponent } from "../../../features/ai/ui/index.js";
 import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
-import { MonsterAiActionModal } from "../../../features/ai-edit-monster/index.js";
 import BestiaryContent from "./BestiaryContent.tsx";
 import BestiaryHeaderActions from "./BestiaryHeaderActions.tsx";
 import {
@@ -30,7 +29,6 @@ import {
 import "../../../assets/components/Bestiary.css";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	isCustomSource,
 	parseBestiarySyncEvent,
 	parseMonsterReference,
 	type MonsterReference,
@@ -51,6 +49,7 @@ import { useBestiaryMonsterList } from "./useBestiaryMonsterList.ts";
 import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionState.ts";
 import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";
 import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";
+import { BestiaryBrowserModals } from "./BestiaryBrowserModals.tsx";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -376,22 +375,14 @@ export default function BestiaryBrowser({
 		/>
 	);
 
-	const bestiaryModals = (
+	return (
 		<>
-			<MonsterEditorModal
-				editingMonster={fieldEditingMonster}
-				onCancel={closeEditCustomMonster}
-				onSave={saveEditedCustomMonster}
-			/>
-			<MonsterAiActionModal
-				aiActionMonster={aiActionMonster}
-				onCancel={closeMonsterAiAction}
-				onChoose={chooseMonsterAiAction}
-				showGlobalEdit={isCustomSource(aiActionMonster?.source)}
-				showImagePromptAction
-			/>
-			<BestiaryAiModals
+			{bestiaryContent}
+			<BestiaryBrowserModals
+				BestiaryAiModals={BestiaryAiModals}
+				MonsterEditorModal={MonsterEditorModal}
 				ResponseModal={ResponseModal}
+				aiActionMonster={aiActionMonster}
 				aiDraftDiffResources={aiDraftDiffResources}
 				aiDraftResponseEntry={aiDraftResponseEntry}
 				aiDraftResponseRef={aiDraftResponseRef}
@@ -402,6 +393,7 @@ export default function BestiaryBrowser({
 				aiEditInstructions={aiEditInstructions}
 				aiEditMode={aiEditMode}
 				aiModels={aiModels}
+				fieldEditingMonster={fieldEditingMonster}
 				getDiffResourceState={getDiffResourceState}
 				getHistoryChangeSummary={getHistoryChangeSummary}
 				isAiEditingMonster={isAiEditingMonster}
@@ -412,11 +404,15 @@ export default function BestiaryBrowser({
 				}
 				onCancelDraft={closeAiDraftResponse}
 				onCancelEdit={closeAiEditCustomMonster}
+				onCancelEditCustomMonster={closeEditCustomMonster}
 				onCancelEditRequest={cancelAiEditCustomMonsterRequest}
+				onCancelMonsterAiAction={closeMonsterAiAction}
+				onChooseMonsterAiAction={chooseMonsterAiAction}
 				onInstructionsChange={setAiEditInstructions}
 				onModelChange={setSelectedAiModel}
 				onSaveDraftChanges={saveAiDraftResponseChanges}
 				onSaveEdit={saveAiEditedCustomMonster}
+				onSaveEditedCustomMonster={saveEditedCustomMonster}
 				onUndoDraft={(entry) => restoreAiDraftResponse(entry, "undo")}
 				onUndoDraftResource={(entry, resourceIds) =>
 					restoreAiDraftResponse(entry, "undo", { resourceIds })
@@ -425,13 +421,6 @@ export default function BestiaryBrowser({
 				setAiEditAttachedFiles={setAiEditAttachedFiles}
 				setAiEditAttachedImages={setAiEditAttachedImages}
 			/>
-		</>
-	);
-
-	return (
-		<>
-			{bestiaryContent}
-			{bestiaryModals}
 		</>
 	);
 }
