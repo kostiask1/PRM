@@ -1,15 +1,8 @@
-import {
-	useMemo,
-	type ComponentType,
-} from "react";
+import type { ComponentType } from "react";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
 import type { AiResponseModalComponent } from "../../../features/ai/ui/index.js";
 import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
 import "../../../assets/components/Bestiary.css";
-import {
-	parseBestiarySyncEvent,
-	parseMonsterReference,
-} from "../model.js";
 import type {
 	BestiaryAiModalsSlot,
 	BestiaryAssistantSlot,
@@ -86,14 +79,6 @@ export default function BestiaryBrowser({
 		syncEvent: rawSyncEvent,
 		useSearchDebounce,
 	} = useBestiaryBrowserRuntime();
-	const syncEvent = useMemo(
-		() => parseBestiarySyncEvent(rawSyncEvent),
-		[rawSyncEvent],
-	);
-	const initialMonsterReference = useMemo(
-		() => parseMonsterReference(initialSelectedName, initialSelectedSource),
-		[initialSelectedName, initialSelectedSource],
-	);
 	const {
 		aiDraftResponseRef,
 		allMonsters,
@@ -216,7 +201,7 @@ export default function BestiaryBrowser({
 		setSources,
 		shouldAutoSelectMonsterRef,
 		sources,
-		syncEvent,
+		rawSyncEvent,
 	});
 
 	const {
@@ -282,7 +267,8 @@ export default function BestiaryBrowser({
 		allMonsters,
 		displayedMonsters,
 		embeddedScrolledMonsterRef,
-		initialMonsterReference,
+		initialSelectedName,
+		initialSelectedSource,
 		listRef,
 		scrollToInitialSelected,
 		selectedMonster,

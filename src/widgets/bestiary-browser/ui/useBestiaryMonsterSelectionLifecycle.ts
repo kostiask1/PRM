@@ -1,5 +1,6 @@
 import {
 	useEffect,
+	useMemo,
 	type Dispatch,
 	type MutableRefObject,
 	type RefObject,
@@ -11,14 +12,15 @@ import {
 	getBestiaryInitialSelectionScrollPlan,
 	getBestiarySelectionPlan,
 	isSameMonsterIdentity,
-	type MonsterReference,
+	parseMonsterReference,
 } from "../model.js";
 
 export interface UseBestiaryMonsterSelectionLifecycleOptions {
 	allMonsters: BestiaryMonster[];
 	displayedMonsters: BestiaryMonster[];
 	embeddedScrolledMonsterRef: MutableRefObject<string>;
-	initialMonsterReference: MonsterReference;
+	initialSelectedName: string;
+	initialSelectedSource: string;
 	listRef: RefObject<ReactList>;
 	scrollToInitialSelected: boolean;
 	selectedMonster: BestiaryMonster | null;
@@ -31,7 +33,8 @@ export function useBestiaryMonsterSelectionLifecycle({
 	allMonsters,
 	displayedMonsters,
 	embeddedScrolledMonsterRef,
-	initialMonsterReference,
+	initialSelectedName,
+	initialSelectedSource,
 	listRef,
 	scrollToInitialSelected,
 	selectedMonster,
@@ -39,6 +42,11 @@ export function useBestiaryMonsterSelectionLifecycle({
 	setSelectedMonster,
 	shouldAutoSelectMonsterRef,
 }: UseBestiaryMonsterSelectionLifecycleOptions) {
+	const initialMonsterReference = useMemo(
+		() => parseMonsterReference(initialSelectedName, initialSelectedSource),
+		[initialSelectedName, initialSelectedSource],
+	);
+
 	useEffect(() => {
 		const plan = getBestiarySelectionPlan(
 			displayedMonsters,

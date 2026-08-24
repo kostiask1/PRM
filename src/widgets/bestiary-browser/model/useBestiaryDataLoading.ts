@@ -1,5 +1,6 @@
 import {
 	useEffect,
+	useMemo,
 	type Dispatch,
 	type MutableRefObject,
 	type SetStateAction,
@@ -19,6 +20,7 @@ import {
 	getCustomRefreshSelection,
 	getMonsterListFromResponse,
 	isCustomSource,
+	parseBestiarySyncEvent,
 	type MonsterReference,
 } from "./bestiaryBrowser.ts";
 
@@ -37,7 +39,7 @@ interface Options {
 	setSources: Dispatch<SetStateAction<string[]>>;
 	shouldAutoSelectMonsterRef: MutableRefObject<boolean>;
 	sources: string[];
-	syncEvent: Parameters<typeof getBestiarySyncEventPlan>[0];
+	rawSyncEvent: unknown;
 }
 
 export function useBestiaryDataLoading({
@@ -55,8 +57,13 @@ export function useBestiaryDataLoading({
 	setSources,
 	shouldAutoSelectMonsterRef,
 	sources,
-	syncEvent,
+	rawSyncEvent,
 }: Options): void {
+	const syncEvent = useMemo(
+		() => parseBestiarySyncEvent(rawSyncEvent),
+		[rawSyncEvent],
+	);
+
 	useEffect(() => {
 		const controller = new AbortController();
 		const loadInitialData = async () => {

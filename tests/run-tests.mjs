@@ -11076,6 +11076,76 @@ await run(
 );
 
 await run(
+	"Phase 275 moves Bestiary input normalization to lifecycle owners",
+	async () => {
+		const [browserSource, dataLoadingSource, lifecycleSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/useBestiaryDataLoading.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryMonsterSelectionLifecycle.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				"syncEvent: rawSyncEvent,",
+				"useBestiaryDataLoading({",
+				"rawSyncEvent,",
+				"useBestiaryMonsterSelectionLifecycle({",
+				"initialSelectedName,",
+				"initialSelectedSource,",
+			],
+			"Bestiary browser forwards raw lifecycle inputs to their owners",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/useMemo|parseBestiarySyncEvent|parseMonsterReference|initialMonsterReference/,
+		);
+		assertSourceTokensInOrder(
+			dataLoadingSource,
+			[
+				"export function useBestiaryDataLoading({",
+				"rawSyncEvent,",
+				"const syncEvent = useMemo(",
+				"() => parseBestiarySyncEvent(rawSyncEvent),",
+				"[rawSyncEvent],",
+				"const plan = getBestiarySyncEventPlan(syncEvent);",
+			],
+			"Bestiary data-loading owns stable sync-event normalization",
+		);
+		assertSourceTokensInOrder(
+			lifecycleSource,
+			[
+				"export function useBestiaryMonsterSelectionLifecycle({",
+				"initialSelectedName,",
+				"initialSelectedSource,",
+				"const initialMonsterReference = useMemo(",
+				"() => parseMonsterReference(initialSelectedName, initialSelectedSource),",
+				"[initialSelectedName, initialSelectedSource],",
+				"const plan = getBestiarySelectionPlan(",
+			],
+			"Bestiary selection lifecycle owns stable initial-reference normalization",
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryDataLoading|useBestiaryMonsterSelectionLifecycle/,
+		);
+	},
+);
+
+await run(
 	"Phase 274 isolates Bestiary Browser external adapters behind a private UI module",
 	async () => {
 		const [browserSource, dependenciesSource, widgetEntry, modelEntry, modelTypes] =
@@ -11212,7 +11282,6 @@ await run(
 			browserSource,
 			[
 				'import { useBestiaryBrowserState } from "./useBestiaryBrowserState.ts";',
-				"const initialMonsterReference = useMemo(",
 				"} = useBestiaryBrowserState();",
 				"} = useBestiaryMonsterSelectionState({",
 			],
@@ -11508,7 +11577,8 @@ await run(
 				"} = useBestiaryMonsterList({",
 				"useBestiaryMonsterSelectionLifecycle({",
 				"embeddedScrolledMonsterRef,",
-				"initialMonsterReference,",
+				"initialSelectedName,",
+				"initialSelectedSource,",
 				"scrollToInitialSelected,",
 				"selectedMonsterRef,",
 			],
@@ -11525,6 +11595,8 @@ await run(
 				"useEffect,",
 				"export interface UseBestiaryMonsterSelectionLifecycleOptions",
 				"export function useBestiaryMonsterSelectionLifecycle",
+				"const initialMonsterReference = useMemo(",
+				"() => parseMonsterReference(initialSelectedName, initialSelectedSource),",
 				"const plan = getBestiarySelectionPlan(",
 				"if (isSameMonsterIdentity(selectedMonsterRef.current, plan.monster)) return;",
 				"if (plan.explicit) shouldAutoSelectMonsterRef.current = false;",
@@ -12776,12 +12848,12 @@ await run(
 		assertSourceTokensInOrder(
 			browserSource,
 			[
-				"const syncEvent = useMemo(",
+				"} = useBestiaryBrowserState();",
 				"} = useBestiaryCustomMonsterHistory({",
 				"useBestiaryDataLoading({",
 				"pendingSyncSelectionRef,",
 				"shouldAutoSelectMonsterRef,",
-				"syncEvent,",
+				"rawSyncEvent,",
 				"} = useBestiaryAiWorkflows({",
 				"} = useBestiaryMonsterList({",
 			],
@@ -12792,6 +12864,8 @@ await run(
 			[
 				"import {\n\tuseEffect,",
 				"export function useBestiaryDataLoading({",
+				"const syncEvent = useMemo(",
+				"() => parseBestiarySyncEvent(rawSyncEvent),",
 				"const loadInitialData = async () => {",
 				"bestiaryApi.getBestiarySources({ signal: controller.signal }),",
 				"const plan = getBestiarySyncEventPlan(syncEvent);",
@@ -17113,9 +17187,7 @@ await run(
 				"syncEvent: rawSyncEvent,",
 				"useSearchDebounce,",
 				"} = useBestiaryBrowserRuntime();",
-				"const syncEvent = useMemo(",
-				"() => parseBestiarySyncEvent(rawSyncEvent),",
-				"[rawSyncEvent],",
+				"} = useBestiaryBrowserState();",
 				"} = useBestiarySearchControls({",
 				"} = useBestiaryCustomMonsterEditing({",
 				"requestConfirmation,",
@@ -18676,8 +18748,9 @@ await run(
 		]);
 		assert.match(source, /syncEvent:\s*rawSyncEvent,/);
 		assert.match(source, /\} = useBestiaryBrowserRuntime\(\);/);
+		assert.doesNotMatch(source, /parseBestiarySyncEvent|const syncEvent = useMemo/);
 		assert.match(
-			source,
+			dataLoadingSource,
 			/const syncEvent = useMemo\(\s*\(\) => parseBestiarySyncEvent\(rawSyncEvent\),\s*\[rawSyncEvent\],\s*\);/,
 		);
 		assert.match(dataLoadingSource, /\}, \[syncEvent\]\);/);
