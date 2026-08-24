@@ -9635,6 +9635,7 @@ await run(
 			);
 			assert.deepEqual(staleRawImports, []);
 			assert.deepEqual(mentionConsumers.sort(), [
+				"src/pages/campaign/ui/components/CampaignGraphDetails.tsx",
 				"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
 				"src/pages/campaign/ui/components/CampaignNotesSection.tsx",
 				"src/pages/encounter/ui/components/EncounterHeader.tsx",
@@ -11071,6 +11072,66 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useAiAssistantRouteState/,
+		);
+	},
+);
+
+await run(
+	"Phase 279 isolates Campaign graph details and Markdown mentions in private page UI",
+	async () => {
+		const [graphSource, detailsSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignGraphDetails.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			graphSource,
+			[
+				'import { CampaignGraphDetails } from "./CampaignGraphDetails.tsx";',
+				"const renderConnection = (edge: CampaignGraphEdge): ReactElement | null => {",
+				"<CampaignGraphDetails",
+				"selectedNode={selectedNode}",
+				"renderConnection={renderConnection}",
+			],
+			"Campaign graph controller composes the private details presentation",
+		);
+		assert.doesNotMatch(
+			graphSource,
+			/MARKDOWN_TAGS_WITH_MENTIONS|function renderMentionChildren|function ParsedGraphText|function CampaignGraphSelectedDetails|function CampaignGraphOverview|function CampaignGraphDetails\(/,
+		);
+		assertSourceTokensInOrder(
+			detailsSource,
+			[
+				'import React, { type ReactElement, type ReactNode, useMemo } from "react";',
+				"getCampaignGraphDetailTextPresentation,",
+				"const NODE_TYPE_ORDER =",
+				"const MARKDOWN_TAGS_WITH_MENTIONS =",
+				"function renderMentionChildren",
+				"function ParsedGraphText",
+				"const presentation = getCampaignGraphDetailTextPresentation",
+				"if (shouldActivateCampaignGraphDetailText",
+				"export function CampaignGraphDetails",
+				"<CampaignGraphSelectedDetails",
+				"<CampaignGraphOverview",
+			],
+			"Campaign graph private detail and Markdown presentation",
+		);
+		assert.doesNotMatch(
+			detailsSource,
+			/useCampaignPageRuntime|buildCampaignGraph|layoutCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/CampaignGraphDetails|CampaignGraphDetailsProps/,
 		);
 	},
 );
