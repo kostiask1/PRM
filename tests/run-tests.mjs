@@ -10113,7 +10113,7 @@ await run(
 		assertSourceTokensInOrder(
 			appSource,
 			[
-				"const [isCTRLPressed, setCTRLPressed] = useState(false);",
+				"const isCTRLPressed = useAppModifierKey();",
 				"const {",
 				"dispatch,",
 				"modalState,",
@@ -10328,6 +10328,69 @@ await run(
 		assert.doesNotMatch(
 			`${pageEntry}\n${pageTypes}`,
 			/useEncounterMonsterAiWorkflows/,
+		);
+	},
+);
+
+await run(
+	"Phase 234 moves App modifier-key lifecycle into the private app model",
+	async () => {
+		const [appSource, hookSource, appRuntimeEntry, appRuntimeTypes] =
+			await Promise.all([
+				fs.readFile("src/App.tsx", "utf8"),
+				fs.readFile("src/app/model/useAppModifierKey.ts", "utf8"),
+				fs.readFile("src/app/model/index.js", "utf8"),
+				fs.readFile("src/app/model/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			appSource,
+			/import \{ useAppModifierKey \} from "\.\/app\/model\/useAppModifierKey\.ts";/,
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const location = useLocation();",
+				"const routerNavigate = useNavigate();",
+				"const isCTRLPressed = useAppModifierKey();",
+				"} = useAppRuntimes();",
+				"navigateTo(slug, null, false, null, isCTRLPressed);",
+			],
+			"App modifier-key composition",
+		);
+		assert.doesNotMatch(
+			appSource,
+			/useState|isEditableAppTarget|handleKeyDown|handleKeyUp|handleMouseUp|document\.addEventListener\("key(?:down|up)"/,
+		);
+		assertSourceTokensInOrder(
+			hookSource,
+			[
+				'import {',
+				"useEffect,",
+				"useState,",
+				'import { isEditableAppTarget } from "./appShellPresentation.ts";',
+				"export function useAppModifierKey(): boolean {",
+				"const [isPressed, setIsPressed] = useState(false);",
+				"if (isEditableAppTarget(event.target)) return;",
+				"if (event.ctrlKey || event.metaKey) setIsPressed(true);",
+				"if (!event.ctrlKey && !event.metaKey) setIsPressed(false);",
+				'document.addEventListener("keydown", handleKeyDown);',
+				'document.addEventListener("keyup", handleKeyUp);',
+				'document.addEventListener("mouseup", handleMouseUp);',
+				'document.removeEventListener("keydown", handleKeyDown);',
+				'document.removeEventListener("keyup", handleKeyUp);',
+				'document.removeEventListener("mouseup", handleMouseUp);',
+				"return isPressed;",
+			],
+			"App modifier-key lifecycle",
+		);
+		assert.doesNotMatch(
+			hookSource,
+			/useAppDispatch|useAppSelector|appStore|shared\/model|window\./,
+		);
+		assert.doesNotMatch(
+			`${appRuntimeEntry}\n${appRuntimeTypes}`,
+			/useAppModifierKey/,
 		);
 	},
 );

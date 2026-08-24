@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { campaignApi } from "./entities/campaign/index.js";
 import { backupApi } from "./features/backup/index.js";
@@ -49,10 +49,6 @@ import {
 	alert,
 	requestCampaignsReloadAction,
 } from "./shared/model/index.js";
-import {
-	isEditableAppTarget,
-} from "./app/model/appShellPresentation.ts";
-
 import { initRealtimeSync } from "./app/realtime/index.js";
 import {
 	navigateTo,
@@ -64,6 +60,7 @@ import { useAppBootstrap } from "./app/model/useAppBootstrap.ts";
 import { useCampaignCompletionToggle } from "./app/model/useCampaignCompletionToggle.ts";
 import { useMobileSidebar } from "./app/model/useMobileSidebar.ts";
 import { useAppRuntimes } from "./app/model/useAppRuntimes.ts";
+import { useAppModifierKey } from "./app/model/useAppModifierKey.ts";
 
 const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 	EntityLinkContext,
@@ -75,7 +72,7 @@ const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 export default function App() {
 	const location = useLocation();
 	const routerNavigate = useNavigate();
-	const [isCTRLPressed, setCTRLPressed] = useState(false);
+	const isCTRLPressed = useAppModifierKey();
 	const {
 		dispatch,
 		modalState,
@@ -97,32 +94,6 @@ export default function App() {
 		openModal,
 		closeModal,
 	} = useAppRuntimes();
-
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (isEditableAppTarget(e.target)) return;
-			if (e.ctrlKey || e.metaKey) {
-				setCTRLPressed(true);
-			}
-		};
-		const handleKeyUp = (e: KeyboardEvent) => {
-			if (isEditableAppTarget(e.target)) return;
-			if (!e.ctrlKey && !e.metaKey) {
-				setCTRLPressed(false);
-			}
-		};
-		const handleMouseUp = () => setCTRLPressed(false);
-
-		document.addEventListener("keydown", handleKeyDown);
-		document.addEventListener("keyup", handleKeyUp);
-		document.addEventListener("mouseup", handleMouseUp);
-
-		return () => {
-			document.removeEventListener("keydown", handleKeyDown);
-			document.removeEventListener("keyup", handleKeyUp);
-			document.removeEventListener("mouseup", handleMouseUp);
-		};
-	}, []);
 
 	useEffect(() => {
 		initRealtimeSync();
