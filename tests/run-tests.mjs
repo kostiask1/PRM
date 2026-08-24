@@ -11016,6 +11016,70 @@ await run(
 );
 
 await run(
+	"Phase 252 isolates Bestiary list and detail presentation in the private widget model",
+	async () => {
+		const [browserModelSource, presentationSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserPresentation.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				"export {\n\tgetBestiaryDetailPresentation,",
+				"getBestiaryMonsterRowPresentation,",
+				'from "./bestiaryBrowserPresentation.ts";',
+				"export type {",
+				"BestiaryMonsterRowPresentation,",
+				"BestiaryMonsterRowPrimaryAction,",
+			],
+			"Bestiary presentation compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function getBestiaryMonsterRowPrimaryAction|function getBestiaryDetailDeleteAction|function isFavoriteMonster/,
+		);
+		assertSourceTokensInOrder(
+			presentationSource,
+			[
+				"import type {",
+				"BestiaryFavorite,",
+				"BestiaryMonster,",
+				"from \"../../../entities/bestiary/index.js\";",
+				"import {",
+				"getMonsterCrDisplay,",
+				"isCustomSource,",
+				"from \"./bestiaryBrowserFiltering.ts\";",
+				"import { isSameMonsterIdentity } from \"./bestiaryBrowserSelection.ts\";",
+				"export type BestiaryMonsterRowPrimaryAction",
+				"export interface BestiaryMonsterRowPresentation",
+				"export function getBestiaryMonsterRowPresentation",
+				"export function getBestiaryDetailPresentation",
+			],
+			"Bestiary private list and detail presentation model",
+		);
+		assert.doesNotMatch(
+			presentationSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserPresentation/,
+		);
+	},
+);
+
+await run(
 	"Phase 251 isolates Bestiary identity and selection policies in the private widget model",
 	async () => {
 		const [browserModelSource, selectionSource, widgetEntry, modelEntry, modelTypes] =
@@ -11230,8 +11294,6 @@ await run(
 		assertSourceTokensInOrder(
 			browserModelSource,
 			[
-				'import {\n\tgetMonsterCrDisplay,',
-				"from \"./bestiaryBrowserFiltering.ts\";",
 				"export {",
 				"filterBestiaryMonsters,",
 				"getMonsterCrDisplay,",
@@ -48800,6 +48862,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/model/bestiaryBrowserSelection.ts",
 		"utf8",
 	);
+	const bestiaryPresentationSource = await fs.readFile(
+		"src/widgets/bestiary-browser/model/bestiaryBrowserPresentation.ts",
+		"utf8",
+	);
 	const bestiarySyncSource = await fs.readFile(
 		"src/widgets/bestiary-browser/model/bestiaryBrowserSync.ts",
 		"utf8",
@@ -48886,7 +48952,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		bestiaryContentSource,
 		/showAddToEncounterPicker=\{presentation\.showAddToEncounterPicker\}/,
 	);
-	assert.match(bestiaryModelSource, /showAddToEncounterPicker: Boolean\(onAddMonster\)/);
+	assert.match(
+		bestiaryPresentationSource,
+		/showAddToEncounterPicker: Boolean\(onAddMonster\)/,
+	);
 	assert.doesNotMatch(spellsSource, embeddedPropPattern);
 	assert.doesNotMatch(spellsSource, /useSearchParams/);
 	assert.doesNotMatch(spellsSource, /next\.set\("spell"/);

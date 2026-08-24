@@ -896,6 +896,8 @@ Next:
 - Phase 250 preserves group/reference source-name resolution, canonical identity matching, unmatched monster identity, and lair/regional projection. The full suite passes 523/523 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 251 by moving Bestiary canonical identity/reference parsing, custom lookup, clone/equality, selection, custom-refresh, and initial-scroll plans into private `widgets/bestiary-browser/model/bestiaryBrowserSelection.ts`. `bestiaryBrowser.ts` retains the compatibility facade.
 - Phase 251 preserves normalization/read order, nullable reference behavior, official-first automatic selection, explicit displayed-before-all lookup, custom refresh precedence, and scroll-key semantics. The full suite passes 524/524 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 252 by moving Bestiary list-row and detail presentation into private `widgets/bestiary-browser/model/bestiaryBrowserPresentation.ts`. `bestiaryBrowser.ts` retains the compatibility facade.
+- Phase 252 preserves canonical selected/favorite/custom identity, token/CR fallbacks, primary-action precedence, lazy add-title resolution, custom-only deletion, and callback identity. The full suite passes 525/525 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
