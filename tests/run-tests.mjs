@@ -11076,6 +11076,68 @@ await run(
 );
 
 await run(
+	"Phase 274 isolates Bestiary Browser external adapters behind a private UI module",
+	async () => {
+		const [browserSource, dependenciesSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/bestiaryBrowserDependencies.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiaryBrowserState } from "./useBestiaryBrowserState.ts";',
+				"import {",
+				'from "./bestiaryBrowserDependencies.ts";',
+				"listCampaigns: bestiaryBrowserApi.listCampaigns,",
+				'title: translate("Error")',
+				"toggleFavorite: bestiaryBrowserApi.toggleBestiaryFavorite,",
+				"getDiffResourceState={getDiffResourceState}",
+			],
+			"Bestiary browser consumes private API and localization adapters",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/\bcampaignApi\b|\bbestiaryApi\b|\bsettingsApi\b|\blang\b|const api =|function translate\(|function getHistoryChangeSummary\(|function getDiffResourceState\(/,
+		);
+		assertSourceTokensInOrder(
+			dependenciesSource,
+			[
+				"export const bestiaryBrowserApi = {",
+				"...campaignApi,",
+				"...bestiaryApi,",
+				"...settingsApi,",
+				"export function translate",
+				"return lang.t(value);",
+				"export function getHistoryChangeSummary",
+				"getAiHistoryChangeSummary(entry, translate)",
+				"export function getDiffResourceState",
+				"getLocalizedDiffResourceState(resource, translate)",
+			],
+			"Bestiary private external adapters",
+		);
+		assert.doesNotMatch(
+			dependenciesSource,
+			/useState|useRef|useEffect|useMemo|useBestiaryBrowserRuntime|app\/model|shared\/model/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserApi|bestiaryBrowserDependencies|translate\(/,
+		);
+	},
+);
+
+await run(
 	"Phase 273 gives Bestiary AI workflows ownership of request cancellation",
 	async () => {
 		const [browserSource, stateSource, workflowsSource, widgetEntry, modelEntry, modelTypes] =
@@ -11390,7 +11452,7 @@ await run(
 				'import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";',
 				"const { handleToggleFavorite } = useBestiaryFavoriteToggle({",
 				"setFavorites,",
-				"toggleFavorite: api.toggleBestiaryFavorite,",
+				"toggleFavorite: bestiaryBrowserApi.toggleBestiaryFavorite,",
 			],
 			"Bestiary browser composes its private favorite-toggle hook",
 		);

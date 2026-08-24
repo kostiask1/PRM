@@ -940,6 +940,8 @@ Next:
 - Phase 272 preserves state/ref initialization order, all setter/ref identities supplied to workflows and UI hosts, and no public widget entry expansion. The full suite passes 545/545 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 273 by moving Bestiary AI edit request-controller lifecycle into private `widgets/bestiary-browser/model/useBestiaryAiWorkflows.ts`. `BestiaryBrowser.tsx` retains UI orchestration.
 - Phase 273 preserves request cancellation, replacement guards, unmount abort, settled-controller clearing, workflow command identity, and no public widget entry expansion. The full suite passes 546/546 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 274 by moving Bestiary Browser API aggregation and localized history/diff adapters into private `widgets/bestiary-browser/ui/bestiaryBrowserDependencies.ts`. `BestiaryBrowser.tsx` retains UI orchestration.
+- Phase 274 preserves API spread order, translation output, helper signatures, source-selection/favorite transport routing, and no public widget entry expansion. The full suite passes 547/547 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

@@ -2,24 +2,10 @@ import {
 	useMemo,
 	type ComponentType,
 } from "react";
-import { campaignApi } from "../../../entities/campaign/index.js";
-import {
-	bestiaryApi,
-	type BestiaryMonster,
-} from "../../../entities/bestiary/index.js";
-import type {
-	AiHistoryEntry,
-	AiHistoryResource,
-} from "../../../features/ai/index.js";
+import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
 import type { AiResponseModalComponent } from "../../../features/ai/ui/index.js";
 import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
-import { settingsApi } from "../../../features/settings/index.js";
-import {
-	getHistoryChangeSummary as getAiHistoryChangeSummary,
-	getLocalizedDiffResourceState,
-} from "../../../features/ai/index.js";
 import "../../../assets/components/Bestiary.css";
-import { lang } from "../../../shared/lib/index.js";
 import {
 	parseBestiarySyncEvent,
 	parseMonsterReference,
@@ -41,22 +27,14 @@ import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionS
 import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";
 import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";
 import { useBestiaryBrowserState } from "./useBestiaryBrowserState.ts";
+import {
+	bestiaryBrowserApi,
+	getDiffResourceState,
+	getHistoryChangeSummary,
+	translate,
+} from "./bestiaryBrowserDependencies.ts";
 import { BestiaryBrowserModals } from "./BestiaryBrowserModals.tsx";
 import { BestiaryBrowserContent } from "./BestiaryBrowserContent.tsx";
-
-const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
-
-function translate(value: string): string {
-	return lang.t(value);
-}
-
-function getHistoryChangeSummary(entry: AiHistoryEntry | null | undefined): string {
-	return getAiHistoryChangeSummary(entry, translate);
-}
-
-function getDiffResourceState(resource: AiHistoryResource): string {
-	return getLocalizedDiffResourceState(resource, translate);
-}
 
 export interface BestiaryBrowserProps {
 	BestiaryAiModals: BestiaryAiModalsSlot;
@@ -212,15 +190,15 @@ export default function BestiaryBrowser({
 		activeCampaign,
 		activeCampaignSlug,
 		globalIgnoreSourcesList,
-		listCampaigns: api.listCampaigns,
+		listCampaigns: bestiaryBrowserApi.listCampaigns,
 		onCampaigns: replaceCampaigns,
 		onUiIgnoreSources: setGlobalIgnoreSourcesList,
-		showError: (message) => showMessage({ title: lang.t("Error"), message }),
+		showError: (message) => showMessage({ title: translate("Error"), message }),
 		shouldAutoSelectMonsterRef,
 		sources,
 		translate,
-		updateCampaign: api.updateCampaign,
-		updateSettings: api.updateSettings,
+		updateCampaign: bestiaryBrowserApi.updateCampaign,
+		updateSettings: bestiaryBrowserApi.updateSettings,
 	});
 
 	useBestiaryDataLoading({
@@ -297,7 +275,7 @@ export default function BestiaryBrowser({
 
 	const { handleToggleFavorite } = useBestiaryFavoriteToggle({
 		setFavorites,
-		toggleFavorite: api.toggleBestiaryFavorite,
+		toggleFavorite: bestiaryBrowserApi.toggleBestiaryFavorite,
 	});
 
 	useBestiaryMonsterSelectionLifecycle({
