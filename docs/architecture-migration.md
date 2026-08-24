@@ -890,6 +890,8 @@ Next:
 - Phase 247 preserves `getAiAssistantRouteState` inputs, memoized dependency order, and route/destructuring values. The full suite passes 520/520 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 248 by moving Bestiary filtering, sorting, identity normalization, list-display helpers, and challenge-rating projection into private `widgets/bestiary-browser/model/bestiaryBrowserFiltering.ts`. `bestiaryBrowser.ts` retains the compatibility facade and other Bestiary policies.
 - Phase 248 preserves normalization, filter predicate order, localized sort behavior, CR parsing, and public symbols/types. The full suite passes 521/521 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 249 by moving Bestiary source-code extraction, sync-event parsing/planning/execution, and selected-source persistence into private `widgets/bestiary-browser/model/bestiaryBrowserSync.ts`. `bestiaryBrowser.ts` retains the compatibility facade.
+- Phase 249 preserves source candidate precedence, raw sync parsing and truthy-version gating, favorites/selection/reload order, campaign/global persistence callback/error order, and public symbols/types. The full suite passes 522/522 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

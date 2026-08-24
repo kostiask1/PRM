@@ -11016,6 +11016,73 @@ await run(
 );
 
 await run(
+	"Phase 249 isolates Bestiary synchronization and source persistence in the private widget model",
+	async () => {
+		const [browserModelSource, syncSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserSync.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				"export {\n\texecuteBestiarySelectedSourcesSave,",
+				"executeBestiarySyncEventPlan,",
+				"getBestiarySourceCodes,",
+				"getBestiarySyncEventPlan,",
+				"parseBestiarySyncEvent,",
+				'from "./bestiaryBrowserSync.ts";',
+				"export type {",
+				"BestiarySelectedSourcesSaveOutcome,",
+				"BestiarySyncEvent,",
+				"BestiarySyncEventPlan,",
+				"ExecuteBestiarySelectedSourcesSaveOptions,",
+				"ExecuteBestiarySyncEventPlanOptions,",
+			],
+			"Bestiary synchronization compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function getBestiarySourceCandidate|function getBestiarySyncEventVersion|function saveBestiarySelectedSources/,
+		);
+		assertSourceTokensInOrder(
+			syncSource,
+			[
+				'import type { BestiaryFavorite } from "../../../entities/bestiary/index.js";',
+				"export interface BestiarySyncEvent {",
+				"export interface BestiarySyncEventPlan {",
+				"export interface ExecuteBestiarySyncEventPlanOptions {",
+				"export type BestiarySelectedSourcesSaveOutcome =",
+				"export function getBestiarySourceCodes",
+				"export function parseBestiarySyncEvent",
+				"export function getBestiarySyncEventPlan",
+				"export function executeBestiarySyncEventPlan",
+				"export async function executeBestiarySelectedSourcesSave",
+			],
+			"Bestiary private synchronization and source persistence model",
+		);
+		assert.doesNotMatch(
+			syncSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserSync/,
+		);
+	},
+);
+
+await run(
 	"Phase 248 isolates Bestiary filtering and sorting in the private widget model",
 	async () => {
 		const [browserModelSource, filteringSource, widgetEntry, modelEntry, modelTypes] =
@@ -48602,6 +48669,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
 		"utf8",
 	);
+	const bestiarySyncSource = await fs.readFile(
+		"src/widgets/bestiary-browser/model/bestiaryBrowserSync.ts",
+		"utf8",
+	);
 	const spellsSource = await fs.readFile(
 		"src/widgets/spells-browser/ui/SpellsBrowser.tsx",
 		"utf8",
@@ -48663,9 +48734,9 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiaryDataLoadingSource, /executeBestiarySyncEventPlan\(\{/);
 	assert.match(bestiaryCustomEditingSource, /executeBestiaryFieldEditSave\(\{/);
 	assert.match(bestiarySource, /executeBestiarySelectedSourcesSave\(\{/);
-	assert.match(bestiaryModelSource, /function applyBestiarySyncPendingSelection/);
-	assert.match(bestiaryModelSource, /event\.monsterName/);
-	assert.match(bestiaryModelSource, /event\.monsterSource \|\| "CUSTOM"/);
+	assert.match(bestiarySyncSource, /function applyBestiarySyncPendingSelection/);
+	assert.match(bestiarySyncSource, /event\.monsterName/);
+	assert.match(bestiarySyncSource, /event\.monsterSource \|\| "CUSTOM"/);
 	assert.match(bestiarySource, /shouldAutoSelectMonsterRef\.current = false/);
 	assert.match(bestiaryModelSource, /normalizeMonsterName/);
 	assert.match(bestiarySource, /ignoreSourcesList/);
