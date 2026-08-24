@@ -11077,6 +11077,44 @@ await run(
 );
 
 await run(
+	"Phase 286 isolates Campaign graph Flow-node projection in a private page hook",
+	async () => {
+		const [graphSource, nodesSource, pageEntry, pageTypes] = await Promise.all([
+			fs.readFile("src/pages/campaign/ui/components/CampaignNotesGraph.tsx", "utf8"),
+			fs.readFile("src/pages/campaign/ui/components/useCampaignGraphFlowNodeProjection.ts", "utf8"),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+		]);
+
+		assertSourceTokensInOrder(graphSource, [
+			'import { useCampaignGraphFlowNodeProjection } from "./useCampaignGraphFlowNodeProjection.ts";',
+			"useCampaignGraphFlowNodeProjection({",
+			"graphNodes: graph.nodes,",
+			"visibleNodeIds: visibleGraph.visibleNodeIds,",
+			"hasManualPositionsRef,",
+		]);
+		assert.doesNotMatch(
+			graphSource,
+			/getCampaignGraphFlowProjectionPlan|resolveNewCampaignGraphNodeCollisions|positionedCampaignRef/,
+		);
+		assertSourceTokensInOrder(nodesSource, [
+			"useEffect,",
+			"export function useCampaignGraphFlowNodeProjection",
+			"const positionedCampaignRef = useRef(campaignSlug)",
+			"getCampaignGraphFlowProjectionPlan(",
+			"getCurrentCampaignFlowNodeMap(",
+			"getCampaignGraphFlowNodePresentation({",
+			"return resolveNewCampaignGraphNodeCollisions(",
+		]);
+		assert.doesNotMatch(
+			nodesSource,
+			/useCampaignPageRuntime|buildCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(`${pageEntry}\n${pageTypes}`, /useCampaignGraphFlowNodeProjection/);
+	},
+);
+
+await run(
 	"Phase 285 isolates Campaign graph Flow-edge projection in a private page hook",
 	async () => {
 		const [graphSource, edgesSource, pageEntry, pageTypes] = await Promise.all([
@@ -11153,7 +11191,7 @@ await run(
 await run(
 	"Phase 283 isolates Campaign graph controller adapters in private page helpers",
 	async () => {
-		const [graphSource, helpersSource, pageEntry, pageTypes] =
+		const [graphSource, helpersSource, nodeProjectionSource, pageEntry, pageTypes] =
 			await Promise.all([
 				fs.readFile(
 					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
@@ -11161,6 +11199,10 @@ await run(
 				),
 				fs.readFile(
 					"src/pages/campaign/ui/components/campaignGraphControllerHelpers.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/useCampaignGraphFlowNodeProjection.ts",
 					"utf8",
 				),
 				fs.readFile("src/pages/campaign/index.js", "utf8"),
@@ -11171,10 +11213,13 @@ await run(
 			graphSource,
 			[
 				'from "./campaignGraphControllerHelpers.ts";',
-				"const currentById = getCurrentCampaignFlowNodeMap(",
 				"onActivate={() => executeCampaignGraphConnectionAction(",
 			],
 			"Campaign graph controller composes private pure adapters",
+		);
+		assert.match(
+			nodeProjectionSource,
+			/const currentById = getCurrentCampaignFlowNodeMap\(/,
 		);
 		assert.doesNotMatch(
 			graphSource,
