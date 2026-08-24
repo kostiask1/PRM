@@ -17,7 +17,6 @@ import {
 import { useSimplifiedNotesEnabled } from "../../../../features/notes/ui/index.js";
 import {
 	EntityModal,
-	renderMentionText,
 	type EntityModalProps,
 } from "../../../../features/entity-link/index.js";
 import { classNames } from "../../../../shared/lib/index.js";
@@ -75,6 +74,7 @@ import {
 	CampaignGraphNodeCard,
 	type CampaignGraphFlowNode,
 } from "./CampaignGraphNodeCard.tsx";
+import { CampaignGraphConnection } from "./CampaignGraphConnection.tsx";
 import { CampaignGraphDetails } from "./CampaignGraphDetails.tsx";
 import { CampaignGraphNoteModal } from "./CampaignGraphNoteModal.tsx";
 import { CampaignGraphToolbar } from "./CampaignGraphToolbar.tsx";
@@ -583,24 +583,15 @@ export default function CampaignNotesGraph({
 		if (!presentation) return null;
 
 		return (
-			<button
+			<CampaignGraphConnection
 				key={edge.id}
-				type="button"
-				className="CampaignNotesGraph__connection"
-				onClick={() => executeCampaignGraphConnectionAction(
+				presentation={presentation}
+				onActivate={() => executeCampaignGraphConnectionAction(
 					presentation.action,
 					onOpenSession,
 					setSelectedNodeId,
 				)}
-			>
-				<span
-					className={`CampaignNotesGraph__dot ${getCampaignGraphNodeTypeClass(presentation.node.type)}`}
-				/>
-				<span className="CampaignNotesGraph__connectionText">
-					<strong>{renderMentionText(presentation.node.label)}</strong>
-					<span>{renderMentionText(presentation.metaText)}</span>
-				</span>
-			</button>
+			/>
 		);
 	};
 

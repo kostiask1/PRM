@@ -9635,8 +9635,8 @@ await run(
 			);
 			assert.deepEqual(staleRawImports, []);
 			assert.deepEqual(mentionConsumers.sort(), [
+				"src/pages/campaign/ui/components/CampaignGraphConnection.tsx",
 				"src/pages/campaign/ui/components/CampaignGraphDetails.tsx",
-				"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
 				"src/pages/campaign/ui/components/CampaignNotesSection.tsx",
 				"src/pages/encounter/ui/components/EncounterHeader.tsx",
 				"src/pages/encounter/ui/components/EncounterMonsterRow.tsx",
@@ -11077,6 +11077,49 @@ await run(
 );
 
 await run(
+	"Phase 284 isolates Campaign graph connection rendering in private page UI",
+	async () => {
+		const [graphSource, connectionSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile("src/pages/campaign/ui/components/CampaignNotesGraph.tsx", "utf8"),
+				fs.readFile("src/pages/campaign/ui/components/CampaignGraphConnection.tsx", "utf8"),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			graphSource,
+			[
+				'import { CampaignGraphConnection } from "./CampaignGraphConnection.tsx";',
+				"const renderConnection = (edge: CampaignGraphEdge): ReactElement | null => {",
+				"<CampaignGraphConnection",
+				"presentation={presentation}",
+				"onActivate={() => executeCampaignGraphConnectionAction(",
+			],
+			"Campaign graph controller retains connection planning and activation",
+		);
+		assert.doesNotMatch(
+			graphSource,
+			/connectionText|renderMentionText\(presentation\.node\.label\)|getCampaignGraphNodeTypeClass\(presentation\.node\.type\)/,
+		);
+		assertSourceTokensInOrder(
+			connectionSource,
+			[
+				'import { renderMentionText }',
+				"type CampaignGraphConnectionPresentation",
+				"export function CampaignGraphConnection",
+				"className=\"CampaignNotesGraph__connection\"",
+				"getCampaignGraphNodeTypeClass(presentation.node.type)",
+				"renderMentionText(presentation.node.label)",
+			],
+			"Campaign graph private connection presentation",
+		);
+		assert.doesNotMatch(connectionSource, /useCampaignPageRuntime|buildCampaignGraph|useNodesState|onOpenSession/);
+		assert.doesNotMatch(`${pageEntry}\n${pageTypes}`, /CampaignGraphConnection|CampaignGraphConnectionProps/);
+	},
+);
+
+await run(
 	"Phase 283 isolates Campaign graph controller adapters in private page helpers",
 	async () => {
 		const [graphSource, helpersSource, pageEntry, pageTypes] =
@@ -11098,7 +11141,7 @@ await run(
 			[
 				'from "./campaignGraphControllerHelpers.ts";',
 				"const currentById = getCurrentCampaignFlowNodeMap(",
-				"onClick={() => executeCampaignGraphConnectionAction(",
+				"onActivate={() => executeCampaignGraphConnectionAction(",
 			],
 			"Campaign graph controller composes private pure adapters",
 		);
