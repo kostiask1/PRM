@@ -11021,6 +11021,68 @@ await run(
 );
 
 await run(
+	"Phase 265 isolates Bestiary filtered-list projection in a private UI hook",
+	async () => {
+		const [browserSource, listSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryMonsterList.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiaryMonsterList } from "./useBestiaryMonsterList.ts";',
+				"const {",
+				"displayedMonsters,",
+				"onlyFavorites,",
+				"setOnlyFavorites,",
+				"sortOrder,",
+				"toggleSort,",
+				"} = useBestiaryMonsterList({",
+			],
+			"Bestiary browser composes its private filtered-list hook",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/filterBestiaryMonsters|sortBestiaryMonsters|getNextBestiarySortOrder|const \[monsters, setMonsters\]|const \[onlyFavorites, setOnlyFavorites\]|const \[sortOrder, setSortOrder\]/,
+		);
+		assertSourceTokensInOrder(
+			listSource,
+			[
+				'import { useEffect, useMemo, useState } from "react";',
+				"export interface UseBestiaryMonsterListOptions",
+				"export function useBestiaryMonsterList",
+				"const [monsters, setMonsters] = useState<BestiaryMonster[]>([]);",
+				"const [onlyFavorites, setOnlyFavorites] = useState(false);",
+				'const [sortOrder, setSortOrder] = useState<BestiarySortOrder>("none");',
+				"sortBestiaryMonsters(monsters, sortOrder)",
+				"filterBestiaryMonsters(allMonsters, {",
+				"setSortOrder(getNextBestiarySortOrder);",
+			],
+			"Bestiary private filtered-list hook",
+		);
+		assert.doesNotMatch(
+			listSource,
+			/useBestiaryBrowserRuntime|bestiaryApi|app\/model|shared\/model|BestiaryBrowserProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryMonsterList/,
+		);
+	},
+);
+
+await run(
 	"Phase 264 isolates Bestiary search controls in a private UI hook",
 	async () => {
 		const [browserSource, controlsSource, widgetEntry, modelEntry, modelTypes] =
@@ -12127,7 +12189,7 @@ await run(
 				"shouldAutoSelectMonsterRef,",
 				"syncEvent,",
 				"} = useBestiaryAiWorkflows({",
-				"// Local search filtering.",
+				"} = useBestiaryMonsterList({",
 			],
 			"Bestiary browser loading-lifecycle delegation",
 		);
@@ -12188,7 +12250,6 @@ await run(
 		assertSourceTokensInOrder(
 			browserSource,
 			[
-				"const displayedMonsters = useMemo(() => {",
 				"const {\n\t\tcustomMonsters,",
 				"} = useBestiaryCustomMonsterHistory({",
 				"selectedMonsterRef,",
@@ -12338,7 +12399,7 @@ await run(
 				"} = useBestiaryAiWorkflows({",
 				"aiEditControllerRef,",
 				"onCustomBestiaryUpdate: handleCustomBestiaryUpdate,",
-				"// Local search filtering.",
+				"} = useBestiaryMonsterList({",
 			],
 			"Bestiary browser AI-workflow delegation",
 		);

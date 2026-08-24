@@ -28,21 +28,15 @@ import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
 } from "../../../features/ai/index.js";
-import { matchesMonsterSearch } from "../../../entities/bestiary/index.js";
-import { objectMatchesSearch } from "../../../shared/lib/index.js";
 import "../../../assets/components/Bestiary.css";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	filterBestiaryMonsters,
 	getBestiaryInitialSelectionScrollPlan,
 	getBestiarySelectionPlan,
-	getNextBestiarySortOrder,
 	isCustomSource,
 	isSameMonsterIdentity,
 	parseBestiarySyncEvent,
 	parseMonsterReference,
-	sortBestiaryMonsters,
-	type BestiarySortOrder,
 	type MonsterReference,
 } from "../model.js";
 import type {
@@ -57,6 +51,7 @@ import { useBestiaryCustomMonsterHistory } from "../model/useBestiaryCustomMonst
 import { useBestiaryCustomMonsterEditing } from "../model/useBestiaryCustomMonsterEditing.ts";
 import { useBestiarySourceSelection } from "./useBestiarySourceSelection.ts";
 import { useBestiarySearchControls } from "./useBestiarySearchControls.ts";
+import { useBestiaryMonsterList } from "./useBestiaryMonsterList.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -132,13 +127,10 @@ export default function BestiaryBrowser({
 	);
 	const [sources, setSources] = useState<string[]>([]);
 	const [allMonsters, setAllMonsters] = useState<BestiaryMonster[]>([]);
-	const [monsters, setMonsters] = useState<BestiaryMonster[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [selectedMonster, setSelectedMonster] = useState<BestiaryMonster | null>(null);
 	const [legendaryGroups, setLegendaryGroups] = useState<LegendaryGroup[]>([]);
 	const [favorites, setFavorites] = useState<BestiaryFavorite[]>([]);
-	const [onlyFavorites, setOnlyFavorites] = useState(false);
-	const [sortOrder, setSortOrder] = useState<BestiarySortOrder>("none");
 	const [reloadToken, setReloadToken] = useState(0);
 	const listRef = useRef<ReactList>(null);
 	const selectedMonsterRef = useRef<BestiaryMonster | null>(null);
@@ -176,10 +168,6 @@ export default function BestiaryBrowser({
 			aiEditControllerRef.current?.abort();
 		};
 	}, []);
-
-	const displayedMonsters = useMemo(() => {
-		return sortBestiaryMonsters(monsters, sortOrder);
-	}, [monsters, sortOrder]);
 
 	const {
 		customMonsters,
@@ -312,28 +300,20 @@ export default function BestiaryBrowser({
 		showMessage,
 	});
 
-	// Local search filtering.
-	useEffect(() => {
-		const filtered = filterBestiaryMonsters(allMonsters, {
-			selectedSources,
-			sourceFilter,
-			onlyFavorites,
-			favorites,
-			search: debouncedSearch,
-			isDetailedSearch,
-			matchesDetailedSearch: objectMatchesSearch,
-			matchesSimpleSearch: matchesMonsterSearch,
-		});
-		setMonsters(filtered);
-	}, [
-		debouncedSearch,
-		allMonsters,
+	const {
+		displayedMonsters,
 		onlyFavorites,
+		setOnlyFavorites,
+		sortOrder,
+		toggleSort,
+	} = useBestiaryMonsterList({
+		allMonsters,
+		debouncedSearch,
 		favorites,
+		isDetailedSearch,
 		selectedSources,
 		sourceFilter,
-		isDetailedSearch,
-	]);
+	});
 
 	const handleToggleFavorite = async (monster: BestiaryMonster) => {
 		try {
@@ -387,10 +367,6 @@ export default function BestiaryBrowser({
 		scrollToInitialSelected,
 		selectedMonster,
 	]);
-
-	const toggleSort = () => {
-		setSortOrder(getNextBestiarySortOrder);
-	};
 
 	const bestiaryActions = (
 		<BestiaryHeaderActions
