@@ -11021,6 +11021,61 @@ await run(
 );
 
 await run(
+	"Phase 262 isolates Bestiary mobile selection coordination in a private UI hook",
+	async () => {
+		const [contentSource, selectionSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryMobileSelection.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			contentSource,
+			[
+				'import { useBestiaryMobileSelection } from "./useBestiaryMobileSelection.ts";',
+				"export interface BestiaryContentProps",
+				"const { detailRef, handleSelectMonster } = useBestiaryMobileSelection({",
+			],
+			"Bestiary content composes its private mobile selection hook",
+		);
+		assert.doesNotMatch(
+			contentSource,
+			/function isMobileViewport|const handleSelectMonster|scrollIntoView\(|selectedIndex = displayedMonsters\.findIndex/,
+		);
+		assertSourceTokensInOrder(
+			selectionSource,
+			[
+				'import { useEffect, useRef, type RefObject } from "react";',
+				'import type ReactList from "react-list";',
+				'import type { BestiaryMonster } from "../../../entities/bestiary/index.js";',
+				'import { isSameMonsterIdentity } from "../model.js";',
+				"export interface UseBestiaryMobileSelectionOptions",
+				"function isMobileViewport",
+				"export function useBestiaryMobileSelection",
+			],
+			"Bestiary private mobile selection hook",
+		);
+		assert.doesNotMatch(
+			selectionSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|BestiaryContentProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryMobileSelection/,
+		);
+	},
+);
+
+await run(
 	"Phase 261 isolates Bestiary virtualized list UI in a private widget component",
 	async () => {
 		const [contentSource, listSource, widgetEntry, modelEntry, modelTypes] =

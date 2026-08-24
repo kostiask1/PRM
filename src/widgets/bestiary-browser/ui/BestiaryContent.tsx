@@ -1,5 +1,4 @@
 import {
-	useEffect,
 	useRef,
 	type Dispatch,
 	type ReactNode,
@@ -13,7 +12,6 @@ import type {
 } from "../../../entities/bestiary/index.js";
 import {
 	getMonsterItemKey,
-	isSameMonsterIdentity,
 	type BestiarySortOrder,
 } from "../model.js";
 import type {
@@ -25,13 +23,7 @@ import { BestiaryMonsterListItem } from "./BestiaryMonsterListItem.tsx";
 import { BestiaryToolbar } from "./BestiaryToolbar.tsx";
 import { BestiaryDetail } from "./BestiaryDetail.tsx";
 import { BestiaryVirtualizedList } from "./BestiaryVirtualizedList.tsx";
-
-function isMobileViewport() {
-	return (
-		typeof window !== "undefined" &&
-		window.matchMedia("(max-width: 767px)").matches
-	);
-}
+import { useBestiaryMobileSelection } from "./useBestiaryMobileSelection.ts";
 
 export interface BestiaryContentProps {
 	AiAssistantPanel: BestiaryAssistantSlot;
@@ -111,32 +103,12 @@ export default function BestiaryContent({
 	toggleSort,
 }: BestiaryContentProps) {
 	const listContainerRef = useRef<HTMLDivElement>(null);
-	const detailRef = useRef<HTMLDivElement>(null);
-
-	const handleSelectMonster = (monster: BestiaryMonster | null) => {
-		setSelectedMonster(monster);
-		if (!monster?.name || !isMobileViewport()) return;
-
-		requestAnimationFrame(() => {
-			detailRef.current?.scrollIntoView({
-				behavior: "smooth",
-				block: "start",
-			});
-		});
-	};
-
-	useEffect(() => {
-		if (!selectedMonster?.name || !isMobileViewport()) return undefined;
-		const selectedIndex = displayedMonsters.findIndex(
-			(monster) => isSameMonsterIdentity(monster, selectedMonster),
-		);
-		if (selectedIndex < 0) return undefined;
-
-		const frameId = requestAnimationFrame(() => {
-			listRef.current?.scrollTo(selectedIndex);
-		});
-		return () => cancelAnimationFrame(frameId);
-	}, [displayedMonsters, listRef, selectedMonster]);
+	const { detailRef, handleSelectMonster } = useBestiaryMobileSelection({
+		displayedMonsters,
+		listRef,
+		selectedMonster,
+		setSelectedMonster,
+	});
 
 	const renderMonsterItem = (index: number) => (
 		<BestiaryMonsterListItem
