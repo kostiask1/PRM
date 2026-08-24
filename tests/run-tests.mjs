@@ -11076,6 +11076,67 @@ await run(
 );
 
 await run(
+	"Phase 278 isolates Campaign graph custom-node rendering in private page UI",
+	async () => {
+		const [graphSource, nodeCardSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignGraphNodeCard.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			graphSource,
+			[
+				'import {',
+				'from "./CampaignGraphNodeCard.tsx";',
+				"const NODE_TYPES = { campaignGraphNode: CampaignGraphNodeCard };",
+				"<CampaignGraphCanvas",
+				"nodeTypes={NODE_TYPES}",
+			],
+			"Campaign graph controller registers the private custom-node renderer",
+		);
+		assert.doesNotMatch(
+			graphSource,
+			/NODE_ICON_BY_TYPE|HANDLE_POSITIONS|function CampaignGraphNodeHandles|const CampaignGraphNodeCard = memo|getCampaignGraphNodeCardPresentation/,
+		);
+		assertSourceTokensInOrder(
+			nodeCardSource,
+			[
+				'import { memo, type CSSProperties } from "react";',
+				"const NODE_ICON_BY_TYPE",
+				"const HANDLE_POSITIONS",
+				"export interface CampaignGraphFlowNodeData",
+				"export type CampaignGraphFlowNode",
+				"export const CampaignGraphNodeCard = memo(function CampaignGraphNodeCard({",
+				"getCampaignGraphNodeCardPresentation(",
+				"<CampaignGraphNodeHandles />",
+				"data.onOpen(graphNode);",
+				"function CampaignGraphNodeHandles()",
+				'type="source"',
+				'type="target"',
+			],
+			"Campaign graph private custom-node contract, presentation, and handles",
+		);
+		assert.doesNotMatch(
+			nodeCardSource,
+			/useCampaignPageRuntime|buildCampaignGraph|layoutCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/CampaignGraphNodeCard|CampaignGraphFlowNodeData/,
+		);
+	},
+);
+
+await run(
 	"Phase 277 isolates Campaign graph canvas and minimap rendering in private page UI",
 	async () => {
 		const [graphSource, canvasSource, pageEntry, pageTypes] =
