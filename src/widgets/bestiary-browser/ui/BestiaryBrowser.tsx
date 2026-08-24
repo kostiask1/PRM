@@ -1,17 +1,12 @@
 import {
-	useState,
 	useEffect,
 	useMemo,
-	useRef,
 	type ComponentType,
 } from "react";
-import type ReactList from "react-list";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import {
 	bestiaryApi,
-	type BestiaryFavorite,
 	type BestiaryMonster,
-	type LegendaryGroup,
 } from "../../../entities/bestiary/index.js";
 import type {
 	AiHistoryEntry,
@@ -29,7 +24,6 @@ import { lang } from "../../../shared/lib/index.js";
 import {
 	parseBestiarySyncEvent,
 	parseMonsterReference,
-	type MonsterReference,
 } from "../model.js";
 import type {
 	BestiaryAiModalsSlot,
@@ -47,6 +41,7 @@ import { useBestiaryMonsterList } from "./useBestiaryMonsterList.ts";
 import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionState.ts";
 import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";
 import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";
+import { useBestiaryBrowserState } from "./useBestiaryBrowserState.ts";
 import { BestiaryBrowserModals } from "./BestiaryBrowserModals.tsx";
 import { BestiaryBrowserContent } from "./BestiaryBrowserContent.tsx";
 
@@ -122,18 +117,26 @@ export default function BestiaryBrowser({
 		() => parseMonsterReference(initialSelectedName, initialSelectedSource),
 		[initialSelectedName, initialSelectedSource],
 	);
-	const [sources, setSources] = useState<string[]>([]);
-	const [allMonsters, setAllMonsters] = useState<BestiaryMonster[]>([]);
-	const [loading, setLoading] = useState(false);
-	const [legendaryGroups, setLegendaryGroups] = useState<LegendaryGroup[]>([]);
-	const [favorites, setFavorites] = useState<BestiaryFavorite[]>([]);
-	const [reloadToken, setReloadToken] = useState(0);
-	const listRef = useRef<ReactList>(null);
-	const aiDraftResponseRef = useRef<HTMLDivElement>(null);
-	const aiEditControllerRef = useRef<AbortController | null>(null);
-	const openImagePromptForMonsterRef = useRef<((monster: BestiaryMonster) => void) | null>(null);
-	const pendingSyncSelectionRef = useRef<MonsterReference | null>(null);
-	const hasLoadedInitialMonstersRef = useRef(false);
+	const {
+		aiDraftResponseRef,
+		aiEditControllerRef,
+		allMonsters,
+		favorites,
+		hasLoadedInitialMonstersRef,
+		legendaryGroups,
+		listRef,
+		loading,
+		openImagePromptForMonsterRef,
+		pendingSyncSelectionRef,
+		reloadToken,
+		setAllMonsters,
+		setFavorites,
+		setLegendaryGroups,
+		setLoading,
+		setReloadToken,
+		setSources,
+		sources,
+	} = useBestiaryBrowserState();
 
 	const {
 		embeddedScrolledMonsterRef,

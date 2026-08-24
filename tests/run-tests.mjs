@@ -11076,6 +11076,64 @@ await run(
 );
 
 await run(
+	"Phase 272 moves Bestiary browser state and refs into a private UI hook",
+	async () => {
+		const [browserSource, stateSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryBrowserState.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiaryBrowserState } from "./useBestiaryBrowserState.ts";',
+				"const initialMonsterReference = useMemo(",
+				"} = useBestiaryBrowserState();",
+				"} = useBestiaryMonsterSelectionState({",
+			],
+			"Bestiary browser consumes its private state container before dependent workflows",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/const \[sources, setSources\]|useRef<ReactList>|useRef<AbortController|useRef<MonsterReference/,
+		);
+		assertSourceTokensInOrder(
+			stateSource,
+			[
+				"export function useBestiaryBrowserState()",
+				"const [sources, setSources] = useState<string[]>([]);",
+				"const [allMonsters, setAllMonsters] = useState<BestiaryMonster[]>([]);",
+				"const [reloadToken, setReloadToken] = useState(0);",
+				"const listRef = useRef<ReactList>(null);",
+				"const aiEditControllerRef = useRef<AbortController | null>(null);",
+				"const pendingSyncSelectionRef = useRef<MonsterReference | null>(null);",
+				"return {",
+				"hasLoadedInitialMonstersRef,",
+			],
+			"Bestiary browser state container preserves state/ref initialization order",
+		);
+		assert.doesNotMatch(
+			stateSource,
+			/useBestiaryBrowserRuntime|useBestiaryDataLoading|useBestiaryAiWorkflows|campaignApi|bestiaryApi|settingsApi|app\/model|shared\/model/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryBrowserState/,
+		);
+	},
+);
+
+await run(
 	"Phase 271 moves Bestiary draft restore callback adaptation into a private modal host",
 	async () => {
 		const [browserSource, modalsSource, widgetEntry, modelEntry, modelTypes] =

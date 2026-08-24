@@ -936,6 +936,8 @@ Next:
 - Phase 270 preserves content prop routing, header-action enablement, import/export/undo/redo callbacks, assistant/modal slots, and no public widget entry expansion. The full suite passes 543/543 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 271 by moving Bestiary AI draft apply/undo callback adaptation into private `widgets/bestiary-browser/ui/BestiaryBrowserModals.tsx`. `BestiaryBrowser.tsx` retains UI orchestration.
 - Phase 271 preserves all four draft restore routes, their apply/undo mode and resource-ID payloads, modal slot contract, and no public widget entry expansion. The full suite passes 544/544 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 272 by moving Bestiary Browser-owned state and refs into private `widgets/bestiary-browser/ui/useBestiaryBrowserState.ts`. `BestiaryBrowser.tsx` retains UI orchestration.
+- Phase 272 preserves state/ref initialization order, all setter/ref identities supplied to workflows and UI hosts, cleanup ownership, and no public widget entry expansion. The full suite passes 545/545 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
