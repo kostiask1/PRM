@@ -11077,6 +11077,64 @@ await run(
 );
 
 await run(
+	"Phase 280 isolates Campaign graph toolbar controls in private page UI",
+	async () => {
+		const [graphSource, toolbarSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignGraphToolbar.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			graphSource,
+			[
+				'import { CampaignGraphToolbar } from "./CampaignGraphToolbar.tsx";',
+				"const toggleFilter = (filterId: CampaignGraphFilterId) => {",
+				"<CampaignGraphToolbar",
+				"enabledFilters={enabledFilters}",
+				"filterColors={FILTER_COLOR_BY_ID}",
+				"onToggleFilter={toggleFilter}",
+			],
+			"Campaign graph controller composes the private toolbar with owned commands",
+		);
+		assert.doesNotMatch(
+			graphSource,
+			/interface CampaignGraphToolbarProps|function CampaignGraphToolbar\(|CAMPAIGN_GRAPH_FILTERS\.map|GraphCssProperties/,
+		);
+		assertSourceTokensInOrder(
+			toolbarSource,
+			[
+				'import type { CSSProperties } from "react";',
+				"CAMPAIGN_GRAPH_FILTERS,",
+				"interface CampaignGraphToolbarProps",
+				"export function CampaignGraphToolbar",
+				"<input",
+				"<Button",
+				"CAMPAIGN_GRAPH_FILTERS.map",
+				'"--filter-color": filterColors[filter.id]',
+			],
+			"Campaign graph private toolbar presentation",
+		);
+		assert.doesNotMatch(
+			toolbarSource,
+			/useCampaignPageRuntime|buildCampaignGraph|layoutCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/CampaignGraphToolbar|CampaignGraphToolbarProps/,
+		);
+	},
+);
+
+await run(
 	"Phase 279 isolates Campaign graph details and Markdown mentions in private page UI",
 	async () => {
 		const [graphSource, detailsSource, pageEntry, pageTypes] =

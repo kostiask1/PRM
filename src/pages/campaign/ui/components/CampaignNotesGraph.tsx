@@ -4,7 +4,6 @@ import {
 	useMemo,
 	useRef,
 	useState,
-	type CSSProperties,
 	type ReactElement,
 } from "react";
 import {
@@ -15,7 +14,6 @@ import {
 	type ReactFlowInstance,
 } from "@xyflow/react";
 
-import { Button } from "../../../../shared/ui/index.js";
 import {
 	EditableField,
 	type EditableFieldChangeEvent,
@@ -34,7 +32,6 @@ import {
 	resolveCampaignGraphNodeCollision,
 } from "../../graph.js";
 import {
-	CAMPAIGN_GRAPH_FILTERS,
 	DEFAULT_CAMPAIGN_GRAPH_FILTERS,
 	canOpenCampaignGraphNode,
 	executeCampaignGraphOpenTarget,
@@ -85,6 +82,7 @@ import {
 	type CampaignGraphFlowNode,
 } from "./CampaignGraphNodeCard.tsx";
 import { CampaignGraphDetails } from "./CampaignGraphDetails.tsx";
+import { CampaignGraphToolbar } from "./CampaignGraphToolbar.tsx";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
 
@@ -135,7 +133,6 @@ const FILTER_COLOR_BY_ID: Readonly<Record<CampaignGraphFilterId, string>> = {
 };
 
 type CampaignGraphEntityModalState = NonNullable<EntityModalProps["modalState"]>;
-type GraphCssProperties = CSSProperties & Record<`--${string}`, string | number>;
 
 type CampaignFlowNode = CampaignGraphFlowNode;
 type CampaignFlowEdge = CampaignGraphFlowEdge;
@@ -286,84 +283,6 @@ function useCampaignGraphLayout(
 		};
 	}
 	return cacheRef.current.positions;
-}
-
-interface CampaignGraphToolbarProps {
-	query: string;
-	onQueryChange: (value: string) => void;
-	visibleNodeCount: number;
-	totalNodeCount: number;
-	onRelayout: () => void;
-	enabledFilters: CampaignGraphEnabledFilters;
-	typeCounts: Partial<Record<CampaignGraphFilterId, number>>;
-	onToggleFilter: (filterId: CampaignGraphFilterId) => void;
-}
-
-function CampaignGraphToolbar({
-	query,
-	onQueryChange,
-	visibleNodeCount,
-	totalNodeCount,
-	onRelayout,
-	enabledFilters,
-	typeCounts,
-	onToggleFilter,
-}: CampaignGraphToolbarProps) {
-	return (
-		<div className="CampaignNotesGraph__toolbar">
-			<div className="CampaignNotesGraph__toolbarPrimary">
-				<label className="CampaignNotesGraph__searchWrap">
-					<span className="CampaignNotesGraph__visuallyHidden">
-						{lang.t("Search graph...")}
-					</span>
-					<input
-						className="CampaignNotesGraph__search"
-						value={query}
-						onChange={(event) => onQueryChange(event.target.value)}
-						placeholder={lang.t("Search graph...")}
-					/>
-					<span className="CampaignNotesGraph__visibleCount">
-						{visibleNodeCount}/{totalNodeCount}
-					</span>
-				</label>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon="restore"
-					onClick={onRelayout}
-					className="CampaignNotesGraph__relayout"
-					title={lang.t("Arrange graph")}
-				>
-					{lang.t("Arrange")}
-				</Button>
-			</div>
-			<div className="CampaignNotesGraph__filters">
-				{CAMPAIGN_GRAPH_FILTERS.map((filter) => (
-					<Button
-						key={filter.id}
-						variant={enabledFilters[filter.id] ? "primary" : "ghost"}
-						size={Button.SIZES.SMALL}
-						onClick={() => onToggleFilter(filter.id)}
-						className="CampaignNotesGraph__filter"
-						style={
-							{
-								"--filter-color": FILTER_COLOR_BY_ID[filter.id],
-							} as GraphCssProperties
-						}
-						aria-pressed={enabledFilters[filter.id]}
-					>
-						{lang.t(filter.label)}
-						{typeCounts[filter.id] ? ` ${typeCounts[filter.id]}` : ""}
-					</Button>
-				))}
-			</div>
-			<p className="CampaignNotesGraph__hint">
-				{lang.t(
-					"Drag nodes to arrange them. Double-click or use the arrow to open an item.",
-				)}
-			</p>
-		</div>
-	);
 }
 
 export default function CampaignNotesGraph({
@@ -864,6 +783,7 @@ export default function CampaignNotesGraph({
 					onRelayout={handleRelayout}
 					enabledFilters={enabledFilters}
 					typeCounts={typeCounts}
+					filterColors={FILTER_COLOR_BY_ID}
 					onToggleFilter={toggleFilter}
 				/>
 				<CampaignGraphCanvas
