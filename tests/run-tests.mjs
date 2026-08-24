@@ -10575,8 +10575,8 @@ await run(
 				"pendingSyncSelectionRef,",
 				"shouldAutoSelectMonsterRef,",
 				"syncEvent,",
-				"useEffect(() => {",
-				"if (!aiEditingMonster || aiModels.length > 0) return;",
+				"} = useBestiaryAiWorkflows({",
+				"// Local search filtering.",
 			],
 			"Bestiary browser loading-lifecycle delegation",
 		);
@@ -10604,6 +10604,77 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useBestiaryDataLoading/,
+		);
+	},
+);
+
+await run(
+	"Phase 238 isolates Bestiary AI workflow coordination in the private widget model",
+	async () => {
+		const [browserSource, workflowsSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/useBestiaryAiWorkflows.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			browserSource,
+			/import { useBestiaryAiWorkflows } from "\.\.\/model\/useBestiaryAiWorkflows\.ts";/,
+		);
+		assert.match(
+			browserSource,
+			/aiEditControllerRef\.current\?\.abort\(\);/,
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/const \[aiEditingMonster|const \[aiEditMode|const \[aiActionMonster|const \[aiEditInstructions|const \[aiEditAttachedImages|const \[aiEditAttachedFiles|const \[aiEditError|const \[isAiEditingMonster|const \[aiModels|const \[selectedAiModel|const \[aiDraftResponseEntry|const \[isRestoringAiResponse|aiApi|buildDiffResources|loadAiModelOptions|executeAiDraftRestore|executeAiMonsterEditRequest/,
+		);
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				"useBestiaryDataLoading({",
+				"const {\n\t\taiActionMonster,",
+				"} = useBestiaryAiWorkflows({",
+				"aiEditControllerRef,",
+				"onCustomBestiaryUpdate: handleCustomBestiaryUpdate,",
+				"// Local search filtering.",
+			],
+			"Bestiary browser AI-workflow delegation",
+		);
+		assertSourceTokensInOrder(
+			workflowsSource,
+			[
+				"export function useBestiaryAiWorkflows({",
+				"const [aiEditingMonster, setAiEditingMonster] =",
+				"const aiDraftDiffResources = useMemo(",
+				"loadAiModelOptions({",
+				"const openAiEditCustomMonster = (",
+				"const chooseMonsterAiAction = (mode: MonsterAiAction) => {",
+				"const saveAiEditedCustomMonster = async () => {",
+				"await executeAiMonsterEditRequest({",
+				"const restoreAiDraftResponse = async (",
+				"await executeAiDraftRestore({",
+				"return {",
+				"saveAiEditedCustomMonster,",
+			],
+			"Bestiary private AI workflow coordination",
+		);
+		assert.doesNotMatch(
+			workflowsSource,
+			/useBestiaryBrowserRuntime|campaignApi|bestiaryApi|settingsApi|app\/model|shared\/model|<BestiaryContent|<BestiaryAiModals/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryAiWorkflows/,
 		);
 	},
 );
