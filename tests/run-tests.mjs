@@ -1745,10 +1745,24 @@ function getRequiredSourceMatch(source, pattern, message = String(pattern)) {
 	return match[0];
 }
 
+async function getEncounterPageCompositionSource() {
+	const [controllerSource, contentSource] = await Promise.all([
+		fs.readFile(
+			"src/pages/encounter/model/useEncounterPageController.ts",
+			"utf8",
+		),
+		fs.readFile(
+			"src/pages/encounter/ui/components/EncounterPageContent.tsx",
+			"utf8",
+		),
+	]);
+	return `${controllerSource}\n${contentSource}`;
+}
+
 async function getEncounterPrivateComponentSources(componentName) {
 	const [encounterSource, componentSource, runtimeEntrySource, typeEntrySource] =
 		await Promise.all([
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 			fs.readFile(
 				`src/pages/encounter/ui/components/${componentName}.tsx`,
 				"utf8",
@@ -1797,7 +1811,7 @@ function assertEncounterPrivateComponentBoundary({
 	assert.match(
 		encounterSource,
 		new RegExp(
-			`import ${componentName} from "\\./components/${componentName}\\.tsx";`,
+			`import ${componentName} from "\\./(?:components/)?${componentName}\\.tsx";`,
 		),
 	);
 	assert.doesNotMatch(encounterSource, rawDefinitionPattern);
@@ -2301,7 +2315,7 @@ await run(
 				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
 				"utf8",
 			),
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 			fs.readFile(
 				"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
 				"utf8",
@@ -2371,7 +2385,7 @@ await run(
 		);
 		assert.match(
 			encounterSource,
-			/import EncounterBestiaryOverlay from "\.\/components\/EncounterBestiaryOverlay\.tsx";/,
+			/import EncounterBestiaryOverlay from "\.\/EncounterBestiaryOverlay\.tsx";/,
 		);
 		assert.match(
 			monsterFieldModalSource,
@@ -2489,7 +2503,7 @@ await run(
 				"utf8",
 			),
 			fs.readFile("src/widgets/bestiary-browser/index.d.ts", "utf8"),
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 		]);
 
 		for (const [filePath, source] of [
@@ -2606,17 +2620,17 @@ await run(
 			"src/app/ui/BestiaryBrowserRuntimeHost.tsx",
 			"src/pages/encounter/ui/components/BestiaryAiDraftModal.tsx",
 			"src/pages/encounter/ui/components/EncounterBestiaryAiModals.tsx",
+			"src/pages/encounter/ui/components/EncounterPageContent.tsx",
 			"src/pages/encounter/ui/components/MonsterAiEditModal.tsx",
-			"src/pages/encounter/ui/EncounterPage.tsx",
 		]);
 
 		assert.match(
 			encounterSource,
-			/import \{ AiAssistantPanel \} from "\.\.\/\.\.\/\.\.\/widgets\/ai-assistant\/index\.js";/,
+			/import \{ AiAssistantPanel \} from "\.\.\/\.\.\/\.\.\/\.\.\/widgets\/ai-assistant\/index\.js";/,
 		);
 		assert.match(
 			encounterSource,
-			/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/\.\.\/widgets\/monster-stat-block\/index\.js";/,
+			/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/\.\.\/\.\.\/widgets\/monster-stat-block\/index\.js";/,
 		);
 		const encounterBestiaryTag = getRequiredSourceMatch(
 			encounterSource,
@@ -2918,7 +2932,7 @@ await run(
 				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
 				"utf8",
 			),
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 			fs.readFile(
 				"src/features/ai/ui/AiHistoryResponseDialog.tsx",
 				"utf8",
@@ -3109,7 +3123,7 @@ await run(
 			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
 			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 		]);
 
 		for (const filePath of await collectFsdSourceFiles(
@@ -5834,7 +5848,7 @@ await run(
 			[
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
-				"function EncounterView() {",
+				"export function useEncounterPageController() {",
 				"const availablePlayerCharacters = useMemo(",
 				"getAvailableEncounterCharacters(",
 				"const playerCreation = useEncounterPlayerCreation({",
@@ -5850,7 +5864,7 @@ await run(
 				"available={availablePlayerCharacters}",
 				"allCharacters={view.playerCharacters}",
 				"modalCharacter={characterModal.value}",
-				"campaignSlug={activeCampaign.slug}",
+				"campaignSlug={campaign.slug}",
 				"onClosePicker={playerCreation.closePicker}",
 				"onDraft={playerCreation.setDraft}",
 				"onCreate={playerCreation.submit}",
@@ -6004,7 +6018,7 @@ await run(
 			[
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
-				"function EncounterView() {",
+				"export function useEncounterPageController() {",
 				"const characterModal = useEncounterCharacterModal({",
 				"onUpdate: view.updateEncounterCharacter,",
 				"<EncounterDetail",
@@ -6014,7 +6028,7 @@ await run(
 				"selectedInstance={view.selectedInstance}",
 				"selectedGridInstanceId={selectedGridInstanceId}",
 				"focusedMonsterId={focusedMonsterId}",
-				"campaignSlug={activeCampaign.slug}",
+				"campaignSlug={campaign.slug}",
 				"getParticipantInstanceId={getParticipantInstanceId}",
 				"setGridItemRef={setGridItemRef}",
 				"onAiAction={monsterAiAction.openAction}",
@@ -6105,7 +6119,7 @@ await run(
 			[
 				"function getParticipantInstanceId(participant: EncounterViewParticipant): string {",
 				'return String(participant.instanceId || participant.id || "");',
-				"function EncounterView() {",
+				"export function useEncounterPageController() {",
 				"const hpEditing = useEncounterHpEditing({",
 				"onUpdate: view.updateMonsterHp,",
 				"const monsterInteractions = useEncounterMonsterInteractions({",
@@ -6126,7 +6140,7 @@ await run(
 				"monster={monster}",
 				"isDragging={isDragging}",
 				"hpDrafts={hpEditing.drafts}",
-				"selectedInstanceId={getOptionalParticipantId(view.selectedInstance)}",
+				"selectedInstanceId={selectedParticipantId}",
 				"view={view}",
 				"onSelect={monsterInteractions.select}",
 				"onHpChange={hpEditing.onChange}",
@@ -6232,8 +6246,8 @@ await run(
 		assertSourceTokensInOrder(
 			encounterSource,
 			[
-				'import { useEncounterHeaderDismissal } from "../model/useEncounterHeaderDismissal.ts";',
-				"function EncounterView() {",
+				'import { useEncounterHeaderDismissal } from "./useEncounterHeaderDismissal.ts";',
+				"export function useEncounterPageController() {",
 				"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
 				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
 				"useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));",
@@ -6241,11 +6255,11 @@ await run(
 				"<EncounterHeader",
 				"view={view}",
 				"displayMode={effectiveDisplayMode}",
-				"displayedMonsterCount={displayedMonsterCount}",
+				"displayedMonsterCount={gridMonsters.length}",
 				"gridColumns={gridColumns}",
 				"isActionsOpen={isHeaderActionsOpen}",
 				"actionsRef={headerActionsRef}",
-				"onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}",
+				"onToggleActions={toggleHeaderActions}",
 				"onDisplayMode={displaySettings.updateViewMode}",
 				"onGridColumns={displaySettings.updateGridColumns}",
 				"<EncounterParticipantList",
@@ -6323,8 +6337,8 @@ await run(
 
 await run("Phase 216 moves Encounter header tooltip presentation to its private component", async () => {
 	const [page, header, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
-		fs.readFile("src/pages/encounter/ui/components/EncounterHeader.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
+			fs.readFile("src/pages/encounter/ui/components/EncounterHeader.tsx", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
@@ -6612,7 +6626,7 @@ await run(
 
 		assert.match(
 			encounterSource,
-			/import EncounterBestiaryOverlay from "\.\/components\/EncounterBestiaryOverlay\.tsx";/,
+			/import EncounterBestiaryOverlay from "\.\/EncounterBestiaryOverlay\.tsx";/,
 		);
 		assert.doesNotMatch(
 			encounterSource,
@@ -6625,7 +6639,7 @@ await run(
 		assertSourceTokensInOrder(
 			encounterSource,
 			[
-				"function EncounterView() {",
+				"export default function EncounterPageContent({ controller }: Props) {",
 				"<EncounterBestiaryOverlay",
 				"open={view.showBestiary}",
 				"onClose={() => view.setShowBestiary(false)}",
@@ -6684,7 +6698,7 @@ await run(
 		} = await getEncounterPrivateComponentSources("EncounterNotification");
 		assert.match(
 			encounterSource,
-			/import EncounterNotification from "\.\/components\/EncounterNotification\.tsx";/,
+			/import EncounterNotification from "\.\/EncounterNotification\.tsx";/,
 		);
 		assert.doesNotMatch(
 			encounterSource,
@@ -6697,7 +6711,7 @@ await run(
 		assertSourceTokensInOrder(
 			encounterSource,
 			[
-				"function EncounterView() {",
+				"export default function EncounterPageContent({ controller }: Props) {",
 				"<EncounterNotification",
 				"message={view.notification}",
 				"onClose={() => view.setNotification(null)}",
@@ -6728,16 +6742,16 @@ await run(
 	async () => {
 		const [encounterSource, cleanupSource, runtimeEntrySource, typeEntrySource] =
 			await Promise.all([
-				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				getEncounterPageCompositionSource(),
 				fs.readFile("src/pages/encounter/model/useEncounterRequestCleanup.ts", "utf8"),
 				fs.readFile("src/pages/encounter/index.js", "utf8"),
 				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 			]);
-		assert.match(encounterSource, /import \{ useEncounterRequestCleanup \} from "\.\.\/model\/useEncounterRequestCleanup\.ts";/);
+		assert.match(encounterSource, /import \{ useEncounterRequestCleanup \} from "\.\/useEncounterRequestCleanup\.ts";/);
 		assert.doesNotMatch(encounterSource, /function useEncounterRequestCleanup\(/);
 		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterRequestCleanup/);
 		assertSourceTokensInOrder(encounterSource, [
-			"function EncounterView() {",
+			"export function useEncounterPageController() {",
 			"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
 		], "Encounter raw cleanup-ref ownership");
 		assertSourceTokensInOrder(cleanupSource, [
@@ -6757,17 +6771,17 @@ await run(
 	async () => {
 		const [encounterSource, loadingSource, runtimeEntrySource, typeEntrySource] =
 			await Promise.all([
-				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				getEncounterPageCompositionSource(),
 				fs.readFile("src/pages/encounter/model/useEncounterAiModelLoading.ts", "utf8"),
 				fs.readFile("src/pages/encounter/index.js", "utf8"),
 				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 			]);
-		assert.match(encounterSource, /import \{ useEncounterAiModelLoading \} from "\.\.\/model\/useEncounterAiModelLoading\.ts";/);
+		assert.match(encounterSource, /import \{ useEncounterAiModelLoading \} from "\.\/useEncounterAiModelLoading\.ts";/);
 		assert.doesNotMatch(encounterSource, /function useEncounterAiModelLoading\(/);
 		assert.doesNotMatch(encounterSource, /loadAiModelOptions/);
 		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterAiModelLoading/);
 		assertSourceTokensInOrder(encounterSource, [
-			"function EncounterView() {",
+			"export function useEncounterPageController() {",
 			"useEncounterAiModelLoading({",
 			"aiEditingMonster: aiEditor.editingMonster,",
 			"aiModelCount: aiEditor.models.length,",
@@ -6912,12 +6926,12 @@ await run(
 	async () => {
 		const [encounterSource, focusSource, runtimeEntrySource, typeEntrySource] =
 			await Promise.all([
-				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				getEncounterPageCompositionSource(),
 				fs.readFile("src/pages/encounter/model/useEncounterGridFocus.ts", "utf8"),
 				fs.readFile("src/pages/encounter/index.js", "utf8"),
 				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 			]);
-		assert.match(encounterSource, /import \{ useEncounterGridFocus \} from "\.\.\/model\/useEncounterGridFocus\.ts";/);
+		assert.match(encounterSource, /import \{ useEncounterGridFocus \} from "\.\/useEncounterGridFocus\.ts";/);
 		assert.doesNotMatch(encounterSource, /const setGridItemRef =|const focusMonsterInGrid =|gridItemRefs/);
 		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterGridFocus/);
 		assertSourceTokensInOrder(encounterSource, [
@@ -6946,12 +6960,12 @@ await run(
 	async () => {
 		const [encounterSource, creationSource, runtimeEntrySource, typeEntrySource] =
 			await Promise.all([
-				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				getEncounterPageCompositionSource(),
 				fs.readFile("src/pages/encounter/model/useEncounterPlayerCreation.ts", "utf8"),
 				fs.readFile("src/pages/encounter/index.js", "utf8"),
 				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 			]);
-		assert.match(encounterSource, /import \{ useEncounterPlayerCreation \} from "\.\.\/model\/useEncounterPlayerCreation\.ts";/);
+		assert.match(encounterSource, /import \{ useEncounterPlayerCreation \} from "\.\/useEncounterPlayerCreation\.ts";/);
 		assert.doesNotMatch(encounterSource, /executeEncounterPlayerCreation|buildCreateEntityPayload|createEmptyEncounterCharacterDraft|const handleCreatePlayer/);
 		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterPlayerCreation/);
 		assertSourceTokensInOrder(encounterSource, [
@@ -6978,12 +6992,12 @@ await run(
 
 await run("Phase 206 isolates Encounter HP editing in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterHpEditing.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterHpEditing \} from "\.\.\/model\/useEncounterHpEditing\.ts";/);
+	assert.match(page, /import \{ useEncounterHpEditing \} from "\.\/useEncounterHpEditing\.ts";/);
 	assert.doesNotMatch(page, /const handleHpInputChange|const handleHpInputBlur|setHpDrafts/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterHpEditing/);
 	assertSourceTokensInOrder(page, [
@@ -7003,12 +7017,12 @@ await run("Phase 206 isolates Encounter HP editing in page model", async () => {
 
 await run("Phase 207 isolates Encounter character modal in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterCharacterModal.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterCharacterModal \} from "\.\.\/model\/useEncounterCharacterModal\.ts";/);
+	assert.match(page, /import \{ useEncounterCharacterModal \} from "\.\/useEncounterCharacterModal\.ts";/);
 	assert.doesNotMatch(page, /const handleCharacterChange|setModalCharacter/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterCharacterModal/);
 	assertSourceTokensInOrder(page, ["const characterModal = useEncounterCharacterModal({", "onUpdate: view.updateEncounterCharacter,", "onOpenCharacter: characterModal.open,", "onCharacterChange={characterModal.getOnChange}", "modalCharacter={characterModal.value}"], "Encounter raw character-modal composition");
@@ -7017,12 +7031,12 @@ await run("Phase 207 isolates Encounter character modal in page model", async ()
 
 await run("Phase 208 isolates Encounter display settings in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterDisplaySettings.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterDisplaySettings \} from "\.\.\/model\/useEncounterDisplaySettings\.ts";/);
+	assert.match(page, /import \{ useEncounterDisplaySettings \} from "\.\/useEncounterDisplaySettings\.ts";/);
 	assert.doesNotMatch(page, /const updateEncounterViewMode|const updateEncounterGridColumns|api\.updateSettings\(\{ encounter(?:ViewMode|GridColumns)/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterDisplaySettings/);
 	assertSourceTokensInOrder(page, [
@@ -7044,12 +7058,12 @@ await run("Phase 208 isolates Encounter display settings in page model", async (
 
 await run("Phase 209 isolates Encounter monster field editing in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterMonsterFieldEditing.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterMonsterFieldEditing \} from "\.\.\/model\/useEncounterMonsterFieldEditing\.ts";/);
+	assert.match(page, /import \{ useEncounterMonsterFieldEditing \} from "\.\/useEncounterMonsterFieldEditing\.ts";/);
 	assert.doesNotMatch(page, /const (openEditMonsterAction|closeEditMonsterAction|chooseEditMonsterAction|closeEditMonsterFields|saveEditedMonsterFields)|fieldEditingMonster|editActionMonster|getEditingMonster/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterFieldEditing/);
 	assertSourceTokensInOrder(page, [
@@ -7079,12 +7093,12 @@ await run("Phase 209 isolates Encounter monster field editing in page model", as
 
 await run("Phase 210 isolates Encounter header dismissal in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterHeaderDismissal.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterHeaderDismissal \} from "\.\.\/model\/useEncounterHeaderDismissal\.ts";/);
+	assert.match(page, /import \{ useEncounterHeaderDismissal \} from "\.\/useEncounterHeaderDismissal\.ts";/);
 	assert.doesNotMatch(page, /function useEncounterHeaderDismissal|document\.addEventListener\("pointerdown"/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterHeaderDismissal/);
 	assertSourceTokensInOrder(page, [
@@ -7106,12 +7120,12 @@ await run("Phase 210 isolates Encounter header dismissal in page model", async (
 
 await run("Phase 211 isolates Encounter monster AI action transitions in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterMonsterAiAction.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterMonsterAiAction \} from "\.\.\/model\/useEncounterMonsterAiAction\.ts";/);
+	assert.match(page, /import \{ useEncounterMonsterAiAction \} from "\.\/useEncounterMonsterAiAction\.ts";/);
 	assert.doesNotMatch(page, /const (handleMonsterAiAction|closeMonsterAiAction|chooseMonsterAiAction)|\[aiActionMonster, setAiActionMonster\]|\[aiTargetInstanceId, setAiTargetInstanceId\]/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiAction/);
 	assertSourceTokensInOrder(page, [
@@ -7141,15 +7155,15 @@ await run("Phase 211 isolates Encounter monster AI action transitions in page mo
 
 await run("Phase 212 moves Encounter render context into page presentation", async () => {
 	const [page, presentation] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/encounterPagePresentation.ts", "utf8"),
 	]);
 	assert.match(page, /getEncounterRenderContext,/);
 	assert.doesNotMatch(page, /function getEncounterRenderContext/);
 	assertSourceTokensInOrder(page, [
-		"const renderContext = getEncounterRenderContext(view, campaign, sessionId);",
-		"if (!renderContext) return <EncounterLoading />;",
-		"const { campaign: activeCampaign, encounter } = renderContext;",
+		"renderContext: getEncounterRenderContext(view, campaign, sessionId),",
+		"if (!renderContext) return null;",
+		"const { campaign, encounter } = renderContext;",
 	], "Encounter raw render-context composition");
 	assertSourceTokensInOrder(presentation, [
 		"export function getEncounterRenderContext(",
@@ -7160,12 +7174,12 @@ await run("Phase 212 moves Encounter render context into page presentation", asy
 
 await run("Phase 213 isolates Encounter monster AI draft lifecycle in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterMonsterAiDraft.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterMonsterAiDraft \} from "\.\.\/model\/useEncounterMonsterAiDraft\.ts";/);
+	assert.match(page, /import \{ useEncounterMonsterAiDraft \} from "\.\/useEncounterMonsterAiDraft\.ts";/);
 	assert.doesNotMatch(page, /const (saveAiDraftResponseChanges|restoreAiDraftResponse|closeAiDraftResponse)|\[aiDraftResponseEntry, setAiDraftResponseEntry\]|\[aiDraftMode, setAiDraftMode\]|\[isRestoringAiResponse, setIsRestoringAiResponse\]/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiDraft/);
 	assertSourceTokensInOrder(page, [
@@ -7207,12 +7221,12 @@ await run("Phase 213 isolates Encounter monster AI draft lifecycle in page model
 
 await run("Phase 214 isolates Encounter monster AI editor session state in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterMonsterAiEditor.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterMonsterAiEditor \} from "\.\.\/model\/useEncounterMonsterAiEditor\.ts";/);
+	assert.match(page, /import \{ useEncounterMonsterAiEditor \} from "\.\/useEncounterMonsterAiEditor\.ts";/);
 	assert.doesNotMatch(page, /const closeAiEditCustomMonster|\[aiEditingMonster, setAiEditingMonster\]|\[aiEditMode, setAiEditMode\]|\[aiEditInstructions, setAiEditInstructions\]|\[aiEditError, setAiEditError\]|\[isAiEditingMonster, setIsAiEditingMonster\]|\[aiModels, setAiModels\]|\[selectedAiModel, setSelectedAiModel\]/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiEditor/);
 	assertSourceTokensInOrder(page, [
@@ -7246,12 +7260,12 @@ await run("Phase 214 isolates Encounter monster AI editor session state in page 
 
 await run("Phase 215 isolates Encounter monster AI generation lifecycle in page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterMonsterAiGeneration.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterMonsterAiGeneration \} from "\.\.\/model\/useEncounterMonsterAiGeneration\.ts";/);
+	assert.match(page, /import \{ useEncounterMonsterAiGeneration \} from "\.\/useEncounterMonsterAiGeneration\.ts";/);
 	assert.doesNotMatch(page, /const (cancelAiEditCustomMonsterRequest|saveAiEditedCustomMonster)|buildMonsterAiRequestPayload|executeMonsterAiRequest|getMonsterAiGenerationPlan|applyEncounterGeneratedMonsterResult/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiGeneration/);
 	assertSourceTokensInOrder(page, [
@@ -7291,12 +7305,12 @@ await run("Phase 215 isolates Encounter monster AI generation lifecycle in page 
 
 await run("Phase 217 isolates Encounter monster interactions in a page model", async () => {
 	const [page, hook, entry, types] = await Promise.all([
-		fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		getEncounterPageCompositionSource(),
 		fs.readFile("src/pages/encounter/model/useEncounterMonsterInteractions.ts", "utf8"),
 		fs.readFile("src/pages/encounter/index.js", "utf8"),
 		fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 	]);
-	assert.match(page, /import \{ useEncounterMonsterInteractions \} from "\.\.\/model\/useEncounterMonsterInteractions\.ts";/);
+	assert.match(page, /import \{ useEncounterMonsterInteractions \} from "\.\/useEncounterMonsterInteractions\.ts";/);
 	assert.doesNotMatch(page, /const (handleSelectMonster|handleMonsterTokenImageChange)|executeEncounterParticipantSelection|getEncounterParticipantSelectionPlan/);
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterInteractions/);
 	assertSourceTokensInOrder(page, [
@@ -7549,7 +7563,7 @@ await run(
 			runtimeEntrySource,
 			typeEntrySource,
 		] = await Promise.all([
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 			fs.readFile(
 				"src/pages/encounter/ui/components/EncounterHeader.tsx",
 				"utf8",
@@ -7564,7 +7578,7 @@ await run(
 
 		assert.match(
 			encounterSource,
-			/import EncounterHeader from "\.\/components\/EncounterHeader\.tsx";/,
+			/import EncounterHeader from "\.\/EncounterHeader\.tsx";/,
 		);
 		assert.match(
 			headerSource,
@@ -7586,8 +7600,8 @@ await run(
 		assertSourceTokensInOrder(
 			encounterSource,
 			[
-				'import { useEncounterHeaderDismissal } from "../model/useEncounterHeaderDismissal.ts";',
-				"function EncounterView() {",
+				'import { useEncounterHeaderDismissal } from "./useEncounterHeaderDismissal.ts";',
+				"export function useEncounterPageController() {",
 				"const headerActionsRef = useRef<HTMLDivElement | null>(null);",
 				"const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);",
 				"useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));",
@@ -7595,7 +7609,7 @@ await run(
 				"<EncounterHeader",
 				"isActionsOpen={isHeaderActionsOpen}",
 				"actionsRef={headerActionsRef}",
-				"onToggleActions={() => setIsHeaderActionsOpen((value) => !value)}",
+				"onToggleActions={toggleHeaderActions}",
 				"onDisplayMode={displaySettings.updateViewMode}",
 				"onGridColumns={displaySettings.updateGridColumns}",
 			],
@@ -8338,7 +8352,7 @@ await run(
 		] = await Promise.all([
 			fs.readFile("src/App.tsx", "utf8"),
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 			fs.readFile(
 				"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
 				"utf8",
@@ -8716,7 +8730,7 @@ await run(
 		assertReferenceOwnerComposition(
 			encounterSource,
 			"Encounter",
-			"const api =",
+			"export default function EncounterPageContent",
 		);
 
 		assert.match(
@@ -8763,7 +8777,7 @@ await run(
 		] = await Promise.all([
 			fs.readFile("src/features/ai-edit-monster/index.js", "utf8"),
 			fs.readFile("src/features/ai-edit-monster/index.d.ts", "utf8"),
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 			fs.readFile(
 				"src/pages/encounter/ui/components/EncounterBestiaryAiModals.tsx",
 				"utf8",
@@ -8856,7 +8870,7 @@ await run(
 
 		assert.match(
 			encounterSource,
-			/import EncounterBestiaryAiModals from "\.\/components\/EncounterBestiaryAiModals\.tsx";/,
+			/import EncounterBestiaryAiModals from "\.\/EncounterBestiaryAiModals\.tsx";/,
 		);
 		const encounterBestiaryTag = getRequiredSourceMatch(
 			encounterSource,
@@ -8876,7 +8890,7 @@ await run(
 		);
 		assert.ok(
 			encounterSource.indexOf(
-				'import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";',
+				'import EncounterBestiaryAiModals from "./EncounterBestiaryAiModals.tsx";',
 			) < encounterSource.indexOf("<EncounterBestiaryOverlay"),
 		);
 
@@ -10159,6 +10173,93 @@ await run(
 		assert.doesNotMatch(
 			`${appRuntimeEntry}\n${appRuntimeTypes}`,
 			/useAppRuntimes/,
+		);
+	},
+);
+
+await run(
+	"Phase 232 consolidates Encounter page orchestration behind private controller and content",
+	async () => {
+		const [pageSource, controllerSource, contentSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+				fs.readFile(
+					"src/pages/encounter/model/useEncounterPageController.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/encounter/ui/components/EncounterPageContent.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			pageSource,
+			/import \{ useEncounterPageController \} from "\.\.\/model\/useEncounterPageController\.ts";/,
+		);
+		assert.match(
+			pageSource,
+			/import EncounterPageContent from "\.\/components\/EncounterPageContent\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			pageSource,
+			[
+				"function EncounterView() {",
+				"const controller = useEncounterPageController();",
+				"if (!controller.renderContext) return <EncounterLoading />;",
+				'<Panel className="EncounterView">',
+				"<EncounterPageContent controller={controller} />",
+			],
+			"Encounter thin route composition",
+		);
+		assert.doesNotMatch(
+			pageSource,
+			/useEncounterView|useEncounterPlayerCreation|useEncounterMonsterAiGeneration|<EncounterHeader|<EncounterBestiaryOverlay/,
+		);
+		assertSourceTokensInOrder(
+			controllerSource,
+			[
+				"export function useEncounterPageController() {",
+				"} = useEncounterPageRuntime();",
+				"const view = useEncounterView();",
+				"const playerCreation = useEncounterPlayerCreation({",
+				"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
+				"const monsterFieldEditing = useEncounterMonsterFieldEditing({",
+				"const aiDraft = useEncounterMonsterAiDraft({",
+				"const aiGeneration = useEncounterMonsterAiGeneration({",
+				"const monsterInteractions = useEncounterMonsterInteractions({",
+				"renderContext: getEncounterRenderContext(view, campaign, sessionId),",
+			],
+			"Encounter private controller orchestration order",
+		);
+		assert.doesNotMatch(
+			controllerSource,
+			/app\/model|shared\/model|<EncounterHeader|<EncounterBestiaryOverlay/,
+		);
+		assertSourceTokensInOrder(
+			contentSource,
+			[
+				"const EncounterRulesReferenceContent =",
+				"const EncounterMonsterEditorModal = createMonsterEditorModalComponent({",
+				"const EncounterAiResponseModal = createAiResponseModalComponent({",
+				"export default function EncounterPageContent({ controller }: Props) {",
+				"<EncounterHeader",
+				"<EncounterParticipantList",
+				"<EncounterBestiaryOverlay",
+				"<EncounterCharacterOverlays",
+				"<EncounterBestiaryAiModals",
+			],
+			"Encounter private content composition",
+		);
+		assert.doesNotMatch(
+			contentSource,
+			/useEncounterView|useEncounterPageRuntime|app\/model|shared\/model/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/useEncounterPageController|EncounterPageContent/,
 		);
 	},
 );
@@ -14975,7 +15076,7 @@ await run(
 				"utf8",
 			),
 			fs.readFile("src/pages/encounter/model/useEncounterView.ts", "utf8"),
-			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			getEncounterPageCompositionSource(),
 			fs.readFile("src/pages/encounter/index.js", "utf8"),
 			fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
 			fs.readFile("src/app/ui/EncounterPageRuntimeHost.tsx", "utf8"),
