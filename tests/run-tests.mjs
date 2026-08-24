@@ -11016,6 +11016,83 @@ await run(
 );
 
 await run(
+	"Phase 253 isolates Bestiary custom-data policy in the private widget model",
+	async () => {
+		const [browserModelSource, customDataSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserCustomData.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				"import {\n\tgetMonsterListFromResponse,",
+				"type CustomBestiaryUpdateOptions,",
+				"type CustomBestiaryUpdatePlan,",
+				'from "./bestiaryBrowserCustomData.ts";',
+				"export {\n\tgetCustomBestiaryUpdatePlan,",
+				"getCustomMonsterDeleteStartPlan,",
+				"getMonsterListFromResponse,",
+				"mergeImportedCustomMonsters,",
+				"parseImportedCustomMonsters,",
+				"removeDeletedCustomMonsterFavorite,",
+				"replaceDeletedCustomMonsterList,",
+				"export type {",
+				"CustomBestiaryUpdateOptions,",
+				"CustomBestiaryUpdatePlan,",
+				"CustomMonsterDeleteStartPlan,",
+			],
+			"Bestiary custom-data compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function isBestiaryMonster|function getGeneratedMonsterSelection|function isDeletedCustomMonsterFavorite|function shouldTrackCustomBestiaryUpdate/,
+		);
+		assertSourceTokensInOrder(
+			customDataSource,
+			[
+				"import type {",
+				"BestiaryFavorite,",
+				"BestiaryMonster,",
+				"from \"../../../entities/bestiary/index.js\";",
+				"import {",
+				"isCustomSource,",
+				"normalizeMonsterName,",
+				"from \"./bestiaryBrowserFiltering.ts\";",
+				"import { findCustomMonsterByName } from \"./bestiaryBrowserSelection.ts\";",
+				"export interface CustomBestiaryUpdateOptions",
+				"export interface CustomBestiaryUpdatePlan",
+				"export type CustomMonsterDeleteStartPlan",
+				"export function getMonsterListFromResponse",
+				"export function getCustomMonsterDeleteStartPlan",
+				"export function getCustomBestiaryUpdatePlan",
+				"export function parseImportedCustomMonsters",
+				"export function mergeImportedCustomMonsters",
+			],
+			"Bestiary private custom-data model",
+		);
+		assert.doesNotMatch(
+			customDataSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserCustomData/,
+		);
+	},
+);
+
+await run(
 	"Phase 252 isolates Bestiary list and detail presentation in the private widget model",
 	async () => {
 		const [browserModelSource, presentationSource, widgetEntry, modelEntry, modelTypes] =
@@ -11102,11 +11179,7 @@ await run(
 			[
 				"import {\n\tcloneCustomMonsters,",
 				"customMonsterListsEqual,",
-				"findCustomMonsterByName,",
-				"getAutoSelectedMonster,",
-				"getMonsterListIndex,",
-				"isSameMonsterIdentity,",
-				"monsterMatchesReference,",
+				"type MonsterReference,",
 				"from \"./bestiaryBrowserSelection.ts\";",
 				"export {\n\tcloneCustomMonsters,",
 				"getBestiaryInitialSelectionScrollPlan,",
