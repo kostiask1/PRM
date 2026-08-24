@@ -11016,6 +11016,76 @@ await run(
 );
 
 await run(
+	"Phase 254 isolates Bestiary field editing in the private widget model",
+	async () => {
+		const [browserModelSource, fieldEditingSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserFieldEditing.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				"export {\n\texecuteBestiaryFieldEditSave,",
+				"getBestiaryFieldEditStartPlan,",
+				"getCreateBasedMonsterPlan,",
+				"getEditedCustomMonsterPayload,",
+				'from "./bestiaryBrowserFieldEditing.ts";',
+				"export type {",
+				"BestiaryFieldEditMode,",
+				"BestiaryFieldEditSaveOutcome,",
+				"BestiaryFieldEditStartPlan,",
+				"CreateBasedMonsterPlan,",
+				"ExecuteBestiaryFieldEditSaveOptions,",
+			],
+			"Bestiary field-edit compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function getMonsterImageUrl|function getOfficialBestiaryFieldEditPlan|function saveBestiaryFieldEditMonster/,
+		);
+		assertSourceTokensInOrder(
+			fieldEditingSource,
+			[
+				'import type { BestiaryMonster } from "../../../entities/bestiary/index.js";',
+				"import {",
+				"isCustomSource,",
+				"normalizeMonsterName,",
+				"from \"./bestiaryBrowserFiltering.ts\";",
+				"export interface CreateBasedMonsterPlan",
+				"export type BestiaryFieldEditStartPlan",
+				"export type BestiaryFieldEditMode",
+				"export type BestiaryFieldEditSaveOutcome",
+				"export interface ExecuteBestiaryFieldEditSaveOptions",
+				"export function getCreateBasedMonsterPlan",
+				"export function getEditedCustomMonsterPayload",
+				"export function getBestiaryFieldEditStartPlan",
+				"export async function executeBestiaryFieldEditSave",
+			],
+			"Bestiary private field-edit model",
+		);
+		assert.doesNotMatch(
+			fieldEditingSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserFieldEditing/,
+		);
+	},
+);
+
+await run(
 	"Phase 253 isolates Bestiary custom-data policy in the private widget model",
 	async () => {
 		const [browserModelSource, customDataSource, widgetEntry, modelEntry, modelTypes] =
