@@ -14,10 +14,6 @@ import {
 	type ReactFlowInstance,
 } from "@xyflow/react";
 
-import {
-	EditableField,
-	type EditableFieldChangeEvent,
-} from "../../../../features/editor/ui/index.js";
 import { useSimplifiedNotesEnabled } from "../../../../features/notes/ui/index.js";
 import {
 	EntityModal,
@@ -82,6 +78,7 @@ import {
 	type CampaignGraphFlowNode,
 } from "./CampaignGraphNodeCard.tsx";
 import { CampaignGraphDetails } from "./CampaignGraphDetails.tsx";
+import { CampaignGraphNoteModal } from "./CampaignGraphNoteModal.tsx";
 import { CampaignGraphToolbar } from "./CampaignGraphToolbar.tsx";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
@@ -151,83 +148,6 @@ export interface CampaignNotesGraphProps {
 	onLoadSessionDetails: () => void | Promise<void>;
 	onSaveNote: (request: CampaignGraphNoteSave) => void | Promise<void>;
 	onOpenSession: (fileName: string) => void;
-}
-
-interface GraphNoteDraft extends Record<string, unknown> {
-	title: string;
-	text: string;
-}
-
-interface GraphNoteModalContentProps {
-	note: SharedNote;
-	simplifiedNotes: boolean;
-	campaignSlug: string;
-	onSave: (updates: GraphNoteDraft) => void | Promise<void>;
-}
-
-function toGraphNoteDraft(note: SharedNote): GraphNoteDraft {
-	return {
-		title: typeof note.title === "string" ? note.title : "",
-		text: typeof note.text === "string" ? note.text : "",
-	};
-}
-
-function GraphNoteModalContent({
-	note,
-	simplifiedNotes,
-	campaignSlug,
-	onSave,
-}: GraphNoteModalContentProps) {
-	const [draft, setDraft] = useState<GraphNoteDraft>(() => toGraphNoteDraft(note));
-	const didMountRef = useRef(false);
-
-	useEffect(() => {
-		setDraft(toGraphNoteDraft(note));
-	}, [note]);
-
-	useEffect(() => {
-		if (!didMountRef.current) {
-			didMountRef.current = true;
-			return undefined;
-		}
-
-		const timer = setTimeout(() => {
-			void onSave(draft);
-		}, 450);
-
-		return () => clearTimeout(timer);
-	}, [draft, onSave]);
-
-	const updateDraft = (updates: Partial<GraphNoteDraft>) => {
-		setDraft((previous) => ({ ...previous, ...updates }));
-	};
-
-	return (
-		<div className="CampaignNotesGraph__noteModal">
-			{!simplifiedNotes && (
-				<EditableField
-					value={draft.title || ""}
-					enableHistory={false}
-					onChange={(event: EditableFieldChangeEvent) =>
-						updateDraft({ title: String(event.target.value) })
-					}
-					placeholder={lang.t("New note")}
-					className="CampaignNotesGraph__noteTitle"
-				/>
-			)}
-			<EditableField
-				type="textarea"
-				value={draft.text || ""}
-				enableHistory={false}
-				onChange={(event: EditableFieldChangeEvent) =>
-					updateDraft({ text: String(event.target.value) })
-				}
-				placeholder={lang.t("Note text...")}
-				campaignSlug={campaignSlug}
-				className="CampaignNotesGraph__noteText"
-			/>
-		</div>
-	);
 }
 
 const NODE_TYPES = { campaignGraphNode: CampaignGraphNodeCard };
@@ -386,7 +306,7 @@ export default function CampaignNotesGraph({
 				type: "note",
 				showFooter: false,
 				children: (
-					<GraphNoteModalContent
+					<CampaignGraphNoteModal
 						note={note}
 						simplifiedNotes={simplifiedNotesEnabled}
 						campaignSlug={campaign.slug}

@@ -11077,6 +11077,65 @@ await run(
 );
 
 await run(
+	"Phase 281 isolates Campaign graph note editing in private page UI",
+	async () => {
+		const [graphSource, noteModalSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignGraphNoteModal.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			graphSource,
+			[
+				'import { CampaignGraphNoteModal } from "./CampaignGraphNoteModal.tsx";',
+				"const openGraphNote = useCallback(",
+				"<CampaignGraphNoteModal",
+				"campaignSlug={campaign.slug}",
+				"const request = getCampaignGraphNoteSaveRequest(node, updates);",
+				"if (request) return onSaveNote(request);",
+			],
+			"Campaign graph controller owns note-save request planning",
+		);
+		assert.doesNotMatch(
+			graphSource,
+			/GraphNoteDraft|GraphNoteModalContent|function toGraphNoteDraft|EditableFieldChangeEvent|<EditableField/,
+		);
+		assertSourceTokensInOrder(
+			noteModalSource,
+			[
+				'import { useEffect, useRef, useState } from "react";',
+				"interface GraphNoteDraft",
+				"function toGraphNoteDraft",
+				"export function CampaignGraphNoteModal",
+				"setDraft(toGraphNoteDraft(note));",
+				"const timer = setTimeout",
+				"}, 450);",
+				"<EditableField",
+				"campaignSlug={campaignSlug}",
+			],
+			"Campaign graph private note-editor state and debounce presentation",
+		);
+		assert.doesNotMatch(
+			noteModalSource,
+			/useCampaignPageRuntime|buildCampaignGraph|layoutCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/CampaignGraphNoteModalProps/,
+		);
+	},
+);
+
+await run(
 	"Phase 280 isolates Campaign graph toolbar controls in private page UI",
 	async () => {
 		const [graphSource, toolbarSource, pageEntry, pageTypes] =
@@ -62352,6 +62411,10 @@ await run(
 			"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
 			"utf8",
 		);
+		const graphNoteModalSource = await fs.readFile(
+			"src/pages/campaign/ui/components/CampaignGraphNoteModal.tsx",
+			"utf8",
+		);
 		const campaignHookSource = await fs.readFile(
 			"src/pages/campaign/model/useCampaignView.ts",
 			"utf8",
@@ -62450,7 +62513,7 @@ await run(
 		assert.match(sceneFieldsSource, /enableHistory=\{enableHistory\}/);
 		assert.match(campaignViewSource, /enableHistory=\{false\}/);
 		assert.match(sessionViewSource, /enableHistory=\{false\}/);
-		assert.match(graphSource, /enableHistory=\{false\}/);
+		assert.match(graphNoteModalSource, /enableHistory=\{false\}/);
 		assert.equal(editableFieldSource.includes("mention.title ="), false);
 		assert.equal(editableFieldSource.includes("title={typeof title"), false);
 		assert.equal(
