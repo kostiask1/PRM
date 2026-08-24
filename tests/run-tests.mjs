@@ -11077,6 +11077,59 @@ await run(
 );
 
 await run(
+	"Phase 282 isolates Campaign graph topology layout caching in a private page hook",
+	async () => {
+		const [graphSource, layoutSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/useCampaignGraphLayout.ts",
+					"utf8",
+				),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			graphSource,
+			[
+				'import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";',
+				"const layoutPositions = useCampaignGraphLayout(graph.nodes, graph.edges);",
+			],
+			"Campaign graph controller consumes its private layout cache",
+		);
+		assert.doesNotMatch(
+			graphSource,
+			/function getGraphTopologyKey|function useCampaignGraphLayout\(/,
+		);
+		assertSourceTokensInOrder(
+			layoutSource,
+			[
+			'import { useRef } from "react";',
+			"function getGraphTopologyKey",
+			"export function useCampaignGraphLayout",
+			"const cacheRef = useRef",
+			"const topologyKey = getGraphTopologyKey(nodes, edges);",
+			"positions: layoutCampaignGraph(nodes, edges),",
+			"return cacheRef.current.positions;",
+			],
+			"Campaign graph private topology-keyed layout cache",
+		);
+		assert.doesNotMatch(
+			layoutSource,
+			/useCampaignPageRuntime|buildCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/useCampaignGraphLayout/,
+		);
+	},
+);
+
+await run(
 	"Phase 281 isolates Campaign graph note editing in private page UI",
 	async () => {
 		const [graphSource, noteModalSource, pageEntry, pageTypes] =

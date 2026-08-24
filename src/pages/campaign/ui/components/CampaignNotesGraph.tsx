@@ -57,7 +57,6 @@ import {
 import type {
 	CampaignGraphEdge,
 	CampaignGraphNode,
-	CampaignGraphPositions,
 } from "../../graph.js";
 import type {
 	CampaignGraphNoteSave,
@@ -80,6 +79,7 @@ import {
 import { CampaignGraphDetails } from "./CampaignGraphDetails.tsx";
 import { CampaignGraphNoteModal } from "./CampaignGraphNoteModal.tsx";
 import { CampaignGraphToolbar } from "./CampaignGraphToolbar.tsx";
+import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
 
@@ -167,42 +167,6 @@ function executeCampaignGraphConnectionAction(
 ): void {
 	if (action.kind === "session") onOpenSession?.(action.fileName);
 	else onSelectNode(action.nodeId);
-}
-
-function getGraphTopologyKey(
-	nodes: CampaignGraphNode[],
-	edges: CampaignGraphEdge[],
-): string {
-	const nodeKey = nodes
-		.map((node) => `${node.id}:${node.type}`)
-		.sort()
-		.join("|");
-	const edgeKey = edges
-		.map(
-			(edge) =>
-				`${edge.id}:${edge.source}:${edge.target}:${edge.relation}`,
-		)
-		.sort()
-		.join("|");
-	return `${nodeKey}::${edgeKey}`;
-}
-
-function useCampaignGraphLayout(
-	nodes: CampaignGraphNode[],
-	edges: CampaignGraphEdge[],
-): CampaignGraphPositions {
-	const cacheRef = useRef<{
-		key: string | null;
-		positions: CampaignGraphPositions;
-	}>({ key: null, positions: {} });
-	const topologyKey = getGraphTopologyKey(nodes, edges);
-	if (cacheRef.current.key !== topologyKey) {
-		cacheRef.current = {
-			key: topologyKey,
-			positions: layoutCampaignGraph(nodes, edges),
-		};
-	}
-	return cacheRef.current.positions;
 }
 
 export default function CampaignNotesGraph({
