@@ -886,6 +886,8 @@ Next:
 - Phase 245 preserves the full estimate input/dependency projection, feature-owned token policy, locale fallback, and file-token zero fallback. The full suite passes 518/518 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 246 by moving AI Assistant prompt, toolbar, attachment, error, notification, and dialog control state into private `widgets/ai-assistant/model/useAiAssistantControls.ts`. `AiAssistantPanel.tsx` retains runtime, workflow composition, and UI composition ownership.
 - Phase 246 preserves every initial state value, the encounter-derived response-parsing default, campaign/session encounter-generation default, and setter contracts. The full suite passes 519/519 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 247 by moving AI Assistant route-state projection into private `widgets/ai-assistant/model/useAiAssistantRouteState.ts`. `AiAssistantPanel.tsx` retains runtime, workflow composition, and UI composition ownership.
+- Phase 247 preserves `getAiAssistantRouteState` inputs, memoized dependency order, and route/destructuring values. The full suite passes 520/520 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

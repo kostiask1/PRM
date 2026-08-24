@@ -4,7 +4,6 @@ import {
 	createElement,
 	isValidElement,
 	useEffect,
-	useMemo,
 	type ReactNode,
 } from "react";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
@@ -30,7 +29,6 @@ import AiAssistantPanelView from "./AiAssistantPanelView.tsx";
 import { createAiAssistantPresentation } from "../model/assistantPresentation.ts";
 import {
 	getAiAssistantPromptPlaceholder,
-	getAiAssistantRouteState,
 	getAiAssistantTitle,
 } from "../model/assistantContext.ts";
 import { useAiAssistantContextController } from "../model/useAiAssistantContextController.ts";
@@ -41,6 +39,7 @@ import { useAiAssistantModelAccess } from "../model/useAiAssistantModelAccess.ts
 import { useAiAssistantGeneratedResult } from "../model/useAiAssistantGeneratedResult.ts";
 import { useAiAssistantGeneration } from "../model/useAiAssistantGeneration.ts";
 import { useAiAssistantControls } from "../model/useAiAssistantControls.ts";
+import { useAiAssistantRouteState } from "../model/useAiAssistantRouteState.ts";
 import { useAiAssistantTokenEstimate } from "../model/useAiAssistantTokenEstimate.ts";
 import { useAiAssistantUpdatedData } from "../model/useAiAssistantUpdatedData.ts";
 import { lang } from "../../../shared/lib/index.js";
@@ -189,23 +188,13 @@ export default function AiAssistantPanel({
 		setActiveSession,
 		showMessage,
 	} = useAiAssistantRuntime();
-	const routeState = useMemo(
-		() =>
-			getAiAssistantRouteState({
-				isBestiary,
-				navigation,
-				imagePromptBasePrompt,
-				campaignAiBasePrompts,
-				campaignImagePromptBasePrompts,
-			}),
-		[
-			campaignAiBasePrompts,
-			campaignImagePromptBasePrompts,
-			imagePromptBasePrompt,
-			isBestiary,
-			navigation,
-		],
-	);
+	const routeState = useAiAssistantRouteState({
+		campaignAiBasePrompts,
+		campaignImagePromptBasePrompts,
+		imagePromptBasePrompt,
+		isBestiary,
+		navigation,
+	});
 	const {
 		route: initialRoute,
 		activeImagePromptBasePrompt,

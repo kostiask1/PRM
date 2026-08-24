@@ -10942,6 +10942,80 @@ await run(
 );
 
 await run(
+	"Phase 247 isolates AI Assistant route projection in the private widget model",
+	async () => {
+		const [panelSource, routeStateSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/ai-assistant/model/useAiAssistantRouteState.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			panelSource,
+			/import \{ useAiAssistantRouteState \} from "\.\.\/model\/useAiAssistantRouteState\.ts";/,
+		);
+		assert.doesNotMatch(
+			panelSource,
+			/const routeState = useMemo|getAiAssistantRouteState\(/,
+		);
+		assertSourceTokensInOrder(
+			panelSource,
+			[
+				"const routeState = useAiAssistantRouteState({",
+				"campaignAiBasePrompts,",
+				"campaignImagePromptBasePrompts,",
+				"imagePromptBasePrompt,",
+				"isBestiary,",
+				"navigation,",
+				"route: initialRoute,",
+				"activeImagePromptBasePrompt,",
+				"activeCampaignBasePrompt,",
+				"historyCampaign: aiHistoryCampaign,",
+				"generateEncountersByDefault,",
+			],
+			"AI Assistant route-state delegation",
+		);
+		assertSourceTokensInOrder(
+			routeStateSource,
+			[
+				'import { useMemo } from "react";',
+				"export function useAiAssistantRouteState({",
+				"return useMemo(",
+				"getAiAssistantRouteState({",
+				"isBestiary,",
+				"navigation,",
+				"imagePromptBasePrompt,",
+				"campaignAiBasePrompts,",
+				"campaignImagePromptBasePrompts,",
+				"campaignAiBasePrompts,",
+				"campaignImagePromptBasePrompts,",
+				"imagePromptBasePrompt,",
+				"isBestiary,",
+				"navigation,",
+			],
+			"AI Assistant private route projection",
+		);
+		assert.doesNotMatch(
+			routeStateSource,
+			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useAiAssistantRouteState/,
+		);
+	},
+);
+
+await run(
 	"Phase 237 isolates Bestiary loading and sync lifecycle in the private widget model",
 	async () => {
 		const [browserSource, dataLoadingSource, widgetEntry, modelEntry, modelTypes] =
@@ -48576,7 +48650,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		/historyCampaign: isBestiary \? "bestiary" : route\.campaign/,
 	);
 	assert.match(aiAssistantContextSource, /getAiAssistantRouteTargets/);
-	assert.match(aiAssistantSource, /getAiAssistantRouteState/);
+	assert.match(aiAssistantSource, /useAiAssistantRouteState/);
 	assert.match(aiAssistantSource, /useAiAssistantUpdatedData/);
 	assert.match(aiAssistantUpdatedDataSource, /buildAiUpdatedDataPlan/);
 	assert.match(aiAssistantUpdatedDataSource, /executeAiUpdatedDataPlan/);
