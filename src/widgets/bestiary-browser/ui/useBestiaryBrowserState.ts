@@ -16,9 +16,6 @@ export function useBestiaryBrowserState() {
 	const [reloadToken, setReloadToken] = useState(0);
 	const listRef = useRef<ReactList>(null);
 	const aiDraftResponseRef = useRef<HTMLDivElement>(null);
-	const openImagePromptForMonsterRef = useRef<
-		((monster: BestiaryMonster) => void) | null
-	>(null);
 	const pendingSyncSelectionRef = useRef<MonsterReference | null>(null);
 	const hasLoadedInitialMonstersRef = useRef(false);
 
@@ -37,7 +34,6 @@ export function useBestiaryBrowserState() {
 		setReloadToken,
 		listRef,
 		aiDraftResponseRef,
-		openImagePromptForMonsterRef,
 		pendingSyncSelectionRef,
 		hasLoadedInitialMonstersRef,
 	};

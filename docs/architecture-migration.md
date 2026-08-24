@@ -944,6 +944,8 @@ Next:
 - Phase 274 preserves API spread order, translation output, helper signatures, source-selection/favorite transport routing, and no public widget entry expansion. The full suite passes 547/547 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 275 by moving Bestiary sync-event and initial monster-reference normalization to their private lifecycle owners. `BestiaryBrowser.tsx` retains UI orchestration.
 - Phase 275 preserves memoized identity by raw input, selection/scroll plan inputs, sync effect dependency, and no public widget entry expansion. The full suite passes 548/548 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 276 by moving Bestiary assistant image-prompt registration and dispatch into private `widgets/bestiary-browser/ui/useBestiaryImagePromptBridge.ts`. `BestiaryBrowser.tsx` retains UI orchestration.
+- Phase 276 preserves ref-held action replacement, nullable handler support, selected-monster dispatch, workflow callback routing, and no public widget entry expansion. The full suite passes 549/549 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

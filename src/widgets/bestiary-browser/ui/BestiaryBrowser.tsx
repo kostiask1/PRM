@@ -20,6 +20,7 @@ import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionS
 import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";
 import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";
 import { useBestiaryBrowserState } from "./useBestiaryBrowserState.ts";
+import { useBestiaryImagePromptBridge } from "./useBestiaryImagePromptBridge.ts";
 import {
 	bestiaryBrowserApi,
 	getDiffResourceState,
@@ -87,7 +88,6 @@ export default function BestiaryBrowser({
 		legendaryGroups,
 		listRef,
 		loading,
-		openImagePromptForMonsterRef,
 		pendingSyncSelectionRef,
 		reloadToken,
 		setAllMonsters,
@@ -98,6 +98,8 @@ export default function BestiaryBrowser({
 		setSources,
 		sources,
 	} = useBestiaryBrowserState();
+	const { onOpenImagePrompt, onRegisterImagePromptAction } =
+		useBestiaryImagePromptBridge();
 
 	const {
 		embeddedScrolledMonsterRef,
@@ -236,9 +238,7 @@ export default function BestiaryBrowser({
 		currentLanguage,
 		customMonsters,
 		onCustomBestiaryUpdate: handleCustomBestiaryUpdate,
-		onOpenImagePrompt: (monster) => {
-			openImagePromptForMonsterRef.current?.(monster);
-		},
+		onOpenImagePrompt,
 		onPushCustomUndoSnapshot: pushCustomUndoSnapshot,
 		showMessage,
 	});
@@ -301,9 +301,7 @@ export default function BestiaryBrowser({
 				onImport={handleImportCustomMonsters}
 				onMonsterAiAction={openMonsterAiAction}
 				onRedo={handleRedo}
-				onRegisterImagePromptAction={(handler) => {
-					openImagePromptForMonsterRef.current = handler;
-				}}
+				onRegisterImagePromptAction={onRegisterImagePromptAction}
 				onSelectMonster={onSelectMonster}
 				onToggleFavorite={handleToggleFavorite}
 				onUndo={handleUndo}

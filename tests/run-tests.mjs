@@ -11076,6 +11076,67 @@ await run(
 );
 
 await run(
+	"Phase 276 isolates the Bestiary image-prompt bridge in a private UI hook",
+	async () => {
+		const [browserSource, stateSource, bridgeSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryBrowserState.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryImagePromptBridge.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiaryImagePromptBridge } from "./useBestiaryImagePromptBridge.ts";',
+				"} = useBestiaryBrowserState();",
+				"useBestiaryImagePromptBridge();",
+				"onOpenImagePrompt,",
+				"onRegisterImagePromptAction={onRegisterImagePromptAction}",
+			],
+			"Bestiary browser composes its private image-prompt bridge",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/openImagePromptForMonsterRef|onOpenImagePrompt: \(monster\) =>/,
+		);
+		assert.doesNotMatch(stateSource, /openImagePromptForMonsterRef/);
+		assertSourceTokensInOrder(
+			bridgeSource,
+			[
+				"export function useBestiaryImagePromptBridge()",
+				"const openImagePromptForMonsterRef = useRef<",
+				"onOpenImagePrompt: (monster: BestiaryMonster) => {",
+				"openImagePromptForMonsterRef.current?.(monster);",
+				"onRegisterImagePromptAction: (",
+				"openImagePromptForMonsterRef.current = handler;",
+			],
+			"Bestiary private image-prompt bridge registration and dispatch",
+		);
+		assert.doesNotMatch(
+			bridgeSource,
+			/useBestiaryBrowserRuntime|useBestiaryAiWorkflows|campaignApi|bestiaryApi|settingsApi|app\/model|shared\/model/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryImagePromptBridge/,
+		);
+	},
+);
+
+await run(
 	"Phase 275 moves Bestiary input normalization to lifecycle owners",
 	async () => {
 		const [browserSource, dataLoadingSource, lifecycleSource, widgetEntry, modelEntry, modelTypes] =
@@ -11401,7 +11462,7 @@ await run(
 				"canRedo={redoStack.length > 0}",
 				"canUndo={undoStack.length > 0}",
 				"onImport={handleImportCustomMonsters}",
-				"onRegisterImagePromptAction={(handler) => {",
+				"onRegisterImagePromptAction={onRegisterImagePromptAction}",
 				"setSelectedMonster={selectMonster}",
 			],
 			"Bestiary browser composes its private content host",
