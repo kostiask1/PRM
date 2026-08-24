@@ -31,17 +31,9 @@ import {
 } from "../../../features/ai/index.js";
 import { matchesMonsterSearch } from "../../../entities/bestiary/index.js";
 import { objectMatchesSearch } from "../../../shared/lib/index.js";
-import {
-	getCampaignIgnoreSourcesList,
-	getIgnoreSourcesListFromSelectedSources,
-	getSelectedSourcesFromIgnoreList,
-	normalizeSourceCode,
-} from "../../../entities/reference/index.js";
-import { formatSourceLabel } from "../../../entities/reference/index.js";
 import "../../../assets/components/Bestiary.css";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	executeBestiarySelectedSourcesSave,
 	filterBestiaryMonsters,
 	getBestiaryInitialSelectionScrollPlan,
 	getBestiarySelectionPlan,
@@ -64,6 +56,7 @@ import { useBestiaryDataLoading } from "../model/useBestiaryDataLoading.ts";
 import { useBestiaryAiWorkflows } from "../model/useBestiaryAiWorkflows.ts";
 import { useBestiaryCustomMonsterHistory } from "../model/useBestiaryCustomMonsterHistory.ts";
 import { useBestiaryCustomMonsterEditing } from "../model/useBestiaryCustomMonsterEditing.ts";
+import { useBestiarySourceSelection } from "./useBestiarySourceSelection.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -77,10 +70,6 @@ function getHistoryChangeSummary(entry: AiHistoryEntry | null | undefined): stri
 
 function getDiffResourceState(resource: AiHistoryResource): string {
 	return getLocalizedDiffResourceState(resource, translate);
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-	return error instanceof Error && error.message ? error.message : fallback;
 }
 
 export interface BestiaryBrowserProps {
@@ -142,7 +131,6 @@ export default function BestiaryBrowser({
 		[initialSelectedName, initialSelectedSource],
 	);
 	const [sources, setSources] = useState<string[]>([]);
-	const [sourceFilter, setSourceFilter] = useState("all");
 	const [allMonsters, setAllMonsters] = useState<BestiaryMonster[]>([]);
 	const [monsters, setMonsters] = useState<BestiaryMonster[]>([]);
 	const [search, setSearch] = useState(initialSearch);
@@ -167,40 +155,6 @@ export default function BestiaryBrowser({
 	const embeddedScrolledMonsterRef = useRef("");
 	const hasLoadedInitialMonstersRef = useRef(false);
 
-	const sourceOptions = useMemo(
-		() => sources.filter((source) => !isCustomSource(source)),
-		[sources],
-	);
-	const filterSourceOptions = useMemo(
-		() => ["CUSTOM", ...sourceOptions],
-		[sourceOptions],
-	);
-	const ignoreSourcesList = useMemo(
-		() =>
-			getCampaignIgnoreSourcesList(activeCampaign, globalIgnoreSourcesList),
-		[activeCampaign, globalIgnoreSourcesList],
-	);
-	const selectedSources = useMemo(
-		() =>
-			getSelectedSourcesFromIgnoreList(
-				filterSourceOptions,
-				ignoreSourcesList,
-			),
-		[filterSourceOptions, ignoreSourcesList],
-	);
-	const sourceFilterLabel = useMemo(() => {
-		if (sourceFilter === "all") return lang.t("All sources");
-		if (isCustomSource(sourceFilter)) return lang.t("Custom creatures");
-		return formatSourceLabel(sourceFilter.replace(/^bestiary-/i, ""));
-	}, [sourceFilter]);
-
-	useEffect(() => {
-		if (sourceFilter === "all") return;
-		const selectedSourceSet = new Set(selectedSources.map(normalizeSourceCode));
-		if (!selectedSourceSet.has(normalizeSourceCode(sourceFilter))) {
-			setSourceFilter("all");
-		}
-	}, [selectedSources, sourceFilter]);
 
 	useEffect(() => {
 		selectedMonsterRef.current = selectedMonster;
@@ -278,38 +232,28 @@ export default function BestiaryBrowser({
 		[onActiveMonsterChange],
 	);
 
-	const saveSelectedSources = useCallback(
-		async (nextSelectedSources: string[]) => {
-			await executeBestiarySelectedSourcesSave({
-				filterSourceOptions,
-				nextSelectedSources,
-				activeCampaignSlug,
-				getIgnoreSourcesList: getIgnoreSourcesListFromSelectedSources,
-				onEnableAutoSelection: () => {
-					shouldAutoSelectMonsterRef.current = true;
-				},
-				updateCampaign: api.updateCampaign,
-				listCampaigns: api.listCampaigns,
-				onCampaigns: replaceCampaigns,
-				updateSettings: api.updateSettings,
-				onUiIgnoreSources: setGlobalIgnoreSourcesList,
-				onLogError: (error) =>
-					console.error("Failed to save ignored sources", error),
-				onError: (error) =>
-					showMessage({
-						title: lang.t("Error"),
-						message: getErrorMessage(error, lang.t("Unknown error")),
-					}),
-			});
-		},
-		[
-			activeCampaignSlug,
-			filterSourceOptions,
-			replaceCampaigns,
-			showMessage,
-			setGlobalIgnoreSourcesList,
-		],
-	);
+	const {
+		filterSourceOptions,
+		selectedSources,
+		saveSelectedSources,
+		sourceFilter,
+		sourceFilterLabel,
+		sourceOptions,
+		setSourceFilter,
+	} = useBestiarySourceSelection({
+		activeCampaign,
+		activeCampaignSlug,
+		globalIgnoreSourcesList,
+		listCampaigns: api.listCampaigns,
+		onCampaigns: replaceCampaigns,
+		onUiIgnoreSources: setGlobalIgnoreSourcesList,
+		showError: (message) => showMessage({ title: lang.t("Error"), message }),
+		shouldAutoSelectMonsterRef,
+		sources,
+		translate,
+		updateCampaign: api.updateCampaign,
+		updateSettings: api.updateSettings,
+	});
 
 	useBestiaryDataLoading({
 		hasLoadedInitialMonstersRef,

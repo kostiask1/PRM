@@ -11021,6 +11021,68 @@ await run(
 );
 
 await run(
+	"Phase 263 isolates Bestiary source-selection policy in a private UI hook",
+	async () => {
+		const [browserSource, selectionSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiarySourceSelection.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiarySourceSelection } from "./useBestiarySourceSelection.ts";',
+				"const {",
+				"filterSourceOptions,",
+				"selectedSources,",
+				"saveSelectedSources,",
+				"sourceFilter,",
+				"setSourceFilter,",
+				"} = useBestiarySourceSelection({",
+			],
+			"Bestiary browser composes its private source-selection hook",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/executeBestiarySelectedSourcesSave\(|getCampaignIgnoreSourcesList\(|getSelectedSourcesFromIgnoreList\(|function getErrorMessage/,
+		);
+		assertSourceTokensInOrder(
+			selectionSource,
+			[
+				"import {",
+				"useCallback,",
+				"useEffect,",
+				"useMemo,",
+				"useState,",
+				"type MutableRefObject,",
+				"export interface UseBestiarySourceSelectionOptions",
+				"export function useBestiarySourceSelection",
+				"executeBestiarySelectedSourcesSave({",
+			],
+			"Bestiary private source-selection hook",
+		);
+		assert.doesNotMatch(
+			selectionSource,
+			/useBestiaryBrowserRuntime|bestiaryApi|aiApi|app\/model|shared\/model|BestiaryBrowserProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiarySourceSelection/,
+		);
+	},
+);
+
+await run(
 	"Phase 262 isolates Bestiary mobile selection coordination in a private UI hook",
 	async () => {
 		const [contentSource, selectionSource, widgetEntry, modelEntry, modelTypes] =
@@ -49479,6 +49541,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/model/useBestiaryCustomMonsterEditing.ts",
 		"utf8",
 	);
+	const bestiarySourceSelectionSource = await fs.readFile(
+		"src/widgets/bestiary-browser/ui/useBestiarySourceSelection.ts",
+		"utf8",
+	);
 	const bestiaryContentSource = await fs.readFile(
 		"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
 		"utf8",
@@ -49563,13 +49629,16 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiaryDataLoadingSource, /getBestiarySyncEventPlan\(syncEvent\)/);
 	assert.match(bestiaryDataLoadingSource, /executeBestiarySyncEventPlan\(\{/);
 	assert.match(bestiaryCustomEditingSource, /executeBestiaryFieldEditSave\(\{/);
-	assert.match(bestiarySource, /executeBestiarySelectedSourcesSave\(\{/);
+	assert.match(
+		bestiarySourceSelectionSource,
+		/executeBestiarySelectedSourcesSave\(\{/,
+	);
 	assert.match(bestiarySyncSource, /function applyBestiarySyncPendingSelection/);
 	assert.match(bestiarySyncSource, /event\.monsterName/);
 	assert.match(bestiarySyncSource, /event\.monsterSource \|\| "CUSTOM"/);
 	assert.match(bestiarySource, /shouldAutoSelectMonsterRef\.current = false/);
 	assert.match(bestiaryModelSource, /normalizeMonsterName/);
-	assert.match(bestiarySource, /ignoreSourcesList/);
+	assert.match(bestiarySourceSelectionSource, /ignoreSourcesList/);
 	assert.match(bestiarySource, /selectedSources/);
 	assert.match(bestiarySelectionSource, /function findReferencedMonster/);
 	assert.match(bestiarySource, /selectedMonsterRef\.current = plan\.monster/);
