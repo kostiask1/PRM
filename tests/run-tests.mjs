@@ -11077,6 +11077,44 @@ await run(
 );
 
 await run(
+	"Phase 287 isolates Campaign graph Flow interactions in a private page hook",
+	async () => {
+		const [graphSource, interactionsSource, pageEntry, pageTypes] = await Promise.all([
+			fs.readFile("src/pages/campaign/ui/components/CampaignNotesGraph.tsx", "utf8"),
+			fs.readFile("src/pages/campaign/ui/components/useCampaignGraphFlowInteractions.ts", "utf8"),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+		]);
+
+		assertSourceTokensInOrder(graphSource, [
+			'import { useCampaignGraphFlowInteractions } from "./useCampaignGraphFlowInteractions.ts";',
+			"const { handleNodeDragStop, handleFlowNodesChange } =",
+			"useCampaignGraphFlowInteractions({",
+			"onFlowNodesChange,",
+			"hasManualPositionsRef,",
+		]);
+		assert.doesNotMatch(
+			graphSource,
+			/resolveCampaignGraphNodeCollision|const selectionChanges = changes\.filter/,
+		);
+		assertSourceTokensInOrder(interactionsSource, [
+			"export function useCampaignGraphFlowInteractions",
+			"const handleNodeDragStop = useCallback",
+			"resolveCampaignGraphNodeCollision(",
+			"const handleFlowNodesChange = useCallback",
+			"const selectionChanges = changes.filter(",
+			"onFlowNodesChange(changes);",
+			"return { handleNodeDragStop, handleFlowNodesChange };",
+		]);
+		assert.doesNotMatch(
+			interactionsSource,
+			/useCampaignPageRuntime|buildCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(`${pageEntry}\n${pageTypes}`, /useCampaignGraphFlowInteractions/);
+	},
+);
+
+await run(
 	"Phase 286 isolates Campaign graph Flow-node projection in a private page hook",
 	async () => {
 		const [graphSource, nodesSource, pageEntry, pageTypes] = await Promise.all([

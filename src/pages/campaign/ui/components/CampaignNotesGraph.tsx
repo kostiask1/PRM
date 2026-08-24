@@ -8,8 +8,6 @@ import {
 } from "react";
 import {
 	useNodesState,
-	type NodeChange,
-	type OnNodeDrag,
 	type ReactFlowInstance,
 } from "@xyflow/react";
 
@@ -22,7 +20,6 @@ import {
 	buildCampaignGraph,
 	normalizeGraphName,
 	layoutCampaignGraph,
-	resolveCampaignGraphNodeCollision,
 } from "../../graph.js";
 import {
 	DEFAULT_CAMPAIGN_GRAPH_FILTERS,
@@ -73,6 +70,7 @@ import {
 } from "./campaignGraphControllerHelpers.ts";
 import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";
 import { useCampaignGraphFlowEdges } from "./useCampaignGraphFlowEdges.ts";
+import { useCampaignGraphFlowInteractions } from "./useCampaignGraphFlowInteractions.ts";
 import { useCampaignGraphFlowNodeProjection } from "./useCampaignGraphFlowNodeProjection.ts";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
@@ -390,47 +388,13 @@ export default function CampaignNotesGraph({
 		visibleGraph.nodes,
 	]);
 
-	const handleNodeDragStop = useCallback<OnNodeDrag<CampaignFlowNode>>(
-		(_event, draggedNode) => {
-			hasManualPositionsRef.current = true;
-			setFlowNodes((currentNodes) => {
-				const position = resolveCampaignGraphNodeCollision(
-					currentNodes,
-					draggedNode.id,
-				);
-				return currentNodes.map((node) =>
-					node.id === draggedNode.id ? { ...node, position } : node,
-				);
-			});
-		},
-		[setFlowNodes],
-	);
-
-	const handleFlowNodesChange = useCallback(
-		(changes: NodeChange<CampaignFlowNode>[]) => {
-			const selectionChanges = changes.filter(
-				(change) => change.type === "select",
-			);
-			const selectedChange = selectionChanges.find(
-				(change) => change.selected,
-			);
-			if (selectedChange) {
-				setSelectedNodeId((currentNodeId) =>
-					currentNodeId === selectedChange.id
-						? currentNodeId
-						: selectedChange.id,
-				);
-			} else if (selectionChanges.length > 0) {
-				setSelectedNodeId(null);
-			}
-
-			if (changes.some((change) => change.type === "position")) {
-				hasManualPositionsRef.current = true;
-			}
-			onFlowNodesChange(changes);
-		},
-		[onFlowNodesChange],
-	);
+	const { handleNodeDragStop, handleFlowNodesChange } =
+		useCampaignGraphFlowInteractions({
+			setFlowNodes,
+			setSelectedNodeId,
+			onFlowNodesChange,
+			hasManualPositionsRef,
+		});
 
 	const toggleFilter = (filterId: CampaignGraphFilterId) => {
 		shouldRelayoutForFilterRef.current = true;

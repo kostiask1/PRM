@@ -966,6 +966,8 @@ Next:
 - Phase 285 preserves position-to-handle routing, visibility, edge relation/stroke/opacity/marker/label presentation, and no page public-entry expansion. The full suite passes 558/558 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 286 by moving Campaign Graph Flow-node synchronization and projection into private `pages/campaign/ui/components/useCampaignGraphFlowNodeProjection.ts`. `CampaignNotesGraph.tsx` retains Flow-state initialization, graph inputs, and controller commands.
 - Phase 286 preserves campaign-position continuity, fresh-layout projection policy, current-node reuse, presentation data, collision resolution, and no page public-entry expansion. The full suite passes 559/559 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 287 by moving Campaign Graph Flow drag/selection event coordination into private `pages/campaign/ui/components/useCampaignGraphFlowInteractions.ts`. `CampaignNotesGraph.tsx` retains Flow state, graph inputs, and canvas composition.
+- Phase 287 preserves drag collision correction, selected-node synchronization, manual-position tracking, callback ordering, and no page public-entry expansion. The full suite passes 560/560 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
