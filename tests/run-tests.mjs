@@ -1746,9 +1746,13 @@ function getRequiredSourceMatch(source, pattern, message = String(pattern)) {
 }
 
 async function getEncounterPageCompositionSource() {
-	const [controllerSource, contentSource] = await Promise.all([
+	const [controllerSource, workflowsSource, contentSource] = await Promise.all([
 		fs.readFile(
 			"src/pages/encounter/model/useEncounterPageController.ts",
+			"utf8",
+		),
+		fs.readFile(
+			"src/pages/encounter/model/useEncounterMonsterAiWorkflows.ts",
 			"utf8",
 		),
 		fs.readFile(
@@ -1756,7 +1760,7 @@ async function getEncounterPageCompositionSource() {
 			"utf8",
 		),
 	]);
-	return `${controllerSource}\n${contentSource}`;
+	return `${controllerSource}\n${workflowsSource}\n${contentSource}`;
 }
 
 async function getEncounterPrivateComponentSources(componentName) {
@@ -7068,7 +7072,7 @@ await run("Phase 209 isolates Encounter monster field editing in page model", as
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterFieldEditing/);
 	assertSourceTokensInOrder(page, [
 		"const monsterFieldEditing = useEncounterMonsterFieldEditing({",
-		"onUpdateMonster: view.updateMonsterFromAi,",
+		"onUpdateMonster: options.view.updateMonsterFromAi,",
 		"onFieldEdit={monsterFieldEditing.openAction}",
 		"fieldActionMonster={monsterFieldEditing.actionMonster}",
 		"onFieldChoose={monsterFieldEditing.chooseAction}",
@@ -7130,8 +7134,8 @@ await run("Phase 211 isolates Encounter monster AI action transitions in page mo
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiAction/);
 	assertSourceTokensInOrder(page, [
 		"const monsterAiAction = useEncounterMonsterAiAction({",
-		"isEditing: aiEditor.isEditing,",
-		"onStartEditing: aiEditor.start,",
+		"isEditing: options.aiEditor.isEditing,",
+		"onStartEditing: options.aiEditor.start,",
 		"targetInstanceId: monsterAiAction.targetInstanceId,",
 		"onAiAction={monsterAiAction.openAction}",
 		"aiActionMonster={monsterAiAction.actionMonster}",
@@ -7184,10 +7188,10 @@ await run("Phase 213 isolates Encounter monster AI draft lifecycle in page model
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiDraft/);
 	assertSourceTokensInOrder(page, [
 		"const aiDraft = useEncounterMonsterAiDraft({",
-		'campaignSlug: campaign?.slug || "",',
+		"campaignSlug: options.campaignSlug,",
 		"targetInstanceId: monsterAiAction.targetInstanceId,",
-		"onLocalUpdate: view.handleAiUpdate,",
-		"onMonsterUpdate: view.updateMonsterFromAi,",
+		"onLocalUpdate: options.view.handleAiUpdate,",
+		"onMonsterUpdate: options.view.updateMonsterFromAi,",
 		"buildDiffResources(aiDraft.entry,",
 		"onDraftMode: aiDraft.setMode,",
 		"onDraftEntry: aiDraft.setEntry,",
@@ -7232,11 +7236,13 @@ await run("Phase 214 isolates Encounter monster AI editor session state in page 
 	assertSourceTokensInOrder(page, [
 		"const aiEditor = useEncounterMonsterAiEditor();",
 		"aiEditingMonster: aiEditor.editingMonster,",
-		"isEditing: aiEditor.isEditing,",
-		"onStartEditing: aiEditor.start,",
-		"aiEditor.setIsEditing(true);",
-		"aiEditor.setError(\"\");",
-		"onSuccess: aiEditor.completeSuccess,",
+		"const monsterAiAction = useEncounterMonsterAiAction({",
+		"isEditing: options.aiEditor.isEditing,",
+		"onStartEditing: options.aiEditor.start,",
+		"const aiGeneration = useEncounterMonsterAiGeneration({",
+		"options.aiEditor.setIsEditing(true);",
+		"options.aiEditor.setError(\"\");",
+		"onSuccess: options.aiEditor.completeSuccess,",
 		"aiEditingMonster={aiEditor.editingMonster as BestiaryMonster | null}",
 		"onCancelEdit={aiEditor.close}",
 		"onInstructionsChange={aiEditor.setInstructions}",
@@ -7270,14 +7276,14 @@ await run("Phase 215 isolates Encounter monster AI generation lifecycle in page 
 	assert.doesNotMatch(`${entry}\n${types}`, /useEncounterMonsterAiGeneration/);
 	assertSourceTokensInOrder(page, [
 		"const aiGeneration = useEncounterMonsterAiGeneration({",
-		"controllerRef: aiEditControllerRef,",
+		"controllerRef: options.aiEditControllerRef,",
 		"targetInstanceId: monsterAiAction.targetInstanceId,",
-		"monster: aiEditor.editingMonster,",
+		"monster: options.aiEditor.editingMonster,",
 		"onDraftMode: aiDraft.setMode,",
 		"onDraftEntry: aiDraft.setEntry,",
-		"aiEditor.setIsEditing(true);",
-		"onSuccess: aiEditor.completeSuccess,",
-		"onComplete: () => aiEditor.setIsEditing(false),",
+		"options.aiEditor.setIsEditing(true);",
+		"onSuccess: options.aiEditor.completeSuccess,",
+		"onComplete: () => options.aiEditor.setIsEditing(false),",
 		"onCancelEditRequest={aiGeneration.cancel}",
 		"onSaveEdit={aiGeneration.save}",
 	], "Encounter raw monster-AI generation composition");
@@ -10226,9 +10232,8 @@ await run(
 				"const view = useEncounterView();",
 				"const playerCreation = useEncounterPlayerCreation({",
 				"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
-				"const monsterFieldEditing = useEncounterMonsterFieldEditing({",
-				"const aiDraft = useEncounterMonsterAiDraft({",
-				"const aiGeneration = useEncounterMonsterAiGeneration({",
+				"const displaySettings = useEncounterDisplaySettings({ patchUiSettings });",
+				"} = useEncounterMonsterAiWorkflows({",
 				"const monsterInteractions = useEncounterMonsterInteractions({",
 				"renderContext: getEncounterRenderContext(view, campaign, sessionId),",
 			],
@@ -10260,6 +10265,69 @@ await run(
 		assert.doesNotMatch(
 			`${pageEntry}\n${pageTypes}`,
 			/useEncounterPageController|EncounterPageContent/,
+		);
+	},
+);
+
+await run(
+	"Phase 233 isolates Encounter AI workflow coordination in the private page model",
+	async () => {
+		const [controllerSource, workflowsSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/encounter/model/useEncounterPageController.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/encounter/model/useEncounterMonsterAiWorkflows.ts",
+					"utf8",
+				),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			controllerSource,
+			/import \{ useEncounterMonsterAiWorkflows \} from "\.\/useEncounterMonsterAiWorkflows\.ts";/,
+		);
+		assert.doesNotMatch(
+			controllerSource,
+			/useEncounterMonsterAiAction|useEncounterMonsterAiDraft|useEncounterMonsterAiGeneration|useEncounterMonsterFieldEditing|buildDiffResources|campaignApi|bestiaryApi|aiApi|settingsApi/,
+		);
+		assertSourceTokensInOrder(
+			controllerSource,
+			[
+				"const aiEditor = useEncounterMonsterAiEditor();",
+				"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
+				"useEncounterAiModelLoading({",
+				"const displaySettings = useEncounterDisplaySettings({ patchUiSettings });",
+				"const {",
+				"} = useEncounterMonsterAiWorkflows({",
+				"const monsterInteractions = useEncounterMonsterInteractions({",
+			],
+			"Encounter controller workflow delegation order",
+		);
+		assertSourceTokensInOrder(
+			workflowsSource,
+			[
+				"export function useEncounterMonsterAiWorkflows(options: Options) {",
+				"const monsterAiAction = useEncounterMonsterAiAction({",
+				"const monsterFieldEditing = useEncounterMonsterFieldEditing({",
+				"const aiDraft = useEncounterMonsterAiDraft({",
+				"const aiDraftDiffResources = useMemo(",
+				"const aiGeneration = useEncounterMonsterAiGeneration({",
+				"return {",
+				"monsterFieldEditing,",
+			],
+			"Encounter private AI workflow composition",
+		);
+		assert.doesNotMatch(
+			workflowsSource,
+			/useEncounterView|useEncounterPageRuntime|app\/model|shared\/model|<EncounterHeader|<EncounterBestiaryOverlay/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/useEncounterMonsterAiWorkflows/,
 		);
 	},
 );

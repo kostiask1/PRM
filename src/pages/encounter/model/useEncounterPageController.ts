@@ -3,13 +3,6 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { campaignApi } from "../../../entities/campaign/index.js";
-import { bestiaryApi } from "../../../entities/bestiary/index.js";
-import {
-	aiApi,
-	buildDiffResources,
-} from "../../../features/ai/index.js";
-import { settingsApi } from "../../../features/settings/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import type {
 	CampaignEntityRecord,
@@ -33,17 +26,13 @@ import { useEncounterDisplaySettings } from "./useEncounterDisplaySettings.ts";
 import { useEncounterGridFocus } from "./useEncounterGridFocus.ts";
 import { useEncounterHeaderDismissal } from "./useEncounterHeaderDismissal.ts";
 import { useEncounterHpEditing } from "./useEncounterHpEditing.ts";
-import { useEncounterMonsterAiAction } from "./useEncounterMonsterAiAction.ts";
-import { useEncounterMonsterAiDraft } from "./useEncounterMonsterAiDraft.ts";
 import { useEncounterMonsterAiEditor } from "./useEncounterMonsterAiEditor.ts";
-import { useEncounterMonsterAiGeneration } from "./useEncounterMonsterAiGeneration.ts";
-import { useEncounterMonsterFieldEditing } from "./useEncounterMonsterFieldEditing.ts";
 import { useEncounterMonsterInteractions } from "./useEncounterMonsterInteractions.ts";
+import { useEncounterMonsterAiWorkflows } from "./useEncounterMonsterAiWorkflows.ts";
 import { useEncounterPlayerCreation } from "./useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "./useEncounterRequestCleanup.ts";
 import useEncounterView from "./useEncounterView.ts";
 
-const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 const EMPTY_ENCOUNTER_PARTICIPANTS: EncounterViewParticipant[] = [];
 const EMPTY_CAMPAIGN_ENTITIES: CampaignEntityRecord[] = [];
 
@@ -155,63 +144,21 @@ export function useEncounterPageController() {
 		onError: aiEditor.setError,
 	});
 	const displaySettings = useEncounterDisplaySettings({ patchUiSettings });
-	const monsterAiAction = useEncounterMonsterAiAction({
-		isEditing: aiEditor.isEditing,
-		onStartEditing: aiEditor.start,
-	});
-	const monsterFieldEditing = useEncounterMonsterFieldEditing({
-		api,
-		creatureLabel: lang.t("Creature"),
-		duplicateNameMessage: lang.t("Custom creature with this name already exists."),
-		errorTitle: lang.t("Error"),
-		unknownError: lang.t("Unknown error"),
-		refreshEntities,
-		showMessage,
-		onUpdateMonster: view.updateMonsterFromAi,
-	});
-	const aiDraft = useEncounterMonsterAiDraft({
-		api,
-		campaignSlug: campaign?.slug || "",
-		targetInstanceId: monsterAiAction.targetInstanceId,
-		onLocalUpdate: view.handleAiUpdate,
-		onMonsterUpdate: view.updateMonsterFromAi,
-		onError: (error) => showMessage({
-			title: lang.t("AI history error"),
-			message: error instanceof Error ? error.message : lang.t("Unknown error"),
-		}),
-	});
-	const aiDraftDiffResources = useMemo(
-		() =>
-			buildDiffResources(aiDraft.entry, {
-				added: lang.t("Added"),
-				deleted: lang.t("Deleted"),
-				modified: lang.t("Modified"),
-			}),
-		[aiDraft.entry],
-	);
-	const aiGeneration = useEncounterMonsterAiGeneration({
-		api,
-		controllerRef: aiEditControllerRef,
+	const {
+		aiDraft,
+		aiDraftDiffResources,
+		aiGeneration,
+		monsterAiAction,
+		monsterFieldEditing,
+	} = useEncounterMonsterAiWorkflows({
+		aiEditor,
+		aiEditControllerRef,
 		campaignSlug: campaign?.slug || "",
 		sessionId: sessionId || "",
-		encounterId: view.encounter?.id,
 		language: currentLanguage,
-		targetInstanceId: monsterAiAction.targetInstanceId,
-		monster: aiEditor.editingMonster,
-		mode: aiEditor.mode,
-		instructions: aiEditor.instructions,
-		selectedModel: aiEditor.selectedModel,
-		translate: lang.t,
-		onDraftMode: aiDraft.setMode,
-		onDraftEntry: aiDraft.setEntry,
-		onMonsterUpdate: view.updateMonsterFromAi,
-		onError: aiEditor.setError,
-		onStart: () => {
-			aiEditor.setIsEditing(true);
-			aiEditor.setError("");
-		},
-		onSuccess: aiEditor.completeSuccess,
-		onComplete: () => aiEditor.setIsEditing(false),
+		view,
+		refreshEntities,
+		showMessage,
 	});
 	const monsterInteractions = useEncounterMonsterInteractions({
 		selectedInstanceId: view.selectedInstance?.instanceId,
