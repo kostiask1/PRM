@@ -50,6 +50,7 @@ import { useBestiarySearchControls } from "./useBestiarySearchControls.ts";
 import { useBestiaryMonsterList } from "./useBestiaryMonsterList.ts";
 import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionState.ts";
 import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";
+import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -302,17 +303,10 @@ export default function BestiaryBrowser({
 		sourceFilter,
 	});
 
-	const handleToggleFavorite = async (monster: BestiaryMonster) => {
-		try {
-			const newFavs = await api.toggleBestiaryFavorite(
-				monster.name,
-				String(monster.source ?? ""),
-			);
-			setFavorites(newFavs ?? []);
-		} catch (err) {
-			console.error("Failed to toggle favorite", err);
-		}
-	};
+	const { handleToggleFavorite } = useBestiaryFavoriteToggle({
+		setFavorites,
+		toggleFavorite: api.toggleBestiaryFavorite,
+	});
 
 	useBestiaryMonsterSelectionLifecycle({
 		allMonsters,

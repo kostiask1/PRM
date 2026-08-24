@@ -11021,6 +11021,61 @@ await run(
 );
 
 await run(
+	"Phase 268 isolates Bestiary favorite toggling in a private UI hook",
+	async () => {
+		const [browserSource, favoriteSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryFavoriteToggle.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";',
+				"const { handleToggleFavorite } = useBestiaryFavoriteToggle({",
+				"setFavorites,",
+				"toggleFavorite: api.toggleBestiaryFavorite,",
+			],
+			"Bestiary browser composes its private favorite-toggle hook",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/const handleToggleFavorite = async|api\.toggleBestiaryFavorite\(\s*monster\.name/,
+		);
+		assertSourceTokensInOrder(
+			favoriteSource,
+			[
+				"export interface UseBestiaryFavoriteToggleOptions",
+				"export function useBestiaryFavoriteToggle",
+				"const handleToggleFavorite = async (monster: BestiaryMonster) => {",
+				"String(monster.source ?? \"\")",
+				"setFavorites(newFavs ?? []);",
+				'console.error("Failed to toggle favorite", err);',
+			],
+			"Bestiary private favorite-toggle hook",
+		);
+		assert.doesNotMatch(
+			favoriteSource,
+			/useBestiaryBrowserRuntime|bestiaryApi|app\/model|shared\/model|BestiaryBrowserProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryFavoriteToggle/,
+		);
+	},
+);
+
+await run(
 	"Phase 267 isolates Bestiary selection lifecycle in a private UI hook",
 	async () => {
 		const [browserSource, lifecycleSource, widgetEntry, modelEntry, modelTypes] =
