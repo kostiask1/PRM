@@ -17,11 +17,9 @@ import { bestiaryApi } from "../../../entities/bestiary/index.js";
 import {
 	aiApi,
 	aiGenerationLifecycleReducer,
-	buildAiGeneratedResultPlan,
 	buildAiTokenEstimate,
 	buildAiGenerationRequest,
 	createAiHistoryWorkflow,
-	executeAiGeneratedResultPlan,
 	executeAiGeneration,
 	executeAiHistoryRetry,
 	formatAiGenerationFailureAlert,
@@ -31,7 +29,6 @@ import {
 	isAiGenerationPending,
 	isFailedHistoryEntry,
 	useAiImagePromptData,
-	type AiGenerationResult,
 	type AiHistoryEntry,
 	type AiHistoryResource,
 	type AiContextSession,
@@ -54,6 +51,7 @@ import { useAiAssistantHistoryController } from "../model/useAiAssistantHistoryC
 import { useAiImagePromptController } from "../model/useAiImagePromptController.ts";
 import { useAiImagePromptState } from "../model/useAiImagePromptState.ts";
 import { useAiAssistantModelAccess } from "../model/useAiAssistantModelAccess.ts";
+import { useAiAssistantGeneratedResult } from "../model/useAiAssistantGeneratedResult.ts";
 import { useAiAssistantUpdatedData } from "../model/useAiAssistantUpdatedData.ts";
 import type { ImagePromptTarget } from "../model/imagePromptPicker.ts";
 import { lang } from "../../../shared/lib/index.js";
@@ -172,13 +170,6 @@ interface GenerateOptions {
 	imageTarget?: ImagePromptTarget | null;
 	imagePromptBasePromptOverride?: string;
 	userInstructionsOverride?: string | null;
-}
-
-interface GeneratedAiDataInput {
-	data: AiGenerationResult | null;
-	requestType: string | null;
-	shouldParseResponse: boolean;
-	clearPromptOnApplied?: boolean;
 }
 
 const optional = <T,>(value: T | null | undefined): T | undefined =>
@@ -432,55 +423,27 @@ export default function AiAssistantPanel({
 		labels: historyLabels,
 	});
 
-	const handleGeneratedAiData = ({
-		data,
-		requestType,
-		shouldParseResponse,
-		clearPromptOnApplied = true,
-	}: GeneratedAiDataInput): void => {
-		const plan = buildAiGeneratedResultPlan({
-			data,
-			requestType,
-			shouldParseResponse,
-			isBestiary,
-			isCampaign,
-			isEncounter,
-			clearPromptOnApplied,
-		});
-		executeAiGeneratedResultPlan({
-			plan,
-			onHistoryEntry: upsertResponseHistoryEntry,
-			onShowPrompt: showGeneratedPrompt,
-			onNotification: (notification) => {
-				setNotification(
-					notification === "draft-created"
-						? lang.t("AI draft created.")
-						: notification === "custom-creatures-saved"
-							? lang.t("Custom creatures saved.")
-							: lang.t("AI changes applied successfully!"),
-				);
-			},
-			onApplyUpdated: (updatedPlan) => {
-				applyUpdatedAiData(updatedPlan.updated, {
-					entityTypes: updatedPlan.entityTypes,
-					generated: updatedPlan.generated,
-					historyEntry: updatedPlan.historyEntry,
-				});
-			},
-			onCampaignReload: requestCampaignReload,
-			onClearPrompt: () => setUserInstructions(""),
-			onRefreshEntities: refreshEntities,
-			onCloseAuxiliaryDialogs: () => {
-				setIsContextModalOpen(false);
-				setIsImagePromptPickerOpen(false);
-			},
-			onCloseAssistantDialogs: () => {
-				setIsOpen(false);
-				setIsContextModalOpen(false);
-				setIsImagePromptPickerOpen(false);
-			},
-		});
-	};
+	const { handleGeneratedAiData } = useAiAssistantGeneratedResult({
+		applyUpdatedData: applyUpdatedAiData,
+		isBestiary,
+		isCampaign,
+		isEncounter,
+		onClearPrompt: () => setUserInstructions(""),
+		onCloseAssistantDialogs: () => {
+			setIsOpen(false);
+			setIsContextModalOpen(false);
+			setIsImagePromptPickerOpen(false);
+		},
+		onCloseAuxiliaryDialogs: () => {
+			setIsContextModalOpen(false);
+			setIsImagePromptPickerOpen(false);
+		},
+		onNotification: setNotification,
+		onRequestCampaignReload: requestCampaignReload,
+		onRefreshEntities: refreshEntities,
+		showGeneratedPrompt,
+		upsertResponseHistoryEntry,
+	});
 
 	const generate = async (
 		type: string | null = null,

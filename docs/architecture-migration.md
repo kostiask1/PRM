@@ -878,6 +878,8 @@ Next:
 - Phase 241 preserves panel-or-picker load eligibility, default-model selection, save refresh/error/finally order, and localized messages. The full suite passes 514/514 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 242 by moving AI Assistant generated-data application and AI sync-event runtime adaptation into private `widgets/ai-assistant/model/useAiAssistantUpdatedData.ts`. `AiAssistantPanel.tsx` retains runtime, generation/history/context/image-prompt, and UI composition ownership.
 - Phase 242 preserves campaign/session/encounter/bestiary update-plan execution order, route-derived sync metadata, reload/entity refresh callbacks, and localized messages. The full suite passes 515/515 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 243 by moving AI Assistant generated-result processing into private `widgets/ai-assistant/model/useAiAssistantGeneratedResult.ts`. `AiAssistantPanel.tsx` retains runtime, generation/history/context/image-prompt, and UI composition ownership.
+- Phase 243 preserves generated-result plan execution, history/prompt/notification sequencing, update/reload callbacks, dialog-close behavior, and localized messages. The full suite passes 516/516 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

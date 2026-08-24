@@ -10574,8 +10574,6 @@ await run(
 				"fallbackSessionFileName: optional(initialRoute.session),",
 				"sessionFileName: initialRoute.session,",
 				"applyUpdatedData: applyUpdatedAiData,",
-				"onApplyUpdated: (updatedPlan) => {",
-				"applyUpdatedAiData(updatedPlan.updated, {",
 			],
 			"AI Assistant updated-data delegation",
 		);
@@ -10607,6 +10605,84 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useAiAssistantUpdatedData/,
+		);
+	},
+);
+
+await run(
+	"Phase 243 isolates AI Assistant generated-result processing in the private widget model",
+	async () => {
+		const [panelSource, generatedResultSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/ai-assistant/model/useAiAssistantGeneratedResult.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			panelSource,
+			/import \{ useAiAssistantGeneratedResult \} from "\.\.\/model\/useAiAssistantGeneratedResult\.ts";/,
+		);
+		assert.doesNotMatch(
+			panelSource,
+			/const handleGeneratedAiData =|buildAiGeneratedResultPlan|executeAiGeneratedResultPlan/,
+		);
+		assertSourceTokensInOrder(
+			panelSource,
+			[
+				"const { applyUpdatedAiData } = useAiAssistantUpdatedData({",
+				"const { handleGeneratedAiData } = useAiAssistantGeneratedResult({",
+				"applyUpdatedData: applyUpdatedAiData,",
+				"onClearPrompt: () => setUserInstructions(\"\"),",
+				"onCloseAssistantDialogs: () => {",
+				"onCloseAuxiliaryDialogs: () => {",
+				"onNotification: setNotification,",
+				"onRequestCampaignReload: requestCampaignReload,",
+				"onRefreshEntities: refreshEntities,",
+				"showGeneratedPrompt,",
+				"upsertResponseHistoryEntry,",
+				"const generate = async (",
+			],
+			"AI Assistant generated-result delegation",
+		);
+		assertSourceTokensInOrder(
+			generatedResultSource,
+			[
+				"export function useAiAssistantGeneratedResult({",
+				"const handleGeneratedAiData = ({",
+				"const plan = buildAiGeneratedResultPlan({",
+				"executeAiGeneratedResultPlan({",
+				"onHistoryEntry: upsertResponseHistoryEntry,",
+				"onShowPrompt: showGeneratedPrompt,",
+				"onNotification: (notification) => {",
+				'notification === "draft-created"',
+				'notification === "custom-creatures-saved"',
+				"onApplyUpdated: (updatedPlan) => {",
+				"applyUpdatedData(updatedPlan.updated, {",
+				"onCampaignReload: onRequestCampaignReload,",
+				"onClearPrompt,",
+				"onRefreshEntities,",
+				"onCloseAuxiliaryDialogs,",
+				"onCloseAssistantDialogs,",
+				"return { handleGeneratedAiData };",
+			],
+			"AI Assistant private generated-result processing",
+		);
+		assert.doesNotMatch(
+			generatedResultSource,
+			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useAiAssistantGeneratedResult/,
 		);
 	},
 );
@@ -15250,8 +15326,9 @@ await run(
 				"requestReload: (entityTypes) => {",
 				"requestCampaignReload();",
 				"if (entityTypes.length > 0) refreshEntities();",
-				"const handleGeneratedAiData = ({",
-				"onCampaignReload: requestCampaignReload,",
+				"const { handleGeneratedAiData } = useAiAssistantGeneratedResult({",
+				"applyUpdatedData: applyUpdatedAiData,",
+				"onRequestCampaignReload: requestCampaignReload,",
 				"onRefreshEntities: refreshEntities,",
 				"onFailed: (failure) => {",
 				"showMessage({",
