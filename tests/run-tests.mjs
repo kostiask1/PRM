@@ -11016,6 +11016,64 @@ await run(
 );
 
 await run(
+	"Phase 258 isolates Bestiary virtualized list-item UI in a private widget component",
+	async () => {
+		const [contentSource, listItemSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryMonsterListItem.tsx",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			contentSource,
+			[
+				'import { BestiaryMonsterListItem } from "./BestiaryMonsterListItem.tsx";',
+				"export interface BestiaryContentProps",
+				"<BestiaryMonsterListItem",
+			],
+			"Bestiary content composes its private virtualized list item",
+		);
+		assert.doesNotMatch(
+			contentSource,
+			/function executeMonsterRowPrimaryAction|function executeStoppedMonsterRowAction|function MonsterListItemActions|function MonsterListItemContent|function MonsterListItem\(/,
+		);
+		assertSourceTokensInOrder(
+			listItemSource,
+			[
+				'import type { MouseEvent as ReactMouseEvent } from "react";',
+				"import type {",
+				"BestiaryFavorite,",
+				"BestiaryMonster,",
+				"from \"../../../entities/bestiary/index.js\";",
+				"import {",
+				"getMonsterTypeString,",
+				"MonsterStatBlockModel,",
+				"export interface MonsterListItemProps",
+				"export function BestiaryMonsterListItem",
+			],
+			"Bestiary private virtualized list-item component",
+		);
+		assert.doesNotMatch(
+			listItemSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|BestiaryContentProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/BestiaryMonsterListItem/,
+		);
+	},
+);
+
+await run(
 	"Phase 257 isolates Bestiary AI draft restore policy in the private widget model",
 	async () => {
 		const [
