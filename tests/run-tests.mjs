@@ -8136,8 +8136,7 @@ await run(
 			browserSource,
 			[
 				"} = useBestiaryCustomMonsterHistory({",
-				"const handleExportCustomMonsters = () => {",
-				"const handleImportCustomMonsters = async (",
+				"} = useBestiaryCustomMonsterEditing({",
 				"const bestiaryActions = (",
 				"<BestiaryHeaderActions",
 				"canExport={customMonsters.length > 0}",
@@ -10673,6 +10672,77 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useBestiaryCustomMonsterHistory/,
+		);
+	},
+);
+
+await run(
+	"Phase 240 isolates Bestiary custom-monster editing in the private widget model",
+	async () => {
+		const [browserSource, editingSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/useBestiaryCustomMonsterEditing.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			browserSource,
+			/import { useBestiaryCustomMonsterEditing } from "\.\.\/model\/useBestiaryCustomMonsterEditing\.ts";/,
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/const \[fieldEditingMonster|const \[fieldEditingMode|const \[fieldEditingOriginalMonster|const openEditMonster|const closeEditCustomMonster|const applyUpdatedCustomMonster|const createBasedCustomMonster|const updateEditedCustomMonster|const saveEditedCustomMonster|const handleDeleteCustomMonster|const handleExportCustomMonsters|const handleImportCustomMonsters|MonsterStatBlockModel|downloadJsonFile/,
+		);
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				"} = useBestiaryCustomMonsterHistory({",
+				"const {\n\t\tcloseEditCustomMonster,",
+				"} = useBestiaryCustomMonsterEditing({",
+				"onPushCustomUndoSnapshot: pushCustomUndoSnapshot,",
+				"onRestoreCustomMonsters: restoreCustomMonsters,",
+				"requestConfirmation,",
+				"useBestiaryDataLoading({",
+			],
+			"Bestiary browser custom-editing delegation",
+		);
+		assertSourceTokensInOrder(
+			editingSource,
+			[
+				"export function useBestiaryCustomMonsterEditing({",
+				"const [fieldEditingMonster, setFieldEditingMonster] =",
+				"const openEditMonster = (monster: BestiaryMonster) => {",
+				"const applyUpdatedCustomMonster = (",
+				"const createBasedCustomMonster = async (",
+				"bestiaryApi.getCustomBestiaryData()",
+				"const saveEditedCustomMonster = async (draftMonster: BestiaryMonster) => {",
+				"await executeBestiaryFieldEditSave({",
+				"const handleDeleteCustomMonster = async (monster: BestiaryMonster) => {",
+				"await requestConfirmation({",
+				"const handleExportCustomMonsters = () => {",
+				"const handleImportCustomMonsters = async (",
+				"await onRestoreCustomMonsters(",
+				"return {",
+				"saveEditedCustomMonster,",
+			],
+			"Bestiary private custom-editing coordination",
+		);
+		assert.doesNotMatch(
+			editingSource,
+			/useBestiaryBrowserRuntime|campaignApi|aiApi|settingsApi|app\/model|shared\/model|<BestiaryContent|<BestiaryAiModals/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryCustomMonsterEditing/,
 		);
 	},
 );
@@ -14726,6 +14796,7 @@ await run(
 		const [
 			runtimeSource,
 			browserSource,
+			customEditingSource,
 			widgetEntry,
 			widgetTypeEntry,
 			runtimeHostSource,
@@ -14738,6 +14809,10 @@ await run(
 			),
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/model/useBestiaryCustomMonsterEditing.ts",
 				"utf8",
 			),
 			fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
@@ -14831,15 +14906,23 @@ await run(
 				"() => parseBestiarySyncEvent(rawSyncEvent),",
 				"[rawSyncEvent],",
 				"const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);",
+				"} = useBestiaryCustomMonsterEditing({",
+				"requestConfirmation,",
 				"onCampaigns: replaceCampaigns,",
 				"onUiIgnoreSources: setGlobalIgnoreSourcesList,",
 				"showMessage({",
+			],
+			"Bestiary Browser injected runtime and preserved save/delete flow",
+		);
+		assertSourceTokensInOrder(
+			customEditingSource,
+			[
 				"const confirmed = await requestConfirmation({",
 				"if (!confirmed) return;",
 				"title: lang.t(\"Import custom creatures\"),",
 				"title: lang.t(\"Import error\"),",
 			],
-			"Bestiary Browser injected runtime and preserved save/delete flow",
+			"Bestiary Browser custom-editing runtime delegation",
 		);
 		assertSourceTokensInOrder(
 			runtimeHostSource,
@@ -47963,6 +48046,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/model/useBestiaryDataLoading.ts",
 		"utf8",
 	);
+	const bestiaryCustomEditingSource = await fs.readFile(
+		"src/widgets/bestiary-browser/model/useBestiaryCustomMonsterEditing.ts",
+		"utf8",
+	);
 	const bestiaryContentSource = await fs.readFile(
 		"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
 		"utf8",
@@ -48026,7 +48113,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiarySource, /pendingSyncSelectionRef/);
 	assert.match(bestiaryDataLoadingSource, /getBestiarySyncEventPlan\(syncEvent\)/);
 	assert.match(bestiaryDataLoadingSource, /executeBestiarySyncEventPlan\(\{/);
-	assert.match(bestiarySource, /executeBestiaryFieldEditSave\(\{/);
+	assert.match(bestiaryCustomEditingSource, /executeBestiaryFieldEditSave\(\{/);
 	assert.match(bestiarySource, /executeBestiarySelectedSourcesSave\(\{/);
 	assert.match(bestiaryModelSource, /function applyBestiarySyncPendingSelection/);
 	assert.match(bestiaryModelSource, /event\.monsterName/);

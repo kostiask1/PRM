@@ -4,7 +4,6 @@ import {
 	useMemo,
 	useRef,
 	useCallback,
-	type ChangeEvent,
 	type ComponentType,
 } from "react";
 import type ReactList from "react-list";
@@ -25,7 +24,6 @@ import { settingsApi } from "../../../features/settings/index.js";
 import { MonsterAiActionModal } from "../../../features/ai-edit-monster/index.js";
 import BestiaryContent from "./BestiaryContent.tsx";
 import BestiaryHeaderActions from "./BestiaryHeaderActions.tsx";
-import { MonsterStatBlockModel } from "../../../entities/bestiary/index.js";
 import { useDebounce } from "../../../shared/lib/index.js";
 import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
@@ -40,31 +38,18 @@ import {
 	normalizeSourceCode,
 } from "../../../entities/reference/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
-import { downloadJsonFile } from "../../../shared/lib/index.js";
 import "../../../assets/components/Bestiary.css";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	cloneCustomMonsters,
-	executeBestiaryFieldEditSave,
 	executeBestiarySelectedSourcesSave,
 	filterBestiaryMonsters,
 	getBestiaryInitialSelectionScrollPlan,
-	getBestiaryFieldEditStartPlan,
 	getBestiarySelectionPlan,
-	getCreateBasedMonsterPlan,
-	getCustomMonsterDeleteStartPlan,
-	getEditedCustomMonsterPayload,
-	getMonsterListFromResponse,
 	getNextBestiarySortOrder,
 	isCustomSource,
 	isSameMonsterIdentity,
-	mergeImportedCustomMonsters,
-	normalizeMonsterName,
-	parseImportedCustomMonsters,
 	parseBestiarySyncEvent,
 	parseMonsterReference,
-	removeDeletedCustomMonsterFavorite,
-	replaceDeletedCustomMonsterList,
 	sortBestiaryMonsters,
 	type BestiarySortOrder,
 	type MonsterReference,
@@ -78,6 +63,7 @@ import { useBestiaryBrowserRuntime } from "./BestiaryBrowserRuntime.tsx";
 import { useBestiaryDataLoading } from "../model/useBestiaryDataLoading.ts";
 import { useBestiaryAiWorkflows } from "../model/useBestiaryAiWorkflows.ts";
 import { useBestiaryCustomMonsterHistory } from "../model/useBestiaryCustomMonsterHistory.ts";
+import { useBestiaryCustomMonsterEditing } from "../model/useBestiaryCustomMonsterEditing.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -171,10 +157,6 @@ export default function BestiaryBrowser({
 	const [onlyFavorites, setOnlyFavorites] = useState(false);
 	const [sortOrder, setSortOrder] = useState<BestiarySortOrder>("none");
 	const [reloadToken, setReloadToken] = useState(0);
-	const [fieldEditingMonster, setFieldEditingMonster] = useState<BestiaryMonster | null>(null);
-	const [fieldEditingMode, setFieldEditingMode] = useState<"edit" | "create-based">("edit");
-	const [fieldEditingOriginalMonster, setFieldEditingOriginalMonster] =
-		useState<BestiaryMonster | null>(null);
 	const listRef = useRef<ReactList>(null);
 	const selectedMonsterRef = useRef<BestiaryMonster | null>(null);
 	const aiDraftResponseRef = useRef<HTMLDivElement>(null);
@@ -260,6 +242,26 @@ export default function BestiaryBrowser({
 		selectedMonsterRef,
 		setAllMonsters,
 		setReloadToken,
+		setSelectedMonster,
+		shouldAutoSelectMonsterRef,
+		showMessage,
+	});
+	const {
+		closeEditCustomMonster,
+		fieldEditingMonster,
+		handleDeleteCustomMonster,
+		handleExportCustomMonsters,
+		handleImportCustomMonsters,
+		openEditMonster,
+		saveEditedCustomMonster,
+	} = useBestiaryCustomMonsterEditing({
+		customMonsters,
+		onPushCustomUndoSnapshot: pushCustomUndoSnapshot,
+		onRestoreCustomMonsters: restoreCustomMonsters,
+		requestConfirmation,
+		selectedMonsterRef,
+		setAllMonsters,
+		setFavorites,
 		setSelectedMonster,
 		shouldAutoSelectMonsterRef,
 		showMessage,
@@ -399,196 +401,6 @@ export default function BestiaryBrowser({
 			setFavorites(newFavs ?? []);
 		} catch (err) {
 			console.error("Failed to toggle favorite", err);
-		}
-	};
-
-	const openEditMonster = (monster: BestiaryMonster) => {
-		const plan = getBestiaryFieldEditStartPlan(
-			monster,
-			lang.t("Creature"),
-			(target) => new MonsterStatBlockModel(target).localTokenSrc,
-		);
-		if (plan.kind === "skip") return;
-		setFieldEditingMode(plan.mode);
-		setFieldEditingOriginalMonster(plan.originalMonster);
-		setFieldEditingMonster(plan.draftMonster);
-	};
-
-	const closeEditCustomMonster = () => {
-		setFieldEditingMonster(null);
-		setFieldEditingMode("edit");
-		setFieldEditingOriginalMonster(null);
-	};
-
-	const applyUpdatedCustomMonster = (
-		previousName: string,
-		updatedMonster: BestiaryMonster,
-	) => {
-		pushCustomUndoSnapshot(cloneCustomMonsters(customMonsters));
-		shouldAutoSelectMonsterRef.current = false;
-		setAllMonsters((current) => [
-			...current.filter(
-				(item) =>
-					!isCustomSource(item.source) ||
-					!(item.name === previousName || item.name === updatedMonster.name),
-			),
-			updatedMonster,
-		]);
-		setSelectedMonster(updatedMonster);
-		selectedMonsterRef.current = updatedMonster;
-		if (previousName !== updatedMonster.name) {
-			setFavorites((current) =>
-				current.map((favorite) =>
-					favorite.name === previousName && isCustomSource(favorite.source)
-						? { ...favorite, name: updatedMonster.name, source: "CUSTOM" }
-						: favorite,
-				),
-			);
-		}
-	};
-
-	const createBasedCustomMonster = async (
-		draftMonster: BestiaryMonster,
-	): Promise<BestiaryMonster> => {
-		const customMonsters = getMonsterListFromResponse(
-			await api.getCustomBestiaryData(),
-		);
-		const originalModel = new MonsterStatBlockModel(
-			fieldEditingOriginalMonster ?? {},
-		);
-		const plan = getCreateBasedMonsterPlan(
-			customMonsters,
-			draftMonster,
-			fieldEditingOriginalMonster,
-			originalModel.localTokenSrc,
-		);
-		if (plan.duplicate) {
-			throw new Error(
-				lang.t("Custom creature with this name already exists."),
-			);
-		}
-		const updated = await api.replaceCustomBestiaryMonsters([
-			...customMonsters,
-			plan.monster,
-		]);
-		return (
-			(updated ?? []).find(
-				(monster) => normalizeMonsterName(monster.name) === plan.normalizedName,
-			) ?? plan.monster
-		);
-	};
-
-	const updateEditedCustomMonster = async (
-		draftMonster: BestiaryMonster,
-		editingMonster: BestiaryMonster,
-	): Promise<BestiaryMonster> => {
-		const updated = await api.updateCustomBestiaryMonster(
-			String(editingMonster.id || editingMonster.name),
-			{
-				monster: getEditedCustomMonsterPayload(
-					draftMonster,
-					editingMonster,
-					fieldEditingOriginalMonster,
-				),
-			},
-		);
-		if (!updated) throw new Error(lang.t("Empty custom creature response."));
-		return updated;
-	};
-
-	const saveEditedCustomMonster = async (draftMonster: BestiaryMonster) => {
-		await executeBestiaryFieldEditSave({
-			draftMonster,
-			editingMonster: fieldEditingMonster,
-			mode: fieldEditingMode,
-			createBased: createBasedCustomMonster,
-			update: updateEditedCustomMonster,
-			onApplied: applyUpdatedCustomMonster,
-			onClose: closeEditCustomMonster,
-			onError: (error) => showMessage({
-				title: lang.t("Error"),
-				message: getErrorMessage(error, lang.t("Unknown error")),
-			}),
-		});
-	};
-
-	const handleDeleteCustomMonster = async (monster: BestiaryMonster) => {
-		const startPlan = getCustomMonsterDeleteStartPlan(monster);
-		if (startPlan.kind === "skip") return;
-		const confirmed = await requestConfirmation({
-			title: lang.t("Delete custom creature"),
-			message: lang.t('Delete custom creature "{name}"?', {
-				name: startPlan.monsterName,
-			}),
-		});
-		if (!confirmed) return;
-
-		const undoSnapshot = cloneCustomMonsters(customMonsters);
-		try {
-			const updatedCustomMonsters = await api.deleteCustomBestiaryMonster(
-				startPlan.monsterName,
-			);
-			pushCustomUndoSnapshot(undoSnapshot);
-			shouldAutoSelectMonsterRef.current = false;
-			selectedMonsterRef.current = null;
-			setSelectedMonster(null);
-			setAllMonsters((current) =>
-				replaceDeletedCustomMonsterList(current, updatedCustomMonsters),
-			);
-			setFavorites((current) =>
-				removeDeletedCustomMonsterFavorite(current, startPlan.monsterName),
-			);
-		} catch (err) {
-			showMessage({
-				title: lang.t("Delete error"),
-				message: getErrorMessage(err, lang.t("Unknown error")),
-			});
-		}
-	};
-
-	const handleExportCustomMonsters = () => {
-		downloadJsonFile(
-			{
-				version: 1,
-				type: "custom-bestiary",
-				exportedAt: new Date().toISOString(),
-				monster: customMonsters,
-			},
-			`custom-bestiary-${new Date().toISOString().slice(0, 10)}.json`,
-		);
-	};
-
-	const handleImportCustomMonsters = async (
-		event: ChangeEvent<HTMLInputElement>,
-	) => {
-		const file = event.target.files?.[0];
-		event.target.value = "";
-		if (!file) return;
-		try {
-			const raw = await file.text();
-			const validImported = parseImportedCustomMonsters(raw);
-			if (validImported.length === 0) {
-				throw new Error(lang.t("No custom creatures found in file."));
-			}
-			const undoSnapshot = cloneCustomMonsters(customMonsters);
-			await restoreCustomMonsters(
-				mergeImportedCustomMonsters(customMonsters, validImported),
-				{
-				selectedName: validImported[0].name,
-				},
-			);
-			pushCustomUndoSnapshot(undoSnapshot);
-			showMessage({
-				title: lang.t("Import custom creatures"),
-				message: lang.t("Imported custom creatures: {count}", {
-					count: validImported.length,
-				}),
-			});
-		} catch (err) {
-			showMessage({
-				title: lang.t("Import error"),
-				message: getErrorMessage(err, lang.t("Unknown error")),
-			});
 		}
 	};
 
