@@ -4,10 +4,7 @@ import type {
 	AiHistoryResource,
 	AiHistoryRestoreResult,
 } from "../../../features/ai/index.js";
-import {
-	addSourceMonsterImageToDraft,
-	getFirstChangedMonsterName,
-} from "../../../features/ai/index.js";
+import { getFirstChangedMonsterName } from "../../../features/ai/index.js";
 import {
 	cloneCustomMonsters,
 	customMonsterListsEqual,
@@ -18,6 +15,10 @@ import {
 	type CustomBestiaryUpdateOptions,
 	type CustomBestiaryUpdatePlan,
 } from "./bestiaryBrowserCustomData.ts";
+import {
+	normalizeAiBestiaryGenerationResult,
+	type AiBestiaryGenerationResult,
+} from "./bestiaryBrowserAiResults.ts";
 
 export {
 	filterBestiaryMonsters,
@@ -105,29 +106,17 @@ export type {
 	CreateBasedMonsterPlan,
 	ExecuteBestiaryFieldEditSaveOptions,
 } from "./bestiaryBrowserFieldEditing.ts";
-
-export interface AiBestiaryGenerationResult {
-	draft: boolean;
-	aiResponse: AiHistoryEntry | null;
-	updated: unknown;
-	generated: CustomBestiaryUpdateOptions["generated"];
-}
-
-export type AiMonsterGenerationResultPlan =
-	| { kind: "draft"; entry: AiHistoryEntry | null }
-	| {
-			kind: "update";
-			updated: unknown;
-			options: CustomBestiaryUpdateOptions;
-	  }
-	| { kind: "skip" };
+export { getAiMonsterGenerationResultPlan } from "./bestiaryBrowserAiResults.ts";
+export type {
+	AiBestiaryGenerationResult,
+	AiMonsterEditMode,
+	AiMonsterGenerationResultPlan,
+} from "./bestiaryBrowserAiResults.ts";
 
 export interface AiMonsterInstructionPlan {
 	error: "missing-instructions" | null;
 	instructions: string;
 }
-
-export type AiMonsterEditMode = "edit" | "local-edit" | "create-based";
 
 export interface AiMonsterEditRequestInput {
 	targetMonster: BestiaryMonster | null;
@@ -328,26 +317,6 @@ export async function executeAiDraftRestore(
 	}
 }
 
-function normalizeAiBestiaryGenerationResult(
-	value: unknown,
-): AiBestiaryGenerationResult {
-	const record = isRecord(value) ? value : {};
-	return {
-		draft: record.draft === true,
-		aiResponse: isRecord(record.aiResponse)
-			? (record.aiResponse as AiHistoryEntry)
-			: null,
-		updated: record.updated,
-		generated: isRecord(record.generated)
-			? {
-					monsters: getMonsterListFromResponse({
-						monsters: record.generated.monsters,
-					}),
-				}
-			: undefined,
-	};
-}
-
 function getResourceAfterRecord(
 	resource: AiHistoryResource | undefined,
 ): Record<string, unknown> | null {
@@ -376,46 +345,6 @@ export function preserveAiDraftResourceMetadata(
 			},
 		};
 	});
-}
-
-function getAiMonsterDraftResultPlan(
-	data: AiBestiaryGenerationResult,
-	targetMonster: BestiaryMonster,
-): AiMonsterGenerationResultPlan | null {
-	if (!data.draft || !data.aiResponse) return null;
-	return {
-		kind: "draft",
-		entry:
-			addSourceMonsterImageToDraft(data.aiResponse, targetMonster) ?? null,
-	};
-}
-
-function getAiMonsterUpdateResultPlan(
-	data: AiBestiaryGenerationResult,
-	targetMonster: BestiaryMonster,
-	mode: AiMonsterEditMode,
-): AiMonsterGenerationResultPlan {
-	if (!data.updated) return { kind: "skip" };
-	return {
-		kind: "update",
-		updated: data.updated,
-		options: {
-			generated: data.generated,
-			selectedName: mode === "edit" ? targetMonster.name : undefined,
-			trackUndo: false,
-		},
-	};
-}
-
-export function getAiMonsterGenerationResultPlan(
-	data: AiBestiaryGenerationResult,
-	targetMonster: BestiaryMonster,
-	mode: AiMonsterEditMode,
-): AiMonsterGenerationResultPlan {
-	return (
-		getAiMonsterDraftResultPlan(data, targetMonster) ??
-		getAiMonsterUpdateResultPlan(data, targetMonster, mode)
-	);
 }
 
 export function getAiMonsterInstructionPlan(

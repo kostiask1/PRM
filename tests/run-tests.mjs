@@ -11016,6 +11016,71 @@ await run(
 );
 
 await run(
+	"Phase 255 isolates Bestiary AI result policy in the private widget model",
+	async () => {
+		const [browserModelSource, aiResultsSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserAiResults.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				"import {\n\tnormalizeAiBestiaryGenerationResult,",
+				"type AiBestiaryGenerationResult,",
+				'from "./bestiaryBrowserAiResults.ts";',
+				"export { getAiMonsterGenerationResultPlan } from \"./bestiaryBrowserAiResults.ts\";",
+				"export type {",
+				"AiBestiaryGenerationResult,",
+				"AiMonsterEditMode,",
+				"AiMonsterGenerationResultPlan,",
+			],
+			"Bestiary AI result compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function normalizeAiBestiaryGenerationResult|function getAiMonsterDraftResultPlan|function getAiMonsterUpdateResultPlan/,
+		);
+		assertSourceTokensInOrder(
+			aiResultsSource,
+			[
+				'import type { BestiaryMonster } from "../../../entities/bestiary/index.js";',
+				'import type { AiHistoryEntry } from "../../../features/ai/index.js";',
+				"import { addSourceMonsterImageToDraft } from \"../../../features/ai/index.js\";",
+				"import {",
+				"getMonsterListFromResponse,",
+				"type CustomBestiaryUpdateOptions,",
+				"from \"./bestiaryBrowserCustomData.ts\";",
+				"export interface AiBestiaryGenerationResult",
+				"export type AiMonsterGenerationResultPlan",
+				"export type AiMonsterEditMode",
+				"export function normalizeAiBestiaryGenerationResult",
+				"export function getAiMonsterGenerationResultPlan",
+			],
+			"Bestiary private AI result model",
+		);
+		assert.doesNotMatch(
+			aiResultsSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserAiResults/,
+		);
+	},
+);
+
+await run(
 	"Phase 254 isolates Bestiary field editing in the private widget model",
 	async () => {
 		const [browserModelSource, fieldEditingSource, widgetEntry, modelEntry, modelTypes] =
