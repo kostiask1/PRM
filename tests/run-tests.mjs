@@ -11021,6 +11021,72 @@ await run(
 );
 
 await run(
+	"Phase 267 isolates Bestiary selection lifecycle in a private UI hook",
+	async () => {
+		const [browserSource, lifecycleSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryMonsterSelectionLifecycle.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";',
+				"} = useBestiaryMonsterList({",
+				"useBestiaryMonsterSelectionLifecycle({",
+				"embeddedScrolledMonsterRef,",
+				"initialMonsterReference,",
+				"scrollToInitialSelected,",
+				"selectedMonsterRef,",
+			],
+			"Bestiary browser composes its private selection-lifecycle hook",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/getBestiarySelectionPlan\(|getBestiaryInitialSelectionScrollPlan\(|isSameMonsterIdentity\(selectedMonsterRef\.current, plan\.monster\)|requestAnimationFrame\(\(\) => \{\s*listRef\.current\?\.scrollTo/,
+		);
+		assertSourceTokensInOrder(
+			lifecycleSource,
+			[
+				"import {",
+				"useEffect,",
+				"export interface UseBestiaryMonsterSelectionLifecycleOptions",
+				"export function useBestiaryMonsterSelectionLifecycle",
+				"const plan = getBestiarySelectionPlan(",
+				"if (isSameMonsterIdentity(selectedMonsterRef.current, plan.monster)) return;",
+				"if (plan.explicit) shouldAutoSelectMonsterRef.current = false;",
+				"selectedMonsterRef.current = plan.monster;",
+				"setSelectedMonster(plan.monster);",
+				"const plan = getBestiaryInitialSelectionScrollPlan(",
+				"embeddedScrolledMonsterRef.current = plan.scrollKey;",
+				"const frameId = requestAnimationFrame(() => {",
+				"listRef.current?.scrollTo(plan.selectedIndex);",
+				"return () => cancelAnimationFrame(frameId);",
+			],
+			"Bestiary private selection-lifecycle hook",
+		);
+		assert.doesNotMatch(
+			lifecycleSource,
+			/useBestiaryBrowserRuntime|bestiaryApi|app\/model|shared\/model|BestiaryBrowserProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryMonsterSelectionLifecycle/,
+		);
+	},
+);
+
+await run(
 	"Phase 266 isolates Bestiary selected-monster state in a private UI hook",
 	async () => {
 		const [browserSource, selectionSource, widgetEntry, modelEntry, modelTypes] =
@@ -49740,6 +49806,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/ui/useBestiarySourceSelection.ts",
 		"utf8",
 	);
+	const bestiarySelectionLifecycleSource = await fs.readFile(
+		"src/widgets/bestiary-browser/ui/useBestiaryMonsterSelectionLifecycle.ts",
+		"utf8",
+	);
 	const bestiaryContentSource = await fs.readFile(
 		"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
 		"utf8",
@@ -49831,12 +49901,18 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiarySyncSource, /function applyBestiarySyncPendingSelection/);
 	assert.match(bestiarySyncSource, /event\.monsterName/);
 	assert.match(bestiarySyncSource, /event\.monsterSource \|\| "CUSTOM"/);
-	assert.match(bestiarySource, /shouldAutoSelectMonsterRef\.current = false/);
+	assert.match(
+		bestiarySelectionLifecycleSource,
+		/shouldAutoSelectMonsterRef\.current = false/,
+	);
 	assert.match(bestiaryModelSource, /normalizeMonsterName/);
 	assert.match(bestiarySourceSelectionSource, /ignoreSourcesList/);
 	assert.match(bestiarySource, /selectedSources/);
 	assert.match(bestiarySelectionSource, /function findReferencedMonster/);
-	assert.match(bestiarySource, /selectedMonsterRef\.current = plan\.monster/);
+	assert.match(
+		bestiarySelectionLifecycleSource,
+		/selectedMonsterRef\.current = plan\.monster/,
+	);
 	assert.doesNotMatch(bestiarySource, /setSelectedSource/);
 	assert.doesNotMatch(bestiarySource, /normalizeSourceSelection\(initialMonsterReference\.source\)/);
 	assert.doesNotMatch(bestiarySource, embeddedPropPattern);

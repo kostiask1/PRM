@@ -30,10 +30,7 @@ import {
 import "../../../assets/components/Bestiary.css";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	getBestiaryInitialSelectionScrollPlan,
-	getBestiarySelectionPlan,
 	isCustomSource,
-	isSameMonsterIdentity,
 	parseBestiarySyncEvent,
 	parseMonsterReference,
 	type MonsterReference,
@@ -52,6 +49,7 @@ import { useBestiarySourceSelection } from "./useBestiarySourceSelection.ts";
 import { useBestiarySearchControls } from "./useBestiarySearchControls.ts";
 import { useBestiaryMonsterList } from "./useBestiaryMonsterList.ts";
 import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionState.ts";
+import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -316,46 +314,18 @@ export default function BestiaryBrowser({
 		}
 	};
 
-	useEffect(() => {
-		const plan = getBestiarySelectionPlan(
-			displayedMonsters,
-			allMonsters,
-			initialMonsterReference,
-			selectedMonsterRef.current,
-			shouldAutoSelectMonsterRef.current,
-		);
-		if (!plan) return;
-		if (isSameMonsterIdentity(selectedMonsterRef.current, plan.monster)) return;
-		if (plan.explicit) shouldAutoSelectMonsterRef.current = false;
-		selectedMonsterRef.current = plan.monster;
-		setSelectedMonster(plan.monster);
-	}, [
+	useBestiaryMonsterSelectionLifecycle({
 		allMonsters,
 		displayedMonsters,
+		embeddedScrolledMonsterRef,
 		initialMonsterReference,
-	]);
-
-	useEffect(() => {
-		const plan = getBestiaryInitialSelectionScrollPlan(
-			displayedMonsters,
-			initialMonsterReference,
-			selectedMonster,
-			scrollToInitialSelected,
-			embeddedScrolledMonsterRef.current,
-		);
-		if (!plan) return undefined;
-
-		embeddedScrolledMonsterRef.current = plan.scrollKey;
-		const frameId = requestAnimationFrame(() => {
-			listRef.current?.scrollTo(plan.selectedIndex);
-		});
-		return () => cancelAnimationFrame(frameId);
-	}, [
-		displayedMonsters,
-		initialMonsterReference,
+		listRef,
 		scrollToInitialSelected,
 		selectedMonster,
-	]);
+		selectedMonsterRef,
+		setSelectedMonster,
+		shouldAutoSelectMonsterRef,
+	});
 
 	const bestiaryActions = (
 		<BestiaryHeaderActions
