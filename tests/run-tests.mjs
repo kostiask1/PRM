@@ -11016,6 +11016,60 @@ await run(
 );
 
 await run(
+	"Phase 250 isolates Bestiary legendary-group enrichment in the private widget model",
+	async () => {
+		const [browserModelSource, legendarySource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserLegendary.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			browserModelSource,
+			/export \{ enrichMonstersWithLegendaryGroups \} from "\.\/bestiaryBrowserLegendary\.ts";/,
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function getLegendaryGroupIdentity|function getMonsterLegendaryGroup|function getMonsterLegendaryReference/,
+		);
+		assertSourceTokensInOrder(
+			legendarySource,
+			[
+				"import type {",
+				"BestiaryMonster,",
+				"LegendaryGroup,",
+				"from \"../../../entities/bestiary/index.js\";",
+				"import {",
+				"normalizeMonsterName,",
+				"normalizeMonsterSource,",
+				"from \"./bestiaryBrowserFiltering.ts\";",
+				"function getLegendaryGroupIdentity",
+				"function getMonsterLegendaryReference",
+				"export function enrichMonstersWithLegendaryGroups",
+			],
+			"Bestiary private legendary-group enrichment model",
+		);
+		assert.doesNotMatch(
+			legendarySource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserLegendary/,
+		);
+	},
+);
+
+await run(
 	"Phase 249 isolates Bestiary synchronization and source persistence in the private widget model",
 	async () => {
 		const [browserModelSource, syncSource, widgetEntry, modelEntry, modelTypes] =
