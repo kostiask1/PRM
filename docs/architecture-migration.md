@@ -904,6 +904,8 @@ Next:
 - Phase 254 preserves custom versus official start modes, monster/draft identity, token fallback, duplicate detection, nullish image precedence, mode-specific previous-name behavior, callback order, and failure outcomes. The full suite passes 527/527 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 255 by moving Bestiary AI generation-result normalization and draft/update planning into private `widgets/bestiary-browser/model/bestiaryBrowserAiResults.ts`. `bestiaryBrowser.ts` retains the compatibility facade.
 - Phase 255 preserves record narrowing, generated-list normalization, draft image enrichment, draft-before-update precedence, edit-only selection, and `trackUndo: false`. The full suite passes 528/528 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 256 by moving Bestiary AI instruction/start-request, cancellation/error, controller-identity, and request-execution policies into private `widgets/bestiary-browser/model/bestiaryBrowserAiRequest.ts`. `bestiaryBrowser.ts` retains the compatibility facade.
+- Phase 256 preserves create-based instruction joining, target/instruction guards, exact generation payload, abort suppression, applied/reset/error order, and always-settle behavior. The full suite passes 529/529 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

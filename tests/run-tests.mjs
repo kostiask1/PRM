@@ -11016,6 +11016,82 @@ await run(
 );
 
 await run(
+	"Phase 256 isolates Bestiary AI request policy in the private widget model",
+	async () => {
+		const [browserModelSource, aiRequestSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserAiRequest.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				"export {",
+				"executeAiMonsterEditRequest,",
+				"getAiMonsterEditErrorMessage,",
+				"getAiMonsterEditStartPlan,",
+				"getAiMonsterInstructionPlan,",
+				"isAbortError,",
+				"shouldClearAiMonsterEditController,",
+				'from "./bestiaryBrowserAiRequest.ts";',
+				"export type {",
+				"AiMonsterEditRequestInput,",
+				"AiMonsterEditRequestOutcome,",
+				"AiMonsterEditStartPlan,",
+				"AiMonsterInstructionPlan,",
+				"ExecuteAiMonsterEditRequestOptions,",
+			],
+			"Bestiary AI request compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function getAiMonsterInstructionPlan|function getAiMonsterEditStartPlan|function isAbortError|function getAiMonsterEditErrorMessage|function shouldClearAiMonsterEditController|function executeAiMonsterEditRequest/,
+		);
+		assertSourceTokensInOrder(
+			aiRequestSource,
+			[
+				'import type { BestiaryMonster } from "../../../entities/bestiary/index.js";',
+				"import {",
+				"normalizeAiBestiaryGenerationResult,",
+				"type AiBestiaryGenerationResult,",
+				"type AiMonsterEditMode,",
+				'from "./bestiaryBrowserAiResults.ts";',
+				"export interface AiMonsterInstructionPlan",
+				"export interface AiMonsterEditRequestInput",
+				"export type AiMonsterEditStartPlan",
+				"export type AiMonsterEditRequestOutcome",
+				"export interface ExecuteAiMonsterEditRequestOptions",
+				"export function getAiMonsterInstructionPlan",
+				"export function getAiMonsterEditStartPlan",
+				"export function isAbortError",
+				"export function getAiMonsterEditErrorMessage",
+				"export function shouldClearAiMonsterEditController",
+				"export async function executeAiMonsterEditRequest",
+			],
+			"Bestiary private AI request model",
+		);
+		assert.doesNotMatch(
+			aiRequestSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserAiRequest/,
+		);
+	},
+);
+
+await run(
 	"Phase 255 isolates Bestiary AI result policy in the private widget model",
 	async () => {
 		const [browserModelSource, aiResultsSource, widgetEntry, modelEntry, modelTypes] =
@@ -11036,9 +11112,6 @@ await run(
 		assertSourceTokensInOrder(
 			browserModelSource,
 			[
-				"import {\n\tnormalizeAiBestiaryGenerationResult,",
-				"type AiBestiaryGenerationResult,",
-				'from "./bestiaryBrowserAiResults.ts";',
 				"export { getAiMonsterGenerationResultPlan } from \"./bestiaryBrowserAiResults.ts\";",
 				"export type {",
 				"AiBestiaryGenerationResult,",
