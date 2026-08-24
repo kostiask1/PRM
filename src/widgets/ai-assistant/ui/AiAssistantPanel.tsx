@@ -32,13 +32,11 @@ import {
 	hasHistoryChanges,
 	initialAiGenerationLifecycle,
 	isAiGenerationPending,
-	saveGeminiApiKeyAndRefreshModels,
 	isFailedHistoryEntry,
 	useAiImagePromptData,
 	type AiGenerationResult,
 	type AiHistoryEntry,
 	type AiHistoryResource,
-	type AiModelDescriptor,
 	type AiContextSession,
 	type BuildAiUpdatedDataPlanOptions,
 } from "../../../features/ai/index.js";
@@ -59,6 +57,7 @@ import { useAiAssistantContextController } from "../model/useAiAssistantContextC
 import { useAiAssistantHistoryController } from "../model/useAiAssistantHistoryController.ts";
 import { useAiImagePromptController } from "../model/useAiImagePromptController.ts";
 import { useAiImagePromptState } from "../model/useAiImagePromptState.ts";
+import { useAiAssistantModelAccess } from "../model/useAiAssistantModelAccess.ts";
 import type { ImagePromptTarget } from "../model/imagePromptPicker.ts";
 import { lang } from "../../../shared/lib/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
@@ -263,9 +262,6 @@ export default function AiAssistantPanel({
 	);
 	const [useContext, setUseContext] = useState(true);
 	const [error, setError] = useState("");
-	const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
-	const [apiKeyInput, setApiKeyInput] = useState("");
-	const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 	const [userInstructions, setUserInstructions] = useState("");
 	const [notification, setNotification] = useState<string | null>(null);
 	const imagePromptState = useAiImagePromptState();
@@ -289,8 +285,6 @@ export default function AiAssistantPanel({
 		generateEncountersByDefault,
 	);
 	const [generateCustomMonsters, setGenerateCustomMonsters] = useState(false);
-	const [aiModels, setAiModels] = useState<AiModelDescriptor[]>([]);
-	const [selectedModel, setSelectedModel] = useState("");
 	const {
 		charactersList,
 		characterContext,
@@ -363,21 +357,22 @@ export default function AiAssistantPanel({
 		setCanCancelGenerate(false);
 	};
 
-	useEffect(() => {
-		if ((!isOpen && !isImagePromptPickerOpen) || aiModels.length > 0) return;
-		api
-			.listAiModels()
-			.then((result) => {
-				const models = Array.isArray(result?.models) ? result.models : [];
-				setAiModels(models);
-				if (!selectedModel) {
-					setSelectedModel(result?.defaultModel || models[0]?.name || "");
-				}
-			})
-			.catch((err) => {
-				console.error("Failed to load AI models", err);
-			});
-	}, [isOpen, isImagePromptPickerOpen, aiModels.length, selectedModel]);
+	const {
+		aiModels,
+		apiKeyInput,
+		isApiKeyMissing,
+		isSavingApiKey,
+		saveApiKey: handleSaveApiKey,
+		selectedModel,
+		setApiKeyInput,
+		setIsApiKeyMissing,
+		setSelectedModel,
+	} = useAiAssistantModelAccess({
+		isImagePromptPickerOpen,
+		isOpen,
+		onError: setError,
+		onNotification: setNotification,
+	});
 
 	const publishAiSyncEvent = useCallback(
 		(extra: Record<string, unknown> = {}) => {
@@ -485,43 +480,6 @@ export default function AiAssistantPanel({
 		notify: setNotification,
 		labels: historyLabels,
 	});
-
-	const handleSaveApiKey = async (): Promise<void> => {
-		const apiKey = apiKeyInput.trim();
-		if (!apiKey) {
-			setError(lang.t("Enter Gemini API key."));
-			return;
-		}
-
-		setIsSavingApiKey(true);
-		setError("");
-		try {
-			const result = await saveGeminiApiKeyAndRefreshModels({
-				apiKey,
-				onRefreshError: (refreshError) => {
-					console.error(
-						"Failed to refresh AI models after saving key",
-						refreshError,
-					);
-				},
-			});
-			if (result.status === "saved" && result.modelSelection) {
-				setAiModels(result.modelSelection.models);
-				setSelectedModel(result.modelSelection.selectedModel);
-			}
-			setApiKeyInput("");
-			setIsApiKeyMissing(false);
-			setNotification(lang.t("Gemini API key saved."));
-		} catch (error) {
-			setError(
-				error instanceof Error && error.message
-					? error.message
-					: lang.t("Failed to save Gemini API key."),
-			);
-		} finally {
-			setIsSavingApiKey(false);
-		}
-	};
 
 	const handleGeneratedAiData = ({
 		data,
