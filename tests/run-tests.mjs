@@ -2377,7 +2377,7 @@ await run(
 		assert.match(bestiaryBrowserModalsSource, /^\s*<MonsterEditorModal\b/m);
 		assert.match(
 			bestiaryBrowserModalsSource,
-			/<BestiaryAiModals \{\.\.\.aiModalsProps\} \/>/,
+			/<BestiaryAiModals[\s\S]*?\{\.\.\.aiModalsProps\}[\s\S]*?onApplyDraft=/,
 		);
 		assert.match(
 			bestiarySource,
@@ -8941,7 +8941,7 @@ await run(
 		);
 		assert.match(
 			bestiaryBrowserModalsSource,
-			/<BestiaryAiModals \{\.\.\.aiModalsProps\} \/>/,
+			/<BestiaryAiModals[\s\S]*?\{\.\.\.aiModalsProps\}[\s\S]*?onApplyDraft=/,
 		);
 
 		assert.match(
@@ -11076,6 +11076,63 @@ await run(
 );
 
 await run(
+	"Phase 271 moves Bestiary draft restore callback adaptation into a private modal host",
+	async () => {
+		const [browserSource, modalsSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowserModals.tsx",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				"<BestiaryBrowserModals",
+				"onRestoreAiDraftResponse={restoreAiDraftResponse}",
+			],
+			"Bestiary browser passes one draft restore command to its private modal host",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/onApplyDraft=|onApplyDraftResource=|onUndoDraft=|onUndoDraftResource=/,
+		);
+		assertSourceTokensInOrder(
+			modalsSource,
+			[
+				"extends Omit<",
+				'"onApplyDraft"',
+				'"onUndoDraftResource"',
+				"onRestoreAiDraftResponse:",
+				"<BestiaryAiModals",
+				"{...aiModalsProps}",
+				'onApplyDraft={(entry) => onRestoreAiDraftResponse(entry, "apply")}',
+				"onApplyDraftResource={(entry, resourceIds) =>",
+				'onUndoDraft={(entry) => onRestoreAiDraftResponse(entry, "undo")}',
+				"onUndoDraftResource={(entry, resourceIds) =>",
+			],
+			"Bestiary private modal host adapts every draft restore route",
+		);
+		assert.doesNotMatch(
+			modalsSource,
+			/useBestiaryBrowserRuntime|useBestiaryAiWorkflows|campaignApi|bestiaryApi|aiApi|settingsApi|app\/model|shared\/model/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/BestiaryBrowserModalsProps|onRestoreAiDraftResponse/,
+		);
+	},
+);
+
+await run(
 	"Phase 270 isolates Bestiary content composition in a private UI component",
 	async () => {
 		const [browserSource, contentHostSource, widgetEntry, modelEntry, modelTypes] =
@@ -11163,8 +11220,7 @@ await run(
 				"<BestiaryBrowserModals",
 				"BestiaryAiModals={BestiaryAiModals}",
 				"MonsterEditorModal={MonsterEditorModal}",
-				"onApplyDraft={(entry) => restoreAiDraftResponse(entry, \"apply\")}",
-				"onUndoDraft={(entry) => restoreAiDraftResponse(entry, \"undo\")}",
+				"onRestoreAiDraftResponse={restoreAiDraftResponse}",
 			],
 			"Bestiary browser composes its private modal host",
 		);
@@ -11181,7 +11237,10 @@ await run(
 				"<MonsterAiActionModal",
 				"showGlobalEdit={isCustomSource(aiActionMonster?.source)}",
 				"showImagePromptAction",
-				"<BestiaryAiModals {...aiModalsProps} />",
+				"<BestiaryAiModals",
+				"{...aiModalsProps}",
+				"onApplyDraft={(entry) => onRestoreAiDraftResponse(entry, \"apply\")}",
+				"onUndoDraft={(entry) => onRestoreAiDraftResponse(entry, \"undo\")}",
 			],
 			"Bestiary private modal host",
 		);

@@ -387,10 +387,6 @@ export default function BestiaryBrowser({
 				getHistoryChangeSummary={getHistoryChangeSummary}
 				isAiEditingMonster={isAiEditingMonster}
 				isRestoringAiResponse={isRestoringAiResponse}
-				onApplyDraft={(entry) => restoreAiDraftResponse(entry, "apply")}
-				onApplyDraftResource={(entry, resourceIds) =>
-					restoreAiDraftResponse(entry, "apply", { resourceIds })
-				}
 				onCancelDraft={closeAiDraftResponse}
 				onCancelEdit={closeAiEditCustomMonster}
 				onCancelEditCustomMonster={closeEditCustomMonster}
@@ -399,13 +395,10 @@ export default function BestiaryBrowser({
 				onChooseMonsterAiAction={chooseMonsterAiAction}
 				onInstructionsChange={setAiEditInstructions}
 				onModelChange={setSelectedAiModel}
+				onRestoreAiDraftResponse={restoreAiDraftResponse}
 				onSaveDraftChanges={saveAiDraftResponseChanges}
 				onSaveEdit={saveAiEditedCustomMonster}
 				onSaveEditedCustomMonster={saveEditedCustomMonster}
-				onUndoDraft={(entry) => restoreAiDraftResponse(entry, "undo")}
-				onUndoDraftResource={(entry, resourceIds) =>
-					restoreAiDraftResponse(entry, "undo", { resourceIds })
-				}
 				selectedAiModel={selectedAiModel}
 				setAiEditAttachedFiles={setAiEditAttachedFiles}
 				setAiEditAttachedImages={setAiEditAttachedImages}

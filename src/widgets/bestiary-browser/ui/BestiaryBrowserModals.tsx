@@ -11,7 +11,13 @@ import type {
 } from "./bestiaryComposition.ts";
 
 export interface BestiaryBrowserModalsProps
-	extends BestiaryAiModalsSlotProps {
+	extends Omit<
+		BestiaryAiModalsSlotProps,
+		| "onApplyDraft"
+		| "onApplyDraftResource"
+		| "onUndoDraft"
+		| "onUndoDraftResource"
+	> {
 	BestiaryAiModals: BestiaryAiModalsSlot;
 	MonsterEditorModal: ComponentType<
 		Pick<
@@ -24,6 +30,11 @@ export interface BestiaryBrowserModalsProps
 	onCancelEditCustomMonster: MonsterFieldEditModalProps["onCancel"];
 	onCancelMonsterAiAction: MonsterAiActionModalProps["onCancel"];
 	onChooseMonsterAiAction: MonsterAiActionModalProps["onChoose"];
+	onRestoreAiDraftResponse: (
+		entry: Parameters<BestiaryAiModalsSlotProps["onApplyDraft"]>[0],
+		mode: "apply" | "undo",
+		options?: { resourceIds?: string[] },
+	) => void | Promise<void>;
 	onSaveEditedCustomMonster: MonsterFieldEditModalProps["onSave"];
 }
 
@@ -35,6 +46,7 @@ export function BestiaryBrowserModals({
 	onCancelEditCustomMonster,
 	onCancelMonsterAiAction,
 	onChooseMonsterAiAction,
+	onRestoreAiDraftResponse,
 	onSaveEditedCustomMonster,
 	...aiModalsProps
 }: BestiaryBrowserModalsProps) {
@@ -52,7 +64,17 @@ export function BestiaryBrowserModals({
 				showGlobalEdit={isCustomSource(aiActionMonster?.source)}
 				showImagePromptAction
 			/>
-			<BestiaryAiModals {...aiModalsProps} />
+			<BestiaryAiModals
+				{...aiModalsProps}
+				onApplyDraft={(entry) => onRestoreAiDraftResponse(entry, "apply")}
+				onApplyDraftResource={(entry, resourceIds) =>
+					onRestoreAiDraftResponse(entry, "apply", { resourceIds })
+				}
+				onUndoDraft={(entry) => onRestoreAiDraftResponse(entry, "undo")}
+				onUndoDraftResource={(entry, resourceIds) =>
+					onRestoreAiDraftResponse(entry, "undo", { resourceIds })
+				}
+			/>
 		</>
 	);
 }
