@@ -14,7 +14,6 @@ import { sessionApi } from "../../../entities/session/index.js";
 import { bestiaryApi } from "../../../entities/bestiary/index.js";
 import {
 	aiApi,
-	buildAiTokenEstimate,
 	createAiHistoryWorkflow,
 	hasHistoryChanges,
 	isFailedHistoryEntry,
@@ -43,6 +42,7 @@ import { useAiImagePromptState } from "../model/useAiImagePromptState.ts";
 import { useAiAssistantModelAccess } from "../model/useAiAssistantModelAccess.ts";
 import { useAiAssistantGeneratedResult } from "../model/useAiAssistantGeneratedResult.ts";
 import { useAiAssistantGeneration } from "../model/useAiAssistantGeneration.ts";
+import { useAiAssistantTokenEstimate } from "../model/useAiAssistantTokenEstimate.ts";
 import { useAiAssistantUpdatedData } from "../model/useAiAssistantUpdatedData.ts";
 import { lang } from "../../../shared/lib/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
@@ -465,43 +465,17 @@ export default function AiAssistantPanel({
 		routePresentation,
 		translate,
 	);
-	const tokenEstimate = useMemo(() => {
-		return buildAiTokenEstimate({
-			activeCampaignBasePrompt,
-			attachedFiles,
-			attachedImages,
-			campaignContext: optional(campaignContext),
-			characterContext,
-			charactersList,
-			contextConfig,
-			currentLanguage,
-			generateCharacters,
-			generateCustomMonsters,
-			generateEncounters,
-			generateLocations,
-			generateNpcs,
-			globalAiBasePrompt,
-			isBestiary,
-			isCampaign,
-			isEncounter,
-			locationContext,
-			locationsList,
-			npcContext,
-			npcsList,
-			parseAIResponse,
-			selectedModel,
-			sessionData,
-			sessionName,
-			useContext,
-			userInstructions,
-			getCharacterKey: getCharacterContextKey,
-			getLocationKey: getLocationContextKey,
-		});
-	}, [
+	const {
+		formattedFileTokenEstimate,
+		formattedImageTokenEstimate,
+		formattedTextTokenEstimate,
+		formattedTokenEstimate,
+		tokenEstimate,
+	} = useAiAssistantTokenEstimate({
 		activeCampaignBasePrompt,
 		attachedFiles,
 		attachedImages,
-		campaignContext,
+		campaignContext: optional(campaignContext),
 		characterContext,
 		charactersList,
 		contextConfig,
@@ -525,19 +499,9 @@ export default function AiAssistantPanel({
 		sessionName,
 		useContext,
 		userInstructions,
-	]);
-	const formattedTokenEstimate = new Intl.NumberFormat(
-		currentLanguage || "en",
-	).format(tokenEstimate.total);
-	const formattedTextTokenEstimate = new Intl.NumberFormat(
-		currentLanguage || "en",
-	).format(tokenEstimate.textTokens);
-	const formattedImageTokenEstimate = new Intl.NumberFormat(
-		currentLanguage || "en",
-	).format(tokenEstimate.imageTokens);
-	const formattedFileTokenEstimate = new Intl.NumberFormat(
-		currentLanguage || "en",
-	).format(tokenEstimate.fileTokens || 0);
+		getCharacterKey: getCharacterContextKey,
+		getLocationKey: getLocationContextKey,
+	});
 
 	const imagePromptController = useAiImagePromptController({
 		state: imagePromptState,

@@ -10786,6 +10786,83 @@ await run(
 );
 
 await run(
+	"Phase 245 isolates AI Assistant token estimation in the private widget model",
+	async () => {
+		const [panelSource, tokenEstimateSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/ai-assistant/model/useAiAssistantTokenEstimate.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			panelSource,
+			/import \{ useAiAssistantTokenEstimate \} from "\.\.\/model\/useAiAssistantTokenEstimate\.ts";/,
+		);
+		assert.doesNotMatch(
+			panelSource,
+			/tokenEstimate = useMemo|buildAiTokenEstimate|formattedTokenEstimate = new Intl\.NumberFormat/,
+		);
+		assertSourceTokensInOrder(
+			panelSource,
+			[
+				"const {\n\t\tformattedFileTokenEstimate,",
+				"} = useAiAssistantTokenEstimate({",
+				"activeCampaignBasePrompt,",
+				"attachedFiles,",
+				"attachedImages,",
+				"campaignContext: optional(campaignContext),",
+				"contextConfig,",
+				"currentLanguage,",
+				"generateCustomMonsters,",
+				"globalAiBasePrompt,",
+				"sessionData,",
+				"userInstructions,",
+				"getCharacterKey: getCharacterContextKey,",
+				"getLocationKey: getLocationContextKey,",
+				"const imagePromptController = useAiImagePromptController({",
+			],
+			"AI Assistant token-estimate delegation",
+		);
+		assertSourceTokensInOrder(
+			tokenEstimateSource,
+			[
+				'import { useMemo } from "react";',
+				"export function useAiAssistantTokenEstimate(input: AiTokenEstimateInput) {",
+				"const tokenEstimate = useMemo(() => buildAiTokenEstimate(input), [",
+				"input.activeCampaignBasePrompt,",
+				"input.attachedFiles,",
+				"input.contextConfig,",
+				"input.getCharacterKey,",
+				"input.getLocationKey,",
+				"const numberFormat = new Intl.NumberFormat(input.currentLanguage || \"en\");",
+				"formattedFileTokenEstimate: numberFormat.format(tokenEstimate.fileTokens || 0),",
+				"formattedImageTokenEstimate: numberFormat.format(tokenEstimate.imageTokens),",
+				"formattedTextTokenEstimate: numberFormat.format(tokenEstimate.textTokens),",
+				"formattedTokenEstimate: numberFormat.format(tokenEstimate.total),",
+			],
+			"AI Assistant private token-estimate projection",
+		);
+		assert.doesNotMatch(
+			tokenEstimateSource,
+			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useAiAssistantTokenEstimate/,
+		);
+	},
+);
+
+await run(
 	"Phase 237 isolates Bestiary loading and sync lifecycle in the private widget model",
 	async () => {
 		const [browserSource, dataLoadingSource, widgetEntry, modelEntry, modelTypes] =

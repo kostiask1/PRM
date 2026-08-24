@@ -882,6 +882,8 @@ Next:
 - Phase 243 preserves generated-result plan execution, history/prompt/notification sequencing, update/reload callbacks, dialog-close behavior, and localized messages. The full suite passes 516/516 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 244 by moving AI Assistant generation, cancellation, and history-retry lifecycle into private `widgets/ai-assistant/model/useAiAssistantGeneration.ts`. `AiAssistantPanel.tsx` retains runtime, history/context/image-prompt, cleanup registration, and UI composition ownership.
 - Phase 244 preserves reducer/request-ID transitions, abort/ref cleanup, request construction, API-key/failure handling, failed-history replacement, retry deletion/selection behavior, and localized messages. The full suite passes 517/517 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 245 by moving AI Assistant token-estimate projection and formatting into private `widgets/ai-assistant/model/useAiAssistantTokenEstimate.ts`. `AiAssistantPanel.tsx` retains runtime, history/context/image-prompt, and UI composition ownership.
+- Phase 245 preserves the full estimate input/dependency projection, feature-owned token policy, locale fallback, and file-token zero fallback. The full suite passes 518/518 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
