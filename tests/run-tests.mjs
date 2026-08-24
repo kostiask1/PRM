@@ -11016,6 +11016,75 @@ await run(
 );
 
 await run(
+	"Phase 248 isolates Bestiary filtering and sorting in the private widget model",
+	async () => {
+		const [browserModelSource, filteringSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserFiltering.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				'import {\n\tgetMonsterCrDisplay,',
+				"from \"./bestiaryBrowserFiltering.ts\";",
+				"export {",
+				"filterBestiaryMonsters,",
+				"getMonsterCrDisplay,",
+				"getMonsterItemKey,",
+				"getNextBestiarySortOrder,",
+				"parseMonsterCr,",
+				"sortBestiaryMonsters,",
+				"export type {",
+				"BestiaryFilterOptions,",
+				"BestiarySortOrder,",
+			],
+			"Bestiary filtering compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function compileBestiaryFilter|function compareBestiaryMonsters|function parseFractionMonsterCr/,
+		);
+		assertSourceTokensInOrder(
+			filteringSource,
+			[
+				"export type BestiarySortOrder = \"none\" | \"desc\" | \"asc\";",
+				"export interface BestiaryFilterOptions {",
+				"export function normalizeMonsterName",
+				"export function normalizeMonsterSource",
+				"export function isCustomSource",
+				"export function getMonsterItemKey",
+				"export function getMonsterCrDisplay",
+				"export function parseMonsterCr",
+				"export function sortBestiaryMonsters",
+				"function compileBestiaryFilter",
+				"export function filterBestiaryMonsters",
+				"export function getNextBestiarySortOrder",
+			],
+			"Bestiary private filtering and sorting model",
+		);
+		assert.doesNotMatch(
+			filteringSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserFiltering/,
+		);
+	},
+);
+
+await run(
 	"Phase 237 isolates Bestiary loading and sync lifecycle in the private widget model",
 	async () => {
 		const [browserSource, dataLoadingSource, widgetEntry, modelEntry, modelTypes] =
