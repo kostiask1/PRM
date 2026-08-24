@@ -27,7 +27,6 @@ import type {
 } from "../../../features/ai/ui/index.js";
 import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
-import { isAbortError } from "../../../shared/api/index.ts";
 import {
 	MonsterAiActionModal,
 	type MonsterAiAction,
@@ -63,20 +62,15 @@ import "../../../assets/components/Bestiary.css";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	cloneCustomMonsters,
-	enrichMonstersWithLegendaryGroups,
 	executeAiDraftRestore,
 	executeAiMonsterEditRequest,
 	executeBestiaryFieldEditSave,
 	executeBestiarySelectedSourcesSave,
-	executeBestiarySyncEventPlan,
 	filterBestiaryMonsters,
-	getBestiarySourceCodes,
-	getBestiarySyncEventPlan,
 	getBestiaryInitialSelectionScrollPlan,
 	getBestiaryFieldEditStartPlan,
 	getBestiarySelectionPlan,
 	getCustomBestiaryUpdatePlan,
-	getCustomRefreshSelection,
 	getCreateBasedMonsterPlan,
 	getCustomMonsterDeleteStartPlan,
 	getEditedCustomMonsterPayload,
@@ -108,6 +102,7 @@ import type {
 	BestiaryMonsterStatBlockSlot,
 } from "./bestiaryComposition.ts";
 import { useBestiaryBrowserRuntime } from "./BestiaryBrowserRuntime.tsx";
+import { useBestiaryDataLoading } from "../model/useBestiaryDataLoading.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 
@@ -437,137 +432,23 @@ export default function BestiaryBrowser({
 		}
 	};
 
-	// Load available source files.
-	useEffect(() => {
-		const controller = new AbortController();
-		const loadInitialData = async () => {
-			try {
-				const [sourcesData, legendaryData, favData] = await Promise.all([
-					api.getBestiarySources({ signal: controller.signal }),
-					api.getLegendaryGroups({ signal: controller.signal }),
-					api.getBestiaryFavorites({ signal: controller.signal }),
-				]);
-				if (controller.signal.aborted) return;
-				setSources(getBestiarySourceCodes(sourcesData));
-				setLegendaryGroups(Array.isArray(legendaryData) ? legendaryData : []);
-				setFavorites(Array.isArray(favData) ? favData : []);
-			} catch (err) {
-				if (isAbortError(err)) return;
-				console.error(
-					"Failed to load bestiary sources or legendary groups",
-					err,
-				);
-			}
-		};
-		loadInitialData();
-		return () => controller.abort();
-	}, []);
-
-	useEffect(() => {
-		const plan = getBestiarySyncEventPlan(syncEvent);
-		if (!plan) return undefined;
-		const controller = new AbortController();
-		executeBestiarySyncEventPlan({
-			plan,
-			refreshFavorites: () =>
-				api.getBestiaryFavorites({ signal: controller.signal }),
-			onFavorites: (favorites) => {
-				if (!controller.signal.aborted) setFavorites(favorites);
-			},
-			onRefreshError: (error) => {
-				if (!isAbortError(error)) {
-					console.error("Failed to reload bestiary favorites", error);
-				}
-			},
-			onPendingSelection: (selection) => {
-				pendingSyncSelectionRef.current = selection;
-			},
-			onSuppressAutoSelection: () => {
-				shouldAutoSelectMonsterRef.current = false;
-			},
-			onReloadMonsters: () => {
-				setReloadToken((current) => current + 1);
-			},
-		});
-		return () => controller.abort();
-	}, [syncEvent]);
-
-	// Load the full monster list once; sources are filtered locally after that.
-	useEffect(() => {
-		if (sources.length === 0) return;
-
-		const controller = new AbortController();
-		const loadData = async () => {
-			setLoading(true);
-			try {
-				const [officialData, customData] = await Promise.all([
-					api.getBestiaryData("all", { signal: controller.signal }),
-					api.getCustomBestiaryData({ signal: controller.signal }),
-				]);
-				if (controller.signal.aborted) return;
-				const enrichedOfficialMonsters = enrichMonstersWithLegendaryGroups(
-					getMonsterListFromResponse(officialData),
-					legendaryGroups,
-				);
-				const enrichedCustomMonsters = enrichMonstersWithLegendaryGroups(
-					getMonsterListFromResponse(customData),
-					legendaryGroups,
-				);
-				hasLoadedInitialMonstersRef.current = true;
-				setAllMonsters([
-					...enrichedOfficialMonsters,
-					...enrichedCustomMonsters,
-				]);
-			} catch (error) {
-				if (!isAbortError(error)) {
-					console.error("Failed to load local monsters", error);
-				}
-			} finally {
-				if (!controller.signal.aborted) setLoading(false);
-			}
-		};
-		loadData();
-		return () => controller.abort();
-	}, [sources, legendaryGroups]);
-
-	useEffect(() => {
-		if (sources.length === 0 || !hasLoadedInitialMonstersRef.current) return;
-
-		const controller = new AbortController();
-		const loadCustomData = async () => {
-			try {
-				const customData = await api.getCustomBestiaryData({
-					signal: controller.signal,
-				});
-				if (controller.signal.aborted) return;
-				const enrichedCustomMonsters = enrichMonstersWithLegendaryGroups(
-					getMonsterListFromResponse(customData),
-					legendaryGroups,
-				);
-				setAllMonsters((current) => [
-					...current.filter((monster) => !isCustomSource(monster.source)),
-					...enrichedCustomMonsters,
-				]);
-				const pendingSelection = pendingSyncSelectionRef.current;
-				const nextSelected = getCustomRefreshSelection(
-					enrichedCustomMonsters,
-					pendingSelection,
-					selectedMonsterRef.current,
-				);
-				if (!nextSelected) return;
-				if (pendingSelection?.name) pendingSyncSelectionRef.current = null;
-				shouldAutoSelectMonsterRef.current = false;
-				selectedMonsterRef.current = nextSelected;
-				setSelectedMonster(nextSelected);
-			} catch (error) {
-				if (!isAbortError(error)) {
-					console.error("Failed to load custom monsters", error);
-				}
-			}
-		};
-		loadCustomData();
-		return () => controller.abort();
-	}, [sources, legendaryGroups, reloadToken]);
+	useBestiaryDataLoading({
+		hasLoadedInitialMonstersRef,
+		legendaryGroups,
+		pendingSyncSelectionRef,
+		reloadToken,
+		selectedMonsterRef,
+		setAllMonsters,
+		setFavorites,
+		setLegendaryGroups,
+		setLoading,
+		setReloadToken,
+		setSelectedMonster,
+		setSources,
+		shouldAutoSelectMonsterRef,
+		sources,
+		syncEvent,
+	});
 
 	useEffect(() => {
 		if (!aiEditingMonster || aiModels.length > 0) return;

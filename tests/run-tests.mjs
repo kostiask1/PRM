@@ -10541,6 +10541,74 @@ await run(
 );
 
 await run(
+	"Phase 237 isolates Bestiary loading and sync lifecycle in the private widget model",
+	async () => {
+		const [browserSource, dataLoadingSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/useBestiaryDataLoading.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			browserSource,
+			/import \{ useBestiaryDataLoading \} from "\.\.\/model\/useBestiaryDataLoading\.ts";/,
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/const loadInitialData|const loadData|const loadCustomData|isAbortError/,
+		);
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				"const syncEvent = useMemo(",
+				"const handleRedo = async () => {",
+				"useBestiaryDataLoading({",
+				"pendingSyncSelectionRef,",
+				"shouldAutoSelectMonsterRef,",
+				"syncEvent,",
+				"useEffect(() => {",
+				"if (!aiEditingMonster || aiModels.length > 0) return;",
+			],
+			"Bestiary browser loading-lifecycle delegation",
+		);
+		assertSourceTokensInOrder(
+			dataLoadingSource,
+			[
+				"import {\n\tuseEffect,",
+				"export function useBestiaryDataLoading({",
+				"const loadInitialData = async () => {",
+				"bestiaryApi.getBestiarySources({ signal: controller.signal }),",
+				"const plan = getBestiarySyncEventPlan(syncEvent);",
+				"executeBestiarySyncEventPlan({",
+				"const loadData = async () => {",
+				"bestiaryApi.getBestiaryData(\"all\", { signal: controller.signal }),",
+				"const loadCustomData = async () => {",
+				"const nextSelected = getCustomRefreshSelection(",
+				"setSelectedMonster(nextSelected);",
+			],
+			"Bestiary private loading and sync lifecycle",
+		);
+		assert.doesNotMatch(
+			dataLoadingSource,
+			/useBestiaryBrowserRuntime|campaignApi|aiApi|settingsApi|app\/model|shared\/model/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryDataLoading/,
+		);
+	},
+);
+
+await run(
 	"Phase 137 gives Settings an injected Sidebar runtime instead of direct global-store access",
 	async () => {
 		const [
@@ -16160,17 +16228,23 @@ await run(
 await run(
 	"recovered Bestiary sync parsing keeps a stable effect dependency",
 	async () => {
-		const source = await fs.readFile(
-			"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
-			"utf8",
-		);
+		const [source, dataLoadingSource] = await Promise.all([
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/model/useBestiaryDataLoading.ts",
+				"utf8",
+			),
+		]);
 		assert.match(source, /syncEvent:\s*rawSyncEvent,/);
 		assert.match(source, /\} = useBestiaryBrowserRuntime\(\);/);
 		assert.match(
 			source,
 			/const syncEvent = useMemo\(\s*\(\) => parseBestiarySyncEvent\(rawSyncEvent\),\s*\[rawSyncEvent\],\s*\);/,
 		);
-		assert.match(source, /\}, \[syncEvent\]\);/);
+		assert.match(dataLoadingSource, /\}, \[syncEvent\]\);/);
 		assert.doesNotMatch(
 			source,
 			/parseBestiarySyncEvent\(\s*useAppSelector/,
@@ -47745,6 +47819,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
 		"utf8",
 	);
+	const bestiaryDataLoadingSource = await fs.readFile(
+		"src/widgets/bestiary-browser/model/useBestiaryDataLoading.ts",
+		"utf8",
+	);
 	const bestiaryContentSource = await fs.readFile(
 		"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
 		"utf8",
@@ -47806,8 +47884,8 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiarySource, /initialSelectedName = ""/);
 	assert.match(bestiarySource, /hideSearchInput = false/);
 	assert.match(bestiarySource, /pendingSyncSelectionRef/);
-	assert.match(bestiarySource, /getBestiarySyncEventPlan\(syncEvent\)/);
-	assert.match(bestiarySource, /executeBestiarySyncEventPlan\(\{/);
+	assert.match(bestiaryDataLoadingSource, /getBestiarySyncEventPlan\(syncEvent\)/);
+	assert.match(bestiaryDataLoadingSource, /executeBestiarySyncEventPlan\(\{/);
 	assert.match(bestiarySource, /executeBestiaryFieldEditSave\(\{/);
 	assert.match(bestiarySource, /executeBestiarySelectedSourcesSave\(\{/);
 	assert.match(bestiaryModelSource, /function applyBestiarySyncPendingSelection/);
