@@ -11076,6 +11076,74 @@ await run(
 );
 
 await run(
+	"Phase 277 isolates Campaign graph canvas and minimap rendering in private page UI",
+	async () => {
+		const [graphSource, canvasSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignGraphCanvas.tsx",
+					"utf8",
+				),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			graphSource,
+			[
+				'import {',
+				'from "./CampaignGraphCanvas.tsx";',
+				"const NODE_TYPES = { campaignGraphNode: CampaignGraphNodeCard };",
+				"<CampaignGraphCanvas",
+				"flowNodes={flowNodes}",
+				"flowEdges={flowEdges}",
+				"nodeTypes={NODE_TYPES}",
+				"onNodeDragStop={handleNodeDragStop}",
+				'colorMode={currentTheme === "dark" ? "dark" : "light"}',
+			],
+			"Campaign graph controller composes the private flow canvas",
+		);
+		assert.doesNotMatch(
+			graphSource,
+			/function CampaignGraphMiniMap|function CampaignGraphCanvas\(|function CampaignGraphCanvasMessages|<ReactFlow(?:<|\s)|useReactFlow|useViewport|useStore|BackgroundVariant/,
+		);
+		assertSourceTokensInOrder(
+			canvasSource,
+			[
+				'import { useCallback, useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";',
+				"export interface CampaignGraphCanvasNodeData",
+				"export type CampaignGraphFlowNode",
+				"function CampaignGraphMiniMap",
+				"const activePointerRef = useRef<number | null>(null);",
+				"useReactFlow<",
+				"getCampaignGraphMiniMapBounds(nodes)",
+				"event.currentTarget.setPointerCapture(event.pointerId);",
+				"export function CampaignGraphCanvas",
+				"<ReactFlow<CampaignGraphFlowNode<Data>, CampaignGraphFlowEdge>",
+				"<Background variant={BackgroundVariant.Dots} gap={24} size={1.25} />",
+				"<Controls",
+				"<CampaignGraphMiniMap nodes={flowNodes} />",
+				"function CampaignGraphCanvasMessages",
+				"function CampaignGraphEmptyMessage",
+			],
+			"Campaign graph private canvas preserves Flow, minimap, and message composition",
+		);
+		assert.doesNotMatch(
+			canvasSource,
+			/useCampaignPageRuntime|buildCampaignGraph|layoutCampaignGraph|executeCampaignGraphOpenTarget|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/CampaignGraphCanvas|CampaignGraphFlowNode/,
+		);
+	},
+);
+
+await run(
 	"Phase 276 isolates the Bestiary image-prompt bridge in a private UI hook",
 	async () => {
 		const [browserSource, stateSource, bridgeSource, widgetEntry, modelEntry, modelTypes] =

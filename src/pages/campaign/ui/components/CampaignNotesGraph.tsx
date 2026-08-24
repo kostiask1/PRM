@@ -6,26 +6,15 @@ import React, {
 	useRef,
 	useState,
 	type CSSProperties,
-	type PointerEvent as ReactPointerEvent,
 	type ReactElement,
 	type ReactNode,
 } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import {
-	Background,
-	BackgroundVariant,
-	Controls,
 	Handle,
 	MarkerType,
 	Position,
-	ReactFlow,
 	useNodesState,
-	useReactFlow,
-	useStore,
-	useViewport,
-	type Edge,
-	type AriaLabelConfig,
-	type Node,
 	type NodeChange,
 	type NodeProps,
 	type OnNodeDrag,
@@ -67,8 +56,6 @@ import {
 	getCampaignGraphEdgeStrokeWidth,
 	getCampaignGraphFlowNodePresentation,
 	getCampaignGraphFlowProjectionPlan,
-	getCampaignGraphMiniMapBounds,
-	getCampaignGraphMiniMapNodeSize,
 	getCampaignGraphNodeCardPresentation,
 	getCampaignGraphNodeTopologyKey,
 	getCampaignGraphNoteSaveRequest,
@@ -101,6 +88,12 @@ import type { SessionRecord } from "../../../../entities/session/index.js";
 import type { SharedNote } from "../../../../shared/lib/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import { useCampaignPageRuntime } from "../../model/CampaignPageRuntime.tsx";
+import {
+	CampaignGraphCanvas,
+	type CampaignGraphCanvasNodeData,
+	type CampaignGraphFlowEdge,
+	type CampaignGraphFlowNode,
+} from "./CampaignGraphCanvas.tsx";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
 
@@ -205,7 +198,7 @@ const HANDLE_POSITIONS = [
 type CampaignGraphEntityModalState = NonNullable<EntityModalProps["modalState"]>;
 type GraphCssProperties = CSSProperties & Record<`--${string}`, string | number>;
 
-interface CampaignFlowNodeData extends Record<string, unknown> {
+interface CampaignFlowNodeData extends CampaignGraphCanvasNodeData {
 	graphNode: CampaignGraphNode;
 	color: string;
 	typeLabel: string;
@@ -217,8 +210,8 @@ interface CampaignFlowNodeData extends Record<string, unknown> {
 	openLabel: string;
 }
 
-type CampaignFlowNode = Node<CampaignFlowNodeData, "campaignGraphNode">;
-type CampaignFlowEdge = Edge;
+type CampaignFlowNode = CampaignGraphFlowNode<CampaignFlowNodeData>;
+type CampaignFlowEdge = CampaignGraphFlowEdge;
 
 export interface CampaignNotesGraphProps {
 	campaign: CampaignPageCampaign;
@@ -512,92 +505,6 @@ function useCampaignGraphLayout(
 	return cacheRef.current.positions;
 }
 
-function CampaignGraphMiniMap({ nodes }: { nodes: CampaignFlowNode[] }) {
-	const svgRef = useRef<SVGSVGElement>(null);
-	const activePointerRef = useRef<number | null>(null);
-	const { setCenter } = useReactFlow<CampaignFlowNode, CampaignFlowEdge>();
-	const viewport = useViewport();
-	const flowWidth = useStore((state) => state.width);
-	const flowHeight = useStore((state) => state.height);
-	const bounds = useMemo(() => getCampaignGraphMiniMapBounds(nodes), [nodes]);
-
-	const moveViewport = useCallback((event: ReactPointerEvent<SVGSVGElement>) => {
-		if (!bounds || !svgRef.current) return;
-		const rect = svgRef.current.getBoundingClientRect();
-		const x = bounds.x + ((event.clientX - rect.left) / rect.width) * bounds.width;
-		const y = bounds.y + ((event.clientY - rect.top) / rect.height) * bounds.height;
-		setCenter(x, y, { zoom: viewport.zoom, duration: 0 });
-	}, [bounds, setCenter, viewport.zoom]);
-
-	if (!bounds) return null;
-
-	const viewportRect = {
-		x: -viewport.x / viewport.zoom,
-		y: -viewport.y / viewport.zoom,
-		width: flowWidth / viewport.zoom,
-		height: flowHeight / viewport.zoom,
-	};
-	const maskX = Math.max(bounds.x, viewportRect.x);
-	const maskY = Math.max(bounds.y, viewportRect.y);
-	const maskRight = Math.min(bounds.x + bounds.width, viewportRect.x + viewportRect.width);
-	const maskBottom = Math.min(bounds.y + bounds.height, viewportRect.y + viewportRect.height);
-	const hasVisibleViewport = maskRight > maskX && maskBottom > maskY;
-
-	return (
-		<div className="react-flow__panel bottom right react-flow__minimap CampaignNotesGraph__miniMap nopan nowheel">
-			<svg
-				ref={svgRef}
-				className="CampaignNotesGraph__miniMapSvg"
-				viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
-				preserveAspectRatio="xMidYMid meet"
-				aria-label={lang.t("Graph minimap")}
-				onPointerDown={(event) => {
-					activePointerRef.current = event.pointerId;
-					event.currentTarget.setPointerCapture(event.pointerId);
-					moveViewport(event);
-				}}
-				onPointerMove={(event) => {
-					if (activePointerRef.current === event.pointerId) moveViewport(event);
-				}}
-				onPointerUp={(event) => {
-					if (activePointerRef.current === event.pointerId) activePointerRef.current = null;
-				}}
-			>
-				{nodes.filter((node) => !node.hidden).map((node) => {
-					const { width, height } = getCampaignGraphMiniMapNodeSize(node);
-					return (
-						<rect
-							key={node.id}
-							x={node.position.x - width / 2}
-							y={node.position.y - height / 2}
-							width={width}
-							height={height}
-							rx={10}
-							fill={node.data?.color || "#94a3b8"}
-						/>
-					);
-				})}
-				{hasVisibleViewport && (
-					<>
-						<path
-							className="CampaignNotesGraph__miniMapMask"
-							fillRule="evenodd"
-							d={`M ${bounds.x} ${bounds.y} h ${bounds.width} v ${bounds.height} h ${-bounds.width} Z M ${maskX} ${maskY} h ${maskRight - maskX} v ${maskBottom - maskY} h ${maskX - maskRight} Z`}
-						/>
-						<rect
-							className="CampaignNotesGraph__miniMapViewport"
-							x={maskX}
-							y={maskY}
-							width={maskRight - maskX}
-							height={maskBottom - maskY}
-						/>
-					</>
-				)}
-			</svg>
-		</div>
-	);
-}
-
 interface CampaignGraphToolbarProps {
 	query: string;
 	onQueryChange: (value: string) => void;
@@ -674,131 +581,6 @@ function CampaignGraphToolbar({
 			</p>
 		</div>
 	);
-}
-
-interface CampaignGraphCanvasProps {
-	error: string;
-	isLoading: boolean;
-	visibleNodeCount: number;
-	query: string;
-	flowNodes: CampaignFlowNode[];
-	flowEdges: CampaignFlowEdge[];
-	onInit: (instance: ReactFlowInstance<CampaignFlowNode, CampaignFlowEdge>) => void;
-	onNodesChange: (changes: NodeChange<CampaignFlowNode>[]) => void;
-	onNodeSelect: (nodeId: string) => void;
-	onNodeOpen: (nodeId: string) => void;
-	onNodeHover: (nodeId: string | null) => void;
-	onNodeDragStop: OnNodeDrag<CampaignFlowNode>;
-	onPaneClick: () => void;
-	ariaLabelConfig: Partial<AriaLabelConfig>;
-	colorMode: "dark" | "light";
-}
-
-function CampaignGraphCanvas({
-	error,
-	isLoading,
-	visibleNodeCount,
-	query,
-	flowNodes,
-	flowEdges,
-	onInit,
-	onNodesChange,
-	onNodeSelect,
-	onNodeOpen,
-	onNodeHover,
-	onNodeDragStop,
-	onPaneClick,
-	ariaLabelConfig,
-	colorMode,
-}: CampaignGraphCanvasProps) {
-	return (
-		<div className="CampaignNotesGraph__canvasWrap">
-			<CampaignGraphCanvasMessages
-				error={error}
-				isLoading={isLoading}
-				visibleNodeCount={visibleNodeCount}
-				query={query}
-			/>
-			<ReactFlow<CampaignFlowNode, CampaignFlowEdge>
-				nodes={flowNodes}
-				edges={flowEdges}
-				nodeTypes={NODE_TYPES}
-				onInit={onInit}
-				onNodesChange={onNodesChange}
-				onNodeClick={(_event, node) => onNodeSelect(node.id)}
-				onNodeDoubleClick={(_event, node) => onNodeOpen(node.id)}
-				onNodeMouseEnter={(_event, node) => onNodeHover(node.id)}
-				onNodeMouseLeave={() => onNodeHover(null)}
-				onNodeDragStop={onNodeDragStop}
-				onPaneClick={onPaneClick}
-				fitView
-				fitViewOptions={{ padding: 0.16 }}
-				minZoom={0.18}
-				maxZoom={2.2}
-				nodeOrigin={[0.5, 0.5]}
-				nodeDragThreshold={4}
-				nodesConnectable={false}
-				edgesReconnectable={false}
-				deleteKeyCode={null}
-				multiSelectionKeyCode={null}
-				zoomOnDoubleClick={false}
-				autoPanOnNodeDrag
-				autoPanOnNodeFocus
-				onlyRenderVisibleElements
-				aria-label={lang.t("Campaign graph")}
-				ariaLabelConfig={ariaLabelConfig}
-				attributionPosition="top-right"
-				colorMode={colorMode}
-			>
-				<Background variant={BackgroundVariant.Dots} gap={24} size={1.25} />
-				<Controls
-					position="bottom-left"
-					showInteractive={false}
-					fitViewOptions={{ padding: 0.16, duration: 420 }}
-				/>
-				<CampaignGraphMiniMap nodes={flowNodes} />
-			</ReactFlow>
-		</div>
-	);
-}
-
-function CampaignGraphCanvasMessages({
-	error,
-	isLoading,
-	visibleNodeCount,
-	query,
-}: Pick<CampaignGraphCanvasProps, "error" | "isLoading" | "visibleNodeCount" | "query">) {
-	return (
-		<>
-			<CampaignGraphErrorMessage error={error} />
-			<CampaignGraphLoadingMessage isLoading={isLoading} />
-			<CampaignGraphEmptyMessage
-				isLoading={isLoading}
-				visibleNodeCount={visibleNodeCount}
-				query={query}
-			/>
-		</>
-	);
-}
-
-function CampaignGraphErrorMessage({ error }: Pick<CampaignGraphCanvasProps, "error">) {
-	if (!error) return null;
-	return <div className="CampaignNotesGraph__message CampaignNotesGraph__message__error">{error}</div>;
-}
-
-function CampaignGraphLoadingMessage({ isLoading }: Pick<CampaignGraphCanvasProps, "isLoading">) {
-	if (!isLoading) return null;
-	return <div className="CampaignNotesGraph__message">{lang.t("Loading graph...")}</div>;
-}
-
-function CampaignGraphEmptyMessage({
-	isLoading,
-	visibleNodeCount,
-	query,
-}: Pick<CampaignGraphCanvasProps, "isLoading" | "visibleNodeCount" | "query">) {
-	if (visibleNodeCount !== 0 || isLoading) return null;
-	const label = query ? "Nothing found." : "No graph links yet.";
-	return <div className="CampaignNotesGraph__message">{lang.t(label)}</div>;
 }
 
 interface CampaignGraphSelectedDetailsProps {
@@ -1476,6 +1258,7 @@ export default function CampaignNotesGraph({
 					query={query}
 					flowNodes={flowNodes}
 					flowEdges={flowEdges}
+					nodeTypes={NODE_TYPES}
 					onInit={setFlowInstance}
 					onNodesChange={handleFlowNodesChange}
 					onNodeSelect={setSelectedNodeId}
