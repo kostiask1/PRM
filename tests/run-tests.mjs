@@ -11016,6 +11016,56 @@ await run(
 );
 
 await run(
+	"Phase 259 isolates Bestiary toolbar UI in a private widget component",
+	async () => {
+		const [contentSource, toolbarSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryToolbar.tsx",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			contentSource,
+			[
+				'import { BestiaryToolbar } from "./BestiaryToolbar.tsx";',
+				"export interface BestiaryContentProps",
+				"<BestiaryToolbar",
+			],
+			"Bestiary content composes its private toolbar",
+		);
+		assert.doesNotMatch(contentSource, /function BestiaryToolbar\(/);
+		assertSourceTokensInOrder(
+			toolbarSource,
+			[
+				'import type { Dispatch, ReactNode, SetStateAction } from "react";',
+				'import { formatSourceLabel } from "../../../entities/reference/index.js";',
+				'import { Input } from "../../../features/editor/ui/index.js";',
+				"export interface BestiaryToolbarProps",
+				"export function BestiaryToolbar",
+			],
+			"Bestiary private toolbar component",
+		);
+		assert.doesNotMatch(
+			toolbarSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|BestiaryContentProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/BestiaryToolbar/,
+		);
+	},
+);
+
+await run(
 	"Phase 258 isolates Bestiary virtualized list-item UI in a private widget component",
 	async () => {
 		const [contentSource, listItemSource, widgetEntry, modelEntry, modelTypes] =

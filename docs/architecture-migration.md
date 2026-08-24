@@ -910,6 +910,8 @@ Next:
 - Phase 257 preserves restore guard/clone timing, apply/undo dispatch, changed-selection derivation, no-op undo snapshot detection, callback order, busy finalization, and image/original-name metadata fallback. The full suite passes 530/530 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 258 by moving the virtualized Bestiary row, row actions, and row content into private `widgets/bestiary-browser/ui/BestiaryMonsterListItem.tsx`. `BestiaryContent.tsx` retains the list/detail composition boundary.
 - Phase 258 preserves primary-action routing, stopped action clicks, favorite/custom action availability, token/source/CR presentation, selection/double-click behavior, and no public widget entry expansion. The full suite passes 531/531 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 259 by moving the Bestiary source/search/favorite/sort toolbar into private `widgets/bestiary-browser/ui/BestiaryToolbar.tsx`. `BestiaryContent.tsx` retains the list/detail composition boundary.
+- Phase 259 preserves source selection/filter callbacks, source labels, search/deep-search controls, favorite/sort controls, header-action rendering, and no public widget entry expansion. The full suite passes 532/532 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
