@@ -5,7 +5,6 @@ import {
 	isValidElement,
 	useEffect,
 	useMemo,
-	useState,
 	type ReactNode,
 } from "react";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
@@ -24,7 +23,6 @@ import {
 } from "../../../features/ai/index.js";
 import type {
 	AiResponseModalComponent,
-	AiUiAttachment,
 } from "../../../features/ai/ui/index.js";
 const api = { ...campaignApi, ...sessionApi, ...bestiaryApi, ...aiApi };
 import AiImagePromptPickerModal from "./AiImagePromptPickerModal.tsx";
@@ -42,6 +40,7 @@ import { useAiImagePromptState } from "../model/useAiImagePromptState.ts";
 import { useAiAssistantModelAccess } from "../model/useAiAssistantModelAccess.ts";
 import { useAiAssistantGeneratedResult } from "../model/useAiAssistantGeneratedResult.ts";
 import { useAiAssistantGeneration } from "../model/useAiAssistantGeneration.ts";
+import { useAiAssistantControls } from "../model/useAiAssistantControls.ts";
 import { useAiAssistantTokenEstimate } from "../model/useAiAssistantTokenEstimate.ts";
 import { useAiAssistantUpdatedData } from "../model/useAiAssistantUpdatedData.ts";
 import { lang } from "../../../shared/lib/index.js";
@@ -218,12 +217,39 @@ export default function AiAssistantPanel({
 		generateEncountersByDefault,
 	} = routeState;
 
-	const [isOpen, setIsOpen] = useState(false);
-	const [isContextModalOpen, setIsContextModalOpen] = useState(false);
-	const [useContext, setUseContext] = useState(true);
-	const [error, setError] = useState("");
-	const [userInstructions, setUserInstructions] = useState("");
-	const [notification, setNotification] = useState<string | null>(null);
+	const {
+		attachedFiles,
+		attachedImages,
+		error,
+		generateCharacters,
+		generateCustomMonsters,
+		generateEncounters,
+		generateLocations,
+		generateNpcs,
+		isContextModalOpen,
+		isOpen,
+		notification,
+		parseAIResponse,
+		setAttachedFiles,
+		setAttachedImages,
+		setError,
+		setGenerateCharacters,
+		setGenerateCustomMonsters,
+		setGenerateEncounters,
+		setGenerateLocations,
+		setGenerateNpcs,
+		setIsContextModalOpen,
+		setIsOpen,
+		setNotification,
+		setParseAIResponse,
+		setUseContext,
+		setUserInstructions,
+		useContext,
+		userInstructions,
+	} = useAiAssistantControls({
+		generateEncountersByDefault,
+		isEncounter,
+	});
 	const imagePromptState = useAiImagePromptState();
 	const {
 		isOpen: isImagePromptPickerOpen,
@@ -235,16 +261,6 @@ export default function AiAssistantPanel({
 		setRequest: setImagePromptRequest,
 		isContextMode: isImagePromptContextMode,
 	} = imagePromptState;
-	const [attachedImages, setAttachedImages] = useState<AiUiAttachment[]>([]);
-	const [attachedFiles, setAttachedFiles] = useState<AiUiAttachment[]>([]);
-	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
-	const [generateCharacters, setGenerateCharacters] = useState(false);
-	const [generateNpcs, setGenerateNpcs] = useState(true);
-	const [generateLocations, setGenerateLocations] = useState(true);
-	const [generateEncounters, setGenerateEncounters] = useState(
-		generateEncountersByDefault,
-	);
-	const [generateCustomMonsters, setGenerateCustomMonsters] = useState(false);
 	const {
 		charactersList,
 		characterContext,

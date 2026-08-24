@@ -2978,7 +2978,7 @@ await run(
 
 		assert.match(
 			panelSource,
-			/import type \{\s*AiResponseModalComponent,\s*AiUiAttachment,\s*\} from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
+			/import type \{\s*AiResponseModalComponent,\s*\} from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
 		);
 		assert.match(
 			panelSource,
@@ -10858,6 +10858,85 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useAiAssistantTokenEstimate/,
+		);
+	},
+);
+
+await run(
+	"Phase 246 isolates AI Assistant control state in the private widget model",
+	async () => {
+		const [panelSource, controlsSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/ai-assistant/model/useAiAssistantControls.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			panelSource,
+			/import \{ useAiAssistantControls \} from "\.\.\/model\/useAiAssistantControls\.ts";/,
+		);
+		assert.doesNotMatch(
+			panelSource,
+			/const \[isOpen|const \[isContextModalOpen|const \[useContext|const \[attachedImages|const \[attachedFiles|const \[parseAIResponse|const \[generateCharacters|const \[generateCustomMonsters/,
+		);
+		assertSourceTokensInOrder(
+			panelSource,
+			[
+				"const {\n\t\tattachedFiles,",
+				"} = useAiAssistantControls({",
+				"generateEncountersByDefault,",
+				"isEncounter,",
+				"const imagePromptState = useAiImagePromptState();",
+				"useAiAssistantContextController({",
+				"isPanelOpen: isOpen,",
+				"isContextModalOpen,",
+				"useContext,",
+				"parseAiResponse: parseAIResponse,",
+				"generateEncounters,",
+			],
+			"AI Assistant control-state delegation",
+		);
+		assertSourceTokensInOrder(
+			controlsSource,
+			[
+				"export function useAiAssistantControls({",
+				"const [isOpen, setIsOpen] = useState(false);",
+				"const [isContextModalOpen, setIsContextModalOpen] = useState(false);",
+				"const [useContext, setUseContext] = useState(true);",
+				"const [error, setError] = useState(\"\");",
+				"const [userInstructions, setUserInstructions] = useState(\"\");",
+				"const [notification, setNotification] = useState<string | null>(null);",
+				"const [attachedImages, setAttachedImages] = useState<AiUiAttachment[]>([]);",
+				"const [attachedFiles, setAttachedFiles] = useState<AiUiAttachment[]>([]);",
+				"const [parseAIResponse, setParseAIResponse] = useState(isEncounter);",
+				"const [generateCharacters, setGenerateCharacters] = useState(false);",
+				"const [generateNpcs, setGenerateNpcs] = useState(true);",
+				"const [generateLocations, setGenerateLocations] = useState(true);",
+				"const [generateEncounters, setGenerateEncounters] = useState(",
+				"generateEncountersByDefault,",
+				"const [generateCustomMonsters, setGenerateCustomMonsters] = useState(false);",
+				"return {",
+				"setUserInstructions,",
+				"userInstructions,",
+			],
+			"AI Assistant private control state",
+		);
+		assert.doesNotMatch(
+			controlsSource,
+			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useAiAssistantControls/,
 		);
 	},
 );
