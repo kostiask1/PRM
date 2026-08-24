@@ -11077,6 +11077,46 @@ await run(
 );
 
 await run(
+	"Phase 289 isolates Campaign graph selection lifecycle in a private page hook",
+	async () => {
+		const [graphSource, selectionSource, pageEntry, pageTypes] = await Promise.all([
+			fs.readFile("src/pages/campaign/ui/components/CampaignNotesGraph.tsx", "utf8"),
+			fs.readFile("src/pages/campaign/ui/components/useCampaignGraphSelection.ts", "utf8"),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+		]);
+
+		assertSourceTokensInOrder(graphSource, [
+			'import { useCampaignGraphSelection } from "./useCampaignGraphSelection.ts";',
+			"} = useCampaignGraphSelection({",
+			"campaignSlug: campaign.slug,",
+			"visibleGraph,",
+			"hasManualPositionsRef,",
+		]);
+		assert.doesNotMatch(
+			graphSource,
+			/const \[selectedNodeId|const \[hoveredNodeId|getCampaignGraphConnectedIds\(|getCampaignGraphConnectedEdges\(/,
+		);
+		assertSourceTokensInOrder(selectionSource, [
+			"export function useCampaignGraphSelection",
+			"const [selectedNodeId, setSelectedNodeId] = useState",
+			"const [hoveredNodeId, setHoveredNodeId] = useState",
+			"const focusedNodeId = hoveredNodeId || selectedNodeId;",
+			"getCampaignGraphConnectedIds(visibleGraph.edges, focusedNodeId)",
+			"getCampaignGraphConnectedEdges(visibleGraph.edges, selectedNodeId)",
+			"if (selectedNodeId && !visibleGraph.visibleNodeIds.has(selectedNodeId))",
+			"setHoveredNodeId(null);",
+			"hasManualPositionsRef.current = false;",
+		]);
+		assert.doesNotMatch(
+			selectionSource,
+			/useCampaignPageRuntime|buildCampaignGraph|useNodesState|onSaveNote|onOpenSession/,
+		);
+		assert.doesNotMatch(`${pageEntry}\n${pageTypes}`, /useCampaignGraphSelection/);
+	},
+);
+
+await run(
 	"Phase 288 isolates Campaign graph viewport coordination in a private page hook",
 	async () => {
 		const [graphSource, viewportSource, pageEntry, pageTypes] = await Promise.all([

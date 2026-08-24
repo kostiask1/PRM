@@ -26,8 +26,6 @@ import {
 	executeCampaignGraphOpenTarget,
 	formatCampaignGraphSourceList,
 	getCampaignGraphConnectionPresentation,
-	getCampaignGraphConnectedEdges,
-	getCampaignGraphConnectedIds,
 	getCampaignGraphNodeTopologyKey,
 	getCampaignGraphNoteSaveRequest,
 	getCampaignGraphOpenTarget,
@@ -70,6 +68,7 @@ import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";
 import { useCampaignGraphFlowEdges } from "./useCampaignGraphFlowEdges.ts";
 import { useCampaignGraphFlowInteractions } from "./useCampaignGraphFlowInteractions.ts";
 import { useCampaignGraphFlowNodeProjection } from "./useCampaignGraphFlowNodeProjection.ts";
+import { useCampaignGraphSelection } from "./useCampaignGraphSelection.ts";
 import { useCampaignGraphViewport } from "./useCampaignGraphViewport.ts";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
@@ -153,10 +152,8 @@ export default function CampaignNotesGraph({
 			...DEFAULT_CAMPAIGN_GRAPH_FILTERS,
 		}));
 	const [query, setQuery] = useState("");
-	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 	const [entityModalState, setEntityModalState] =
 		useState<CampaignGraphEntityModalState | null>(null);
-	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 	const [flowInstance, setFlowInstance] =
 		useState<ReactFlowInstance<CampaignFlowNode, CampaignFlowEdge> | null>(null);
 	const [flowNodes, setFlowNodes, onFlowNodesChange] =
@@ -210,18 +207,19 @@ export default function CampaignNotesGraph({
 	const layoutPositions = useCampaignGraphLayout(graph.nodes, graph.edges);
 	const nodeTopologyKey = getCampaignGraphNodeTopologyKey(graph.nodes);
 	const flowNodeTopologyKey = getCampaignGraphNodeTopologyKey(flowNodes);
-	const focusedNodeId = hoveredNodeId || selectedNodeId;
-	const connectedIds = useMemo(
-		() => getCampaignGraphConnectedIds(visibleGraph.edges, focusedNodeId),
-		[focusedNodeId, visibleGraph.edges],
-	);
-	const selectedNode = selectedNodeId
-		? visibleGraph.nodeById.get(selectedNodeId)
-		: null;
-	const selectedEdges = useMemo(
-		() => getCampaignGraphConnectedEdges(visibleGraph.edges, selectedNodeId),
-		[selectedNodeId, visibleGraph.edges],
-	);
+	const {
+		selectedNodeId,
+		setSelectedNodeId,
+		setHoveredNodeId,
+		focusedNodeId,
+		connectedIds,
+		selectedNode,
+		selectedEdges,
+	} = useCampaignGraphSelection({
+		campaignSlug: campaign.slug,
+		visibleGraph,
+		hasManualPositionsRef,
+	});
 
 	const openGraphNote = useCallback(
 		(node: CampaignGraphNode, note: SharedNote) => {
@@ -274,18 +272,6 @@ export default function CampaignNotesGraph({
 			sessionDetails,
 		],
 	);
-
-	useEffect(() => {
-		if (selectedNodeId && !visibleGraph.visibleNodeIds.has(selectedNodeId)) {
-			setSelectedNodeId(null);
-		}
-	}, [selectedNodeId, visibleGraph.visibleNodeIds]);
-
-	useEffect(() => {
-		setSelectedNodeId(null);
-		setHoveredNodeId(null);
-		hasManualPositionsRef.current = false;
-	}, [campaign.slug]);
 
 	useCampaignGraphFlowNodeProjection({
 		campaignSlug: campaign.slug,

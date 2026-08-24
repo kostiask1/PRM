@@ -970,6 +970,8 @@ Next:
 - Phase 287 preserves drag collision correction, selected-node synchronization, manual-position tracking, callback ordering, and no page public-entry expansion. The full suite passes 560/560 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 288 by moving Campaign Graph viewport coordination into private `pages/campaign/ui/components/useCampaignGraphViewport.ts`. `CampaignNotesGraph.tsx` retains filter state, graph inputs, Flow state, and canvas composition.
 - Phase 288 preserves filter-triggered and manual relayout policies, 360/520 ms fit timings, campaign topology-reset behavior, manual-position fit guards, and no page public-entry expansion. The full suite passes 561/561 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 289 by moving Campaign Graph selection lifecycle into private `pages/campaign/ui/components/useCampaignGraphSelection.ts`. `CampaignNotesGraph.tsx` retains graph construction, Flow state, navigation, and canvas composition.
+- Phase 289 preserves selected/hovered reset behavior, visibility invalidation, manual-position reset, focus resolution, and connection/detail projections without a page public-entry expansion. The full suite passes 562/562 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
