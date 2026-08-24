@@ -3,7 +3,6 @@ import {
 	cloneElement,
 	createElement,
 	isValidElement,
-	useCallback,
 	useEffect,
 	useMemo,
 	useReducer,
@@ -19,14 +18,12 @@ import {
 	aiApi,
 	aiGenerationLifecycleReducer,
 	buildAiGeneratedResultPlan,
-	buildAiUpdatedDataPlan,
 	buildAiTokenEstimate,
 	buildAiGenerationRequest,
 	createAiHistoryWorkflow,
 	executeAiGeneratedResultPlan,
 	executeAiGeneration,
 	executeAiHistoryRetry,
-	executeAiUpdatedDataPlan,
 	formatAiGenerationFailureAlert,
 	getAiHistoryRetryFailure,
 	hasHistoryChanges,
@@ -38,7 +35,6 @@ import {
 	type AiHistoryEntry,
 	type AiHistoryResource,
 	type AiContextSession,
-	type BuildAiUpdatedDataPlanOptions,
 } from "../../../features/ai/index.js";
 import type {
 	AiResponseModalComponent,
@@ -58,6 +54,7 @@ import { useAiAssistantHistoryController } from "../model/useAiAssistantHistoryC
 import { useAiImagePromptController } from "../model/useAiImagePromptController.ts";
 import { useAiImagePromptState } from "../model/useAiImagePromptState.ts";
 import { useAiAssistantModelAccess } from "../model/useAiAssistantModelAccess.ts";
+import { useAiAssistantUpdatedData } from "../model/useAiAssistantUpdatedData.ts";
 import type { ImagePromptTarget } from "../model/imagePromptPicker.ts";
 import { lang } from "../../../shared/lib/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
@@ -168,13 +165,6 @@ async function getAiContextSession(
 ): Promise<AiContextSession | null> {
 	const session = await api.getSession(campaignSlug, fileName);
 	return session ? { ...session, fileName: session.fileName || fileName } : null;
-}
-
-interface ApplyUpdatedAiDataOptions {
-	entityTypes?: unknown;
-	generated?: BuildAiUpdatedDataPlanOptions["generated"];
-	historyEntry?: AiHistoryEntry | null;
-	trackUndo?: boolean;
 }
 
 interface GenerateOptions {
@@ -374,61 +364,22 @@ export default function AiAssistantPanel({
 		onNotification: setNotification,
 	});
 
-	const publishAiSyncEvent = useCallback(
-		(extra: Record<string, unknown> = {}) => {
-			publishSyncEvent({
-				resource: "ai",
-				campaignSlug:
-					initialRoute.campaign && initialRoute.campaign !== "bestiary"
-						? initialRoute.campaign
-						: undefined,
-				sessionFileName: initialRoute.session || undefined,
-				...extra,
-			});
-		},
-		[initialRoute.campaign, initialRoute.session, publishSyncEvent],
-	);
-
-	const applyUpdatedAiData = useCallback(
-		(updated: unknown, options: ApplyUpdatedAiDataOptions = {}) => {
-			const plan = buildAiUpdatedDataPlan({
-				updated,
-				entityTypes: options.entityTypes,
-				generated: options.generated,
-				historyEntry: options.historyEntry,
-				activeCampaign,
-				isBestiary,
-				isCampaign,
-				isEncounter,
-				encounterId: initialRoute.encounter,
-				fallbackSessionFileName: optional(initialRoute.session),
-			});
-			if (!plan) return false;
-			return executeAiUpdatedDataPlan({
-				plan,
-				onSetActiveCampaign: setActiveCampaign,
-				onSetActiveSession: setActiveSession,
-				onSetActiveEncounter: setActiveEncounter,
-				onRequestCampaignReload: requestCampaignReload,
-				onPublishSyncEvent: publishAiSyncEvent,
-				onRefreshEntities: refreshEntities,
-			});
-		},
-		[
-			activeCampaign,
-			initialRoute.encounter,
-			initialRoute.session,
-			isBestiary,
-			isCampaign,
-			isEncounter,
-			publishAiSyncEvent,
-			refreshEntities,
-			requestCampaignReload,
-			setActiveCampaign,
-			setActiveEncounter,
-			setActiveSession,
-		],
-	);
+	const { applyUpdatedAiData } = useAiAssistantUpdatedData({
+		activeCampaign,
+		campaignSlug: initialRoute.campaign,
+		encounterId: initialRoute.encounter,
+		fallbackSessionFileName: optional(initialRoute.session),
+		isBestiary,
+		isCampaign,
+		isEncounter,
+		publishSyncEvent,
+		refreshEntities,
+		requestCampaignReload,
+		setActiveCampaign,
+		setActiveEncounter,
+		setActiveSession,
+		sessionFileName: initialRoute.session,
+	});
 
 	const historyLabels = {
 		note: lang.t("Note"),

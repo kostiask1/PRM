@@ -10539,6 +10539,79 @@ await run(
 );
 
 await run(
+	"Phase 242 isolates AI Assistant updated-data application in the private widget model",
+	async () => {
+		const [panelSource, updatedDataSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/ai-assistant/model/useAiAssistantUpdatedData.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
+				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			panelSource,
+			/import \{ useAiAssistantUpdatedData \} from "\.\.\/model\/useAiAssistantUpdatedData\.ts";/,
+		);
+		assert.doesNotMatch(
+			panelSource,
+			/const publishAiSyncEvent|const applyUpdatedAiData = useCallback|buildAiUpdatedDataPlan|executeAiUpdatedDataPlan/,
+		);
+		assertSourceTokensInOrder(
+			panelSource,
+			[
+				"const { applyUpdatedAiData } = useAiAssistantUpdatedData({",
+				"activeCampaign,",
+				"campaignSlug: initialRoute.campaign,",
+				"encounterId: initialRoute.encounter,",
+				"fallbackSessionFileName: optional(initialRoute.session),",
+				"sessionFileName: initialRoute.session,",
+				"applyUpdatedData: applyUpdatedAiData,",
+				"onApplyUpdated: (updatedPlan) => {",
+				"applyUpdatedAiData(updatedPlan.updated, {",
+			],
+			"AI Assistant updated-data delegation",
+		);
+		assertSourceTokensInOrder(
+			updatedDataSource,
+			[
+				"export function useAiAssistantUpdatedData({",
+				"const publishAiSyncEvent = useCallback(",
+				"publishSyncEvent({",
+				'resource: "ai",',
+				"campaignSlug:",
+				"sessionFileName: sessionFileName || undefined,",
+				"const applyUpdatedAiData = useCallback(",
+				"const plan = buildAiUpdatedDataPlan({",
+				"onSetActiveCampaign: setActiveCampaign,",
+				"onSetActiveSession: setActiveSession,",
+				"onSetActiveEncounter: setActiveEncounter,",
+				"onRequestCampaignReload: requestCampaignReload,",
+				"onPublishSyncEvent: publishAiSyncEvent,",
+				"onRefreshEntities: refreshEntities,",
+				"return { applyUpdatedAiData };",
+			],
+			"AI Assistant private updated-data application",
+		);
+		assert.doesNotMatch(
+			updatedDataSource,
+			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useAiAssistantUpdatedData/,
+		);
+	},
+);
+
+await run(
 	"Phase 237 isolates Bestiary loading and sync lifecycle in the private widget model",
 	async () => {
 		const [browserSource, dataLoadingSource, widgetEntry, modelEntry, modelTypes] =
@@ -15162,19 +15235,16 @@ await run(
 				"setActiveSession,",
 				"showMessage,",
 				"} = useAiAssistantRuntime();",
-				"const publishAiSyncEvent = useCallback(",
-				"publishSyncEvent({",
-				'resource: "ai",',
-				"campaignSlug:",
-				"sessionFileName:",
-				"...extra,",
-				"const applyUpdatedAiData = useCallback(",
-				"onSetActiveCampaign: setActiveCampaign,",
-				"onSetActiveSession: setActiveSession,",
-				"onSetActiveEncounter: setActiveEncounter,",
-				"onRequestCampaignReload: requestCampaignReload,",
-				"onPublishSyncEvent: publishAiSyncEvent,",
-				"onRefreshEntities: refreshEntities,",
+				"const { applyUpdatedAiData } = useAiAssistantUpdatedData({",
+				"campaignSlug: initialRoute.campaign,",
+				"encounterId: initialRoute.encounter,",
+				"fallbackSessionFileName: optional(initialRoute.session),",
+				"publishSyncEvent,",
+				"refreshEntities,",
+				"requestCampaignReload,",
+				"setActiveCampaign,",
+				"setActiveEncounter,",
+				"setActiveSession,",
 				"confirm: async (copy) => Boolean(await requestConfirmation(copy)),",
 				"alert: showMessage,",
 				"requestReload: (entityTypes) => {",
@@ -48091,6 +48161,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
 		"utf8",
 	);
+	const aiAssistantUpdatedDataSource = await fs.readFile(
+		"src/widgets/ai-assistant/model/useAiAssistantUpdatedData.ts",
+		"utf8",
+	);
 	const aiUpdatedDataWorkflowSource = await fs.readFile(
 		"src/features/ai/model/updatedDataWorkflow.ts",
 		"utf8",
@@ -48172,8 +48246,9 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	);
 	assert.match(aiAssistantContextSource, /getAiAssistantRouteTargets/);
 	assert.match(aiAssistantSource, /getAiAssistantRouteState/);
-	assert.match(aiAssistantSource, /buildAiUpdatedDataPlan/);
-	assert.match(aiAssistantSource, /executeAiUpdatedDataPlan/);
+	assert.match(aiAssistantSource, /useAiAssistantUpdatedData/);
+	assert.match(aiAssistantUpdatedDataSource, /buildAiUpdatedDataPlan/);
+	assert.match(aiAssistantUpdatedDataSource, /executeAiUpdatedDataPlan/);
 	assert.doesNotMatch(aiAssistantSource, /resource: "custom-bestiary"/);
 	assert.match(aiUpdatedDataWorkflowSource, /resource: "custom-bestiary"/);
 	assert.match(aiUpdatedDataWorkflowSource, /monsterName/);
