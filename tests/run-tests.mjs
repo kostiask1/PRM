@@ -11076,7 +11076,60 @@ await run(
 );
 
 await run(
-	"Phase 272 moves Bestiary browser state and refs into a private UI hook",
+	"Phase 273 gives Bestiary AI workflows ownership of request cancellation",
+	async () => {
+		const [browserSource, stateSource, workflowsSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryBrowserState.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/useBestiaryAiWorkflows.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assert.doesNotMatch(
+			browserSource,
+			/useEffect\(|aiEditControllerRef|cancelAiEditCustomMonsterRequest: \(\) =>/,
+		);
+		assert.doesNotMatch(stateSource, /aiEditControllerRef/);
+		assertSourceTokensInOrder(
+			workflowsSource,
+			[
+				"export function useBestiaryAiWorkflows({",
+				"const aiEditControllerRef = useRef<AbortController | null>(null);",
+				"useEffect(() => {",
+				"aiEditControllerRef.current?.abort();",
+				"const cancelAiEditCustomMonsterRequest = () => {",
+				"const controller = new AbortController();",
+				"aiEditControllerRef.current = controller;",
+				"shouldClearAiMonsterEditController(",
+				"aiEditControllerRef.current = null;",
+			],
+			"Bestiary AI workflow owns request creation, cancellation, cleanup, and settled-state release",
+		);
+		assert.doesNotMatch(
+			workflowsSource,
+			/useBestiaryBrowserRuntime|campaignApi|bestiaryApi|settingsApi|app\/model|shared\/model|<BestiaryContent|<BestiaryAiModals/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/aiEditControllerRef|useBestiaryAiWorkflows/,
+		);
+	},
+);
+
+await run(
+	"Phase 272 moves Bestiary browser state and non-workflow refs into a private UI hook",
 	async () => {
 		const [browserSource, stateSource, widgetEntry, modelEntry, modelTypes] =
 			await Promise.all([
@@ -11115,7 +11168,7 @@ await run(
 				"const [allMonsters, setAllMonsters] = useState<BestiaryMonster[]>([]);",
 				"const [reloadToken, setReloadToken] = useState(0);",
 				"const listRef = useRef<ReactList>(null);",
-				"const aiEditControllerRef = useRef<AbortController | null>(null);",
+				"const aiDraftResponseRef = useRef<HTMLDivElement>(null);",
 				"const pendingSyncSelectionRef = useRef<MonsterReference | null>(null);",
 				"return {",
 				"hasLoadedInitialMonstersRef,",
@@ -12862,10 +12915,7 @@ await run(
 			browserSource,
 			/import { useBestiaryAiWorkflows } from "\.\.\/model\/useBestiaryAiWorkflows\.ts";/,
 		);
-		assert.match(
-			browserSource,
-			/aiEditControllerRef\.current\?\.abort\(\);/,
-		);
+		assert.doesNotMatch(browserSource, /aiEditControllerRef/);
 		assert.doesNotMatch(
 			browserSource,
 			/const \[aiEditingMonster|const \[aiEditMode|const \[aiActionMonster|const \[aiEditInstructions|const \[aiEditAttachedImages|const \[aiEditAttachedFiles|const \[aiEditError|const \[isAiEditingMonster|const \[aiModels|const \[selectedAiModel|const \[aiDraftResponseEntry|const \[isRestoringAiResponse|aiApi|buildDiffResources|loadAiModelOptions|executeAiDraftRestore|executeAiMonsterEditRequest/,
@@ -12876,7 +12926,6 @@ await run(
 				"useBestiaryDataLoading({",
 				"const {\n\t\taiActionMonster,",
 				"} = useBestiaryAiWorkflows({",
-				"aiEditControllerRef,",
 				"onCustomBestiaryUpdate: handleCustomBestiaryUpdate,",
 				"} = useBestiaryMonsterList({",
 			],
@@ -12886,8 +12935,10 @@ await run(
 			workflowsSource,
 			[
 				"export function useBestiaryAiWorkflows({",
+				"const aiEditControllerRef = useRef<AbortController | null>(null);",
 				"const [aiEditingMonster, setAiEditingMonster] =",
 				"const aiDraftDiffResources = useMemo(",
+				"aiEditControllerRef.current?.abort();",
 				"loadAiModelOptions({",
 				"const openAiEditCustomMonster = (",
 				"const chooseMonsterAiAction = (mode: MonsterAiAction) => {",

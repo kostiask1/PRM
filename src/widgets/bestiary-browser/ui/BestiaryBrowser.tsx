@@ -1,5 +1,4 @@
 import {
-	useEffect,
 	useMemo,
 	type ComponentType,
 } from "react";
@@ -119,7 +118,6 @@ export default function BestiaryBrowser({
 	);
 	const {
 		aiDraftResponseRef,
-		aiEditControllerRef,
 		allMonsters,
 		favorites,
 		hasLoadedInitialMonstersRef,
@@ -162,12 +160,6 @@ export default function BestiaryBrowser({
 		initialSearch,
 		useSearchDebounce,
 	});
-
-	useEffect(() => {
-		return () => {
-			aiEditControllerRef.current?.abort();
-		};
-	}, []);
 
 	const {
 		customMonsters,
@@ -278,7 +270,6 @@ export default function BestiaryBrowser({
 		setAiEditInstructions,
 		setSelectedAiModel,
 	} = useBestiaryAiWorkflows({
-		aiEditControllerRef,
 		currentLanguage,
 		customMonsters,
 		onCustomBestiaryUpdate: handleCustomBestiaryUpdate,

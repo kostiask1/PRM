@@ -1,8 +1,8 @@
 import {
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
-	type MutableRefObject,
 } from "react";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
 import {
@@ -38,7 +38,6 @@ interface Message {
 }
 
 interface Options {
-	aiEditControllerRef: MutableRefObject<AbortController | null>;
 	currentLanguage: string;
 	customMonsters: BestiaryMonster[];
 	onCustomBestiaryUpdate(
@@ -55,7 +54,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 export function useBestiaryAiWorkflows({
-	aiEditControllerRef,
 	currentLanguage,
 	customMonsters,
 	onCustomBestiaryUpdate,
@@ -63,6 +61,7 @@ export function useBestiaryAiWorkflows({
 	onPushCustomUndoSnapshot,
 	showMessage,
 }: Options) {
+	const aiEditControllerRef = useRef<AbortController | null>(null);
 	const [aiEditingMonster, setAiEditingMonster] =
 		useState<BestiaryMonster | null>(null);
 	const [aiEditMode, setAiEditMode] = useState<MonsterAiEditMode>("edit");
@@ -89,6 +88,12 @@ export function useBestiaryAiWorkflows({
 			}),
 		[aiDraftResponseEntry],
 	);
+
+	useEffect(() => {
+		return () => {
+			aiEditControllerRef.current?.abort();
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!aiEditingMonster || aiModels.length > 0) return;
