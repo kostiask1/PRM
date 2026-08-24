@@ -11077,6 +11077,60 @@ await run(
 );
 
 await run(
+	"Phase 283 isolates Campaign graph controller adapters in private page helpers",
+	async () => {
+		const [graphSource, helpersSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/campaignGraphControllerHelpers.ts",
+					"utf8",
+				),
+				fs.readFile("src/pages/campaign/index.js", "utf8"),
+				fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			graphSource,
+			[
+				'from "./campaignGraphControllerHelpers.ts";',
+				"const currentById = getCurrentCampaignFlowNodeMap(",
+				"onClick={() => executeCampaignGraphConnectionAction(",
+			],
+			"Campaign graph controller composes private pure adapters",
+		);
+		assert.doesNotMatch(
+			graphSource,
+			/function getCurrentCampaignFlowNodeMap|function executeCampaignGraphConnectionAction/,
+		);
+		assertSourceTokensInOrder(
+			helpersSource,
+			[
+				'import type { CampaignGraphConnectionAction }',
+				'import type { CampaignGraphFlowNode }',
+				"export function getCurrentCampaignFlowNodeMap",
+				"if (shouldUseFreshLayout) return new Map();",
+				"export function executeCampaignGraphConnectionAction",
+				'if (action.kind === "session") onOpenSession?.(action.fileName);',
+				"else onSelectNode(action.nodeId);",
+			],
+			"Campaign graph private Flow-map and connection-action adapters",
+		);
+		assert.doesNotMatch(
+			helpersSource,
+			/useCampaignPageRuntime|buildCampaignGraph|layoutCampaignGraph|useNodesState|onSaveNote/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/campaignGraphControllerHelpers|getCurrentCampaignFlowNodeMap|executeCampaignGraphConnectionAction/,
+		);
+	},
+);
+
+await run(
 	"Phase 282 isolates Campaign graph topology layout caching in a private page hook",
 	async () => {
 		const [graphSource, layoutSource, pageEntry, pageTypes] =

@@ -52,7 +52,6 @@ import {
 	shouldFitCampaignGraphTopology,
 	type CampaignGraphEnabledFilters,
 	type CampaignGraphFilterId,
-	type CampaignGraphConnectionAction,
 } from "../../model/campaignGraphPresentation.ts";
 import type {
 	CampaignGraphEdge,
@@ -79,6 +78,10 @@ import {
 import { CampaignGraphDetails } from "./CampaignGraphDetails.tsx";
 import { CampaignGraphNoteModal } from "./CampaignGraphNoteModal.tsx";
 import { CampaignGraphToolbar } from "./CampaignGraphToolbar.tsx";
+import {
+	executeCampaignGraphConnectionAction,
+	getCurrentCampaignFlowNodeMap,
+} from "./campaignGraphControllerHelpers.ts";
 import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
@@ -151,23 +154,6 @@ export interface CampaignNotesGraphProps {
 }
 
 const NODE_TYPES = { campaignGraphNode: CampaignGraphNodeCard };
-
-function getCurrentCampaignFlowNodeMap(
-	nodes: CampaignFlowNode[],
-	shouldUseFreshLayout: boolean,
-): Map<string, CampaignFlowNode> {
-	if (shouldUseFreshLayout) return new Map();
-	return new Map(nodes.map((node) => [node.id, node]));
-}
-
-function executeCampaignGraphConnectionAction(
-	action: CampaignGraphConnectionAction,
-	onOpenSession: ((fileName: string) => void) | undefined,
-	onSelectNode: (nodeId: string) => void,
-): void {
-	if (action.kind === "session") onOpenSession?.(action.fileName);
-	else onSelectNode(action.nodeId);
-}
 
 export default function CampaignNotesGraph({
 	campaign,

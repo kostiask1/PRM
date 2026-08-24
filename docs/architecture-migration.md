@@ -958,6 +958,8 @@ Next:
 - Phase 281 preserves draft reset, the initial-save guard, 450 ms debounce, editor history suppression, simplified-title visibility, campaign slug forwarding, and no page public-entry expansion. The full suite passes 554/554 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 282 by moving Campaign Graph topology-keyed layout caching into private `pages/campaign/ui/components/useCampaignGraphLayout.ts`. `CampaignNotesGraph.tsx` retains layout consumers and all Flow-state update workflows.
 - Phase 282 preserves topology key ordering, cache identity until topology changes, layout delegation, fresh position-map semantics, and no page public-entry expansion. The full suite passes 555/555 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 283 by moving Campaign Graph current-Flow-node map projection and injected connection-action dispatch into private `pages/campaign/ui/components/campaignGraphControllerHelpers.ts`. `CampaignNotesGraph.tsx` retains Flow state, connection planning, and callback ownership.
+- Phase 283 preserves empty fresh-map behavior, node-ID map identity, session-opening precedence, selection fallback, and no page public-entry expansion. The full suite passes 556/556 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
