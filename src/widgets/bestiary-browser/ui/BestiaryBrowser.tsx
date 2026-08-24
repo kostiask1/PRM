@@ -3,7 +3,6 @@ import {
 	useEffect,
 	useMemo,
 	useRef,
-	useCallback,
 	type ComponentType,
 } from "react";
 import type ReactList from "react-list";
@@ -52,6 +51,7 @@ import { useBestiaryCustomMonsterEditing } from "../model/useBestiaryCustomMonst
 import { useBestiarySourceSelection } from "./useBestiarySourceSelection.ts";
 import { useBestiarySearchControls } from "./useBestiarySearchControls.ts";
 import { useBestiaryMonsterList } from "./useBestiaryMonsterList.ts";
+import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionState.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -128,24 +128,28 @@ export default function BestiaryBrowser({
 	const [sources, setSources] = useState<string[]>([]);
 	const [allMonsters, setAllMonsters] = useState<BestiaryMonster[]>([]);
 	const [loading, setLoading] = useState(false);
-	const [selectedMonster, setSelectedMonster] = useState<BestiaryMonster | null>(null);
 	const [legendaryGroups, setLegendaryGroups] = useState<LegendaryGroup[]>([]);
 	const [favorites, setFavorites] = useState<BestiaryFavorite[]>([]);
 	const [reloadToken, setReloadToken] = useState(0);
 	const listRef = useRef<ReactList>(null);
-	const selectedMonsterRef = useRef<BestiaryMonster | null>(null);
 	const aiDraftResponseRef = useRef<HTMLDivElement>(null);
 	const aiEditControllerRef = useRef<AbortController | null>(null);
 	const openImagePromptForMonsterRef = useRef<((monster: BestiaryMonster) => void) | null>(null);
-	const shouldAutoSelectMonsterRef = useRef(true);
 	const pendingSyncSelectionRef = useRef<MonsterReference | null>(null);
-	const embeddedScrolledMonsterRef = useRef("");
 	const hasLoadedInitialMonstersRef = useRef(false);
 
-
-	useEffect(() => {
-		selectedMonsterRef.current = selectedMonster;
-	}, [selectedMonster]);
+	const {
+		embeddedScrolledMonsterRef,
+		selectedMonster,
+		selectedMonsterRef,
+		selectMonster,
+		setSelectedMonster,
+		shouldAutoSelectMonsterRef,
+	} = useBestiaryMonsterSelectionState({
+		initialSelectedName,
+		initialSelectedSource,
+		onActiveMonsterChange,
+	});
 
 	const {
 		debouncedSearch,
@@ -158,10 +162,6 @@ export default function BestiaryBrowser({
 		initialSearch,
 		useSearchDebounce,
 	});
-
-	useEffect(() => {
-		embeddedScrolledMonsterRef.current = "";
-	}, [initialSelectedName, initialSelectedSource]);
 
 	useEffect(() => {
 		return () => {
@@ -207,17 +207,6 @@ export default function BestiaryBrowser({
 		shouldAutoSelectMonsterRef,
 		showMessage,
 	});
-
-	const selectMonster = useCallback(
-		(monster: BestiaryMonster | null) => {
-			shouldAutoSelectMonsterRef.current = false;
-			setSelectedMonster(monster);
-			if (monster?.name) {
-				onActiveMonsterChange?.(monster);
-			}
-		},
-		[onActiveMonsterChange],
-	);
 
 	const {
 		filterSourceOptions,

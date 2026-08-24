@@ -11021,6 +11021,71 @@ await run(
 );
 
 await run(
+	"Phase 266 isolates Bestiary selected-monster state in a private UI hook",
+	async () => {
+		const [browserSource, selectionSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiaryMonsterSelectionState.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionState.ts";',
+				"const {",
+				"embeddedScrolledMonsterRef,",
+				"selectedMonster,",
+				"selectedMonsterRef,",
+				"selectMonster,",
+				"setSelectedMonster,",
+				"shouldAutoSelectMonsterRef,",
+				"} = useBestiaryMonsterSelectionState({",
+			],
+			"Bestiary browser composes its private selected-monster hook",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/useCallback|const \[selectedMonster, setSelectedMonster\]|const selectedMonsterRef = useRef|const shouldAutoSelectMonsterRef = useRef|const embeddedScrolledMonsterRef = useRef|const selectMonster = useCallback/,
+		);
+		assertSourceTokensInOrder(
+			selectionSource,
+			[
+				'import { useCallback, useEffect, useRef, useState } from "react";',
+				"export interface UseBestiaryMonsterSelectionStateOptions",
+				"export function useBestiaryMonsterSelectionState",
+				"const [selectedMonster, setSelectedMonster] =",
+				"const selectedMonsterRef = useRef<BestiaryMonster | null>(null);",
+				"const shouldAutoSelectMonsterRef = useRef(true);",
+				"selectedMonsterRef.current = selectedMonster;",
+				"embeddedScrolledMonsterRef.current = \"\";",
+				"const selectMonster = useCallback(",
+				"shouldAutoSelectMonsterRef.current = false;",
+				"onActiveMonsterChange?.(monster);",
+			],
+			"Bestiary private selected-monster hook",
+		);
+		assert.doesNotMatch(
+			selectionSource,
+			/useBestiaryBrowserRuntime|bestiaryApi|app\/model|shared\/model|BestiaryBrowserProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiaryMonsterSelectionState/,
+		);
+	},
+);
+
+await run(
 	"Phase 265 isolates Bestiary filtered-list projection in a private UI hook",
 	async () => {
 		const [browserSource, listSource, widgetEntry, modelEntry, modelTypes] =
