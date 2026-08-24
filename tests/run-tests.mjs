@@ -2498,6 +2498,7 @@ await run(
 		const [
 			bestiaryBrowserSource,
 			bestiaryContentSource,
+			bestiaryDetailSource,
 			compositionSource,
 			declarationSource,
 			encounterSource,
@@ -2508,6 +2509,10 @@ await run(
 			),
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryDetail.tsx",
 				"utf8",
 			),
 			fs.readFile(
@@ -2608,7 +2613,7 @@ await run(
 			/<BestiaryDetail(?=\s|>)[\s\S]*?\bMonsterStatBlock=\{MonsterStatBlock\}[\s\S]*?\/>/,
 		);
 		assert.match(
-			bestiaryContentSource,
+			bestiaryDetailSource,
 			/function BestiaryDetail\(\{\s*MonsterStatBlock,[\s\S]*?if \(!presentation\) return null;[\s\S]*?<MonsterStatBlock(?=\s|>)/,
 		);
 		assert.match(
@@ -11011,6 +11016,58 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useAiAssistantRouteState/,
+		);
+	},
+);
+
+await run(
+	"Phase 260 isolates Bestiary detail UI in a private widget component",
+	async () => {
+		const [contentSource, detailSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryDetail.tsx",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			contentSource,
+			[
+				'import { BestiaryDetail } from "./BestiaryDetail.tsx";',
+				"export interface BestiaryContentProps",
+				"<BestiaryDetail",
+			],
+			"Bestiary content composes its private detail panel",
+		);
+		assert.doesNotMatch(contentSource, /function BestiaryDetail\(/);
+		assertSourceTokensInOrder(
+			detailSource,
+			[
+				'import type { Dispatch, RefObject, SetStateAction } from "react";',
+				"import type {",
+				"BestiaryFavorite,",
+				"BestiaryMonster,",
+				'import { getBestiaryDetailPresentation } from "../model.js";',
+				"export interface BestiaryDetailProps",
+				"export function BestiaryDetail",
+			],
+			"Bestiary private detail component",
+		);
+		assert.doesNotMatch(
+			detailSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|BestiaryContentProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/\.\/ui\/BestiaryDetail/,
 		);
 	},
 );
@@ -49317,6 +49374,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
 		"utf8",
 	);
+	const bestiaryDetailSource = await fs.readFile(
+		"src/widgets/bestiary-browser/ui/BestiaryDetail.tsx",
+		"utf8",
+	);
 	const bestiaryModelSource = await fs.readFile(
 		"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
 		"utf8",
@@ -49410,9 +49471,16 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.doesNotMatch(bestiarySource, /next\.set\("monster"/);
 	assert.doesNotMatch(bestiarySource, /next\.set\("m_source"/);
 	assert.match(bestiaryContentSource, /onSelectMonster/);
-	assert.match(bestiaryContentSource, /getBestiaryDetailPresentation\(/);
 	assert.match(
 		bestiaryContentSource,
+		/import \{ BestiaryDetail \} from "\.\/BestiaryDetail\.tsx"/,
+	);
+	assert.match(
+		bestiaryDetailSource,
+		/getBestiaryDetailPresentation\(/,
+	);
+	assert.match(
+		bestiaryDetailSource,
 		/showAddToEncounterPicker=\{presentation\.showAddToEncounterPicker\}/,
 	);
 	assert.match(

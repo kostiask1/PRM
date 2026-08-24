@@ -11,10 +11,8 @@ import type {
 	BestiaryFavorite,
 	BestiaryMonster,
 } from "../../../entities/bestiary/index.js";
-import { Button } from "../../../shared/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	getBestiaryDetailPresentation,
 	getMonsterItemKey,
 	isSameMonsterIdentity,
 	type BestiarySortOrder,
@@ -26,6 +24,7 @@ import type {
 } from "./bestiaryComposition.ts";
 import { BestiaryMonsterListItem } from "./BestiaryMonsterListItem.tsx";
 import { BestiaryToolbar } from "./BestiaryToolbar.tsx";
+import { BestiaryDetail } from "./BestiaryDetail.tsx";
 
 function isMobileViewport() {
 	return (
@@ -111,76 +110,6 @@ function BestiaryList({
 					0
 				}
 				type="uniform"
-			/>
-		</div>
-	);
-}
-
-type BestiaryDetailProps = Pick<
-	BestiaryContentProps,
-	| "MonsterStatBlock"
-	| "favorites"
-	| "onAddMonster"
-	| "onDeleteCustomMonster"
-	| "onEditMonster"
-	| "onFavoriteListChange"
-	| "onMonsterAiAction"
-	| "onSelectMonster"
-	| "selectedMonster"
-> & {
-	detailRef: RefObject<HTMLDivElement>;
-	searchHighlight: string;
-};
-
-function BestiaryDetail({
-	MonsterStatBlock,
-	detailRef,
-	favorites,
-	onAddMonster,
-	onDeleteCustomMonster,
-	onEditMonster,
-	onFavoriteListChange,
-	onMonsterAiAction,
-	onSelectMonster,
-	searchHighlight,
-	selectedMonster,
-}: BestiaryDetailProps) {
-	const presentation = getBestiaryDetailPresentation(
-		selectedMonster,
-		favorites,
-		onSelectMonster,
-		onAddMonster,
-		onDeleteCustomMonster,
-		() => lang.t("Add to encounter"),
-	);
-	if (!presentation) return null;
-	return (
-		<div className="Bestiary__detail_container" ref={detailRef}>
-			{presentation.insertAction && (
-				<div className="Bestiary__select_actions">
-					<Button
-						variant="primary"
-						icon="plus"
-						onClick={() =>
-							presentation.insertAction?.(presentation.monster)
-						}
-					>
-						{lang.t("Insert")}
-					</Button>
-				</div>
-			)}
-			<MonsterStatBlock
-				monster={presentation.monster}
-				favoriteActive={presentation.favoriteActive}
-				onNameClick={presentation.addAction}
-				nameTitle={presentation.addTitle}
-				onFavoriteChange={onFavoriteListChange}
-				showAddToEncounterPicker={presentation.showAddToEncounterPicker}
-				onAddToEncounter={presentation.addAction}
-				onAiAction={onMonsterAiAction}
-				onDelete={presentation.deleteAction}
-				onFieldEdit={onEditMonster}
-				searchHighlight={searchHighlight}
 			/>
 		</div>
 	);
