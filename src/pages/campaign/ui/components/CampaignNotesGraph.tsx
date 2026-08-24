@@ -1,5 +1,4 @@
 import {
-	useCallback,
 	useEffect,
 	useMemo,
 	useRef,
@@ -12,10 +11,7 @@ import {
 } from "@xyflow/react";
 
 import { useSimplifiedNotesEnabled } from "../../../../features/notes/ui/index.js";
-import {
-	EntityModal,
-	type EntityModalProps,
-} from "../../../../features/entity-link/index.js";
+import { EntityModal } from "../../../../features/entity-link/index.js";
 import {
 	buildCampaignGraph,
 	normalizeGraphName,
@@ -23,22 +19,16 @@ import {
 import {
 	DEFAULT_CAMPAIGN_GRAPH_FILTERS,
 	canOpenCampaignGraphNode,
-	executeCampaignGraphOpenTarget,
 	formatCampaignGraphSourceList,
 	getCampaignGraphConnectionPresentation,
 	getCampaignGraphNodeTopologyKey,
-	getCampaignGraphNoteSaveRequest,
-	getCampaignGraphOpenTarget,
 	getCampaignGraphRelationLabel,
 	getCampaignGraphTypeCounts,
 	getVisibleCampaignGraph,
 	type CampaignGraphEnabledFilters,
 	type CampaignGraphFilterId,
 } from "../../model/campaignGraphPresentation.ts";
-import type {
-	CampaignGraphEdge,
-	CampaignGraphNode,
-} from "../../graph.js";
+import type { CampaignGraphEdge } from "../../graph.js";
 import type {
 	CampaignGraphNoteSave,
 	CampaignPageCampaign,
@@ -59,7 +49,6 @@ import {
 } from "./CampaignGraphNodeCard.tsx";
 import { CampaignGraphConnection } from "./CampaignGraphConnection.tsx";
 import { CampaignGraphDetails } from "./CampaignGraphDetails.tsx";
-import { CampaignGraphNoteModal } from "./CampaignGraphNoteModal.tsx";
 import { CampaignGraphToolbar } from "./CampaignGraphToolbar.tsx";
 import {
 	executeCampaignGraphConnectionAction,
@@ -68,6 +57,7 @@ import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";
 import { useCampaignGraphFlowEdges } from "./useCampaignGraphFlowEdges.ts";
 import { useCampaignGraphFlowInteractions } from "./useCampaignGraphFlowInteractions.ts";
 import { useCampaignGraphFlowNodeProjection } from "./useCampaignGraphFlowNodeProjection.ts";
+import { useCampaignGraphOpenActions } from "./useCampaignGraphOpenActions.tsx";
 import { useCampaignGraphSelection } from "./useCampaignGraphSelection.ts";
 import { useCampaignGraphViewport } from "./useCampaignGraphViewport.ts";
 import "@xyflow/react/dist/style.css";
@@ -108,8 +98,6 @@ const FILTER_COLOR_BY_ID: Readonly<Record<CampaignGraphFilterId, string>> = {
 	scenes: NODE_COLOR_BY_TYPE.scene,
 	unresolved: NODE_COLOR_BY_TYPE.unresolved,
 };
-
-type CampaignGraphEntityModalState = NonNullable<EntityModalProps["modalState"]>;
 
 type CampaignFlowNode = CampaignGraphFlowNode;
 type CampaignFlowEdge = CampaignGraphFlowEdge;
@@ -152,8 +140,6 @@ export default function CampaignNotesGraph({
 			...DEFAULT_CAMPAIGN_GRAPH_FILTERS,
 		}));
 	const [query, setQuery] = useState("");
-	const [entityModalState, setEntityModalState] =
-		useState<CampaignGraphEntityModalState | null>(null);
 	const [flowInstance, setFlowInstance] =
 		useState<ReactFlowInstance<CampaignFlowNode, CampaignFlowEdge> | null>(null);
 	const [flowNodes, setFlowNodes, onFlowNodesChange] =
@@ -221,57 +207,19 @@ export default function CampaignNotesGraph({
 		hasManualPositionsRef,
 	});
 
-	const openGraphNote = useCallback(
-		(node: CampaignGraphNode, note: SharedNote) => {
-			if (typeof onSaveNote !== "function") return;
-			openModal({
-				title: lang.t("Note"),
-				type: "note",
-				showFooter: false,
-				children: (
-					<CampaignGraphNoteModal
-						note={note}
-						simplifiedNotes={simplifiedNotesEnabled}
-						campaignSlug={campaign.slug}
-						onSave={(updates) => {
-							const request = getCampaignGraphNoteSaveRequest(node, updates);
-							if (request) return onSaveNote(request);
-						}}
-					/>
-				),
-			});
-		},
-		[campaign.slug, onSaveNote, openModal, simplifiedNotesEnabled],
-	);
-
-	const openNode = useCallback(
-		(node: CampaignGraphNode) => {
-			const target = getCampaignGraphOpenTarget({
-				node,
-				characters,
-				npcs,
-				locations,
-				notes,
-				sessionDetails,
-				canSaveNote: typeof onSaveNote === "function",
-			});
-			executeCampaignGraphOpenTarget(target, {
-				session: (fileName) => onOpenSession?.(fileName),
-				entity: (entity, type) => setEntityModalState({ entity, type }),
-				note: (note) => openGraphNote(node, note),
-			});
-		},
-		[
+	const { entityModalState, setEntityModalState, openNode } =
+		useCampaignGraphOpenActions({
+			campaignSlug: campaign.slug,
 			characters,
+			npcs,
 			locations,
 			notes,
-			npcs,
-			openGraphNote,
-			onOpenSession,
-			onSaveNote,
 			sessionDetails,
-		],
-	);
+			onSaveNote,
+			onOpenSession,
+			simplifiedNotes: simplifiedNotesEnabled,
+			openModal,
+		});
 
 	useCampaignGraphFlowNodeProjection({
 		campaignSlug: campaign.slug,

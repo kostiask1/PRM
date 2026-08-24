@@ -11077,6 +11077,48 @@ await run(
 );
 
 await run(
+	"Phase 290 isolates Campaign graph open actions in a private page hook",
+	async () => {
+		const [graphSource, actionsSource, pageEntry, pageTypes] = await Promise.all([
+			fs.readFile("src/pages/campaign/ui/components/CampaignNotesGraph.tsx", "utf8"),
+			fs.readFile("src/pages/campaign/ui/components/useCampaignGraphOpenActions.tsx", "utf8"),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+		]);
+
+		assertSourceTokensInOrder(graphSource, [
+			'import { useCampaignGraphOpenActions } from "./useCampaignGraphOpenActions.tsx";',
+			"const { entityModalState, setEntityModalState, openNode } =",
+			"useCampaignGraphOpenActions({",
+			"simplifiedNotes: simplifiedNotesEnabled,",
+			"openModal,",
+		]);
+		assert.doesNotMatch(
+			graphSource,
+			/getCampaignGraphOpenTarget|executeCampaignGraphOpenTarget|function openGraphNote|const openGraphNote/,
+		);
+		assertSourceTokensInOrder(actionsSource, [
+			"export function useCampaignGraphOpenActions",
+			"const [entityModalState, setEntityModalState] =",
+			"const openGraphNote = useCallback",
+			'if (typeof onSaveNote !== "function") return;',
+			"<CampaignGraphNoteModal",
+			"getCampaignGraphNoteSaveRequest(node, updates)",
+			"const openNode = useCallback",
+			"getCampaignGraphOpenTarget({",
+			"executeCampaignGraphOpenTarget(target, {",
+			"entity: (entity, type) => setEntityModalState({ entity, type }),",
+			"note: (note) => openGraphNote(node, note),",
+		]);
+		assert.doesNotMatch(
+			actionsSource,
+			/useCampaignPageRuntime|buildCampaignGraph|useNodesState|onLoadSessionDetails/,
+		);
+		assert.doesNotMatch(`${pageEntry}\n${pageTypes}`, /useCampaignGraphOpenActions/);
+	},
+);
+
+await run(
 	"Phase 289 isolates Campaign graph selection lifecycle in a private page hook",
 	async () => {
 		const [graphSource, selectionSource, pageEntry, pageTypes] = await Promise.all([
@@ -11426,10 +11468,14 @@ await run(
 await run(
 	"Phase 281 isolates Campaign graph note editing in private page UI",
 	async () => {
-		const [graphSource, noteModalSource, pageEntry, pageTypes] =
+		const [graphSource, noteActionsSource, noteModalSource, pageEntry, pageTypes] =
 			await Promise.all([
 				fs.readFile(
 					"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/campaign/ui/components/useCampaignGraphOpenActions.tsx",
 					"utf8",
 				),
 				fs.readFile(
@@ -11443,18 +11489,27 @@ await run(
 		assertSourceTokensInOrder(
 			graphSource,
 			[
-				'import { CampaignGraphNoteModal } from "./CampaignGraphNoteModal.tsx";',
-				"const openGraphNote = useCallback(",
-				"<CampaignGraphNoteModal",
-				"campaignSlug={campaign.slug}",
-				"const request = getCampaignGraphNoteSaveRequest(node, updates);",
-				"if (request) return onSaveNote(request);",
+				'import { useCampaignGraphOpenActions } from "./useCampaignGraphOpenActions.tsx";',
+				"useCampaignGraphOpenActions({",
+				"campaignSlug: campaign.slug,",
 			],
-			"Campaign graph controller owns note-save request planning",
+			"Campaign graph controller delegates note-save request planning",
 		);
 		assert.doesNotMatch(
 			graphSource,
 			/GraphNoteDraft|GraphNoteModalContent|function toGraphNoteDraft|EditableFieldChangeEvent|<EditableField/,
+		);
+		assertSourceTokensInOrder(
+			noteActionsSource,
+			[
+				'import { CampaignGraphNoteModal } from "./CampaignGraphNoteModal.tsx";',
+				"const openGraphNote = useCallback(",
+				"<CampaignGraphNoteModal",
+				"campaignSlug={campaignSlug}",
+				"const request = getCampaignGraphNoteSaveRequest(node, updates);",
+				"if (request) return onSaveNote(request);",
+			],
+			"Campaign graph private open-action coordinator owns note-save request planning",
 		);
 		assertSourceTokensInOrder(
 			noteModalSource,
