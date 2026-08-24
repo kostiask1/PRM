@@ -24,7 +24,6 @@ import { settingsApi } from "../../../features/settings/index.js";
 import { MonsterAiActionModal } from "../../../features/ai-edit-monster/index.js";
 import BestiaryContent from "./BestiaryContent.tsx";
 import BestiaryHeaderActions from "./BestiaryHeaderActions.tsx";
-import { useDebounce } from "../../../shared/lib/index.js";
 import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
@@ -57,6 +56,7 @@ import { useBestiaryAiWorkflows } from "../model/useBestiaryAiWorkflows.ts";
 import { useBestiaryCustomMonsterHistory } from "../model/useBestiaryCustomMonsterHistory.ts";
 import { useBestiaryCustomMonsterEditing } from "../model/useBestiaryCustomMonsterEditing.ts";
 import { useBestiarySourceSelection } from "./useBestiarySourceSelection.ts";
+import { useBestiarySearchControls } from "./useBestiarySearchControls.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -133,11 +133,6 @@ export default function BestiaryBrowser({
 	const [sources, setSources] = useState<string[]>([]);
 	const [allMonsters, setAllMonsters] = useState<BestiaryMonster[]>([]);
 	const [monsters, setMonsters] = useState<BestiaryMonster[]>([]);
-	const [search, setSearch] = useState(initialSearch);
-	const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);
-	const [isDetailedSearch, setIsDetailedSearch] = useState(
-		initialDetailedSearch,
-	);
 	const [loading, setLoading] = useState(false);
 	const [selectedMonster, setSelectedMonster] = useState<BestiaryMonster | null>(null);
 	const [legendaryGroups, setLegendaryGroups] = useState<LegendaryGroup[]>([]);
@@ -160,13 +155,17 @@ export default function BestiaryBrowser({
 		selectedMonsterRef.current = selectedMonster;
 	}, [selectedMonster]);
 
-	useEffect(() => {
-		setSearch(initialSearch);
-	}, [initialSearch]);
-
-	useEffect(() => {
-		setIsDetailedSearch(Boolean(initialDetailedSearch));
-	}, [initialDetailedSearch]);
+	const {
+		debouncedSearch,
+		isDetailedSearch,
+		search,
+		setIsDetailedSearch,
+		setSearch,
+	} = useBestiarySearchControls({
+		initialDetailedSearch,
+		initialSearch,
+		useSearchDebounce,
+	});
 
 	useEffect(() => {
 		embeddedScrolledMonsterRef.current = "";

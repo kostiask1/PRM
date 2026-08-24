@@ -11021,6 +11021,66 @@ await run(
 );
 
 await run(
+	"Phase 264 isolates Bestiary search controls in a private UI hook",
+	async () => {
+		const [browserSource, controlsSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/useBestiarySearchControls.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { useBestiarySearchControls } from "./useBestiarySearchControls.ts";',
+				"const {",
+				"debouncedSearch,",
+				"isDetailedSearch,",
+				"search,",
+				"setIsDetailedSearch,",
+				"setSearch,",
+				"} = useBestiarySearchControls({",
+			],
+			"Bestiary browser composes its private search-controls hook",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/useDebounce\(|const \[search, setSearch\]|const \[isDetailedSearch, setIsDetailedSearch\]/,
+		);
+		assertSourceTokensInOrder(
+			controlsSource,
+			[
+				'import { useEffect, useState } from "react";',
+				'import { useDebounce } from "../../../shared/lib/index.js";',
+				"export interface UseBestiarySearchControlsOptions",
+				"export function useBestiarySearchControls",
+				"useDebounce(search, useSearchDebounce ? 250 : 0)",
+				"setSearch(initialSearch);",
+				"setIsDetailedSearch(Boolean(initialDetailedSearch));",
+			],
+			"Bestiary private search-controls hook",
+		);
+		assert.doesNotMatch(
+			controlsSource,
+			/useBestiaryBrowserRuntime|bestiaryApi|app\/model|shared\/model|BestiaryBrowserProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/useBestiarySearchControls/,
+		);
+	},
+);
+
+await run(
 	"Phase 263 isolates Bestiary source-selection policy in a private UI hook",
 	async () => {
 		const [browserSource, selectionSource, widgetEntry, modelEntry, modelTypes] =
@@ -16289,6 +16349,7 @@ await run(
 		const [
 			runtimeSource,
 			browserSource,
+			searchControlsSource,
 			customEditingSource,
 			widgetEntry,
 			widgetTypeEntry,
@@ -16302,6 +16363,10 @@ await run(
 			),
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/useBestiarySearchControls.ts",
 				"utf8",
 			),
 			fs.readFile(
@@ -16398,7 +16463,7 @@ await run(
 				"const syncEvent = useMemo(",
 				"() => parseBestiarySyncEvent(rawSyncEvent),",
 				"[rawSyncEvent],",
-				"const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);",
+				"} = useBestiarySearchControls({",
 				"} = useBestiaryCustomMonsterEditing({",
 				"requestConfirmation,",
 				"onCampaigns: replaceCampaigns,",
@@ -16406,6 +16471,10 @@ await run(
 				"showMessage({",
 			],
 			"Bestiary Browser injected runtime and preserved save/delete flow",
+		);
+		assert.match(
+			searchControlsSource,
+			/useDebounce\(search, useSearchDebounce \? 250 : 0\)/,
 		);
 		assertSourceTokensInOrder(
 			customEditingSource,

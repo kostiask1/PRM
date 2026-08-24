@@ -920,6 +920,8 @@ Next:
 - Phase 262 preserves state-update-before-scroll ordering, mobile-only guards, selected-identity lookup, animation-frame cancellation, detail smooth-scroll options, and no public widget entry expansion. The full suite passes 535/535 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 263 by moving Bestiary source filtering, ignored-source selection, reset-on-unavailable-source, labeling, and persistence orchestration into private `widgets/bestiary-browser/ui/useBestiarySourceSelection.ts`. `BestiaryBrowser.tsx` retains UI orchestration.
 - Phase 263 preserves source normalization, custom-source behavior, campaign/global persistence routing, auto-selection re-enable timing, error/log callbacks, and no public widget entry expansion. The full suite passes 536/536 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 264 by moving Bestiary search-control state into private `widgets/bestiary-browser/ui/useBestiarySearchControls.ts`. `BestiaryBrowser.tsx` retains UI orchestration.
+- Phase 264 preserves initial search and detailed-search synchronization, debounce timing policy, setters, and no public widget entry expansion. The full suite passes 537/537 tests; architecture and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
