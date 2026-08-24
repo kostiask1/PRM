@@ -4,37 +4,27 @@ import {
 	useState,
 } from "react";
 import { lang } from "../../../shared/lib/index.js";
+import type { CampaignRecord } from "../../../entities/campaign/index.js";
 import type {
-	CampaignEntityRecord,
-	CampaignRecord,
-} from "../../../entities/campaign/index.js";
-import type {
-	EncounterViewModel,
 	EncounterViewParticipant,
 } from "./contracts.ts";
 import {
 	getAvailableEncounterCharacters,
-	getEncounterGridProjection,
-	getEncounterLayout,
 	getEncounterRenderContext,
-	getEncounterSelectedGridId,
 } from "./encounterPagePresentation.ts";
 import { useEncounterPageRuntime } from "./EncounterPageRuntime.tsx";
 import { useEncounterAiModelLoading } from "./useEncounterAiModelLoading.ts";
 import { useEncounterCharacterModal } from "./useEncounterCharacterModal.ts";
 import { useEncounterDisplaySettings } from "./useEncounterDisplaySettings.ts";
-import { useEncounterGridFocus } from "./useEncounterGridFocus.ts";
 import { useEncounterHeaderDismissal } from "./useEncounterHeaderDismissal.ts";
 import { useEncounterHpEditing } from "./useEncounterHpEditing.ts";
 import { useEncounterMonsterAiEditor } from "./useEncounterMonsterAiEditor.ts";
 import { useEncounterMonsterInteractions } from "./useEncounterMonsterInteractions.ts";
 import { useEncounterMonsterAiWorkflows } from "./useEncounterMonsterAiWorkflows.ts";
+import { useEncounterPageDisplayProjection } from "./useEncounterPageDisplayProjection.ts";
 import { useEncounterPlayerCreation } from "./useEncounterPlayerCreation.ts";
 import { useEncounterRequestCleanup } from "./useEncounterRequestCleanup.ts";
 import useEncounterView from "./useEncounterView.ts";
-
-const EMPTY_ENCOUNTER_PARTICIPANTS: EncounterViewParticipant[] = [];
-const EMPTY_CAMPAIGN_ENTITIES: CampaignEntityRecord[] = [];
 
 function getParticipantInstanceId(participant: EncounterViewParticipant): string {
 	return String(participant.instanceId || participant.id || "");
@@ -46,18 +36,6 @@ function getEncounterDisplayMode(value: unknown): "single" | "grid" {
 
 function getEncounterGridColumns(value: unknown): number {
 	return Number(value) || 2;
-}
-
-function getEncounterViewParticipants(
-	view: EncounterViewModel,
-): EncounterViewParticipant[] {
-	return view.encounter?.monsters || EMPTY_ENCOUNTER_PARTICIPANTS;
-}
-
-function getEncounterViewPlayerCharacters(
-	view: EncounterViewModel,
-): CampaignEntityRecord[] {
-	return view.playerCharacters || EMPTY_CAMPAIGN_ENTITIES;
 }
 
 export function useEncounterPageController() {
@@ -79,38 +57,20 @@ export function useEncounterPageController() {
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const view = useEncounterView();
-	const encounterParticipants = getEncounterViewParticipants(view);
-	const playerCharacters = getEncounterViewPlayerCharacters(view);
-
-	const { gridMonsters, gridRepresentativeByInstanceId } = useMemo(() => {
-		const projection = getEncounterGridProjection(encounterParticipants);
-		return {
-			gridMonsters: projection.monsters,
-			gridRepresentativeByInstanceId: projection.representativeByInstanceId,
-		};
-	}, [encounterParticipants]);
-
-	const selectedGridInstanceId = getEncounterSelectedGridId(
-		view.selectedInstance,
-		gridRepresentativeByInstanceId,
-	);
-	const {
-		focusTimeoutRef,
-		focusedMonsterId,
-		focusMonsterInGrid,
-		setGridItemRef,
-	} = useEncounterGridFocus(gridRepresentativeByInstanceId);
-	const displayedMonsterCount = gridMonsters.length;
-	const {
-		displayMode: effectiveDisplayMode,
-		gridColumns: effectiveGridColumns,
-	} = getEncounterLayout(displayMode, gridColumns, displayedMonsterCount);
+	const displayProjection = useEncounterPageDisplayProjection({
+		displayMode,
+		gridColumns,
+		view,
+	});
 	const availablePlayerCharacters = useMemo(
 		() => getAvailableEncounterCharacters(
-			encounterParticipants,
-			playerCharacters,
+			displayProjection.encounterParticipants,
+			displayProjection.playerCharacters,
 		),
-		[encounterParticipants, playerCharacters],
+		[
+			displayProjection.encounterParticipants,
+			displayProjection.playerCharacters,
+		],
 	);
 	const playerCreation = useEncounterPlayerCreation({
 		campaignSlug: campaign?.slug || "",
@@ -133,7 +93,7 @@ export function useEncounterPageController() {
 	});
 	const aiEditor = useEncounterMonsterAiEditor();
 
-	useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);
+	useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);
 	useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));
 	useEncounterAiModelLoading({
 		aiEditingMonster: aiEditor.editingMonster,
@@ -162,10 +122,10 @@ export function useEncounterPageController() {
 	});
 	const monsterInteractions = useEncounterMonsterInteractions({
 		selectedInstanceId: view.selectedInstance?.instanceId,
-		displayMode: effectiveDisplayMode,
+		displayMode: displayProjection.effectiveDisplayMode,
 		onOpenCharacter: characterModal.open,
 		onSelect: view.setSelectedInstance,
-		onFocus: focusMonsterInGrid,
+		onFocus: displayProjection.focusMonsterInGrid,
 		onTokenImageUpdate: view.updateMonsterImage,
 	});
 
@@ -178,12 +138,9 @@ export function useEncounterPageController() {
 		availablePlayerCharacters,
 		characterModal,
 		displaySettings,
-		effectiveDisplayMode,
-		effectiveGridColumns,
-		focusedMonsterId,
+		...displayProjection,
 		getParticipantInstanceId,
 		gridColumns,
-		gridMonsters,
 		headerActionsRef,
 		hpEditing,
 		isHeaderActionsOpen,
@@ -192,11 +149,9 @@ export function useEncounterPageController() {
 		monsterInteractions,
 		playerCreation,
 		renderContext: getEncounterRenderContext(view, campaign, sessionId),
-		selectedGridInstanceId,
 		selectedParticipantId: view.selectedInstance
 			? getParticipantInstanceId(view.selectedInstance)
 			: undefined,
-		setGridItemRef,
 		toggleHeaderActions: () => setIsHeaderActionsOpen((value) => !value),
 		view,
 	};

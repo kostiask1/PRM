@@ -1746,7 +1746,11 @@ function getRequiredSourceMatch(source, pattern, message = String(pattern)) {
 }
 
 async function getEncounterPageCompositionSource() {
-	const [controllerSource, workflowsSource, contentSource] = await Promise.all([
+	const [displayProjectionSource, controllerSource, workflowsSource, contentSource] = await Promise.all([
+		fs.readFile(
+			"src/pages/encounter/model/useEncounterPageDisplayProjection.ts",
+			"utf8",
+		),
 		fs.readFile(
 			"src/pages/encounter/model/useEncounterPageController.ts",
 			"utf8",
@@ -1760,7 +1764,7 @@ async function getEncounterPageCompositionSource() {
 			"utf8",
 		),
 	]);
-	return `${controllerSource}\n${workflowsSource}\n${contentSource}`;
+	return `${displayProjectionSource}\n${controllerSource}\n${workflowsSource}\n${contentSource}`;
 }
 
 async function getEncounterPrivateComponentSources(componentName) {
@@ -6128,10 +6132,10 @@ await run(
 				"onUpdate: view.updateMonsterHp,",
 				"const monsterInteractions = useEncounterMonsterInteractions({",
 				"selectedInstanceId: view.selectedInstance?.instanceId,",
-				"displayMode: effectiveDisplayMode,",
+				"displayMode: displayProjection.effectiveDisplayMode,",
 				"onOpenCharacter: characterModal.open,",
 				"onSelect: view.setSelectedInstance,",
-				"onFocus: focusMonsterInGrid,",
+				"onFocus: displayProjection.focusMonsterInGrid,",
 				"onTokenImageUpdate: view.updateMonsterImage,",
 				"<EncounterParticipantList",
 				"monsters={encounter.monsters}",
@@ -6756,7 +6760,7 @@ await run(
 		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterRequestCleanup/);
 		assertSourceTokensInOrder(encounterSource, [
 			"export function useEncounterPageController() {",
-			"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
+			"useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);",
 		], "Encounter raw cleanup-ref ownership");
 		assertSourceTokensInOrder(cleanupSource, [
 			'import { useEffect, type RefObject } from "react";',
@@ -6940,8 +6944,8 @@ await run(
 		assert.doesNotMatch(`${runtimeEntrySource}\n${typeEntrySource}`, /useEncounterGridFocus/);
 		assertSourceTokensInOrder(encounterSource, [
 			"} = useEncounterGridFocus(gridRepresentativeByInstanceId);",
-			"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
-			"onFocus: focusMonsterInGrid,",
+			"useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);",
+			"onFocus: displayProjection.focusMonsterInGrid,",
 			"focusedMonsterId={focusedMonsterId}",
 			"setGridItemRef={setGridItemRef}",
 		], "Encounter raw grid-focus composition");
@@ -7322,10 +7326,10 @@ await run("Phase 217 isolates Encounter monster interactions in a page model", a
 	assertSourceTokensInOrder(page, [
 		"const monsterInteractions = useEncounterMonsterInteractions({",
 		"selectedInstanceId: view.selectedInstance?.instanceId,",
-		"displayMode: effectiveDisplayMode,",
+		"displayMode: displayProjection.effectiveDisplayMode,",
 		"onOpenCharacter: characterModal.open,",
 		"onSelect: view.setSelectedInstance,",
-		"onFocus: focusMonsterInGrid,",
+		"onFocus: displayProjection.focusMonsterInGrid,",
 		"onTokenImageUpdate: view.updateMonsterImage,",
 		"onSelect={monsterInteractions.select}",
 		"onTokenImageChange={monsterInteractions.updateTokenImage}",
@@ -10231,7 +10235,7 @@ await run(
 				"} = useEncounterPageRuntime();",
 				"const view = useEncounterView();",
 				"const playerCreation = useEncounterPlayerCreation({",
-				"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
+				"useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);",
 				"const displaySettings = useEncounterDisplaySettings({ patchUiSettings });",
 				"} = useEncounterMonsterAiWorkflows({",
 				"const monsterInteractions = useEncounterMonsterInteractions({",
@@ -10298,7 +10302,7 @@ await run(
 			controllerSource,
 			[
 				"const aiEditor = useEncounterMonsterAiEditor();",
-				"useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);",
+				"useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);",
 				"useEncounterAiModelLoading({",
 				"const displaySettings = useEncounterDisplaySettings({ patchUiSettings });",
 				"const {",
@@ -10391,6 +10395,72 @@ await run(
 		assert.doesNotMatch(
 			`${appRuntimeEntry}\n${appRuntimeTypes}`,
 			/useAppModifierKey/,
+		);
+	},
+);
+
+await run(
+	"Phase 235 isolates Encounter display projection in the private page model",
+	async () => {
+		const [controllerSource, projectionSource, pageEntry, pageTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/pages/encounter/model/useEncounterPageController.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/encounter/model/useEncounterPageDisplayProjection.ts",
+					"utf8",
+				),
+				fs.readFile("src/pages/encounter/index.js", "utf8"),
+				fs.readFile("src/pages/encounter/index.d.ts", "utf8"),
+			]);
+
+		assert.match(
+			controllerSource,
+			/import \{ useEncounterPageDisplayProjection \} from "\.\/useEncounterPageDisplayProjection\.ts";/,
+		);
+		assert.doesNotMatch(
+			controllerSource,
+			/getEncounterGridProjection|getEncounterLayout|getEncounterSelectedGridId|useEncounterGridFocus|EMPTY_ENCOUNTER_PARTICIPANTS|EMPTY_CAMPAIGN_ENTITIES/,
+		);
+		assertSourceTokensInOrder(
+			controllerSource,
+			[
+				"export function useEncounterPageController() {",
+				"const view = useEncounterView();",
+				"const displayProjection = useEncounterPageDisplayProjection({",
+				"const availablePlayerCharacters = useMemo(",
+				"useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);",
+				"displayMode: displayProjection.effectiveDisplayMode,",
+				"onFocus: displayProjection.focusMonsterInGrid,",
+				"...displayProjection,",
+			],
+			"Encounter controller display-projection delegation",
+		);
+		assertSourceTokensInOrder(
+			projectionSource,
+			[
+				'import { useMemo } from "react";',
+				'import { useEncounterGridFocus } from "./useEncounterGridFocus.ts";',
+				"export function useEncounterPageDisplayProjection({",
+				"const encounterParticipants = getEncounterViewParticipants(view);",
+				"const { gridMonsters, gridRepresentativeByInstanceId } = useMemo(() => {",
+				"const selectedGridInstanceId = getEncounterSelectedGridId(",
+				"} = useEncounterGridFocus(gridRepresentativeByInstanceId);",
+				"} = getEncounterLayout(displayMode, gridColumns, gridMonsters.length);",
+				"return {",
+				"setGridItemRef,",
+			],
+			"Encounter private display projection",
+		);
+		assert.doesNotMatch(
+			projectionSource,
+			/useEncounterView|useEncounterPageRuntime|campaignApi|bestiaryApi|aiApi|settingsApi|app\/model|shared\/model/,
+		);
+		assert.doesNotMatch(
+			`${pageEntry}\n${pageTypes}`,
+			/useEncounterPageDisplayProjection/,
 		);
 	},
 );
