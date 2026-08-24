@@ -962,6 +962,8 @@ Next:
 - Phase 283 preserves empty fresh-map behavior, node-ID map identity, session-opening precedence, selection fallback, and no page public-entry expansion. The full suite passes 556/556 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 284 by moving Campaign Graph connection-row mention-aware rendering into private `pages/campaign/ui/components/CampaignGraphConnection.tsx`. `CampaignNotesGraph.tsx` retains connection planning and activation routing.
 - Phase 284 preserves connection node type styling, mention rendering, click delegation, and no page public-entry expansion. The full suite passes 557/557 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 285 by moving Campaign Graph React Flow edge projection into private `pages/campaign/ui/components/useCampaignGraphFlowEdges.ts`. `CampaignNotesGraph.tsx` retains Flow state, visibility/focus inputs, and canvas composition.
+- Phase 285 preserves position-to-handle routing, visibility, edge relation/stroke/opacity/marker/label presentation, and no page public-entry expansion. The full suite passes 558/558 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 

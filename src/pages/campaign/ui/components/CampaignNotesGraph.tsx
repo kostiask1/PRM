@@ -7,7 +7,6 @@ import {
 	type ReactElement,
 } from "react";
 import {
-	MarkerType,
 	useNodesState,
 	type NodeChange,
 	type OnNodeDrag,
@@ -19,7 +18,6 @@ import {
 	EntityModal,
 	type EntityModalProps,
 } from "../../../../features/entity-link/index.js";
-import { classNames } from "../../../../shared/lib/index.js";
 import {
 	buildCampaignGraph,
 	normalizeGraphName,
@@ -34,11 +32,6 @@ import {
 	getCampaignGraphConnectionPresentation,
 	getCampaignGraphConnectedEdges,
 	getCampaignGraphConnectedIds,
-	getCampaignGraphEdgeColor,
-	getCampaignGraphEdgeHandles,
-	getCampaignGraphEdgeOpacity,
-	getCampaignGraphEdgePresentation,
-	getCampaignGraphEdgeStrokeWidth,
 	getCampaignGraphFlowNodePresentation,
 	getCampaignGraphFlowProjectionPlan,
 	getCampaignGraphNodeTopologyKey,
@@ -83,6 +76,7 @@ import {
 	getCurrentCampaignFlowNodeMap,
 } from "./campaignGraphControllerHelpers.ts";
 import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";
+import { useCampaignGraphFlowEdges } from "./useCampaignGraphFlowEdges.ts";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
 
@@ -111,16 +105,6 @@ const TYPE_LABELS: Readonly<Record<string, string>> = {
 	"scene-note": "Scene notes",
 	unresolved: "Unknown mention",
 };
-
-function getCampaignFlowEdgeMarker(hasSequenceMarker: boolean, color: string) {
-	if (!hasSequenceMarker) return undefined;
-	return {
-		type: MarkerType.ArrowClosed,
-		color,
-		width: 14,
-		height: 14,
-	};
-}
 
 const FILTER_COLOR_BY_ID: Readonly<Record<CampaignGraphFilterId, string>> = {
 	notes: NODE_COLOR_BY_TYPE["campaign-note"],
@@ -419,60 +403,12 @@ export default function CampaignNotesGraph({
 		visibleGraph.nodes,
 	]);
 
-	const flowEdges = useMemo<CampaignFlowEdge[]>(() => {
-		const positions = new Map(flowNodes.map((node) => [node.id, node.position]));
-		const hasFocus = Boolean(focusedNodeId);
-		return graph.edges.map<CampaignFlowEdge>((edge) => {
-			const isVisible = visibleGraph.visibleEdgeIds.has(edge.id);
-			const color = getCampaignGraphEdgeColor(edge);
-			const presentation = getCampaignGraphEdgePresentation(edge, focusedNodeId);
-			const handles = getCampaignGraphEdgeHandles(
-				positions.get(edge.source),
-				positions.get(edge.target),
-			);
-
-			return {
-				id: edge.id,
-				source: edge.source,
-				target: edge.target,
-				...handles,
-				type: presentation.type,
-				hidden: !isVisible,
-				selectable: false,
-				focusable: false,
-				deletable: false,
-				animated: presentation.animated,
-				className: classNames(
-					"CampaignNotesGraph__flowEdge",
-					`is_${edge.relation}`,
-					presentation.isMuted && "is_muted",
-				),
-				style: {
-					stroke: color,
-					strokeWidth: getCampaignGraphEdgeStrokeWidth(edge),
-					opacity: getCampaignGraphEdgeOpacity(
-						edge,
-						presentation.isFocused,
-						hasFocus,
-					),
-					strokeDasharray: presentation.strokeDasharray,
-				},
-				markerEnd: getCampaignFlowEdgeMarker(
-					presentation.hasSequenceMarker,
-					color,
-				),
-				label: presentation.label,
-				labelStyle: { fill: "var(--text-bright)", fontWeight: 700 },
-				labelBgStyle: {
-					fill: "var(--panel)",
-					fillOpacity: 0.92,
-				},
-				labelBgPadding: [5, 3] as [number, number],
-				labelBgBorderRadius: 8,
-				zIndex: 0,
-			};
-		});
-	}, [flowNodes, focusedNodeId, graph.edges, visibleGraph.visibleEdgeIds]);
+	const flowEdges = useCampaignGraphFlowEdges({
+		flowNodes,
+		edges: graph.edges,
+		visibleEdgeIds: visibleGraph.visibleEdgeIds,
+		focusedNodeId,
+	});
 
 	useEffect(() => {
 		if (!shouldFitCampaignGraphTopology({

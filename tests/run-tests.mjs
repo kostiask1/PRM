@@ -11077,6 +11077,37 @@ await run(
 );
 
 await run(
+	"Phase 285 isolates Campaign graph Flow-edge projection in a private page hook",
+	async () => {
+		const [graphSource, edgesSource, pageEntry, pageTypes] = await Promise.all([
+			fs.readFile("src/pages/campaign/ui/components/CampaignNotesGraph.tsx", "utf8"),
+			fs.readFile("src/pages/campaign/ui/components/useCampaignGraphFlowEdges.ts", "utf8"),
+			fs.readFile("src/pages/campaign/index.js", "utf8"),
+			fs.readFile("src/pages/campaign/index.d.ts", "utf8"),
+		]);
+
+		assertSourceTokensInOrder(graphSource, [
+			'import { useCampaignGraphFlowEdges } from "./useCampaignGraphFlowEdges.ts";',
+			"const flowEdges = useCampaignGraphFlowEdges({",
+			"visibleEdgeIds: visibleGraph.visibleEdgeIds,",
+			"focusedNodeId,",
+		]);
+		assert.doesNotMatch(graphSource, /function getCampaignFlowEdgeMarker|const flowEdges = useMemo/);
+		assertSourceTokensInOrder(edgesSource, [
+			'import { useMemo } from "react";',
+			"function getCampaignFlowEdgeMarker",
+			"export function useCampaignGraphFlowEdges",
+			"const positions = new Map",
+			"getCampaignGraphEdgePresentation(edge, focusedNodeId)",
+			"markerEnd: getCampaignFlowEdgeMarker",
+			"labelBgPadding: [5, 3]",
+		]);
+		assert.doesNotMatch(edgesSource, /useCampaignPageRuntime|buildCampaignGraph|useNodesState|onSaveNote|onOpenSession/);
+		assert.doesNotMatch(`${pageEntry}\n${pageTypes}`, /useCampaignGraphFlowEdges/);
+	},
+);
+
+await run(
 	"Phase 284 isolates Campaign graph connection rendering in private page UI",
 	async () => {
 		const [graphSource, connectionSource, pageEntry, pageTypes] =
