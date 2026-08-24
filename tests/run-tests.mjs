@@ -11016,6 +11016,79 @@ await run(
 );
 
 await run(
+	"Phase 251 isolates Bestiary identity and selection policies in the private widget model",
+	async () => {
+		const [browserModelSource, selectionSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/model/bestiaryBrowserSelection.ts",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserModelSource,
+			[
+				"import {\n\tcloneCustomMonsters,",
+				"customMonsterListsEqual,",
+				"findCustomMonsterByName,",
+				"getAutoSelectedMonster,",
+				"getMonsterListIndex,",
+				"isSameMonsterIdentity,",
+				"monsterMatchesReference,",
+				"from \"./bestiaryBrowserSelection.ts\";",
+				"export {\n\tcloneCustomMonsters,",
+				"getBestiaryInitialSelectionScrollPlan,",
+				"getBestiarySelectionPlan,",
+				"getCustomRefreshSelection,",
+				"parseMonsterReference,",
+				"export type {",
+				"BestiaryInitialSelectionScrollPlan,",
+				"BestiarySelectionPlan,",
+				"MonsterReference,",
+			],
+			"Bestiary identity and selection compatibility re-exports",
+		);
+		assert.doesNotMatch(
+			browserModelSource,
+			/function haveSameMonsterName|function findReferencedMonster|function getAutomaticMonsterSelection|function canScrollToInitialBestiarySelection/,
+		);
+		assertSourceTokensInOrder(
+			selectionSource,
+			[
+				'import type { BestiaryMonster } from "../../../entities/bestiary/index.js";',
+				"export interface MonsterReference {",
+				"export interface BestiarySelectionPlan {",
+				"export interface BestiaryInitialSelectionScrollPlan {",
+				"export function parseMonsterReference",
+				"export function isSameMonsterIdentity",
+				"export function monsterMatchesReference",
+				"export function findCustomMonsterByName",
+				"export function getBestiaryInitialSelectionScrollPlan",
+				"export function getBestiarySelectionPlan",
+				"export function getCustomRefreshSelection",
+			],
+			"Bestiary private identity and selection model",
+		);
+		assert.doesNotMatch(
+			selectionSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<BestiaryContent/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/bestiaryBrowserSelection/,
+		);
+	},
+);
+
+await run(
 	"Phase 250 isolates Bestiary legendary-group enrichment in the private widget model",
 	async () => {
 		const [browserModelSource, legendarySource, widgetEntry, modelEntry, modelTypes] =
@@ -48723,6 +48796,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
 		"utf8",
 	);
+	const bestiarySelectionSource = await fs.readFile(
+		"src/widgets/bestiary-browser/model/bestiaryBrowserSelection.ts",
+		"utf8",
+	);
 	const bestiarySyncSource = await fs.readFile(
 		"src/widgets/bestiary-browser/model/bestiaryBrowserSync.ts",
 		"utf8",
@@ -48795,7 +48872,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiaryModelSource, /normalizeMonsterName/);
 	assert.match(bestiarySource, /ignoreSourcesList/);
 	assert.match(bestiarySource, /selectedSources/);
-	assert.match(bestiaryModelSource, /function findReferencedMonster/);
+	assert.match(bestiarySelectionSource, /function findReferencedMonster/);
 	assert.match(bestiarySource, /selectedMonsterRef\.current = plan\.monster/);
 	assert.doesNotMatch(bestiarySource, /setSelectedSource/);
 	assert.doesNotMatch(bestiarySource, /normalizeSourceSelection\(initialMonsterReference\.source\)/);
