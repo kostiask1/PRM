@@ -20,8 +20,6 @@ import type {
 import type { AiResponseModalComponent } from "../../../features/ai/ui/index.js";
 import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
-import BestiaryContent from "./BestiaryContent.tsx";
-import BestiaryHeaderActions from "./BestiaryHeaderActions.tsx";
 import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
@@ -50,6 +48,7 @@ import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionS
 import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";
 import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";
 import { BestiaryBrowserModals } from "./BestiaryBrowserModals.tsx";
+import { BestiaryBrowserContent } from "./BestiaryBrowserContent.tsx";
 
 const api = { ...campaignApi, ...bestiaryApi, ...settingsApi };
 
@@ -320,64 +319,54 @@ export default function BestiaryBrowser({
 		shouldAutoSelectMonsterRef,
 	});
 
-	const bestiaryActions = (
-		<BestiaryHeaderActions
-			canExport={customMonsters.length > 0}
-			canRedo={redoStack.length > 0}
-			canUndo={undoStack.length > 0}
-			onExport={handleExportCustomMonsters}
-			onImport={handleImportCustomMonsters}
-			onRedo={handleRedo}
-			onUndo={handleUndo}
-		/>
-	);
-
-	const bestiaryContent = (
-		<BestiaryContent
-			AiAssistantPanel={AiAssistantPanel}
-			MonsterStatBlock={MonsterStatBlock}
-			ResponseModal={ResponseModal}
-			displayedMonsters={displayedMonsters}
-			favorites={favorites}
-			headerActions={bestiaryActions}
-			hideSearchInput={hideSearchInput}
-			isDetailedSearch={isDetailedSearch}
-			listRef={listRef}
-			loading={loading}
-			onAddMonster={onAddMonster}
-			onAiEditCustomMonster={openAiEditCustomMonster}
-			onDeleteCustomMonster={handleDeleteCustomMonster}
-			onEditMonster={openEditMonster}
-			onFavoriteListChange={setFavorites}
-			onMonsterAiAction={openMonsterAiAction}
-			onRegisterImagePromptAction={(handler) => {
-				openImagePromptForMonsterRef.current = handler;
-			}}
-			onSelectMonster={onSelectMonster}
-			onToggleFavorite={handleToggleFavorite}
-			onlyFavorites={onlyFavorites}
-			search={search}
-			searchHighlight={debouncedSearch}
-			selectedMonster={selectedMonster}
-			onSelectedSourcesChange={saveSelectedSources}
-			onSourceFilterChange={setSourceFilter}
-			setIsDetailedSearch={setIsDetailedSearch}
-			setOnlyFavorites={setOnlyFavorites}
-			setSearch={setSearch}
-			setSelectedMonster={selectMonster}
-			selectedSources={selectedSources}
-			sourceFilter={sourceFilter}
-			sourceFilterLabel={sourceFilterLabel}
-			sortOrder={sortOrder}
-			sourceOptions={sourceOptions}
-			sources={sources}
-			toggleSort={toggleSort}
-		/>
-	);
-
 	return (
 		<>
-			{bestiaryContent}
+			<BestiaryBrowserContent
+				AiAssistantPanel={AiAssistantPanel}
+				MonsterStatBlock={MonsterStatBlock}
+				ResponseModal={ResponseModal}
+				canExport={customMonsters.length > 0}
+				canRedo={redoStack.length > 0}
+				canUndo={undoStack.length > 0}
+				displayedMonsters={displayedMonsters}
+				favorites={favorites}
+				hideSearchInput={hideSearchInput}
+				isDetailedSearch={isDetailedSearch}
+				listRef={listRef}
+				loading={loading}
+				onAddMonster={onAddMonster}
+				onAiEditCustomMonster={openAiEditCustomMonster}
+				onDeleteCustomMonster={handleDeleteCustomMonster}
+				onEditMonster={openEditMonster}
+				onExport={handleExportCustomMonsters}
+				onFavoriteListChange={setFavorites}
+				onImport={handleImportCustomMonsters}
+				onMonsterAiAction={openMonsterAiAction}
+				onRedo={handleRedo}
+				onRegisterImagePromptAction={(handler) => {
+					openImagePromptForMonsterRef.current = handler;
+				}}
+				onSelectMonster={onSelectMonster}
+				onToggleFavorite={handleToggleFavorite}
+				onUndo={handleUndo}
+				onlyFavorites={onlyFavorites}
+				search={search}
+				searchHighlight={debouncedSearch}
+				selectedMonster={selectedMonster}
+				onSelectedSourcesChange={saveSelectedSources}
+				onSourceFilterChange={setSourceFilter}
+				setIsDetailedSearch={setIsDetailedSearch}
+				setOnlyFavorites={setOnlyFavorites}
+				setSearch={setSearch}
+				setSelectedMonster={selectMonster}
+				selectedSources={selectedSources}
+				sourceFilter={sourceFilter}
+				sourceFilterLabel={sourceFilterLabel}
+				sortOrder={sortOrder}
+				sourceOptions={sourceOptions}
+				sources={sources}
+				toggleSort={toggleSort}
+			/>
 			<BestiaryBrowserModals
 				BestiaryAiModals={BestiaryAiModals}
 				MonsterEditorModal={MonsterEditorModal}

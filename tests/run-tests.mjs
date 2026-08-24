@@ -2381,7 +2381,7 @@ await run(
 		);
 		assert.match(
 			bestiarySource,
-			/return \(\s*<>\s*\{bestiaryContent\}\s*<BestiaryBrowserModals/,
+			/return \(\s*<>\s*<BestiaryBrowserContent[\s\S]*?<BestiaryBrowserModals/,
 		);
 
 		const encounterBestiaryTag = encounterSource.match(
@@ -2502,6 +2502,7 @@ await run(
 	async () => {
 		const [
 			bestiaryBrowserSource,
+			bestiaryBrowserContentSource,
 			bestiaryContentSource,
 			bestiaryDetailSource,
 			compositionSource,
@@ -2510,6 +2511,10 @@ await run(
 		] = await Promise.all([
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowserContent.tsx",
 				"utf8",
 			),
 			fs.readFile(
@@ -2593,7 +2598,7 @@ await run(
 			/export default function BestiaryBrowser\(\{\s*BestiaryAiModals,\s*AiAssistantPanel,\s*MonsterStatBlock,/,
 		);
 		const bestiaryContentTag = bestiaryBrowserSource.match(
-			/<BestiaryContent(?=\s|>)[\s\S]*?\/>/,
+			/<BestiaryBrowserContent(?=\s|>)[\s\S]*?\/>/,
 		)?.[0];
 		assert.ok(bestiaryContentTag);
 		assert.match(
@@ -2603,6 +2608,14 @@ await run(
 		assert.match(
 			bestiaryContentTag,
 			/\bMonsterStatBlock=\{MonsterStatBlock\}/,
+		);
+		assert.match(
+			bestiaryBrowserContentSource,
+			/<BestiaryContent[\s\S]*?\{\.\.\.contentProps\}[\s\S]*?headerActions=/,
+		);
+		assert.match(
+			bestiaryBrowserContentSource,
+			/<BestiaryHeaderActions[\s\S]*?canExport=\{canExport\}[\s\S]*?onUndo=\{onUndo\}/,
 		);
 
 		assert.match(
@@ -2926,6 +2939,7 @@ await run(
 			panelViewSource,
 			mainContentSource,
 			bestiaryBrowserSource,
+			bestiaryBrowserContentSource,
 			bestiaryContentSource,
 			bestiaryCompositionSource,
 			encounterSource,
@@ -2944,6 +2958,10 @@ await run(
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowserContent.tsx",
 				"utf8",
 			),
 			fs.readFile(
@@ -3035,10 +3053,14 @@ await run(
 			/export interface BestiaryAssistantSlotProps\s*\{\s*ResponseModal: AiResponseModalComponent;\s*isBestiary: boolean;/,
 		);
 		const bestiaryContentTag = bestiaryBrowserSource.match(
-			/<BestiaryContent(?=\s|>)[\s\S]*?\/>/,
+			/<BestiaryBrowserContent(?=\s|>)[\s\S]*?\/>/,
 		)?.[0];
 		assert.ok(bestiaryContentTag);
 		assert.match(bestiaryContentTag, /\bResponseModal=\{ResponseModal\}/);
+		assert.match(
+			bestiaryBrowserContentSource,
+			/<BestiaryContent[\s\S]*?\{\.\.\.contentProps\}[\s\S]*?headerActions=/,
+		);
 		assert.match(
 			bestiaryContentSource,
 			/export interface BestiaryContentProps\s*\{[\s\S]*?\bResponseModal: BestiaryAssistantSlotProps\["ResponseModal"\];/,
@@ -8118,6 +8140,7 @@ await run(
 	async () => {
 		const [
 			browserSource,
+			browserContentSource,
 			headerActionsSource,
 			runtimeEntrySource,
 			typeEntrySource,
@@ -8126,6 +8149,10 @@ await run(
 		] = await Promise.all([
 			fs.readFile(
 				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowserContent.tsx",
 				"utf8",
 			),
 			fs.readFile(
@@ -8140,15 +8167,14 @@ await run(
 
 		assert.match(
 			browserSource,
-			/import BestiaryHeaderActions from "\.\/BestiaryHeaderActions\.tsx";/,
+			/import \{ BestiaryBrowserContent \} from "\.\/BestiaryBrowserContent\.tsx";/,
 		);
 		assertSourceTokensInOrder(
 			browserSource,
 			[
 				"} = useBestiaryCustomMonsterHistory({",
 				"} = useBestiaryCustomMonsterEditing({",
-				"const bestiaryActions = (",
-				"<BestiaryHeaderActions",
+				"<BestiaryBrowserContent",
 				"canExport={customMonsters.length > 0}",
 				"canRedo={redoStack.length > 0}",
 				"canUndo={undoStack.length > 0}",
@@ -8156,9 +8182,29 @@ await run(
 				"onImport={handleImportCustomMonsters}",
 				"onRedo={handleRedo}",
 				"onUndo={handleUndo}",
-				"headerActions={bestiaryActions}",
 			],
 			"Bestiary header-action composition",
+		);
+		assert.match(
+			browserContentSource,
+			/import BestiaryHeaderActions from "\.\/BestiaryHeaderActions\.tsx";/,
+		);
+		assertSourceTokensInOrder(
+			browserContentSource,
+			[
+				"export function BestiaryBrowserContent",
+				"<BestiaryContent",
+				"headerActions={",
+				"<BestiaryHeaderActions",
+				"canExport={canExport}",
+				"canRedo={canRedo}",
+				"canUndo={canUndo}",
+				"onExport={onExport}",
+				"onImport={onImport}",
+				"onRedo={onRedo}",
+				"onUndo={onUndo}",
+			],
+			"Bestiary private header-action composition",
 		);
 		assert.doesNotMatch(
 			browserSource,
@@ -11025,6 +11071,69 @@ await run(
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useAiAssistantRouteState/,
+		);
+	},
+);
+
+await run(
+	"Phase 270 isolates Bestiary content composition in a private UI component",
+	async () => {
+		const [browserSource, contentHostSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryBrowserContent.tsx",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			browserSource,
+			[
+				'import { BestiaryBrowserContent } from "./BestiaryBrowserContent.tsx";',
+				"<BestiaryBrowserContent",
+				"canExport={customMonsters.length > 0}",
+				"canRedo={redoStack.length > 0}",
+				"canUndo={undoStack.length > 0}",
+				"onImport={handleImportCustomMonsters}",
+				"onRegisterImagePromptAction={(handler) => {",
+				"setSelectedMonster={selectMonster}",
+			],
+			"Bestiary browser composes its private content host",
+		);
+		assert.doesNotMatch(
+			browserSource,
+			/<BestiaryContent\b|<BestiaryHeaderActions\b|const bestiaryActions =|const bestiaryContent =/,
+		);
+		assertSourceTokensInOrder(
+			contentHostSource,
+			[
+				"export interface BestiaryBrowserContentProps",
+				'extends Omit<BestiaryContentProps, "headerActions">',
+				"export function BestiaryBrowserContent",
+				"<BestiaryContent",
+				"{...contentProps}",
+				"headerActions={",
+				"<BestiaryHeaderActions",
+				"canExport={canExport}",
+				"onImport={onImport}",
+				"onUndo={onUndo}",
+			],
+			"Bestiary private content host",
+		);
+		assert.doesNotMatch(
+			contentHostSource,
+			/useBestiaryBrowserRuntime|campaignApi|bestiaryApi|aiApi|settingsApi|app\/model|shared\/model|BestiaryBrowserProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/BestiaryBrowserContent/,
 		);
 	},
 );
