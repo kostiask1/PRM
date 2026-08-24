@@ -11,7 +11,6 @@ import type {
 	BestiaryFavorite,
 	BestiaryMonster,
 } from "../../../entities/bestiary/index.js";
-import { lang } from "../../../shared/lib/index.js";
 import {
 	getMonsterItemKey,
 	isSameMonsterIdentity,
@@ -25,17 +24,13 @@ import type {
 import { BestiaryMonsterListItem } from "./BestiaryMonsterListItem.tsx";
 import { BestiaryToolbar } from "./BestiaryToolbar.tsx";
 import { BestiaryDetail } from "./BestiaryDetail.tsx";
+import { BestiaryVirtualizedList } from "./BestiaryVirtualizedList.tsx";
 
 function isMobileViewport() {
 	return (
 		typeof window !== "undefined" &&
 		window.matchMedia("(max-width: 767px)").matches
 	);
-}
-
-function getFallbackScrollParent() {
-	if (typeof window === "undefined") return null;
-	return window;
 }
 
 export interface BestiaryContentProps {
@@ -75,44 +70,6 @@ export interface BestiaryContentProps {
 	sourceOptions: string[];
 	sources: string[];
 	toggleSort: () => void;
-}
-
-interface BestiaryListProps {
-	displayedMonsters: BestiaryMonster[];
-	itemRenderer: (index: number) => ReactNode;
-	listContainerRef: RefObject<HTMLDivElement>;
-	listRef: RefObject<ReactList>;
-	loading: boolean;
-}
-
-function BestiaryList({
-	displayedMonsters,
-	itemRenderer,
-	listContainerRef,
-	listRef,
-	loading,
-}: BestiaryListProps) {
-	return (
-		<div className="Bestiary__list" ref={listContainerRef}>
-			{loading && displayedMonsters.length === 0 && (
-				<div className="Bestiary__loading muted">{lang.t("Loading...")}</div>
-			)}
-			<ReactList
-				ref={listRef}
-				itemRenderer={itemRenderer}
-				length={displayedMonsters.length}
-				scrollParentGetter={() =>
-					listContainerRef.current || getFallbackScrollParent()
-				}
-				scrollParentViewportSizeGetter={() =>
-					listContainerRef.current?.clientHeight ||
-					getFallbackScrollParent()?.innerHeight ||
-					0
-				}
-				type="uniform"
-			/>
-		</div>
-	);
 }
 
 export default function BestiaryContent({
@@ -221,7 +178,7 @@ export default function BestiaryContent({
 					toggleSort={toggleSort}
 				/>
 				<div className="Bestiary__content Bestiary__content__stacked">
-					<BestiaryList
+					<BestiaryVirtualizedList
 						displayedMonsters={displayedMonsters}
 						itemRenderer={renderMonsterItem}
 						listContainerRef={listContainerRef}

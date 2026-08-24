@@ -11021,6 +11021,60 @@ await run(
 );
 
 await run(
+	"Phase 261 isolates Bestiary virtualized list UI in a private widget component",
+	async () => {
+		const [contentSource, listSource, widgetEntry, modelEntry, modelTypes] =
+			await Promise.all([
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/widgets/bestiary-browser/ui/BestiaryVirtualizedList.tsx",
+					"utf8",
+				),
+				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
+				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
+			]);
+
+		assertSourceTokensInOrder(
+			contentSource,
+			[
+				'import { BestiaryVirtualizedList } from "./BestiaryVirtualizedList.tsx";',
+				"export interface BestiaryContentProps",
+				"<BestiaryVirtualizedList",
+			],
+			"Bestiary content composes its private virtualized list",
+		);
+		assert.doesNotMatch(
+			contentSource,
+			/function getFallbackScrollParent|function BestiaryList\(/,
+		);
+		assertSourceTokensInOrder(
+			listSource,
+			[
+				'import type { ReactNode, RefObject } from "react";',
+				'import ReactList from "react-list";',
+				'import type { BestiaryMonster } from "../../../entities/bestiary/index.js";',
+				"export interface BestiaryVirtualizedListProps",
+				"function getFallbackScrollParent",
+				"export function BestiaryVirtualizedList",
+			],
+			"Bestiary private virtualized-list component",
+		);
+		assert.doesNotMatch(
+			listSource,
+			/useBestiaryBrowserRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|BestiaryContentProps/,
+		);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
+			/\.\/ui\/BestiaryVirtualizedList/,
+		);
+	},
+);
+
+await run(
 	"Phase 260 isolates Bestiary detail UI in a private widget component",
 	async () => {
 		const [contentSource, detailSource, widgetEntry, modelEntry, modelTypes] =
