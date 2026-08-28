@@ -6,7 +6,7 @@ import {
 
 import type { RulesReferenceNavigationTarget } from "../model.js";
 
-export interface RulesReferenceErrorNotice {
+export interface RulesReferenceErrorNotice extends Record<string, unknown> {
 	title: string;
 	message: string;
 }

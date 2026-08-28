@@ -974,6 +974,8 @@ Next:
 - Phase 289 preserves selected/hovered reset behavior, visibility invalidation, manual-position reset, focus resolution, and connection/detail projections without a page public-entry expansion. The full suite passes 562/562 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
 - Completed Phase 290 by moving Campaign Graph target-opening coordination into private `pages/campaign/ui/components/useCampaignGraphOpenActions.tsx`. `CampaignNotesGraph.tsx` retains graph/runtime composition and render hosts.
 - Phase 290 preserves note save-request adaptation, entity-modal lifecycle, session/entity/note route dispatch, callback ordering, and no page public-entry expansion. The full suite passes 563/563 tests; architecture, performance, and Ukrainian encoding checks pass. Complete lint/typecheck remains tracked under `MD-R04`.
+- Completed Phase 291 by closing the remaining complete-tooling verification debt: runtime ports now model extensible modal/message/settings payloads, session creation/rename transitions validate a concrete file name, mutable request-controller refs remain private to the encounter workflow, and the AI/Bestiary public contracts match their consumers without widening slice ownership.
+- Phase 291 preserves modal/confirmation result semantics, session-route behavior, Encounter header values, and all existing public-entry boundaries. The full suite passes 563/563 tests; architecture, performance, lint, strict typecheck, and Ukrainian encoding checks pass. `MD-R04` is closed.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -1367,7 +1369,7 @@ wipe-and-replace boundary.
 
 ### Recovery R5 — Enforced ownership and verification
 
-Status: **In progress**
+Status: **Complete**
 
 - [x] Keep Fallow's
   `app -> pages -> widgets -> features -> entities -> shared` direction.
@@ -1608,8 +1610,8 @@ Status: **In progress**
   page cannot regain direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
-- [ ] Run the complete lint and typecheck gates after the declared local
-  tooling dependencies are available.
+- [x] Run the complete lint and typecheck gates with the declared local tooling
+  dependencies restored; Phase 291 passes both gates.
 - [x] Run the full `npm test` gate; Phase 119 closed at 398 tests, Phase 122
   passed 405/405, Phase 123 passed 409/409, Phase 124 passed 410/410, and Phase
   125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, Phase

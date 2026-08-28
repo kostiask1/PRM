@@ -1,6 +1,6 @@
 import {
 	useMemo,
-	type RefObject,
+	type MutableRefObject,
 } from "react";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import { bestiaryApi } from "../../../entities/bestiary/index.js";
@@ -13,7 +13,6 @@ import { lang } from "../../../shared/lib/index.js";
 import type { EncounterPageMessage } from "./EncounterPageRuntime.tsx";
 import type {
 	EncounterViewModel,
-	EncounterViewParticipant,
 } from "./contracts.ts";
 import type { useEncounterMonsterAiEditor } from "./useEncounterMonsterAiEditor.ts";
 import { useEncounterMonsterAiAction } from "./useEncounterMonsterAiAction.ts";
@@ -25,7 +24,7 @@ const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 
 interface Options {
 	aiEditor: ReturnType<typeof useEncounterMonsterAiEditor>;
-	aiEditControllerRef: RefObject<AbortController | null>;
+	aiEditControllerRef: MutableRefObject<AbortController | null>;
 	campaignSlug: string;
 	sessionId: string;
 	language: string;

@@ -6,7 +6,7 @@ import type {
 
 export interface UseBestiaryFavoriteToggleOptions {
 	setFavorites: Dispatch<SetStateAction<BestiaryFavorite[]>>;
-	toggleFavorite(name: string, source: string): Promise<BestiaryFavorite[]>;
+	toggleFavorite(name: string, source: string): Promise<BestiaryFavorite[] | null>;
 }
 
 export function useBestiaryFavoriteToggle({

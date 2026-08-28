@@ -35,6 +35,12 @@ interface EncounterHeaderProps {
 	onGridColumns: (columns: number) => void;
 }
 
+interface EncounterHeaderTooltips {
+	averageTooltip: ReactNode;
+	maxTooltip: ReactNode;
+	weightedTooltip: ReactNode;
+}
+
 export default function EncounterHeader({
 	view,
 	displayMode,
@@ -128,10 +134,7 @@ function EncounterHeaderIdentity({
 	averageTooltip,
 	maxTooltip,
 	weightedTooltip,
-}: Pick<
-	EncounterHeaderProps,
-	"view" | "averageTooltip" | "maxTooltip" | "weightedTooltip"
->) {
+}: Pick<EncounterHeaderProps, "view"> & EncounterHeaderTooltips) {
 	return (
 		<div className="EncounterView__header">
 			<Button variant="ghost" size={Button.SIZES.SMALL} onClick={view.handleBack} icon="back" className="SessionView__backBtn" />
@@ -148,10 +151,7 @@ function EncounterMetrics({
 	averageTooltip,
 	maxTooltip,
 	weightedTooltip,
-}: Pick<
-	EncounterHeaderProps,
-	"view" | "averageTooltip" | "maxTooltip" | "weightedTooltip"
->) {
+}: Pick<EncounterHeaderProps, "view"> & EncounterHeaderTooltips) {
 	const participantCount = view.encounter?.monsters.length || 0;
 	const metrics: Array<[ReactNode, ReactNode, ReactNode, string]> = [
 		[lang.t("Avg initiative"), view.initiativeStats.average, averageTooltip, ""],

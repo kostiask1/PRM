@@ -166,7 +166,6 @@ export default function BestiaryBrowser({
 	});
 
 	const {
-		filterSourceOptions,
 		selectedSources,
 		saveSelectedSources,
 		sourceFilter,

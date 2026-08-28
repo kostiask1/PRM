@@ -57,6 +57,7 @@ export {
 	resolveAiGenerationRequestPolicy,
 	sanitizeAiContextConfig,
 	type AiGenerationRequestAttachments,
+	type AiGenerationRequestInput,
 	type AiGenerationRequestOptions,
 	type AiGenerationRequestPolicy,
 	type AiGenerationRequestTarget,

@@ -38,7 +38,7 @@ export interface EncounterPageDiceRollRequest {
 	};
 }
 
-export interface EncounterPageUiSettingsPatch {
+export interface EncounterPageUiSettingsPatch extends Record<string, unknown> {
 	encounterViewMode?: "grid" | "single";
 	encounterGridColumns?: number;
 }

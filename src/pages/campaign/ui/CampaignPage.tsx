@@ -46,8 +46,6 @@ import {
 	type CampaignSessionItem,
 } from "../model/campaignPagePresentation.ts";
 
-type CampaignViewController = ReturnType<typeof useCampaignView>;
-
 function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const { navigateToSession } = useCampaignPageRuntime();
 	const view = useCampaignView({ campaign });

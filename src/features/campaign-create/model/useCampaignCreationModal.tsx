@@ -9,7 +9,7 @@ import {
 	type CampaignCreationResult,
 } from "./campaignCreation.ts";
 
-export interface CampaignCreationModalConfig {
+export interface CampaignCreationModalConfig extends Record<string, unknown> {
 	title: string;
 	type: "confirm";
 	showFooter: false;

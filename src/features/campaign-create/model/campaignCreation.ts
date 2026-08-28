@@ -2,7 +2,7 @@ export interface CampaignCreationResult {
 	slug: string;
 }
 
-export interface CampaignCreationError {
+export interface CampaignCreationError extends Record<string, unknown> {
 	title: string;
 	message: string;
 }

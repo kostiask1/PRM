@@ -41,7 +41,7 @@ interface Options {
 		nextCustomMonsters: BestiaryMonster[],
 		options?: { selectedName?: string; clearSelection?: boolean },
 	): Promise<BestiaryMonster[]>;
-	requestConfirmation(options: Message): Promise<boolean>;
+	requestConfirmation(options: Message): Promise<unknown>;
 	selectedMonsterRef: MutableRefObject<BestiaryMonster | null>;
 	setAllMonsters: Dispatch<SetStateAction<BestiaryMonster[]>>;
 	setFavorites: Dispatch<SetStateAction<BestiaryFavorite[]>>;

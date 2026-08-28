@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { MutableRefObject } from "react";
 import type { aiApi, AiHistoryEntry } from "../../../features/ai/index.js";
 import {
 	buildMonsterAiRequestPayload,
@@ -13,7 +13,7 @@ type AiGenerationApi = Pick<typeof aiApi, "generateAi">;
 
 interface Options {
 	api: AiGenerationApi;
-	controllerRef: RefObject<AbortController | null>;
+	controllerRef: MutableRefObject<AbortController | null>;
 	campaignSlug: string;
 	sessionId: string;
 	encounterId?: string | number;

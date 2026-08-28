@@ -5,6 +5,7 @@ import type { SessionEditorSession } from "./sessionMutations.ts";
 import {
 	executeSessionSave,
 	normalizeSessionSavePolicy,
+	type SessionRenamedRecord,
 } from "./sessionPersistence.ts";
 
 export interface SessionSaveOptions {
@@ -15,7 +16,7 @@ export interface SessionSaveOptions {
 interface SessionPersistenceOptions {
 	campaignSlug: string;
 	sessionId: string;
-	onSessionRenamed?: (session: SessionRecord) => void;
+	onSessionRenamed?: (session: SessionRenamedRecord) => void;
 	onSaveError?: (error: unknown) => void;
 	delay?: number;
 }

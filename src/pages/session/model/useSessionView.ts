@@ -99,7 +99,7 @@ export default function useSessionView() {
 		navigateToCampaign(campaignSlug);
 	}, [campaignSlug, navigateToCampaign]);
 	const handleSessionRenamed = useCallback(
-		(result: SessionRecord) => {
+		(result: SessionRecord & { fileName: string }) => {
 			navigateToSession(campaignSlug, result.fileName, true);
 			requestCampaignReload();
 		},

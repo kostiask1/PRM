@@ -67,6 +67,7 @@ export function useEncounterPageController() {
 		showMessage,
 		view,
 	});
+	const { characterModal, playerCreation } = participantEditing;
 	const aiEditor = useEncounterMonsterAiEditor();
 
 	useEncounterRequestCleanup(displayProjection.focusTimeoutRef, aiEditControllerRef);

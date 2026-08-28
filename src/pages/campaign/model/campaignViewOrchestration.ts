@@ -290,6 +290,8 @@ export function getCampaignSessionCreationPlan(
 
 export type CampaignSessionCreationOutcome = "created" | "cancelled" | "failed";
 
+type CampaignCreatedSession = SessionRecord & { fileName: string };
+
 interface ExecuteCampaignSessionCreationOptions {
 	campaignSlug: string;
 	plan: CampaignSessionCreationPlan;
@@ -297,7 +299,7 @@ interface ExecuteCampaignSessionCreationOptions {
 		campaignSlug: string,
 		name: string,
 	) => Promise<SessionRecord | null>;
-	onCreated: (session: SessionRecord) => void;
+	onCreated: (session: CampaignCreatedSession) => void;
 	onError: (error: unknown) => void;
 }
 
@@ -311,8 +313,10 @@ export async function executeCampaignSessionCreation({
 	if (plan.kind === "cancelled") return "cancelled";
 	try {
 		const session = await createSession(campaignSlug, plan.name);
-		if (!session) throw new Error("Session creation returned no session");
-		onCreated(session);
+		if (!session || typeof session.fileName !== "string" || !session.fileName) {
+			throw new Error("Session creation returned no session");
+		}
+		onCreated({ ...session, fileName: session.fileName });
 		return "created";
 	} catch (error) {
 		onError(error);

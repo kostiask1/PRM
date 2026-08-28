@@ -1,6 +1,8 @@
 import type { SessionRecord } from "../../../entities/session/index.js";
 import type { SessionEditorSession } from "./sessionMutations.ts";
 
+export type SessionRenamedRecord = SessionRecord & { fileName: string };
+
 export interface SessionSavePolicy {
 	throwOnError: boolean;
 	updateUi: boolean;
@@ -22,7 +24,7 @@ export interface ExecuteSessionSaveOptions {
 		session: SessionEditorSession,
 	) => Promise<SessionRecord | null>;
 	setSaving?: (isSaving: boolean) => void;
-	onSessionRenamed?: (session: SessionRecord) => void;
+	onSessionRenamed?: (session: SessionRenamedRecord) => void;
 	onSaveError?: (error: unknown) => void;
 }
 
@@ -43,7 +45,7 @@ export function shouldNotifySessionRename(
 	result: SessionRecord | null,
 	sessionId: string,
 	updateUi: boolean,
-): result is SessionRecord {
+): result is SessionRenamedRecord {
 	return Boolean(
 		updateUi &&
 			result?.fileName &&

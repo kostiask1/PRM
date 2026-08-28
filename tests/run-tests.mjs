@@ -12601,7 +12601,6 @@ await run(
 			[
 				'import { useBestiarySourceSelection } from "./useBestiarySourceSelection.ts";',
 				"const {",
-				"filterSourceOptions,",
 				"selectedSources,",
 				"saveSelectedSources,",
 				"sourceFilter,",
