@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import "../../../assets/components/MentionPickerModalContent.css";
 
 import { lang } from "../../../shared/lib/index.js";
 import { Button } from "../../../shared/ui/index.js";
@@ -27,7 +28,7 @@ export default function MentionPickerModalContent({
 	);
 
 	return (
-		<div className="MentionPicker">
+		<div className="MentionPickerModalContent">
 			<Input
 				value={query}
 				onChange={(event) => setQuery(event.target.value)}
@@ -35,26 +36,26 @@ export default function MentionPickerModalContent({
 				autoFocus
 			/>
 
-			<div className="MentionPicker__columns">
+			<div className="MentionPickerModalContent__columns">
 				{groups.map((group) => (
-					<section key={group.key} className="MentionPicker__column">
-						<h4 className="MentionPicker__column_title">
+					<section key={group.key} className="MentionPickerModalContent__column">
+						<h4 className="MentionPickerModalContent__columnTitle">
 							{lang.t(group.label)}
 						</h4>
-						<div className="MentionPicker__list">
+						<div className="MentionPickerModalContent__list">
 							{group.items.length > 0 ? (
 								group.items.map((entity) => (
 									<button
 										key={`${entity.type}-${entity.id}-${entity.name}`}
 										type="button"
-										className="MentionPicker__item"
+										className="MentionPickerModalContent__item"
 										onClick={() => onSelect(String(entity.name || ""))}
 									>
 										<span>{entity.name}</span>
 									</button>
 								))
 							) : (
-								<p className="muted MentionPicker__empty">
+								<p className="muted MentionPickerModalContent__empty">
 									{lang.t("Nothing found.")}
 								</p>
 							)}
@@ -63,7 +64,7 @@ export default function MentionPickerModalContent({
 				))}
 			</div>
 
-			<div className="MentionPicker__actions">
+			<div className="MentionPickerModalContent__actions">
 				<Button variant="ghost" onClick={onCancel}>
 					{lang.t("Cancel")}
 				</Button>

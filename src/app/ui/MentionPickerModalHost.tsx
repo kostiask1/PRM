@@ -144,7 +144,7 @@ function openMentionPickerModal(
 	openModalRequest({
 		title: lang.t("Choose mention"),
 		type: "confirm",
-		className: "MentionPickerModal",
+		className: "MentionPickerModalHost__modal",
 		showFooter: false,
 		onCancelAction: () => {
 			cancelMentionPicker(callbacks, dispatch);
