@@ -45,6 +45,7 @@ export type CampaignGraphRelation =
 	| "mentions";
 
 export type CampaignGraphEntityType = "characters" | "npc" | "locations";
+export type CampaignGraphConnectionMode = "direct" | "all";
 export type CampaignGraphEnabledFilters = Record<CampaignGraphFilterId, boolean>;
 export type CampaignGraphTypeCounts = Partial<Record<CampaignGraphFilterId, number>>;
 export type GraphTranslate = (key: string) => string;
@@ -678,8 +679,10 @@ export function getVisibleCampaignGraph(
 	graph: CampaignGraphResult,
 	enabledFilters: CampaignGraphEnabledFilters,
 	normalizedQuery: string,
+	connectionMode: CampaignGraphConnectionMode = "all",
 ): CampaignGraphVisibleResult {
-	const enabledNodes = graph.nodes.filter((node) => {
+	const connectionGraph = getCampaignGraphForConnectionMode(graph, connectionMode);
+	const enabledNodes = connectionGraph.nodes.filter((node) => {
 		if (node.type === "campaign") return true;
 		if (
 			node.type === "scene-note" &&
@@ -690,7 +693,7 @@ export function getVisibleCampaignGraph(
 		return enabledFilters[getCampaignGraphFilterId(node.type)] !== false;
 	});
 	const enabledNodeIds = new Set(enabledNodes.map((node) => node.id));
-	const enabledEdges = graph.edges.filter(
+	const enabledEdges = connectionGraph.edges.filter(
 		(edge) => enabledNodeIds.has(edge.source) && enabledNodeIds.has(edge.target),
 	);
 	const visibleNodeIds = getVisibleNodeIds(
@@ -709,6 +712,36 @@ export function getVisibleCampaignGraph(
 		visibleNodeIds,
 		visibleEdgeIds: new Set(edges.map((edge) => edge.id)),
 		nodeById: new Map(nodes.map((node) => [node.id, node])),
+	};
+}
+
+export function getCampaignGraphEdgesForConnectionMode(
+	edges: CampaignGraphEdge[],
+	connectionMode: CampaignGraphConnectionMode,
+): CampaignGraphEdge[] {
+	if (connectionMode === "all") return edges;
+	return edges.filter((edge) => edge.relation !== "related");
+}
+
+export function getCampaignGraphForConnectionMode(
+	graph: CampaignGraphResult,
+	connectionMode: CampaignGraphConnectionMode,
+): CampaignGraphResult {
+	if (connectionMode === "all") return graph;
+	const edges = getCampaignGraphEdgesForConnectionMode(graph.edges, connectionMode);
+	const nodes = graph.nodes.map((node) => ({ ...node, degree: 0 }));
+	const nodeById = new Map(nodes.map((node) => [node.id, node]));
+	edges.forEach((edge) => {
+		const source = nodeById.get(edge.source);
+		const target = nodeById.get(edge.target);
+		if (source) source.degree += 1;
+		if (target) target.degree += 1;
+	});
+	return {
+		...graph,
+		nodes,
+		edges,
+		stats: { ...graph.stats, edges: edges.length },
 	};
 }
 

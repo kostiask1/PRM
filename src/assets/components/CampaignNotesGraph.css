@@ -98,6 +98,24 @@
 	white-space: nowrap;
 }
 
+.CampaignNotesGraph__connectionModes {
+	display: inline-flex;
+	flex: 0 0 auto;
+	padding: 2px;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--bg), transparent 18%);
+}
+
+.CampaignNotesGraph__connectionMode {
+	min-height: 26px;
+	padding: 4px 9px;
+	border-color: transparent;
+	border-radius: 999px;
+	font-size: 0.72rem;
+	white-space: nowrap;
+}
+
 .CampaignNotesGraph__filters {
 	display: flex;
 	flex-wrap: wrap;
@@ -811,6 +829,7 @@
 
 @media (max-width: 767px) {
 	.CampaignNotesGraph__toolbarPrimary {
+		flex-wrap: wrap;
 		align-items: stretch;
 	}
 
@@ -820,6 +839,15 @@
 
 	.CampaignNotesGraph__relayout>span {
 		display: none;
+	}
+
+	.CampaignNotesGraph__connectionModes {
+		order: 3;
+		width: 100%;
+	}
+
+	.CampaignNotesGraph__connectionMode {
+		flex: 1 1 0;
 	}
 
 	.CampaignNotesGraph__canvasWrap {

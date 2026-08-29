@@ -21,12 +21,14 @@ import {
 	canOpenCampaignGraphNode,
 	formatCampaignGraphSourceList,
 	getCampaignGraphConnectionPresentation,
+	getCampaignGraphForConnectionMode,
 	getCampaignGraphNodeTopologyKey,
 	getCampaignGraphRelationLabel,
 	getCampaignGraphTypeCounts,
 	getVisibleCampaignGraph,
 	type CampaignGraphEnabledFilters,
 	type CampaignGraphFilterId,
+	type CampaignGraphConnectionMode,
 } from "../../model/campaignGraphPresentation.ts";
 import type { CampaignGraphEdge } from "../../graph.js";
 import type {
@@ -140,6 +142,8 @@ export default function CampaignNotesGraph({
 			...DEFAULT_CAMPAIGN_GRAPH_FILTERS,
 		}));
 	const [query, setQuery] = useState("");
+	const [connectionMode, setConnectionMode] =
+		useState<CampaignGraphConnectionMode>("direct");
 	const [flowInstance, setFlowInstance] =
 		useState<ReactFlowInstance<CampaignFlowNode, CampaignFlowEdge> | null>(null);
 	const [flowNodes, setFlowNodes, onFlowNodesChange] =
@@ -182,16 +186,24 @@ export default function CampaignNotesGraph({
 		],
 	);
 
+	const activeGraph = useMemo(
+		() => getCampaignGraphForConnectionMode(graph, connectionMode),
+		[connectionMode, graph],
+	);
 	const visibleGraph = useMemo(
-		() => getVisibleCampaignGraph(graph, enabledFilters, normalizeGraphName(query)),
-		[enabledFilters, graph, query],
+		() => getVisibleCampaignGraph(
+			activeGraph,
+			enabledFilters,
+			normalizeGraphName(query),
+		),
+		[activeGraph, enabledFilters, query],
 	);
 	const typeCounts = useMemo(
 		() => getCampaignGraphTypeCounts(graph.nodes),
 		[graph.nodes],
 	);
-	const layoutPositions = useCampaignGraphLayout(graph.nodes, graph.edges);
-	const nodeTopologyKey = getCampaignGraphNodeTopologyKey(graph.nodes);
+	const layoutPositions = useCampaignGraphLayout(activeGraph.nodes, activeGraph.edges);
+	const nodeTopologyKey = getCampaignGraphNodeTopologyKey(activeGraph.nodes);
 	const flowNodeTopologyKey = getCampaignGraphNodeTopologyKey(flowNodes);
 	const {
 		selectedNodeId,
@@ -223,7 +235,7 @@ export default function CampaignNotesGraph({
 
 	useCampaignGraphFlowNodeProjection({
 		campaignSlug: campaign.slug,
-		graphNodes: graph.nodes,
+		graphNodes: activeGraph.nodes,
 		layoutPositions,
 		selectedNodeId,
 		focusedNodeId,
@@ -252,7 +264,7 @@ export default function CampaignNotesGraph({
 
 	const flowEdges = useCampaignGraphFlowEdges({
 		flowNodes,
-		edges: graph.edges,
+		edges: activeGraph.edges,
 		visibleEdgeIds: visibleGraph.visibleEdgeIds,
 		focusedNodeId,
 	});
@@ -271,6 +283,11 @@ export default function CampaignNotesGraph({
 			...previous,
 			[filterId]: !previous[filterId],
 		}));
+	};
+	const changeConnectionMode = (mode: CampaignGraphConnectionMode) => {
+		if (mode === connectionMode) return;
+		requestFilterRelayout();
+		setConnectionMode(mode);
 	};
 
 	const renderConnection = (edge: CampaignGraphEdge): ReactElement | null => {
@@ -303,7 +320,7 @@ export default function CampaignNotesGraph({
 	const visibleNonCampaignNodes = visibleGraph.nodes.filter(
 		(node) => node.type !== "campaign",
 	).length;
-	const totalNonCampaignNodes = graph.nodes.filter(
+	const totalNonCampaignNodes = activeGraph.nodes.filter(
 		(node) => node.type !== "campaign",
 	).length;
 	const selectedCanOpen = canOpenCampaignGraphNode(
@@ -311,7 +328,7 @@ export default function CampaignNotesGraph({
 		typeof onSaveNote === "function",
 	);
 	const openGraphNodeById = (nodeId: string) => {
-		const node = graph.nodes.find((item) => item.id === nodeId);
+		const node = activeGraph.nodes.find((item) => item.id === nodeId);
 		if (node) openNode(node);
 	};
 	const openSelectedNode = () => {
@@ -347,6 +364,8 @@ export default function CampaignNotesGraph({
 					visibleNodeCount={visibleNonCampaignNodes}
 					totalNodeCount={totalNonCampaignNodes}
 					onRelayout={handleRelayout}
+					connectionMode={connectionMode}
+					onConnectionModeChange={changeConnectionMode}
 					enabledFilters={enabledFilters}
 					typeCounts={typeCounts}
 					filterColors={FILTER_COLOR_BY_ID}
@@ -377,7 +396,7 @@ export default function CampaignNotesGraph({
 				selectedCanOpen={selectedCanOpen}
 				onOpenSelected={openSelectedNode}
 				renderConnection={renderConnection}
-				graph={graph}
+				graph={activeGraph}
 				typeLabels={TYPE_LABELS}
 				visibleNodes={visibleGraph.nodes}
 				visibleEdgeCount={visibleGraph.edges.length}

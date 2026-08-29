@@ -79,6 +79,8 @@ import {
 	getCampaignGraphEdgeHandles,
 	getCampaignGraphEdgeOpacity,
 	getCampaignGraphEdgePresentation,
+	getCampaignGraphEdgesForConnectionMode,
+	getCampaignGraphForConnectionMode,
 	getCampaignGraphFlowNodePresentation,
 	getCampaignGraphFlowProjectionPlan,
 	getCampaignGraphMiniMapBounds,
@@ -11254,7 +11256,7 @@ await run(
 		assertSourceTokensInOrder(graphSource, [
 			'import { useCampaignGraphFlowNodeProjection } from "./useCampaignGraphFlowNodeProjection.ts";',
 			"useCampaignGraphFlowNodeProjection({",
-			"graphNodes: graph.nodes,",
+			"graphNodes: activeGraph.nodes,",
 			"visibleNodeIds: visibleGraph.visibleNodeIds,",
 			"hasManualPositionsRef,",
 		]);
@@ -11435,7 +11437,7 @@ await run(
 			graphSource,
 			[
 				'import { useCampaignGraphLayout } from "./useCampaignGraphLayout.ts";',
-				"const layoutPositions = useCampaignGraphLayout(graph.nodes, graph.edges);",
+				"const layoutPositions = useCampaignGraphLayout(activeGraph.nodes, activeGraph.edges);",
 			],
 			"Campaign graph controller consumes its private layout cache",
 		);
@@ -26843,6 +26845,52 @@ await run("campaign graph builds nodes and mention edges", () => {
 		simplifiedGraph.nodes.find((node) => node.type === "scene-note")?.label,
 		"Текст сцени.",
 	);
+});
+
+await run("campaign graph connection modes hide only co-mention edges", () => {
+	const edges = [
+		{ id: "contains", source: "campaign", target: "note", relation: "contains", count: 1, sources: [] },
+		{ id: "sequence", source: "scene-1", target: "scene-2", relation: "sequence", count: 1, sources: [] },
+		{ id: "mentions", source: "note", target: "npc", relation: "mentions", count: 1, sources: [] },
+		{ id: "inherited", source: "campaign", target: "npc", relation: "mentions", count: 1, sources: [] },
+		{ id: "related", source: "npc", target: "location", relation: "related", count: 1, sources: [] },
+	];
+	assert.deepEqual(
+		getCampaignGraphEdgesForConnectionMode(edges, "direct").map((edge) => edge.id),
+		["contains", "sequence", "mentions", "inherited"],
+	);
+	assert.equal(getCampaignGraphEdgesForConnectionMode(edges, "all"), edges);
+
+	const graph = {
+		nodes: [
+			{ id: "npc", type: "npc", label: "Вартовий", meta: {}, searchText: "вартовий", degree: 1 },
+			{ id: "location", type: "location", label: "Брама", meta: {}, searchText: "брама", degree: 1 },
+		],
+		edges: [edges[4]],
+		stats: { nodes: 2, edges: 1, unresolved: 0 },
+	};
+	const projectedDirectGraph = getCampaignGraphForConnectionMode(graph, "direct");
+	assert.equal(projectedDirectGraph.stats.edges, 0);
+	assert.deepEqual(projectedDirectGraph.nodes.map((node) => node.degree), [0, 0]);
+	assert.equal(getCampaignGraphForConnectionMode(graph, "all"), graph);
+	const direct = getVisibleCampaignGraph(
+		graph,
+		DEFAULT_CAMPAIGN_GRAPH_FILTERS,
+		"вартовий",
+		"direct",
+	);
+	assert.deepEqual(direct.nodes.map((node) => node.id), ["npc"]);
+	assert.equal(direct.edges.length, 0);
+	assert.equal(direct.visibleEdgeIds.size, 0);
+
+	const all = getVisibleCampaignGraph(
+		graph,
+		DEFAULT_CAMPAIGN_GRAPH_FILTERS,
+		"вартовий",
+		"all",
+	);
+	assert.deepEqual(all.nodes.map((node) => node.id), ["npc", "location"]);
+	assert.deepEqual(all.edges.map((edge) => edge.id), ["related"]);
 });
 
 await run("campaign graph scene projection preserves text identity and mention scope", () => {

@@ -4,6 +4,7 @@ import { Button } from "../../../../shared/ui/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import {
 	CAMPAIGN_GRAPH_FILTERS,
+	type CampaignGraphConnectionMode,
 	type CampaignGraphEnabledFilters,
 	type CampaignGraphFilterId,
 } from "../../model/campaignGraphPresentation.ts";
@@ -16,6 +17,8 @@ interface CampaignGraphToolbarProps {
 	visibleNodeCount: number;
 	totalNodeCount: number;
 	onRelayout: () => void;
+	connectionMode: CampaignGraphConnectionMode;
+	onConnectionModeChange: (mode: CampaignGraphConnectionMode) => void;
 	enabledFilters: CampaignGraphEnabledFilters;
 	typeCounts: Partial<Record<CampaignGraphFilterId, number>>;
 	filterColors: Readonly<Record<CampaignGraphFilterId, string>>;
@@ -28,6 +31,8 @@ export function CampaignGraphToolbar({
 	visibleNodeCount,
 	totalNodeCount,
 	onRelayout,
+	connectionMode,
+	onConnectionModeChange,
 	enabledFilters,
 	typeCounts,
 	filterColors,
@@ -60,6 +65,24 @@ export function CampaignGraphToolbar({
 				>
 					{lang.t("Arrange")}
 				</Button>
+				<div
+					className="CampaignNotesGraph__connectionModes"
+					role="group"
+					aria-label={lang.t("Connection mode")}
+				>
+					{(["direct", "all"] as const).map((mode) => (
+						<Button
+							key={mode}
+							variant={connectionMode === mode ? "primary" : "ghost"}
+							size={Button.SIZES.SMALL}
+							onClick={() => onConnectionModeChange(mode)}
+							className="CampaignNotesGraph__connectionMode"
+							aria-pressed={connectionMode === mode}
+						>
+							{lang.t(mode === "direct" ? "Direct connections" : "All connections")}
+						</Button>
+					))}
+				</div>
 			</div>
 			<div className="CampaignNotesGraph__filters">
 				{CAMPAIGN_GRAPH_FILTERS.map((filter) => (
