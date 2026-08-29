@@ -65,7 +65,7 @@ function ImageGallerySidebar({
 	return (
 		<aside className="ImageGallery__sidebar">
 			<button
-				className={classNames("SourceBtn", {
+				className={classNames("ImageGallery__sourceButton", {
 					is_active: selectedSource === "general",
 					is_drag_over: dragOverTarget?.id === "general",
 				})}
@@ -91,7 +91,7 @@ function ImageGallerySidebar({
 			>
 				<Icon name="database" size={16} />
 				<span>{lang.t("General")}</span>
-				<span className="SourceBtn__size">
+				<span className="ImageGallery__sourceButton__size">
 					{formatBytes(sourceSizes.general ?? 0)}
 				</span>
 			</button>
@@ -99,7 +99,7 @@ function ImageGallerySidebar({
 			{campaigns.map((campaign) => (
 				<button
 					key={campaign.slug}
-					className={classNames("SourceBtn", {
+					className={classNames("ImageGallery__sourceButton", {
 						is_active: selectedSource === campaign.slug,
 						is_drag_over: dragOverTarget?.id === campaign.slug,
 					})}
@@ -125,7 +125,7 @@ function ImageGallerySidebar({
 				>
 					<Icon name="map" size={16} />
 					<span>{campaign.name}</span>
-					<span className="SourceBtn__size">
+					<span className="ImageGallery__sourceButton__size">
 						{formatBytes(sourceSizes[campaign.slug] ?? 0)}
 					</span>
 				</button>
@@ -151,7 +151,7 @@ function ImageGalleryTabs({ controller }: { controller: ImageGalleryUiController
 			{categories.map((category) => (
 				<button
 					key={category.id}
-					className={classNames("TabBtn", {
+					className={classNames("ImageGallery__tabButton", {
 						is_active: selectedCat.id === category.id,
 						is_drag_over: dragOverTarget?.id === category.id,
 					})}

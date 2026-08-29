@@ -112,7 +112,7 @@ export function ImageGalleryNavigation({
 			</div>
 			<div className="ImageGallery__breadcrumbs">
 				<button
-					className={classNames("BreadcrumbItem", {
+					className={classNames("ImageGallery__breadcrumbItem", {
 						is_active: selectedSub === "",
 						is_drag_over:
 							dragOverTarget?.type === "breadcrumb" &&
@@ -147,10 +147,10 @@ export function ImageGalleryNavigation({
 					);
 					return (
 						<Fragment key={breadcrumbPath}>
-							<Icon name="chevron" size={10} className="BreadcrumbSeparator" />
+							<Icon name="chevron" size={10} className="ImageGallery__breadcrumbSeparator" />
 							<Tooltip content={breadcrumbLabel} disabled={!isBestiaryBreadcrumb}>
 								<button
-									className={classNames("BreadcrumbItem", {
+									className={classNames("ImageGallery__breadcrumbItem", {
 										is_active: index === pathParts.length - 1,
 										is_drag_over:
 											dragOverTarget?.type === "breadcrumb" &&
@@ -183,7 +183,7 @@ export function ImageGalleryNavigation({
 						</Fragment>
 					);
 				})}
-				<Icon name="chevron" size={10} className="BreadcrumbSeparator" />
+				<Icon name="chevron" size={10} className="ImageGallery__breadcrumbSeparator" />
 				{!isReadonlyCurrentFolder && (
 					<div className="ImageGallery__new_sub">
 						{isCreatingSub ? (
@@ -367,7 +367,7 @@ function ImageGalleryUploadControl({
 }) {
 	if (!presentation.showUpload) return null;
 	return (
-		<label className="UploadBtn">
+		<label className="ImageGallery__uploadButton">
 			<Icon name="plus" size={14} />
 			<span>{lang.t("Upload")}</span>
 			<input
