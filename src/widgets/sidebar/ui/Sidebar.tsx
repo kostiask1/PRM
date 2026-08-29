@@ -80,6 +80,7 @@ export default function Sidebar({
 	const [localCampaigns, setLocalCampaigns] =
 		useState<SidebarCampaign[]>(campaigns);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+	const [isExportingBackup, setIsExportingBackup] = useState(false);
 	const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 	const [isSidebarPinnedOpen, setIsSidebarPinnedOpen] = useState(false);
 	const [isCompletedCampaignsCollapsed, setIsCompletedCampaignsCollapsed] =
@@ -237,6 +238,8 @@ export default function Sidebar({
 	};
 
 	const handleExport = async () => {
+		if (isExportingBackup) return;
+		setIsExportingBackup(true);
 		try {
 			const blob = await backupApi.exportAllArchive();
 			downloadBlob(
@@ -244,10 +247,12 @@ export default function Sidebar({
 				`prm-full-backup-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 			);
 		} catch (error) {
-			reportError({
+				reportError({
 				title: lang.t("Backup error"),
 				message: getSidebarErrorMessage(error, lang.t("Unknown error")),
 			});
+		} finally {
+			setIsExportingBackup(false);
 		}
 	};
 
@@ -311,6 +316,7 @@ export default function Sidebar({
 				/>
 				<SidebarArchiveControls
 					fileInputRef={fileInputRef}
+					isExporting={isExportingBackup}
 					onFileChange={handleFileChange}
 					onExport={() => void handleExport()}
 					onImport={handleOpenImportDb}

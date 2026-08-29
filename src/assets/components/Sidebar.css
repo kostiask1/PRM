@@ -275,6 +275,28 @@
 	color: var(--accent);
 }
 
+.Sidebar__backupLoader {
+	width: 16px;
+	height: 16px;
+	flex: 0 0 16px;
+	border: 2px solid color-mix(in srgb, currentColor, transparent 70%);
+	border-top-color: currentColor;
+	border-radius: 50%;
+	animation: SidebarBackupLoaderSpin 0.7s linear infinite;
+}
+
+@keyframes SidebarBackupLoaderSpin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.Sidebar__backupLoader {
+		animation-duration: 1.5s;
+	}
+}
+
 .Sidebar__campaignCompleted {
 	background:
 		repeating-linear-gradient(

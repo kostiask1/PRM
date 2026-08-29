@@ -5,6 +5,7 @@ import { Button } from "../../../shared/ui/index.js";
 
 interface SidebarArchiveControlsProps {
 	fileInputRef: RefObject<HTMLInputElement>;
+	isExporting: boolean;
 	onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
 	onExport: () => void;
 	onImport: () => void;
@@ -12,6 +13,7 @@ interface SidebarArchiveControlsProps {
 
 export default function SidebarArchiveControls({
 	fileInputRef,
+	isExporting,
 	onFileChange,
 	onExport,
 	onImport,
@@ -28,11 +30,16 @@ export default function SidebarArchiveControls({
 			<div className="Sidebar__footerGrid">
 				<Button
 					variant="footer"
-					icon="database"
+					icon={isExporting ? undefined : "database"}
 					iconSize={16}
 					onClick={onExport}
+					disabled={isExporting}
+					aria-busy={isExporting}
 				>
-					{lang.t("Backup")}
+					{isExporting && (
+						<span className="Sidebar__backupLoader" aria-hidden="true" />
+					)}
+					{isExporting ? lang.t("Loading...") : lang.t("Backup")}
 				</Button>
 				<Button
 					variant="footer"
