@@ -257,23 +257,6 @@
 	margin-bottom: var(--space-4);
 }
 
-.DiceButton {
-	background: color-mix(in srgb, var(--border), transparent 70%);
-	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
-	border-radius: var(--radius-md);
-	padding: var(--space-2) 0;
-	color: var(--text);
-	font-weight: 600;
-	cursor: pointer;
-	transition: all 0.2s;
-}
-
-.DiceButton:hover {
-	background: var(--accent);
-	color: var(--text-bright);
-	transform: translateY(-2px);
-}
-
 .DiceCalculator__lastResult {
 	display: flex;
 	flex-direction: column;
@@ -489,29 +472,29 @@
 	text-decoration: underline;
 }
 
-.dice_min {
+.DiceCalculator__min {
 	color: var(--danger);
 	/* Red for one. */
 	font-weight: bold;
 }
 
-.dice_max {
+.DiceCalculator__max {
 	color: var(--success);
 	/* Green for the maximum value. */
 	font-weight: bold;
 }
 
-.dice_recharge_fail {
+.DiceCalculator__rechargeFailure {
 	color: var(--danger);
 	font-weight: bold;
 }
 
-.dice_recharge_success {
+.DiceCalculator__rechargeSuccess {
 	color: var(--success);
 	font-weight: bold;
 }
 
-.dice_dropped {
+.DiceCalculator__dropped {
 	opacity: 0.4;
 	text-decoration: line-through;
 }

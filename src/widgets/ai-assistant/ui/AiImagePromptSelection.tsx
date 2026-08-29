@@ -62,7 +62,7 @@ function ImagePromptContextChoice({
 	onContinue: () => void;
 }) {
 	return (
-		<div className="AiAssistant__image_prompt_context_choice">
+		<div className="AiAssistantPanel__image_prompt_context_choice">
 			<div>
 				<strong>{lang.t("No element selected")}</strong>
 				<span>
@@ -109,15 +109,15 @@ export default function AiImagePromptSelection({
 	};
 
 	return (
-		<div className="AiAssistant__image_prompt_picker">
+		<div className="AiAssistantPanel__image_prompt_picker">
 			<ImagePromptContextChoice
 				loading={loading}
 				onContinue={onContinueWithoutSelection}
 			/>
 			{isDataLoading && (
-				<div className="AiAssistant__loading">{lang.t("Loading...")}</div>
+				<div className="AiAssistantPanel__loading">{lang.t("Loading...")}</div>
 			)}
-			<div className="AiAssistant__image_prompt_columns">
+			<div className="AiAssistantPanel__image_prompt_columns">
 				{isBestiary ? (
 					CUSTOM_MONSTER_COLUMNS.map((column) => (
 						<ImagePromptColumn

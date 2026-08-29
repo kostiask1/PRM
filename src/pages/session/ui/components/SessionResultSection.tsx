@@ -1,5 +1,6 @@
 import { EditableField } from "../../../../features/editor/ui/index.js";
 import { lang } from "../../../../shared/lib/index.js";
+import "../../../../assets/components/SessionResultSection.css";
 import TodoSection from "./TodoSection.tsx";
 
 interface SessionResultSectionProps {
@@ -15,7 +16,7 @@ export default function SessionResultSection({
 		<TodoSection title={lang.t("Session result")}>
 			<EditableField
 				type="textarea"
-				className="field__result"
+				className="SessionResultSection__field"
 				enableHistory={false}
 				placeholder={lang.t("Summary of what actually happened...")}
 				value={value}

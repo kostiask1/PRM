@@ -12,9 +12,9 @@ export default function AiResponsePreviewResourceHeader({
 	state,
 }: AiResponsePreviewResourceHeaderProps) {
 	return (
-		<div className="AiAssistant__preview_resource_header">
+		<div className="AiAssistantPanel__preview_resource_header">
 			<span>{label}</span>
-			<div className="AiAssistant__preview_resource_actions">
+			<div className="AiAssistantPanel__preview_resource_actions">
 				<span>{state}</span>
 				{actions}
 			</div>

@@ -1,0 +1,47 @@
+.SessionFloatingActions__checklistToggle {
+	position: fixed;
+	top: 135px;
+	right: var(--space-4);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	z-index: 100;
+}
+
+.SessionFloatingActions__checklistToggle button {
+	width: var(--size-10);
+	height: var(--size-10);
+	background: var(--bg-2);
+	border-radius: 50%;
+	border: 1px solid var(--border);
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+	color: var(--accent);
+	transition: all 0.2s ease;
+}
+
+.SessionFloatingActions__checklistToggle:hover button {
+	background: var(--panel-2);
+	transform: scale(1.08) translateY(-2px);
+	border-color: var(--accent);
+}
+
+.SessionFloatingActions__checklistBadge {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	width: 10px;
+	height: 10px;
+	background: var(--danger);
+	border-radius: 50%;
+	border: 2px solid var(--bg-2);
+}
+
+@media (max-width: 760px) {
+	.SessionFloatingActions__checklistToggle {
+		top: auto;
+		right: var(--space-3);
+		bottom: var(--space-3);
+		z-index: 900;
+	}
+}

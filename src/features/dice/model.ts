@@ -109,12 +109,12 @@ export function getRechargeThreshold(
 export function getRechargeResultClass(
 	result: DiceResultEntry | null,
 	value: unknown = result?.total,
-): "" | "dice_recharge_success" | "dice_recharge_fail" {
+): "" | "DiceCalculator__rechargeSuccess" | "DiceCalculator__rechargeFailure" {
 	const threshold = getRechargeThreshold(result);
 	if (!threshold || !Number.isFinite(Number(value))) return "";
 	return Number(value) >= threshold
-		? "dice_recharge_success"
-		: "dice_recharge_fail";
+		? "DiceCalculator__rechargeSuccess"
+		: "DiceCalculator__rechargeFailure";
 }
 
 export function addDieToFormula(currentValue: string, sides: number): string {

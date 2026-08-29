@@ -119,7 +119,7 @@ export default function AiImagePromptPickerModal({
 			onConfirm={() => {}}
 			onCancel={onCancel}
 			showFooter={false}
-			className="AiAssistant__image_prompt_modal"
+			className="AiAssistantPanel__image_prompt_modal"
 			cancelDisabled={loading}
 		>
 			{state.isDetailsVisible ? (

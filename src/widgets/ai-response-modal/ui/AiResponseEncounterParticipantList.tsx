@@ -42,7 +42,7 @@ function getEncounterParticipantClassName(
 	isChanged: boolean | undefined,
 ): string {
 	return classNames(
-		"AiAssistant__encounter_item",
+		"AiAssistantPanel__encounter_item",
 		getBeforeEncounterParticipantClassName(side, isMissing),
 		getAfterEncounterParticipantClassName(side, isMissing),
 		getModifiedEncounterParticipantClassName(isChanged),
@@ -68,14 +68,14 @@ export default function AiResponseEncounterParticipantList({
 
 	if (entries.length === 0) {
 		return (
-			<div className="AiAssistant__encounter_empty">
+			<div className="AiAssistantPanel__encounter_empty">
 				{lang.t("No creatures in encounter.")}
 			</div>
 		);
 	}
 
 	return (
-		<ol className="AiAssistant__encounter_list">
+		<ol className="AiAssistantPanel__encounter_list">
 			{entries.map(({ key, participant, index }) => {
 				const counterpart = counterpartByKey.get(key);
 				const isMissing = !counterpart;
@@ -90,11 +90,11 @@ export default function AiResponseEncounterParticipantList({
 							isChanged,
 						)}
 					>
-						<span className="AiAssistant__encounter_item_name">
+						<span className="AiAssistantPanel__encounter_item_name">
 							{getEncounterParticipantName(participant)}
 						</span>
 						{getEncounterParticipantMeta(participant) && (
-							<span className="AiAssistant__encounter_item_meta">
+							<span className="AiAssistantPanel__encounter_item_meta">
 								{getEncounterParticipantMeta(participant)}
 							</span>
 						)}

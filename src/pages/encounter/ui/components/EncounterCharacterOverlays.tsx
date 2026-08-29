@@ -2,6 +2,7 @@ import type {
 	CampaignEntityRecord,
 	CharacterData,
 } from "../../../../entities/campaign/index.js";
+import "../../../../assets/components/EncounterCharacterOverlays.css";
 import { getEncounterCharacterDisplayName } from "../../../../entities/encounter/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import { Button, Modal } from "../../../../shared/ui/index.js";
@@ -57,7 +58,7 @@ function EncounterCharacterPickerOverlay(props: EncounterCharacterOverlaysProps)
 			showFooter={false}
 			type="custom"
 		>
-			<div className="EncounterCharacterPicker">
+			<div className="EncounterCharacterOverlays">
 				{props.creating ? (
 					<EncounterCharacterCreateForm {...props} />
 				) : (
@@ -77,7 +78,7 @@ function EncounterCharacterCreateForm({
 	onReset,
 }: EncounterCharacterOverlaysProps) {
 	return (
-		<div className="EncounterCharacterPicker__create">
+		<div className="EncounterCharacterOverlays__create">
 			<CharacterCard
 				character={draft}
 				onChange={(_id, updated) => onDraft(updated as EncounterCharacterDraft)}
@@ -89,7 +90,7 @@ function EncounterCharacterCreateForm({
 				showDeleteButton={false}
 				showHeader={false}
 			/>
-			<div className="EncounterCharacterPicker__createActions">
+			<div className="EncounterCharacterOverlays__createActions">
 				<Button
 					variant="primary"
 					onClick={onCreate}
@@ -117,7 +118,7 @@ function EncounterCharacterList({
 				variant="create"
 				icon="plus"
 				onClick={onStartCreate}
-				className="EncounterCharacterPicker__createBtn"
+				className="EncounterCharacterOverlays__createButton"
 			>
 				{lang.t("New character")}
 			</Button>
@@ -126,13 +127,13 @@ function EncounterCharacterList({
 					<button
 						type="button"
 						key={String(character.id || character.slug)}
-						className="EncounterCharacterPicker__item"
+					className="EncounterCharacterOverlays__item"
 						onClick={() => onAdd(character)}
 					>
-						<span className="EncounterCharacterPicker__name">
+						<span className="EncounterCharacterOverlays__name">
 							{getEncounterCharacterDisplayName(character)}
 						</span>
-						<span className="EncounterCharacterPicker__meta">
+						<span className="EncounterCharacterOverlays__meta">
 							{[character.race, character.class].filter(Boolean).join(" • ")}
 							{character.level
 								? ` • ${lang.t("Lvl. {level}", { level: character.level })}`

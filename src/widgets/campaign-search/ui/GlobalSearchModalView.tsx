@@ -36,7 +36,7 @@ function CampaignSearchFilterButton({ filter, active, onToggle }: {
 		<Button
 			variant={active ? "primary" : "ghost"}
 			size={Button.SIZES.SMALL}
-			className="GlobalSearch__filter"
+			className="GlobalSearchModal__filter"
 			onClick={() => onToggle(filter)}
 			style={{ "--search-result-color": FILTER_COLOR_BY_ID[filter] } as CSSProperties}
 		>
@@ -49,19 +49,19 @@ function CampaignSearchContentState({ isLoading, error, results, query, onOpen }
 	GlobalSearchModalViewProps,
 	"isLoading" | "error" | "results" | "query" | "onOpen"
 >) {
-	if (isLoading) return <div className="GlobalSearch__state">{lang.t("Loading...")}</div>;
-	if (error) return <div className="GlobalSearch__state is_error">{error}</div>;
+	if (isLoading) return <div className="GlobalSearchModal__state">{lang.t("Loading...")}</div>;
+	if (error) return <div className="GlobalSearchModal__state is_error">{error}</div>;
 	return <CampaignSearchResults results={results} query={query} onOpen={onOpen} />;
 }
 
 export default function GlobalSearchModalView(props: GlobalSearchModalViewProps) {
 	return (
 		<Modal title={lang.t("Global search")} onConfirm={getGlobalSearchConfirmationHandler(props.onCancel)} onCancel={props.onCancel} showFooter={false}>
-			<div className="GlobalSearch">
-				<div className="GlobalSearch__bar">
+			<div className="GlobalSearchModal">
+				<div className="GlobalSearchModal__bar">
 					<input autoFocus value={props.query} onChange={(event) => props.onQueryChange(event.target.value)} placeholder={lang.t("Search campaign...")} />
 				</div>
-				<div className="GlobalSearch__filters">
+				<div className="GlobalSearchModal__filters">
 					{CAMPAIGN_SEARCH_FILTERS.map((filter) => (
 						<CampaignSearchFilterButton key={filter} filter={filter} active={props.activeFilters.has(filter)} onToggle={props.onToggleFilter} />
 					))}

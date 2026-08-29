@@ -75,7 +75,7 @@ function MonsterTokenDropzone({
 	"tokenUploadCampaignSlug" | "onUpload" | "onCancelReplace"
 > & { presentation: MonsterTokenSectionPresentation }) {
 	return (
-		<div className="MonsterStatBlock__token_dropzone">
+		<div className="MonsterStatBlock__tokenDropzone">
 			<ImageDropzone
 				campaignSlug={tokenUploadCampaignSlug}
 				initialSource={tokenUploadCampaignSlug}
@@ -125,7 +125,7 @@ function MonsterTokenImage({
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon="image"
-					className="MonsterStatBlock__replace_token_btn"
+					className="MonsterStatBlock__replaceTokenButton"
 					onClick={onReplace}
 					title={lang.t("Replace image")}
 				/>
@@ -218,9 +218,9 @@ export function MonsterAbilities({ model, helpers, onRoll }: AbilitySectionProps
 							className={classNames("MonsterStatBlock__ability_box", helpers.changedClass(field))}
 							onClick={() => onRoll(`1d20${formatModifier(modifier)}`)}
 						>
-							<span className="ability_label">{label}</span>
-							<span className="ability_mod">{formatModifier(modifier)}</span>
-							<span className="ability_score">{value}</span>
+							<span className="MonsterStatBlock__abilityLabel">{label}</span>
+							<span className="MonsterStatBlock__abilityModifier">{formatModifier(modifier)}</span>
+							<span className="MonsterStatBlock__abilityScore">{value}</span>
 						</div>
 					</Tooltip>
 				);
@@ -280,7 +280,7 @@ function MonsterNameRow(props: HeaderDetailsProps) {
 		helpers.changedClass("name"),
 	);
 	return (
-		<div className="MonsterStatBlock__name__row">
+		<div className="MonsterStatBlock__nameRow">
 			<MonsterNameControl
 				monster={monster}
 				presentation={presentation}
@@ -299,7 +299,7 @@ function MonsterNameRow(props: HeaderDetailsProps) {
 				onAction={props.onAiAction}
 				variant="ghost"
 				icon="wand"
-				className="MonsterStatBlock__ai_btn"
+				className="MonsterStatBlock__aiButton"
 				titleKey="AI creature action"
 			/>
 			<MonsterCallbackAction
@@ -308,7 +308,7 @@ function MonsterNameRow(props: HeaderDetailsProps) {
 				onAction={props.onFieldEdit}
 				variant="ghost"
 				icon="edit"
-				className="MonsterStatBlock__edit_btn"
+				className="MonsterStatBlock__editButton"
 				titleKey="Edit creature"
 			/>
 			<MonsterCallbackAction
@@ -317,7 +317,7 @@ function MonsterNameRow(props: HeaderDetailsProps) {
 				onAction={props.onDelete}
 				variant="danger"
 				icon="trash"
-				className="MonsterStatBlock__delete_btn"
+				className="MonsterStatBlock__deleteButton"
 				titleKey="Delete custom creature"
 			/>
 			<MonsterAddToEncounterAction
@@ -381,7 +381,7 @@ function MonsterFavoriteAction({
 			variant="ghost"
 			size={Button.SIZES.SMALL}
 			icon="star"
-			className={classNames("MonsterStatBlock__favorite_btn", {
+			className={classNames("MonsterStatBlock__favoriteButton", {
 				is_active: presentation.favoriteActive,
 			})}
 			onClick={onFavorite}
@@ -435,7 +435,7 @@ function MonsterAddToEncounterAction({
 			variant="primary"
 			size={Button.SIZES.SMALL}
 			icon="plus"
-			className="MonsterStatBlock__add_to_encounter_btn"
+			className="MonsterStatBlock__addToEncounterButton"
 			onClick={onAdd}
 		>
 			{lang.t("Add to encounter")}
@@ -448,7 +448,7 @@ function MonsterMetadata({ monster, model, sourceLabel, helpers }: Pick<HeaderDe
 	return (
 		<>
 			<MonsterOriginalName presentation={presentation} helpers={helpers} />
-			<div className={classNames("MonsterStatBlock__meta_line", helpers.changedClass("size", "type", "alignment"))}>{helpers.highlight(model.size)} {helpers.highlight(model.typeLabel)}, {helpers.highlight(model.alignment)}</div>
+			<div className={classNames("MonsterStatBlock__metaLine", helpers.changedClass("size", "type", "alignment"))}>{helpers.highlight(model.size)} {helpers.highlight(model.typeLabel)}, {helpers.highlight(model.alignment)}</div>
 			<MonsterSourceLine
 				presentation={presentation}
 				sourceLabel={sourceLabel}
@@ -491,7 +491,7 @@ function MonsterSourceLine({
 	return (
 		<div
 			className={classNames(
-				"MonsterStatBlock__meta_line",
+				"MonsterStatBlock__metaLine",
 				helpers.changedClass("source"),
 			)}
 		>
@@ -518,14 +518,14 @@ function MonsterStats({ monster, model, helpers, renderSenses }: StatsProps) {
 	return (
 		<>
 			<div className="MonsterStatBlock__stats">
-				<div className={classNames("stat_item", helpers.changedClass("hp", "hit_points"))}><strong>HP:</strong> {helpers.renderContent(model.hp.val)} {model.hp.formula && <>(<RollDice formula={model.hp.formula}>{helpers.highlight(model.hp.formula)}</RollDice>)</>}</div>
-				<div className={classNames("stat_item ac", helpers.changedClass("ac", "armor_class"))}><strong>AC:</strong> {helpers.renderContent(model.ac.val)} {helpers.renderContent(model.ac.desc)}</div>
-				<div className={classNames("stat_item", helpers.changedClass("speed"))}><strong>Speed:</strong> {helpers.highlight(model.speed)}</div>
+				<div className={classNames("MonsterStatBlock__statItem", helpers.changedClass("hp", "hit_points"))}><strong>HP:</strong> {helpers.renderContent(model.hp.val)} {model.hp.formula && <>(<RollDice formula={model.hp.formula}>{helpers.highlight(model.hp.formula)}</RollDice>)</>}</div>
+				<div className={classNames("MonsterStatBlock__statItem MonsterStatBlock__statItem_ac", helpers.changedClass("ac", "armor_class"))}><strong>AC:</strong> {helpers.renderContent(model.ac.val)} {helpers.renderContent(model.ac.desc)}</div>
+				<div className={classNames("MonsterStatBlock__statItem", helpers.changedClass("speed"))}><strong>Speed:</strong> {helpers.highlight(model.speed)}</div>
 			</div>
 			<div className="MonsterStatBlock__properties">
-				{model.saves.length > 0 && <div className={classNames("MonsterStatBlock__property_item", helpers.changedClass("save"))}><strong>Saving Throws:</strong>{" "}{model.saves.map((save, index) => <React.Fragment key={save.label}>{save.label} <RollDice formula={`1d20${formatModifier(Number.parseInt(String(save.val)))}`}>{formatModifier(Number.parseInt(String(save.val)))}</RollDice>{index < model.saves.length - 1 ? ", " : ""}</React.Fragment>)}</div>}
-				{model.skills.length > 0 && <div className={classNames("MonsterStatBlock__property_item MonsterStatBlock__property_item__skills", helpers.changedClass("skill"))}><strong>Skills:</strong>{" "}{model.skills.map(([name, value], index) => <React.Fragment key={name}><span className="skill_name" style={{ textTransform: "capitalize" }}>{helpers.highlight(name)}</span>{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(value)))}`}>{formatModifier(Number.parseInt(String(value)))}</RollDice>{index < model.skills.length - 1 ? ", " : ""}</React.Fragment>)}</div>}
-				{damageProperties.map(([field, label]) => monster[field] ? <div key={field} className={classNames("MonsterStatBlock__property_item", helpers.changedClass(field))}><strong>{label}:</strong>{" "}{helpers.highlight(model.formatDamageProperty(monster[field]))}</div> : null)}
+				{model.saves.length > 0 && <div className={classNames("MonsterStatBlock__propertyItem", helpers.changedClass("save"))}><strong>Saving Throws:</strong>{" "}{model.saves.map((save, index) => <React.Fragment key={save.label}>{save.label} <RollDice formula={`1d20${formatModifier(Number.parseInt(String(save.val)))}`}>{formatModifier(Number.parseInt(String(save.val)))}</RollDice>{index < model.saves.length - 1 ? ", " : ""}</React.Fragment>)}</div>}
+				{model.skills.length > 0 && <div className={classNames("MonsterStatBlock__propertyItem MonsterStatBlock__propertyItem_skills", helpers.changedClass("skill"))}><strong>Skills:</strong>{" "}{model.skills.map(([name, value], index) => <React.Fragment key={name}><span className="MonsterStatBlock__skillName" style={{ textTransform: "capitalize" }}>{helpers.highlight(name)}</span>{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(value)))}`}>{formatModifier(Number.parseInt(String(value)))}</RollDice>{index < model.skills.length - 1 ? ", " : ""}</React.Fragment>)}</div>}
+				{damageProperties.map(([field, label]) => monster[field] ? <div key={field} className={classNames("MonsterStatBlock__propertyItem", helpers.changedClass(field))}><strong>{label}:</strong>{" "}{helpers.highlight(model.formatDamageProperty(monster[field]))}</div> : null)}
 				<div className="MonsterStatBlock__description">
 					<p className={helpers.changedClass("senses")}><strong>Senses:</strong> {renderSenses()}</p>
 					<p className={helpers.changedClass("languages")}><strong>Languages:</strong> {helpers.highlight(model.languages)}</p>
@@ -630,7 +630,7 @@ function SpellContentLine({ label, values, helpers }: { label: string; values: u
 
 export function MonsterActionList({ actions, title, field, helpers }: { actions: MonsterEntry[]; title: string; field: string; helpers: RenderHelpers }) {
 	if (actions.length === 0) return null;
-	return <div className={classNames("MonsterStatBlock__section", helpers.changedClass(field))}><h4>{title}:</h4>{actions.map((action, index) => <div key={index} className="MonsterStatBlock__action"><strong>{helpers.renderActionName(action.name)}.</strong>{" "}{helpers.renderContent(action.entries ?? action.desc)}<div className="MonsterStatBlock__action_rolls">{action.attack_bonus != null && <div className="stat_item">Atk:{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(action.attack_bonus)))}`}>{formatModifier(Number.parseInt(String(action.attack_bonus)))}</RollDice></div>}{action.damage_dice && <div className="stat_item">Dmg:{" "}<RollDice formula={`${action.damage_dice}${getDamageBonus(action)}`} /></div>}</div></div>)}</div>;
+	return <div className={classNames("MonsterStatBlock__section", helpers.changedClass(field))}><h4>{title}:</h4>{actions.map((action, index) => <div key={index} className="MonsterStatBlock__action"><strong>{helpers.renderActionName(action.name)}.</strong>{" "}{helpers.renderContent(action.entries ?? action.desc)}<div className="MonsterStatBlock__actionRolls">{action.attack_bonus != null && <div className="MonsterStatBlock__statItem">Atk:{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(action.attack_bonus)))}`}>{formatModifier(Number.parseInt(String(action.attack_bonus)))}</RollDice></div>}{action.damage_dice && <div className="MonsterStatBlock__statItem">Dmg:{" "}<RollDice formula={`${action.damage_dice}${getDamageBonus(action)}`} /></div>}</div></div>)}</div>;
 }
 
 export function MonsterContentSection({ content, title, field, helpers }: { content: unknown[]; title: string; field: string; helpers: RenderHelpers }) {

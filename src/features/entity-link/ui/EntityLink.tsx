@@ -7,6 +7,8 @@ import {
 	useState,
 } from "react";
 
+import "../../../assets/components/EntityLink.css";
+
 import { classNames, parseUrl } from "../../../shared/lib/index.js";
 import {
 	EntityLinkContext,
@@ -64,7 +66,7 @@ export default function EntityLink({
 		<>
 			<a
 				href="#"
-				className={classNames("mention_link", className)}
+			className={classNames("EntityLink", className)}
 				onClick={handleOpenModal}
 			>
 				{children || name}

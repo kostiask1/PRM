@@ -30,78 +30,6 @@
 	gap: var(--space-2);
 }
 
-.ProgressBar {
-	height: 10px;
-	border-radius: var(--radius-pill);
-	overflow: hidden;
-	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
-	background: var(--bg-deep);
-}
-
-.ProgressBar__fill {
-	width: 0;
-	height: 100%;
-	background: linear-gradient(90deg, var(--accent), var(--success));
-	transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ProgressBar__label {
-	display: flex;
-	justify-content: space-between;
-	gap: var(--space-3);
-	color: var(--muted);
-	font-size: 0.82rem;
-	margin-bottom: 6px;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-}
-
-.TodoSection {
-	border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
-	border-radius: var(--radius-2xl);
-	background: color-mix(in srgb, var(--bg), transparent 55%);
-}
-
-.TodoSection__header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	background: var(--bg);
-	border-radius: var(--radius-2xl);
-	position: sticky;
-	top: calc(-1 * var(--space-5));
-	padding: var(--space-3);
-	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
-	z-index: 1;
-}
-
-.TodoSection__header h3 {
-	margin: 0;
-	font-size: 1.05rem;
-	font-weight: 600;
-	font-family: var(--font-heading);
-	color: var(--text-bright);
-}
-
-.TodoSection__header .Button span {
-	white-space: nowrap;
-}
-
-.TodoSection__titleGroup {
-	display: flex;
-	align-items: center;
-	gap: var(--space-1);
-	width: 100%;
-}
-
-.TodoSection__header.is_collapsible {
-	cursor: pointer;
-}
-
-.TodoSection__body {
-	padding: var(--space-3);
-}
-
 .SessionView__notes {
 	display: flex;
 	flex-direction: row;
@@ -109,7 +37,7 @@
 	gap: var(--space-2);
 }
 
-.SessionView__notes .note_card_simple {
+.SessionView__notes .NoteCard {
 	height: 100%;
 }
 
@@ -207,238 +135,10 @@
 	min-width: unset !important;
 }
 
-.SessionView__progressWrap {
-	display: grid;
-	gap: var(--space-1);
-	margin-bottom: 40px;
-}
-
 .SessionView__todoList {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-5);
-}
-
-.SceneCard {
-	margin-bottom: var(--space-2);
-	display: grid;
-	gap: var(--space-3);
-	background: color-mix(in srgb, var(--text-bright), transparent 98%);
-	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
-	border-radius: var(--radius-lg);
-	overflow: hidden;
-}
-
-.SceneCard__header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: var(--space-2);
-	background: color-mix(in srgb, var(--text-bright), transparent 98%);
-	border-radius: var(--radius-lg);
-	gap: var(--space-2);
-}
-
-.SceneCard__headerActions {
-	display: flex;
-	align-items: center;
-	gap: var(--space-2);
-}
-
-.SceneCard__headerActions .Button {
-	height: 100%;
-	min-height: unset;
-	height: var(--control-h);
-}
-
-.SceneCard__headerActions .Button__danger {
-	padding: 0;
-	width: var(--control-h);
-}
-
-.SceneCard__titleGroup {
-	display: flex;
-	align-items: center;
-	gap: var(--space-2);
-	cursor: pointer;
-}
-
-.SceneCard__title {
-	font-weight: 700;
-}
-
-.SceneCard__content {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 1fr;
-	align-items: start;
-	gap: var(--space-3);
-	padding: 0 var(--space-2) var(--space-2);
-}
-
-.SceneCard__text_side {
-	min-width: 0;
-}
-
-.SceneCard__image_side {
-	margin-top: var(--space-7);
-	width: 100%;
-}
-
-.SceneCard__portrait_container {
-	width: 100%;
-	border-radius: var(--radius-md);
-	overflow: hidden;
-	position: relative;
-}
-
-.SceneCard__portrait_wrapper {
-	width: 100%;
-	height: 100%;
-}
-
-.SceneCard__portrait_wrapper img {
-	width: 100%;
-	height: 100%;
-	object-fit: contain;
-	cursor: pointer;
-}
-
-.SceneCard__grid {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: var(--space-3);
-	padding: 0;
-}
-
-.SessionView .field__result .MarkdownView,
-.SessionView .field__result {
-	min-height: 200px !important;
-}
-
-.SceneCard__image_delete {
-	position: absolute;
-	top: var(--space-2);
-	right: var(--space-2);
-	opacity: 0;
-	transition: opacity 0.2s;
-}
-
-.SceneCard__portrait_wrapper:hover .SceneCard__image_delete {
-	opacity: 1;
-}
-
-.SceneCard__image_side .ImageDropzone {
-	height: 100%;
-	min-height: 180px;
-	margin: 0;
-}
-
-.SceneCard__image_side .ImageDropzone__content {
-	padding: var(--space-3);
-}
-
-.SceneCard__encounter_name {
-	font-weight: 600;
-}
-
-.SceneCard__notes {
-	margin-top: var(--space-3);
-}
-
-.SceneCard__notes_headerRow {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--space-2);
-	margin-top: var(--space-6);
-	margin-bottom: var(--space-2);
-}
-
-.SceneCard__notes_header {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--space-3);
-	cursor: pointer;
-}
-
-.SceneCard__notes_header label {
-	font-weight: 600;
-}
-
-.SceneCard__notes_list {
-	display: grid;
-	gap: var(--space-2);
-}
-
-.SessionView__checklistToggle {
-	position: fixed;
-	top: 135px;
-	right: var(--space-4);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	z-index: 100;
-}
-
-.SessionView__checklistToggle button {
-	width: var(--size-10);
-	height: var(--size-10);
-	background: var(--bg-2);
-	border-radius: 50%;
-	border: 1px solid var(--border);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-	color: var(--accent);
-	transition: all 0.2s ease;
-}
-
-.SessionView__checklistToggle:hover button {
-	background: var(--panel-2);
-	transform: scale(1.08) translateY(-2px);
-	border-color: var(--accent);
-}
-
-.SessionView__checklistBadge {
-	position: absolute;
-	top: 10px;
-	right: 10px;
-	width: 10px;
-	height: 10px;
-	background: var(--danger);
-	border-radius: 50%;
-	border: 2px solid var(--bg-2);
-}
-
-.SessionView__checklistModal {
-	padding: var(--space-1);
-}
-
-.SceneImageModal {
-	width: min(98vw, 1600px);
-	max-width: 98vw;
-	height: 96vh;
-}
-
-.SceneImageModal .Modal__body {
-	padding: var(--space-1);
-	height: 100%;
-	overflow: hidden;
-}
-
-.SceneImageModal__content {
-	height: 100%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: color-mix(in srgb, var(--bg-2), black 20%);
-	border-radius: var(--radius-sm);
-	overflow: hidden;
-}
-
-.SceneImageModal__content img {
-	max-width: 100%;
-	max-height: 100%;
-	object-fit: contain;
 }
 
 @media (max-width: 1024px) {
@@ -544,13 +244,6 @@
 		padding-right: calc(var(--size-8) + var(--space-4));
 	}
 
-	.SceneCard__content {
-		gap: var(--space-2);
-	}
-
-	.SceneCard__image_side {
-		margin-top: var(--space-4);
-	}
 }
 
 @media (max-width: 767px) {
@@ -581,35 +274,7 @@
 		line-height: 1.05;
 	}
 
-	.TodoSection {
-		border-radius: var(--radius-lg);
-	}
-
-	.TodoSection__header {
-		gap: var(--space-2);
-		padding: var(--space-2);
-		border-radius: var(--radius-lg);
-	}
-
-	.TodoSection__header h3 {
-		font-size: 0.98rem;
-		line-height: 1.15;
-	}
-
-	.TodoSection__titleGroup .Button {
-		min-width: 36px;
-		width: 36px;
-		min-height: 36px;
-		height: 36px;
-		padding: 0;
-	}
-
-	.TodoSection__body {
-		padding: var(--space-2);
-	}
-
-	.SessionView__sectionActions,
-	.SceneCard__headerActions {
+	.SessionView__sectionActions {
 		width: 100%;
 		flex-wrap: nowrap;
 		overflow-x: auto;
@@ -617,8 +282,7 @@
 		scrollbar-width: thin;
 	}
 
-	.SessionView__sectionActions .Button,
-	.SceneCard__headerActions .Button {
+	.SessionView__sectionActions .Button {
 		flex: 0 0 auto;
 		min-height: var(--control-h-sm);
 		font-size: 0.82rem;
@@ -640,11 +304,6 @@
 		white-space: nowrap;
 	}
 
-	.SceneCard__headerActions .Button__danger {
-		width: 44px;
-		min-width: 44px;
-	}
-
 	.SessionView__encountersQuickAccess,
 	.SessionView__encountersList {
 		width: 100%;
@@ -663,20 +322,6 @@
 		max-width: min(78vw, 220px);
 	}
 
-	.SceneCard__titleGroup,
-	.SceneCard__title {
-		width: 100%;
-	}
-
-	.SceneCard__content,
-	.SceneCard__grid {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.SceneCard__image_side {
-		margin-top: 0;
-	}
-
 	.SessionView__notes>div,
 	.SessionView__characters>div,
 	.SessionView__locations>div {
@@ -693,16 +338,4 @@
 		flex-direction: column;
 	}
 
-	.SessionView__checklistToggle {
-		top: auto;
-		right: var(--space-3);
-		bottom: var(--space-3);
-		z-index: 900;
-	}
-
-	.SceneImageModal {
-		width: 100vw;
-		max-width: 100vw;
-		height: 100dvh;
-	}
 }

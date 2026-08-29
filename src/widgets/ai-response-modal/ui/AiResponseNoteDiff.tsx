@@ -32,7 +32,7 @@ function getSingleNoteSurfaceClassName(
 	isNew: boolean,
 ): string {
 	return classNames(
-		"AiAssistant__preview_note_surface",
+		"AiAssistantPanel__preview_note_surface",
 		isDraft && isNew && "is_editable",
 	);
 }
@@ -60,9 +60,9 @@ function AiResponseSingleNoteDiff({
 	isNew: boolean;
 }) {
 	return (
-		<div className="AiAssistant__preview_card_stack">
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">
+		<div className="AiAssistantPanel__preview_card_stack">
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">
 					{isNew ? lang.t("New") : lang.t("Deleted")}
 				</div>
 				<div className={getSingleNoteSurfaceClassName(isDraft, isNew)}>
@@ -85,18 +85,18 @@ function AiResponseChangedNoteDiff({
 }: Pick<AiResponseNoteDiffProps, "isDraft" | "renderNoteCard" | "resource">) {
 	const highlightFields = buildNoteHighlightFields(resource);
 	return (
-		<div className="AiAssistant__preview_card_columns">
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">{lang.t("Before")}</div>
-				<div className="AiAssistant__preview_note_surface is_before">
+		<div className="AiAssistantPanel__preview_card_columns">
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">{lang.t("Before")}</div>
+				<div className="AiAssistantPanel__preview_note_surface is_before">
 					{renderNoteCard(resource, resource.before, false, highlightFields)}
 				</div>
 			</div>
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">{lang.t("After")}</div>
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">{lang.t("After")}</div>
 				<div
 					className={classNames(
-						"AiAssistant__preview_note_surface is_after",
+						"AiAssistantPanel__preview_note_surface is_after",
 						isDraft && "is_editable",
 					)}
 				>
@@ -125,7 +125,7 @@ export default function AiResponseNoteDiff({
 		<div
 			className={getPreviewResourceClassName(
 				resource,
-				"AiAssistant__preview_resource_notes",
+				"AiAssistantPanel__preview_resource_notes",
 			)}
 		>
 			{renderPreviewResourceHeader(resource)}

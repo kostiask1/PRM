@@ -15,7 +15,7 @@ interface ActionButtonProps {
 
 function AppliedState({ visible }: { visible: boolean }) {
 	return visible ? (
-		<span className="AiAssistant__preview_resource_state is_applied">
+		<span className="AiAssistantPanel__preview_resource_state is_applied">
 			{lang.t("Applied")}
 		</span>
 	) : null;
@@ -23,7 +23,7 @@ function AppliedState({ visible }: { visible: boolean }) {
 
 function UndoneState({ visible }: { visible: boolean }) {
 	return visible ? (
-		<span className="AiAssistant__preview_resource_state is_undone">
+		<span className="AiAssistantPanel__preview_resource_state is_undone">
 			{lang.t("Undone")}
 		</span>
 	) : null;

@@ -51,8 +51,8 @@ export default function CampaignEntitySection({
 			className="CampaignView__section"
 			data-character-drop-type={dropType}
 		>
-			<div className="section_row">
-				<div className="section_title_group" onClick={onToggle}>
+			<div className="CampaignView__sectionRow">
+				<div className="CampaignView__sectionTitleGroup" onClick={onToggle}>
 					{hasData && (
 						<CollapseToggleButton
 							size={Button.SIZES.MEDIUM}

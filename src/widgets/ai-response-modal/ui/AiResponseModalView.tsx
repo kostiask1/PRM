@@ -72,14 +72,14 @@ function ResponseToolbar({
 function ResponseDetails({ rows }: { rows: AiResponseDetailRow[] }) {
 	if (rows.length === 0) return null;
 	return (
-		<div className="AiAssistant__response_details">
-			<div className="AiAssistant__response_details_title">
+		<div className="AiAssistantPanel__response_details">
+			<div className="AiAssistantPanel__response_details_title">
 				{lang.t("Request details")}
 			</div>
 			{rows.map((row) => (
-				<div key={row.label} className="AiAssistant__response_details_row">
-					<span className="AiAssistant__response_details_label">{row.label}</span>
-					<span className="AiAssistant__response_details_value">{row.value}</span>
+				<div key={row.label} className="AiAssistantPanel__response_details_row">
+					<span className="AiAssistantPanel__response_details_label">{row.label}</span>
+					<span className="AiAssistantPanel__response_details_value">{row.value}</span>
 				</div>
 			))}
 		</div>
@@ -107,29 +107,29 @@ function DraftResourceEditor({
 	const isNew = resource.before === null;
 	return (
 		<div
-			className={classNames("AiAssistant__draft_resource", isNew && "is_new")}
+			className={classNames("AiAssistantPanel__draft_resource", isNew && "is_new")}
 		>
-			<div className="AiAssistant__draft_resource_header">
+			<div className="AiAssistantPanel__draft_resource_header">
 				<span>{resource.label}</span>
-				<div className="AiAssistant__preview_resource_actions">
+				<div className="AiAssistantPanel__preview_resource_actions">
 					<span>{getDiffResourceState(resource)}</span>
 					{renderResourceActions(resource)}
 				</div>
 			</div>
-			<div className="AiAssistant__draft_columns">
+			<div className="AiAssistantPanel__draft_columns">
 				{!isNew && (
-					<div className="AiAssistant__draft_column">
-						<div className="AiAssistant__draft_column_title">{lang.t("Before")}</div>
+					<div className="AiAssistantPanel__draft_column">
+						<div className="AiAssistantPanel__draft_column_title">{lang.t("Before")}</div>
 						<pre>{snapshotToText(resource.before)}</pre>
 					</div>
 				)}
-				<div className="AiAssistant__draft_column">
-					<div className="AiAssistant__draft_column_title">
+				<div className="AiAssistantPanel__draft_column">
+					<div className="AiAssistantPanel__draft_column_title">
 						{isNew ? lang.t("New") : lang.t("After")}
 					</div>
 					<EditableField
 						type="textarea"
-						className="AiAssistant__draft_textarea"
+						className="AiAssistantPanel__draft_textarea"
 						value={text}
 						onChange={(event) => updateDraftText(resource, event.target.value)}
 					/>
@@ -141,8 +141,8 @@ function DraftResourceEditor({
 
 function DraftEditor(props: DraftEditorProps) {
 	return (
-		<div className="AiAssistant__draft_editor">
-			<div className="AiAssistant__draft_editor_title">
+		<div className="AiAssistantPanel__draft_editor">
+			<div className="AiAssistantPanel__draft_editor_title">
 				{lang.t("Draft values before applying")}
 			</div>
 			{props.resources.map((resource) => (
@@ -175,7 +175,7 @@ function DiffViewSwitch({
 	setViewMode,
 }: Pick<ResponseDiffProps, "viewMode" | "setViewMode">) {
 	return (
-		<div className="AiAssistant__diff_view_switch">
+		<div className="AiAssistantPanel__diff_view_switch">
 			<Button
 				variant={viewMode === "preview" ? "primary" : "ghost"}
 				size={Button.SIZES.SMALL}
@@ -197,13 +197,13 @@ function DiffViewSwitch({
 function ResponseDiff(props: ResponseDiffProps) {
 	const hasDraftResources = props.isDraft && props.resources.length > 0;
 	return (
-		<div className="AiAssistant__diff">
-			<div className="AiAssistant__diff_title">
+		<div className="AiAssistantPanel__diff">
+			<div className="AiAssistantPanel__diff_title">
 				<span>{lang.t("Changes")}</span>
 				<span>{props.getHistoryChangeSummary(props.entry)}</span>
 			</div>
 			{props.isDraft && (
-				<div className="AiAssistant__diff_hint">
+				<div className="AiAssistantPanel__diff_hint">
 					{lang.t(
 						"You can enable automatic applying of parsed AI changes in settings.",
 					)}
@@ -212,7 +212,7 @@ function ResponseDiff(props: ResponseDiffProps) {
 			<DiffViewSwitch viewMode={props.viewMode} setViewMode={props.setViewMode} />
 			{props.viewMode === "preview" ? props.preview : props.jsonDiff}
 			{hasDraftResources && props.draftError && (
-				<div className="AiAssistant__draft_error">{props.draftError}</div>
+				<div className="AiAssistantPanel__draft_error">{props.draftError}</div>
 			)}
 			{hasDraftResources && props.viewMode === "json" && <DraftEditor {...props} />}
 		</div>
@@ -249,13 +249,13 @@ export default function AiResponseModalView(props: AiResponseModalViewProps) {
 			onCancel={props.onCancel}
 			showFooter={false}
 			overlayClassName={classNames(
-				"AiAssistant__response_overlay",
-				props.selectedResponseHasChanges && "AiAssistant__response_overlay_wide",
+				"AiAssistantPanel__response_overlay",
+				props.selectedResponseHasChanges && "AiAssistantPanel__response_overlay_wide",
 			)}
 			cancelDisabled={props.isRestoringResponse}
 		>
-			<div className="AiAssistant__prompt_result_wrap">
-				<div className="AiAssistant__prompt_result_actions">
+			<div className="AiAssistantPanel__prompt_result_wrap">
+				<div className="AiAssistantPanel__prompt_result_actions">
 					<ResponseToolbar
 						hasChanges={props.selectedResponseHasChanges}
 						isDraft={props.isDraft}
@@ -268,7 +268,7 @@ export default function AiResponseModalView(props: AiResponseModalViewProps) {
 				</div>
 				{!props.selectedResponseHasChanges && (
 					<div
-						className="AiAssistant__prompt_result"
+						className="AiAssistantPanel__prompt_result"
 						ref={props.generatedPromptRef as RefObject<HTMLDivElement>}
 					>
 						<ReactMarkdown components={props.markdownComponents}>

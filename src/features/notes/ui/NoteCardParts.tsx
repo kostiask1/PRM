@@ -40,7 +40,7 @@ export function NoteCardHeader({
 	if (!visible) return null;
 	return (
 		<div
-			className="note_card_simple__header"
+			className="NoteCard__header"
 			onClick={() => {
 				if (canCollapse) onToggleCollapse(note.id);
 			}}
@@ -58,7 +58,7 @@ export function NoteCardHeader({
 				onChange={(event) => onTitleChange(note.id, event.target.value)}
 				placeholder={lang.t("New note")}
 				className={classNames(
-					"note_card_simple__title",
+					"NoteCard__title",
 					isNoteCardFieldHighlighted(highlightFields, "title") &&
 						"is_ai_changed_field",
 				)}
@@ -112,7 +112,7 @@ export function NoteCardSimplified({
 					{hasTruncatedPreview && "..."}
 				</span>
 			)}
-			<div className="note_card_simple__simpleActions">
+			<div className="NoteCard__simpleActions">
 				{canCollapse && (
 					<CollapseToggleButton
 						size={Button.SIZES.SMALL}
@@ -121,7 +121,7 @@ export function NoteCardSimplified({
 						title={
 							isCollapsed ? lang.t("Expand note") : lang.t("Collapse note")
 						}
-						className="note_card_simple__actionBtn"
+						className="NoteCard__actionButton"
 					/>
 				)}
 				<Button
@@ -134,7 +134,7 @@ export function NoteCardSimplified({
 						onDelete(noteId);
 					}}
 					title={lang.t("Delete note")}
-					className="note_card_simple__actionBtn note_card_simple__actionBtn__danger"
+					className="NoteCard__actionButton NoteCard__actionButton_danger"
 				/>
 			</div>
 		</>
@@ -162,7 +162,7 @@ export function NoteCardBody({
 }: NoteCardBodyProps) {
 	if (!visible) return null;
 	return (
-		<div className="note_card_simple__content">
+		<div className="NoteCard__content">
 			<EditableField
 				type="textarea"
 				value={note.text}

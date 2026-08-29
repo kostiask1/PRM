@@ -25,16 +25,16 @@ export default function AiApiKeyPanel({
 	const disabled = isSavingApiKey || loading;
 
 	return (
-		<div className="AiAssistant__api_key_panel">
-			<div className="AiAssistant__api_key_title">
+		<div className="AiAssistantPanel__api_key_panel">
+			<div className="AiAssistantPanel__api_key_title">
 				{lang.t("Gemini AI setup")}
 			</div>
-			<div className="AiAssistant__api_key_help">
+			<div className="AiAssistantPanel__api_key_help">
 				{lang.t(
 					"Paste Gemini API key and it will be saved to the project .env file.",
 				)}
 			</div>
-			<div className="AiAssistant__api_key_row">
+			<div className="AiAssistantPanel__api_key_row">
 				<TextInput
 					type="password"
 					value={apiKeyInput}

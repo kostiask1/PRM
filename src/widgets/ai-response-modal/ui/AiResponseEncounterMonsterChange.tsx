@@ -22,24 +22,24 @@ export default function AiResponseEncounterMonsterChange({
 	statusLabel,
 }: AiResponseEncounterMonsterChangeProps) {
 	return isPaired ? (
-		<div className="AiAssistant__preview_card_columns">
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">
+		<div className="AiAssistantPanel__preview_card_columns">
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">
 					{label} / {beforeLabel}
 				</div>
 				{beforeCard}
 			</div>
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">
 					{label} / {afterLabel}
 				</div>
 				{afterCard}
 			</div>
 		</div>
 	) : (
-		<div className="AiAssistant__preview_card_stack">
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">
+		<div className="AiAssistantPanel__preview_card_stack">
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">
 					{label} / {statusLabel}
 				</div>
 				{singleCard}

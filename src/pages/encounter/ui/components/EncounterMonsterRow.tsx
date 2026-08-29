@@ -1,4 +1,5 @@
 import { classNames, lang } from "../../../../shared/lib/index.js";
+import "../../../../assets/components/EncounterMonsterRow.css";
 import { Button, Tooltip } from "../../../../shared/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
 import {

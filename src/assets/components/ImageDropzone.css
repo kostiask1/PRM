@@ -87,39 +87,3 @@
 	font: inherit;
 	word-break: break-all;
 }
-
-.ImageAssetField__missing {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	gap: var(--space-3);
-	min-height: 160px;
-	margin: var(--space-4) 0;
-	padding: var(--space-5);
-	border: 1px solid color-mix(in srgb, var(--danger), transparent 35%);
-	border-radius: var(--radius-sm);
-	background: color-mix(in srgb, var(--danger), transparent 92%);
-	color: var(--text);
-	text-align: center;
-}
-
-.ImageAssetField__missing_title {
-	font-weight: 700;
-	color: var(--danger);
-}
-
-.ImageAssetField__missing_url {
-	max-width: 100%;
-	color: var(--muted);
-	font-size: 0.82rem;
-	overflow-wrap: anywhere;
-}
-
-.ImageAssetField__missing_actions {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: var(--space-2);
-	flex-wrap: wrap;
-}

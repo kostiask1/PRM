@@ -64,7 +64,7 @@ function AiResponseHistoryRow({
 	return (
 		<ListCard
 			onClick={() => onSelect(entry)}
-			className="AiAssistant__history_card"
+			className="AiAssistantPanel__history_card"
 			actions={
 				<>
 					{view.showRetry && (
@@ -86,10 +86,10 @@ function AiResponseHistoryRow({
 				</>
 			}
 		>
-			<div className="ListCard__title AiAssistant__history_title">
+			<div className="ListCard__title AiAssistantPanel__history_title">
 				{view.title}
 			</div>
-			<div className="ListCard__meta AiAssistant__history_meta">
+			<div className="ListCard__meta AiAssistantPanel__history_meta">
 				<span>{view.dateLabel}</span>
 				{view.changeSummary && <span>{view.changeSummary}</span>}
 				{view.stateLabel && <span>{view.stateLabel}</span>}
@@ -135,9 +135,9 @@ export default function AiResponseHistory({
 	};
 
 	return (
-		<section className="AiAssistant__response_history">
-			<div className="AiAssistant__response_history_header">
-				<div className="AiAssistant__response_history_title">
+		<section className="AiAssistantPanel__response_history">
+			<div className="AiAssistantPanel__response_history_header">
+				<div className="AiAssistantPanel__response_history_title">
 					<h4>{lang.t("Response history")}</h4>
 					{storageSizeLabel && (
 						<span>
@@ -155,7 +155,7 @@ export default function AiResponseHistory({
 					{lang.t("Clear")}
 				</Button>
 			</div>
-			<div className="AiAssistant__response_history_list">
+			<div className="AiAssistantPanel__response_history_list">
 				<ReactList
 					itemRenderer={renderHistoryEntry}
 					length={entries.length}

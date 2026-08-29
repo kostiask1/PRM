@@ -84,7 +84,7 @@ function CampaignEntityContext({
 }: CampaignEntityContextProps) {
 	return (
 		<>
-			<div className="AiAssistant__context_row">
+			<div className="AiAssistantPanel__context_row">
 				<Checkbox
 					checked={context.included !== false}
 					onChange={(included) => onToggleIncluded(contextKey, included)}
@@ -92,8 +92,8 @@ function CampaignEntityContext({
 				/>
 			</div>
 			{context.included !== false && (
-				<div className="AiAssistant__location_context">
-					<div className="AiAssistant__location_actions">
+				<div className="AiAssistantPanel__location_context">
+					<div className="AiAssistantPanel__location_actions">
 						<Button
 							variant="ghost"
 							size={Button.SIZES.SMALL}
@@ -118,7 +118,7 @@ function CampaignEntityContext({
 							return (
 								<div
 									key={itemKey}
-									className="AiAssistant__context_row AiAssistant__location_row"
+									className="AiAssistantPanel__context_row AiAssistantPanel__location_row"
 								>
 									<Checkbox
 										checked={contextItems[itemKey] !== false}
@@ -131,7 +131,7 @@ function CampaignEntityContext({
 							);
 						})
 					) : (
-						<div className="muted AiAssistant__empty_context">
+						<div className="muted AiAssistantPanel__empty_context">
 							{lang.t(emptyLabel)}
 						</div>
 					)}
@@ -203,10 +203,10 @@ export default function AiContextSettingsModal({
 			onCancel={onCancel}
 			showFooter={false}
 		>
-			<div className="AiAssistant__context_manager">
+			<div className="AiAssistantPanel__context_manager">
 				<section>
 					<h4>{lang.t("Campaign")}</h4>
-					<div className="AiAssistant__context_row">
+					<div className="AiAssistantPanel__context_row">
 						<Checkbox
 							checked={contextConfig.campaignNotes}
 							onChange={(value) =>
@@ -267,8 +267,8 @@ export default function AiContextSettingsModal({
 						const isExpanded = Boolean(expandedSessions[slug]);
 
 						return (
-							<div key={slug} className="AiAssistant__session_context">
-								<div className="AiAssistant__context_row">
+							<div key={slug} className="AiAssistantPanel__session_context">
+								<div className="AiAssistantPanel__context_row">
 									<Checkbox
 										checked={config.included}
 										onChange={(included) =>
@@ -281,7 +281,7 @@ export default function AiContextSettingsModal({
 											}))
 										}
 										label={session.name}
-										className="AiAssistant__session_name"
+										className="AiAssistantPanel__session_name"
 									/>
 									<CollapseToggleButton
 										size={Button.SIZES.SMALL}
@@ -290,8 +290,8 @@ export default function AiContextSettingsModal({
 									/>
 								</div>
 								{isExpanded && config.data && (
-									<div className="AiAssistant__context_details">
-										<div className="AiAssistant__context_row">
+									<div className="AiAssistantPanel__context_details">
+										<div className="AiAssistantPanel__context_row">
 											<Checkbox
 												checked={config.notes !== false}
 												onChange={(value) =>
@@ -303,7 +303,7 @@ export default function AiContextSettingsModal({
 												label={lang.t("Notes")}
 											/>
 										</div>
-										<div className="AiAssistant__context_row">
+										<div className="AiAssistantPanel__context_row">
 											<Checkbox
 												checked={config.result_text !== false}
 												onChange={(value) =>
@@ -315,7 +315,7 @@ export default function AiContextSettingsModal({
 												label={lang.t("Summary")}
 											/>
 										</div>
-										<div className="AiAssistant__scenes_context">
+										<div className="AiAssistantPanel__scenes_context">
 											{(config.data.scenes || []).map((scene, index) => {
 												const sceneConfig = getAiSceneContextConfig(
 													config,
@@ -324,9 +324,9 @@ export default function AiContextSettingsModal({
 												return (
 													<div
 														key={scene.id}
-														className="AiAssistant__scene_item"
+														className="AiAssistantPanel__scene_item"
 													>
-														<div className="AiAssistant__context_row">
+														<div className="AiAssistantPanel__context_row">
 															<Checkbox
 																checked={sceneConfig.included}
 																onChange={(value) =>
@@ -347,7 +347,7 @@ export default function AiContextSettingsModal({
 															/>
 														</div>
 														{sceneConfig.included && (
-															<div className="AiAssistant__scene_fields">
+															<div className="AiAssistantPanel__scene_fields">
 																{SCENE_FIELDS.map((field) => (
 																	<Checkbox
 																		key={field.key}

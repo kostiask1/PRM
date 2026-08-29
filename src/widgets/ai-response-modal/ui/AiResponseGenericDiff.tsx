@@ -30,10 +30,10 @@ function AiResponseSingleSnapshotFields({
 			)
 		: ["value"];
 	return (
-		<div className="AiAssistant__preview_stack">
+		<div className="AiAssistantPanel__preview_stack">
 			{keys.map((key) => (
-				<div key={`${resource.id}-${key}`} className="AiAssistant__preview_field">
-					<div className="AiAssistant__preview_field_label">{key}</div>
+				<div key={`${resource.id}-${key}`} className="AiAssistantPanel__preview_field">
+					<div className="AiAssistantPanel__preview_field_label">{key}</div>
 					<pre>{formatFieldValue(getFieldValue(snapshot, key))}</pre>
 				</div>
 			))}
@@ -54,13 +54,13 @@ function AiResponseChangedField({
 		return renderNoteArrayDiff(resource, before, after);
 	}
 	return (
-		<div className="AiAssistant__preview_columns">
-			<div className="AiAssistant__preview_column">
-				<div className="AiAssistant__preview_column_title">{lang.t("Before")}</div>
+		<div className="AiAssistantPanel__preview_columns">
+			<div className="AiAssistantPanel__preview_column">
+				<div className="AiAssistantPanel__preview_column_title">{lang.t("Before")}</div>
 				<pre className="is_removed">{formatFieldValue(before)}</pre>
 			</div>
-			<div className="AiAssistant__preview_column">
-				<div className="AiAssistant__preview_column_title">{lang.t("After")}</div>
+			<div className="AiAssistantPanel__preview_column">
+				<div className="AiAssistantPanel__preview_column_title">{lang.t("After")}</div>
 				<pre className="is_added">{formatFieldValue(after)}</pre>
 			</div>
 		</div>
@@ -88,9 +88,9 @@ export default function AiResponseGenericDiff({
 				fieldKeys.map((field) => (
 					<div
 						key={`${resource.id}-${field}`}
-						className="AiAssistant__preview_field"
+						className="AiAssistantPanel__preview_field"
 					>
-						<div className="AiAssistant__preview_field_label">{field}</div>
+						<div className="AiAssistantPanel__preview_field_label">{field}</div>
 						<AiResponseChangedField
 							resource={resource}
 							field={field}

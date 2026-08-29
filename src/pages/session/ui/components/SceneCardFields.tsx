@@ -26,7 +26,7 @@ export default function SceneCardFields({
 	onUpdateField,
 }: SceneCardFieldsProps) {
 	return (
-		<div className="SceneCard__grid">
+		<div className="SessionSceneCard__grid">
 			{fields.map((field) => (
 				<div key={field.key} className="SceneCardFields__item">
 					<div className="SceneCardFields__title">{lang.t(field.title)}</div>

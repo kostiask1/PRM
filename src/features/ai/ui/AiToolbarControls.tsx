@@ -76,9 +76,9 @@ export function AiModelPicker({
 }) {
 	const disabled = loading || aiModels.length === 0;
 	return (
-		<label className="AiAssistant__modelPicker">
+		<label className="AiAssistantPanel__modelPicker">
 			<Select
-				className={classNames("AiAssistant__modelSelect", {
+				className={classNames("AiAssistantPanel__modelSelect", {
 					is_disabled: disabled,
 				})}
 				disabled={disabled}
@@ -109,7 +109,7 @@ export function AiContextActions({
 	if (isBestiary) return null;
 	return (
 		<div
-			className={classNames("AiAssistant__context_toggle", {
+			className={classNames("AiAssistantPanel__context_toggle", {
 				is_active: useContext,
 			})}
 		>

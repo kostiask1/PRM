@@ -266,10 +266,10 @@ export default function DiceCalculator({
 		const content = itemsToShow.map((item, idx) => {
 			const isMin = item.max && item.val === 1;
 			const isMax = item.max && item.val === item.max;
-			let dynamicClassName = isMin ? "dice_min" : isMax ? "dice_max" : "";
+			let dynamicClassName = isMin ? "DiceCalculator__min" : isMax ? "DiceCalculator__max" : "";
 			const rechargeClass = getRechargeResultClass(result, item.val);
 			if (rechargeClass) dynamicClassName = rechargeClass;
-			if (item.dropped) dynamicClassName += " dice_dropped";
+			if (item.dropped) dynamicClassName += " DiceCalculator__dropped";
 
 			const sign = idx > 0 && item.val >= 0 ? " + " : "";
 			return (
@@ -360,9 +360,9 @@ export default function DiceCalculator({
 										className={classNames("DiceCalculator__totalValue", {
 											[getRechargeResultClass(lastResult)]:
 												Boolean(getRechargeResultClass(lastResult)),
-											dice_max:
+											DiceCalculator__max:
 												lastResult.isCritical && lastResult.total === 20,
-											dice_min:
+											DiceCalculator__min:
 												lastResult.isCritical && lastResult.total !== 20,
 										})}
 									>
@@ -373,11 +373,11 @@ export default function DiceCalculator({
 												content={getPotentialRangeLabel(lastResult)}
 											>
 												<span className="DiceCalculator__averageValue">
-													<span className="dice_min">{lastResult.min}</span>
+													<span className="DiceCalculator__min">{lastResult.min}</span>
 													<span>/</span>
 													<span>{lastResult.average}</span>
 													<span>/</span>
-													<span className="dice_max">{lastResult.max}</span>
+													<span className="DiceCalculator__max">{lastResult.max}</span>
 												</span>
 											</Tooltip>
 										)}
@@ -489,8 +489,8 @@ export default function DiceCalculator({
 															getRechargeResultClass(roll) ||
 															(roll.isCritical
 																? roll.total === 20
-																	? "dice_max"
-																	: "dice_min"
+															? "DiceCalculator__max"
+															: "DiceCalculator__min"
 																: "")
 														}
 													>

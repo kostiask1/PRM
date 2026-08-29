@@ -1,4 +1,5 @@
 import { lang } from "../../shared/lib/index.js";
+import "../../assets/components/ProjectGuide.css";
 
 const HOTKEYS = [
 	"Ctrl+K — Add character/NPC/location link",

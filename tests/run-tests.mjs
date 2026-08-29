@@ -3779,7 +3779,7 @@ await run(
 			[
 				"if (cardType) {",
 				"key={resource.id}",
-				'"AiAssistant__preview_resource_cards"',
+				'"AiAssistantPanel__preview_resource_cards"',
 				"{renderPreviewResourceHeader(resource)}",
 				"<AiResponseCardDiff",
 				"resource={resource}",
@@ -3804,7 +3804,7 @@ await run(
 				"type CardHighlightFields",
 				"type RenderEntityCard = (",
 				"function getSingleCardSurfaceClassName(",
-				'"AiAssistant__preview_card_surface"',
+				'"AiAssistantPanel__preview_card_surface"',
 				'isDraft && isNew && "is_editable"',
 				"function isSingleCardEditable(",
 				"isDraft && isNew && !isResourceApplied(resource)",
@@ -3821,7 +3821,7 @@ await run(
 				'{lang.t("Before")}',
 				"renderEntityCard(resource, resource.before, false, highlightFields)",
 				'{lang.t("After")}',
-				'"AiAssistant__preview_card_surface is_after"',
+				'"AiAssistantPanel__preview_card_surface is_after"',
 				'isDraft && "is_editable"',
 				"resource.after,",
 				"isDraft && !isResourceApplied(resource)",
@@ -3911,7 +3911,7 @@ await run(
 				"function getModifiedEncounterParticipantClassName(",
 				'isChanged && "is_modified"',
 				"function getEncounterParticipantClassName(",
-				'"AiAssistant__encounter_item"',
+				'"AiAssistantPanel__encounter_item"',
 				"getBeforeEncounterParticipantClassName(side, isMissing)",
 				"getAfterEncounterParticipantClassName(side, isMissing)",
 				"getModifiedEncounterParticipantClassName(isChanged)",
@@ -4012,7 +4012,7 @@ await run(
 				"renderPreviewResourceHeader: (resource: PreviewResource) => ReactNode;",
 				"resource: PreviewResource;",
 				"function getSingleNoteSurfaceClassName(",
-				'"AiAssistant__preview_note_surface"',
+				'"AiAssistantPanel__preview_note_surface"',
 				'isDraft && isNew && "is_editable"',
 				"function isSingleNoteEditable(",
 				"isDraft && isNew && !isResourceApplied(resource)",
@@ -4029,7 +4029,7 @@ await run(
 				'{lang.t("Before")}',
 				"renderNoteCard(resource, resource.before, false, highlightFields)",
 				'{lang.t("After")}',
-				'"AiAssistant__preview_note_surface is_after"',
+				'"AiAssistantPanel__preview_note_surface is_after"',
 				'isDraft && "is_editable"',
 				"resource.after,",
 				"isDraft && !isResourceApplied(resource)",
@@ -4037,7 +4037,7 @@ await run(
 				"export default function AiResponseNoteDiff({",
 				"const isNew = resource.before === null;",
 				"const isDeleted = resource.after === null;",
-				'"AiAssistant__preview_resource_notes"',
+				'"AiAssistantPanel__preview_resource_notes"',
 				"{renderPreviewResourceHeader(resource)}",
 				"isNew || isDeleted ? (",
 				"<AiResponseSingleNoteDiff",
@@ -4131,7 +4131,7 @@ await run(
 			],
 			"AI response encounter monster-change composition",
 		);
-		assert.doesNotMatch(responseModalSource, /AiAssistant__preview_card_stack/);
+		assert.doesNotMatch(responseModalSource, /AiAssistantPanel__preview_card_stack/);
 		assert.doesNotMatch(
 			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
 			/AiResponseEncounterMonsterChange/,
@@ -4151,14 +4151,14 @@ await run(
 				"statusLabel?: ReactNode;",
 				"export default function AiResponseEncounterMonsterChange({",
 				"return isPaired ? (",
-				'"AiAssistant__preview_card_columns"',
-				'"AiAssistant__preview_card_frame"',
-				'"AiAssistant__preview_column_title"',
+				'"AiAssistantPanel__preview_card_columns"',
+				'"AiAssistantPanel__preview_card_frame"',
+				'"AiAssistantPanel__preview_column_title"',
 				"{label} / {beforeLabel}",
 				"{beforeCard}",
 				"{label} / {afterLabel}",
 				"{afterCard}",
-				'"AiAssistant__preview_card_stack"',
+				'"AiAssistantPanel__preview_card_stack"',
 				"{label} / {statusLabel}",
 				"{singleCard}",
 			],
@@ -4804,8 +4804,8 @@ await run(
 				"export default function CampaignDescriptionSection({",
 				'"CampaignView__section"',
 				'id={makeDomId("campaign", "description")}',
-				'"section_row"',
-				'"section_title_group"',
+				'"CampaignView__sectionRow"',
+				'"CampaignView__sectionTitleGroup"',
 				"onClick={onToggle}",
 				"{hasData && (",
 				"<CollapseToggleButton",
@@ -5015,8 +5015,8 @@ await run(
 				"export default function CampaignEntitySection({",
 				'"CampaignView__section"',
 				"data-character-drop-type={dropType}",
-				'"section_row"',
-				'"section_title_group"',
+				'"CampaignView__sectionRow"',
+				'"CampaignView__sectionTitleGroup"',
 				"onClick={onToggle}",
 				"{hasData && (",
 				"<CollapseToggleButton",
@@ -5276,10 +5276,10 @@ await run(
 				"export default function SessionFloatingActions({",
 				"<Tooltip",
 				'{lang.t("Preparation checklist")}',
-				'"SessionView__checklistToggle"',
+				'"SessionFloatingActions__checklistToggle"',
 				"<button onClick={onOpenChecklist}",
 				'<Icon name="list" size={28} />',
-				'progress < 100 && <span className="SessionView__checklistBadge" />',
+				'progress < 100 && <span className="SessionFloatingActions__checklistBadge" />',
 				"{isGlobalSearchOpen && (",
 				"<GlobalSearchModal onCancel={onCloseGlobalSearch} />",
 			],
@@ -5527,7 +5527,7 @@ await run(
 				'title={lang.t("Session result")}',
 				"<EditableField",
 				'type="textarea"',
-				'className="field__result"',
+				'className="SessionResultSection__field"',
 				"enableHistory={false}",
 				'placeholder={lang.t("Summary of what actually happened...")}',
 				"value={value}",
@@ -5800,6 +5800,7 @@ await run(
 			sceneCardSource,
 			[
 				'import type { MouseEvent, ReactNode } from "react";',
+				'import "../../../../assets/components/SessionSceneCard.css";',
 				'import type { SessionScene } from "../../../../entities/session/index.js";',
 				'import { lang, type SharedNote } from "../../../../shared/lib/index.js";',
 				'import SceneCardFields, {',
@@ -5831,7 +5832,7 @@ await run(
 				"const encounterLabel = props.hasEncounter",
 				"? props.encounterName",
 				': lang.t("New encounter");',
-				'<div className="SceneCard">',
+				'<div className="SessionSceneCard">',
 				"<SceneCardHeader",
 				"number={props.number}",
 				"collapsed={props.collapsed}",
@@ -5841,8 +5842,8 @@ await run(
 				"hasEncounter={props.hasEncounter}",
 				"encounterName={encounterLabel}",
 				"{!props.collapsed && (",
-				'"SceneCard__content"',
-				'"SceneCard__text_side"',
+				'"SessionSceneCard__content"',
+				'"SessionSceneCard__textSide"',
 				"<SceneCardFields",
 				"fields={props.fields}",
 				"scene={props.scene}",
@@ -5970,7 +5971,7 @@ await run(
 				"onCancel={props.onClosePicker}",
 				"showFooter={false}",
 				'type="custom"',
-				'"EncounterCharacterPicker"',
+				'"EncounterCharacterOverlays"',
 				"props.creating ? (",
 				"<EncounterCharacterCreateForm {...props} />",
 				"<EncounterCharacterList {...props} />",
@@ -5998,13 +5999,13 @@ await run(
 				'variant="create"',
 				'icon="plus"',
 				"onClick={onStartCreate}",
-				'"EncounterCharacterPicker__createBtn"',
+				'"EncounterCharacterOverlays__createButton"',
 				'{lang.t("New character")}',
 				"available.length > 0 ? (",
 				"available.map((character) => (",
 				'type="button"',
 				"key={String(character.id || character.slug)}",
-				'"EncounterCharacterPicker__item"',
+				'"EncounterCharacterOverlays__item"',
 				"onClick={() => onAdd(character)}",
 				"getEncounterCharacterDisplayName(character)",
 				"character.race, character.class",
@@ -6366,11 +6367,11 @@ await run(
 				'[lang.t("Avg initiative"), view.initiativeStats.average, averageTooltip, ""],',
 				'[lang.t("Max initiative"), view.initiativeStats.max, maxTooltip, ""],',
 				'lang.t("CR-weighted avg initiative"),',
-				'" EncounterViewMetric__accent",',
+				'" EncounterHeader__metric_accent",',
 				"participantCount > 0 &&",
 				"metrics.map(([label, value, content, modifier]) => (",
 				"key={String(label)}",
-				'"EncounterViewMetric__tooltip"',
+				'"EncounterHeader__metricTooltip"',
 			],
 			"Encounter private header presentation",
 		);
@@ -7448,6 +7449,7 @@ await run(
 			[
 				'import type { SessionChecklistItem } from "../../model/contracts.ts";',
 				'import { lang } from "../../../../shared/lib/index.js";',
+				'import "../../../../assets/components/SessionChecklistOverlay.css";',
 				'import { Modal } from "../../../../shared/ui/index.js";',
 				'import TodoItem from "./TodoItem.tsx";',
 				"interface SessionChecklistOverlayProps {",
@@ -7463,13 +7465,13 @@ await run(
 				"onConfirm={onClose}",
 				"onCancel={onClose}",
 				"showFooter={false}",
-				'"SessionView__checklistModal"',
-				'"SessionView__progressWrap"',
-				'"ProgressBar__label"',
+				'"SessionChecklistOverlay__modal"',
+				'"SessionChecklistOverlay__progressWrap"',
+				'"SessionChecklistOverlay__progressLabel"',
 				'{lang.t("Preparation progress")}',
 				"{progress}%",
-				'"ProgressBar"',
-				'"ProgressBar__fill"',
+				'"SessionChecklistOverlay__progress"',
+				'"SessionChecklistOverlay__progressFill"',
 				"style={{ width: `${progress}%` }}",
 				"checklistItems.map((item) => (",
 				"<TodoItem",
@@ -7805,7 +7807,7 @@ await run(
 		);
 		assert.doesNotMatch(
 			sessionSource,
-			/getSessionSceneNotesPresentation|getSceneNotesWithCollapsedState|SceneCard__notes/,
+			/getSessionSceneNotesPresentation|getSceneNotesWithCollapsedState|SessionSceneCard__notes/,
 		);
 		assert.doesNotMatch(
 			`${runtimeEntrySource}\n${typeEntrySource}`,
@@ -7843,7 +7845,7 @@ await run(
 				"presentation.notes,",
 				"presentation.bulkActionShouldCollapse,",
 				"return (",
-				'"SceneCard__notes"',
+				'"SessionSceneCard__notes"',
 				"renderSceneNotesHeader({",
 				"onBulkSceneNotesCollapse: handleBulkSceneNotesCollapse,",
 				"presentation,",
@@ -7851,8 +7853,8 @@ await run(
 				"renderSceneNotesList({",
 				"interface SceneNotesHeaderProps {",
 				"function renderSceneNotesHeader({",
-				'"SceneCard__notes_headerRow"',
-				'"SceneCard__notes_header"',
+				'"SessionSceneCard__notesHeaderRow"',
+				'"SessionSceneCard__notesHeader"',
 				"presentation.hasData ? onToggleNotesCollapse : undefined",
 				"<CollapseToggleButton",
 				"collapsed={presentation.isCollapsed}",
@@ -7865,7 +7867,7 @@ await run(
 				"function renderSceneNotesList({",
 				"<DraggableList",
 				"items={presentation.renderableNotes}",
-				'"SceneCard__notes_list"',
+				'"SessionSceneCard__notesList"',
 				"onReorder={onSceneNotesReorder}",
 				"{...getAiIgnoredNoteListProps(onSceneNoteAiIgnoredChange)}",
 				"renderItem={(note, isDragging, index) =>",
@@ -7938,7 +7940,7 @@ await run(
 		);
 		assert.doesNotMatch(
 			responseModalSource,
-			/AiAssistant__preview_resource_header/,
+			/AiAssistantPanel__preview_resource_header/,
 		);
 		assert.doesNotMatch(
 			`${runtimeEntrySource}\n${typeEntrySource}\n${modelEntrySource}\n${modelTypeEntrySource}`,
@@ -7954,9 +7956,9 @@ await run(
 				"state: ReactNode;",
 				"export default function AiResponsePreviewResourceHeader({",
 				"return (",
-				'"AiAssistant__preview_resource_header"',
+				'"AiAssistantPanel__preview_resource_header"',
 				"<span>{label}</span>",
-				'"AiAssistant__preview_resource_actions"',
+				'"AiAssistantPanel__preview_resource_actions"',
 				"<span>{state}</span>",
 				"{actions}",
 			],
@@ -11687,6 +11689,11 @@ await run(
 			graphSource,
 			/NODE_ICON_BY_TYPE|HANDLE_POSITIONS|function CampaignGraphNodeHandles|const CampaignGraphNodeCard = memo|getCampaignGraphNodeCardPresentation/,
 		);
+		assert.match(
+			graphSource,
+			/formatCampaignGraphSourceList\(\s*edge\.sources,\s*\(key\) => lang\.t\(key\),\s*\)/,
+			"Campaign graph source labels preserve the localization receiver",
+		);
 		assertSourceTokensInOrder(
 			nodeCardSource,
 			[
@@ -14201,7 +14208,7 @@ await run(
 				'import { useSimplifiedNotesEnabled } from "./SimplifiedNotesRuntime.tsx";',
 				"const simplifiedNotesEnabled = useSimplifiedNotesEnabled();",
 				"getNoteCardPresentation(",
-				"note_card_simple__simplified: simplifiedNotesEnabled",
+				"NoteCard__simplified: simplifiedNotesEnabled",
 				"shouldExpandNoteFromCardClick(",
 			],
 			"Notes presentation runtime consumption",
@@ -28305,8 +28312,8 @@ await run("dice calculator model preserves request, formula, and result policies
 	assert.equal(getFullDiceBreakdownString(roll.breakdown), "6 - [2]");
 	assert.equal(getDiceBreakdownLabel(roll), "6 - [2]");
 	assert.equal(getRechargeThreshold(roll), 5);
-	assert.equal(getRechargeResultClass(roll), "dice_recharge_fail");
-	assert.equal(getRechargeResultClass(roll, 5), "dice_recharge_success");
+	assert.equal(getRechargeResultClass(roll), "DiceCalculator__rechargeFailure");
+	assert.equal(getRechargeResultClass(roll, 5), "DiceCalculator__rechargeSuccess");
 	assert.equal(isSingleDieRoll(roll), false);
 	assert.equal(
 		isSingleDieRoll({
@@ -42011,10 +42018,10 @@ await run("AI assistant delegates stable visual composition to feature UI", asyn
 	assert.match(panelViewSource, /<AiAssistantShell/);
 	assert.match(panelViewSource, /<AiAssistantPromptComposer/);
 	assert.match(panelViewSource, /<AiHistoryResponseDialog/);
-	assert.doesNotMatch(panelSource, /className="AiAssistant__prompt_area"/);
+	assert.doesNotMatch(panelSource, /className="AiAssistantPanel__prompt_area"/);
 	assert.doesNotMatch(panelSource, /<AiResponseModal/);
-	assert.match(shellSource, /className="AiAssistant__toggle"/);
-	assert.match(promptSource, /className="AiAssistant__token_estimate"/);
+	assert.match(shellSource, /className="AiAssistantPanel__toggle"/);
+	assert.match(promptSource, /className="AiAssistantPanel__token_estimate"/);
 	assert.match(responseSource, /onRestore\(entry, "apply"/);
 	assert.match(toolbarSource, /showParsedGenerationOptions/);
 	assert.match(contextSource, /CampaignEntityContext/);
@@ -62832,6 +62839,10 @@ await run(
 			"src/assets/components/MainContent.css",
 			"utf8",
 		);
+		const projectGuideCss = await fs.readFile(
+			"src/assets/components/ProjectGuide.css",
+			"utf8",
+		);
 		const uk = JSON.parse(await fs.readFile("src/langs/uk.json", "utf8"));
 
 		assert.match(
@@ -62925,7 +62936,8 @@ await run(
 			editableFieldCss.includes(".EditableField__hotkeysTooltip"),
 			false,
 		);
-		assert.match(mainContentCss, /\.ProjectGuide__hotkeys/);
+		assert.doesNotMatch(mainContentCss, /\.ProjectGuide__/);
+		assert.match(projectGuideCss, /\.ProjectGuide__hotkeys/);
 
 		assert.match(tooltipSource, /anchorElement = null/);
 		assert.match(tooltipSource, /anchorElement \|\| triggerRef\.current/);

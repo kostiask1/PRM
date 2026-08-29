@@ -71,9 +71,9 @@ export default function CreateCharacterButton({
 			<Button variant={buttonVariant} size={buttonSize} onClick={openModal} className={buttonClassName} icon={icon}>{buttonLabel || modalTitle}</Button>
 			{isOpen && (
 				<Modal title={modalTitle} type="confirm" showFooter={false} onConfirm={closeModal} onCancel={closeModal}>
-					<div className="CreateCharacterModal">
+					<div className="CreateCharacterButton__modal">
 						<CharacterCard character={draft} onChange={(_id, updated) => setDraft(updated)} onDelete={() => {}} onToggleCollapse={null} campaignSlug={campaignSlug} type={entityType} viewMode="modal" showDeleteButton={false} showHeader={false} />
-						<div className="CreateCharacterModal__actions">
+						<div className="CreateCharacterButton__actions">
 							<Button variant="primary" onClick={() => { void handleSubmit(); }} disabled={isSubmitting || !isCharacterDraftValid(draft)}>{lang.t("Create")}</Button>
 							<Button variant="ghost" onClick={closeModal} disabled={isSubmitting}>{lang.t("Cancel")}</Button>
 						</div>

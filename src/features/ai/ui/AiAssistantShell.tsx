@@ -32,7 +32,7 @@ export default function AiAssistantShell({
 }: AiAssistantShellProps) {
 	return (
 		<div className="AiAssistant">
-			<Tooltip className="AiAssistant__toggle" content={title}>
+			<Tooltip className="AiAssistantPanel__toggle" content={title}>
 				<button onClick={onOpen}>
 					<Icon name="wand" size={28} />
 				</button>
@@ -41,13 +41,13 @@ export default function AiAssistantShell({
 			{isOpen && (
 				<Modal
 					title={title}
-					className="AiAssistant__main_modal"
+					className="AiAssistantPanel__main_modal"
 					onConfirm={() => {}}
 					onCancel={onClose}
 					showFooter={false}
 					cancelDisabled={isLoading}
 				>
-					<div className="AiAssistant__content">{children}</div>
+					<div className="AiAssistantPanel__content">{children}</div>
 				</Modal>
 			)}
 

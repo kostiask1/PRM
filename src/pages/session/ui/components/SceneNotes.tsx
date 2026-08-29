@@ -50,7 +50,7 @@ export default function SceneNotes({
 	};
 
 	return (
-		<div className="SceneCard__notes">
+		<div className="SessionSceneCard__notes">
 			{renderSceneNotesHeader({
 				onBulkSceneNotesCollapse: handleBulkSceneNotesCollapse,
 				onToggleNotesCollapse,
@@ -80,9 +80,9 @@ function renderSceneNotesHeader({
 	presentation,
 }: SceneNotesHeaderProps) {
 	return (
-		<div className="SceneCard__notes_headerRow">
+		<div className="SessionSceneCard__notesHeaderRow">
 			<div
-				className="SceneCard__notes_header"
+				className="SessionSceneCard__notesHeader"
 				onClick={presentation.hasData ? onToggleNotesCollapse : undefined}
 			>
 				{presentation.hasData && (
@@ -129,7 +129,7 @@ function renderSceneNotesList({
 	return (
 		<DraggableList
 			items={presentation.renderableNotes}
-			className="SceneCard__notes_list"
+			className="SessionSceneCard__notesList"
 			onReorder={onSceneNotesReorder}
 			{...getAiIgnoredNoteListProps(onSceneNoteAiIgnoredChange)}
 			renderItem={(note, isDragging, index) =>

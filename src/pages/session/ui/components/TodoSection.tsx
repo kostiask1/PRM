@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Button, CollapseToggleButton } from "../../../../shared/ui/index.js";
 import { classNames } from "../../../../shared/lib/index.js";
+import "../../../../assets/components/TodoSection.css";
 
 export interface TodoSectionProps {
 	title: ReactNode;

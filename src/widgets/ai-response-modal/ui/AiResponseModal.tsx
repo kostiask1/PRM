@@ -151,7 +151,7 @@ function AiResponseModal({
 		...extraClassNames: Array<string | false | null | undefined>
 	) =>
 		classNames(
-			"AiAssistant__preview_resource",
+			"AiAssistantPanel__preview_resource",
 			...extraClassNames,
 			resource.before === null && "is_added",
 			resource.after === null && "is_removed",
@@ -304,8 +304,8 @@ function AiResponseModal({
 		return (
 			<div
 				className={classNames(
-					"AiAssistant__preview_card_surface",
-					"AiAssistant__encounter_monster_surface",
+					"AiAssistantPanel__preview_card_surface",
+					"AiAssistantPanel__encounter_monster_surface",
 					className,
 				)}
 			>
@@ -445,8 +445,8 @@ function AiResponseModal({
 		if (changedKeys.length === 0) return null;
 
 		return (
-			<div className="AiAssistant__encounter_monsters">
-				<div className="AiAssistant__preview_column_title">
+			<div className="AiAssistantPanel__encounter_monsters">
+				<div className="AiAssistantPanel__preview_column_title">
 					{lang.t("Creature changes")}
 				</div>
 				{changedKeys.map((key) =>
@@ -469,9 +469,9 @@ function AiResponseModal({
 	) => {
 		if (snapshot === null) return null;
 		return (
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">{label}</div>
-				<div className={`AiAssistant__encounter_panel is_${side}`}>
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">{label}</div>
+				<div className={`AiAssistantPanel__encounter_panel is_${side}`}>
 					<AiResponseEncounterParticipantList
 						snapshot={snapshot}
 						counterpartSnapshot={counterpart}
@@ -500,11 +500,11 @@ function AiResponseModal({
 				key={resource.id}
 				className={getPreviewResourceClassName(
 					resource,
-					"AiAssistant__preview_resource_encounter",
+					"AiAssistantPanel__preview_resource_encounter",
 				)}
 			>
 				{renderPreviewResourceHeader(resource, title)}
-				<div className="AiAssistant__preview_card_columns AiAssistant__encounter_columns">
+				<div className="AiAssistantPanel__preview_card_columns AiAssistantPanel__encounter_columns">
 					{renderEncounterSide(before, after, "before", lang.t("Before"))}
 					{renderEncounterSide(
 						after,
@@ -551,7 +551,7 @@ function AiResponseModal({
 			(key) => !snapshotsEqual(beforeByKey.get(key), afterByKey.get(key)),
 		);
 		return (
-			<div className="AiAssistant__preview_note_list">
+			<div className="AiAssistantPanel__preview_note_list">
 				{keys.map((key, index) => {
 					const before = beforeByKey.get(key) ?? null;
 					const after = afterByKey.get(key) ?? null;
@@ -583,7 +583,7 @@ function AiResponseModal({
 					key={resource.id}
 					className={getPreviewResourceClassName(
 						resource,
-						"AiAssistant__preview_resource_cards",
+						"AiAssistantPanel__preview_resource_cards",
 					)}
 				>
 					{renderPreviewResourceHeader(resource)}
@@ -632,7 +632,7 @@ function AiResponseModal({
 				renderResourceActions={renderResourceActions}
 				updateDraftText={updateDraftText}
 				preview={
-					<div className="AiAssistant__preview_diff">
+					<div className="AiAssistantPanel__preview_diff">
 						{selectedResponseDiffResources.map(renderPreviewResource)}
 					</div>
 				}

@@ -45,7 +45,7 @@ export default function AiAssistantToolbar(props: AiAssistantToolbarProps) {
 	const { showCharacterGeneration, showParsedGenerationOptions } =
 		getAiToolbarVisibility(props);
 	return (
-		<div className="AiAssistant__actions">
+		<div className="AiAssistantPanel__actions">
 			<AiModelPicker
 				aiModels={props.aiModels}
 				loading={props.loading}

@@ -1,0 +1,74 @@
+.TodoSection {
+	border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+	border-radius: var(--radius-2xl);
+	background: color-mix(in srgb, var(--bg), transparent 55%);
+}
+
+.TodoSection__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: var(--bg);
+	border-radius: var(--radius-2xl);
+	position: sticky;
+	top: calc(-1 * var(--space-5));
+	padding: var(--space-3);
+	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
+	z-index: 1;
+}
+
+.TodoSection__header h3 {
+	margin: 0;
+	font-size: 1.05rem;
+	font-weight: 600;
+	font-family: var(--font-heading);
+	color: var(--text-bright);
+}
+
+.TodoSection__header .Button span {
+	white-space: nowrap;
+}
+
+.TodoSection__titleGroup {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	width: 100%;
+}
+
+.TodoSection__header.is_collapsible {
+	cursor: pointer;
+}
+
+.TodoSection__body {
+	padding: var(--space-3);
+}
+
+@media (max-width: 760px) {
+	.TodoSection {
+		border-radius: var(--radius-lg);
+	}
+
+	.TodoSection__header {
+		gap: var(--space-2);
+		padding: var(--space-2);
+		border-radius: var(--radius-lg);
+	}
+
+	.TodoSection__header h3 {
+		font-size: 0.98rem;
+		line-height: 1.15;
+	}
+
+	.TodoSection__titleGroup .Button {
+		min-width: 36px;
+		width: 36px;
+		min-height: 36px;
+		height: 36px;
+		padding: 0;
+	}
+
+	.TodoSection__body {
+		padding: var(--space-2);
+	}
+}

@@ -1,0 +1,35 @@
+.SessionChecklistOverlay__progressLabel {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--space-3);
+	color: var(--muted);
+	font-size: 0.82rem;
+	margin-bottom: 6px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.SessionChecklistOverlay__progressWrap {
+	display: grid;
+	gap: var(--space-1);
+	margin-bottom: 40px;
+}
+
+.SessionChecklistOverlay__modal {
+	padding: var(--space-1);
+}
+
+.SessionChecklistOverlay__progress {
+	height: 10px;
+	border-radius: var(--radius-pill);
+	overflow: hidden;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
+	background: var(--bg-deep);
+}
+
+.SessionChecklistOverlay__progressFill {
+	width: 0;
+	height: 100%;
+	background: linear-gradient(90deg, var(--accent), var(--success));
+	transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}

@@ -80,6 +80,7 @@ import {
 import { $setBlocksType } from "@lexical/selection";
 import { Button, Tooltip } from "../../../shared/ui/index.js";
 import "../../../assets/components/EditableField.css";
+import "../../../assets/components/EntityLink.css";
 import { classNames } from "../../../shared/lib/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { parseUrl } from "../../../shared/lib/index.js";
@@ -120,7 +121,7 @@ import {
 
 export type { EditableFieldChangeEvent } from "./editorPresentation.ts";
 
-const MENTION_CLASS = "mention_link EditableField__mention";
+const MENTION_CLASS = "EntityLink EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const TAB_CLASS = "EditableField__tab";
 const EDITOR_NAMESPACE = "EditableField";

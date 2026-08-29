@@ -20,8 +20,8 @@ export default function CampaignDescriptionSection({
 			className="CampaignView__section"
 			id={makeDomId("campaign", "description")}
 		>
-			<div className="section_row">
-				<div className="section_title_group" onClick={onToggle}>
+			<div className="CampaignView__sectionRow">
+				<div className="CampaignView__sectionTitleGroup" onClick={onToggle}>
 					{hasData && (
 						<CollapseToggleButton
 							size={Button.SIZES.MEDIUM}

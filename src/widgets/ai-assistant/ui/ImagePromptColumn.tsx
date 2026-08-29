@@ -28,9 +28,9 @@ export default function ImagePromptColumn<Item extends ImagePromptEntity>({
 	getPreview,
 }: ImagePromptColumnProps<Item>) {
 	return (
-		<section className="AiAssistant__image_prompt_column">
+		<section className="AiAssistantPanel__image_prompt_column">
 			<h4>{lang.t(title)}</h4>
-			<div className="AiAssistant__image_prompt_list">
+			<div className="AiAssistantPanel__image_prompt_list">
 				{items.length > 0 ? (
 					items.map((item, index) => {
 						const key = getImagePromptItemKey(
@@ -44,7 +44,7 @@ export default function ImagePromptColumn<Item extends ImagePromptEntity>({
 							<button
 								key={key}
 								type="button"
-								className="AiAssistant__image_prompt_item"
+								className="AiAssistantPanel__image_prompt_item"
 								onClick={() => onSelect(item, index)}
 								disabled={loading}
 								title={lang.t("Generate visual prompt for this item")}
@@ -55,7 +55,7 @@ export default function ImagePromptColumn<Item extends ImagePromptEntity>({
 						);
 					})
 				) : (
-					<div className="muted AiAssistant__empty_context">
+					<div className="muted AiAssistantPanel__empty_context">
 						{lang.t(emptyLabel)}
 					</div>
 				)}

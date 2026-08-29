@@ -2,6 +2,7 @@ import type { ReactNode, RefObject } from "react";
 import { lang } from "../../../../shared/lib/index.js";
 import { Button, Tooltip } from "../../../../shared/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
+import "../../../../assets/components/EncounterHeader.css";
 import type { EncounterViewModel } from "../../model/contracts.ts";
 import EncounterHeaderActions from "./EncounterHeaderActions.tsx";
 
@@ -160,21 +161,21 @@ function EncounterMetrics({
 			lang.t("CR-weighted avg initiative"),
 			view.initiativeStats.weightedAverage,
 			weightedTooltip,
-			" EncounterViewMetric__accent",
+			" EncounterHeader__metric_accent",
 		],
 	];
 	return (
 		<div className="EncounterView__metrics">
-			<div className="EncounterViewMetric">
-				<span className="EncounterViewMetric__label">{lang.t("Participants")}</span>
-				<span className="EncounterViewMetric__value">{participantCount}</span>
+			<div className="EncounterHeader__metric">
+				<span className="EncounterHeader__metricLabel">{lang.t("Participants")}</span>
+				<span className="EncounterHeader__metricValue">{participantCount}</span>
 			</div>
 			{participantCount > 0 &&
 				metrics.map(([label, value, content, modifier]) => (
-					<div className={`EncounterViewMetric${modifier}`} key={String(label)}>
-						<Tooltip content={content} className="EncounterViewMetric__tooltip">
-							<span className="EncounterViewMetric__label">{label}</span>
-							<span className="EncounterViewMetric__value">{value}</span>
+					<div className={`EncounterHeader__metric${modifier}`} key={String(label)}>
+						<Tooltip content={content} className="EncounterHeader__metricTooltip">
+							<span className="EncounterHeader__metricLabel">{label}</span>
+							<span className="EncounterHeader__metricValue">{value}</span>
 						</Tooltip>
 					</div>
 				))}

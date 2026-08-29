@@ -23,7 +23,7 @@ interface AiResponseCardDiffProps {
 
 function getSingleCardSurfaceClassName(isDraft: boolean, isNew: boolean): string {
 	return classNames(
-		"AiAssistant__preview_card_surface",
+		"AiAssistantPanel__preview_card_surface",
 		isDraft && isNew && "is_editable",
 	);
 }
@@ -55,9 +55,9 @@ function AiResponseSingleCardDiff({
 }) {
 	const snapshot = isNew ? resource.after : resource.before;
 	return (
-		<div className="AiAssistant__preview_card_stack">
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">
+		<div className="AiAssistantPanel__preview_card_stack">
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">
 					{isNew ? lang.t("New") : lang.t("Deleted")}
 				</div>
 				<div
@@ -82,18 +82,18 @@ function AiResponseChangedCardDiff({
 }: AiResponseCardDiffProps) {
 	const highlightFields = buildCardHighlightFields(resource);
 	return (
-		<div className="AiAssistant__preview_card_columns">
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">{lang.t("Before")}</div>
-				<div className="AiAssistant__preview_card_surface is_before">
+		<div className="AiAssistantPanel__preview_card_columns">
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">{lang.t("Before")}</div>
+				<div className="AiAssistantPanel__preview_card_surface is_before">
 					{renderEntityCard(resource, resource.before, false, highlightFields)}
 				</div>
 			</div>
-			<div className="AiAssistant__preview_card_frame">
-				<div className="AiAssistant__preview_column_title">{lang.t("After")}</div>
+			<div className="AiAssistantPanel__preview_card_frame">
+				<div className="AiAssistantPanel__preview_column_title">{lang.t("After")}</div>
 				<div
 					className={classNames(
-						"AiAssistant__preview_card_surface is_after",
+						"AiAssistantPanel__preview_card_surface is_after",
 						isDraft && "is_editable",
 					)}
 				>

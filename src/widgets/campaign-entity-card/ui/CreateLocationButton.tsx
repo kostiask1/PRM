@@ -9,7 +9,7 @@ import {
 	type ButtonVariant,
 	type IconName,
 } from "../../../shared/ui/index.js";
-import "../../../assets/components/CreateCharacterButton.css";
+import "../../../assets/components/CreateLocationButton.css";
 import { createLocationDraft, isLocationDraftValid } from "../model/campaignEntityCard.ts";
 import LocationCard from "./LocationCard.tsx";
 import { useCampaignEntityCreationRuntime } from "./CampaignEntityCreationRuntime.tsx";
@@ -67,10 +67,10 @@ export default function CreateLocationButton({
 		<>
 			<Button variant={buttonVariant} size={buttonSize} onClick={openModal} className={buttonClassName} icon={icon}>{buttonLabel || title}</Button>
 			{isOpen && (
-				<Modal title={title} type="confirm" className="CreateLocationModal" showFooter={false} onConfirm={closeModal} onCancel={closeModal}>
-					<div className="CreateCharacterModal">
+				<Modal title={title} type="confirm" className="CreateLocationButton__card" showFooter={false} onConfirm={closeModal} onCancel={closeModal}>
+					<div className="CreateLocationButton__modal">
 						<LocationCard location={draft} onChange={(_id, updated) => setDraft(updated)} onDelete={() => {}} onToggleCollapse={null} campaignSlug={campaignSlug} viewMode="modal" showDeleteButton={false} showHeader={false} />
-						<div className="CreateCharacterModal__actions">
+						<div className="CreateLocationButton__actions">
 							<Button variant="primary" onClick={() => { void handleSubmit(); }} disabled={isSubmitting || !isLocationDraftValid(draft)}>{lang.t("Create")}</Button>
 							<Button variant="ghost" onClick={closeModal} disabled={isSubmitting}>{lang.t("Cancel")}</Button>
 						</div>

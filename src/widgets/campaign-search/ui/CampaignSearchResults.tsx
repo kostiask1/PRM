@@ -32,7 +32,7 @@ function renderHighlightedText(text: unknown, terms: string[]): ReactNode {
 	return source.split(pattern).filter(Boolean).map((part, index) => {
 		const content = renderMentionText(part);
 		return terms.some((term) => part.toLowerCase() === term.toLowerCase())
-			? <mark key={`${part}:${index}`} className="GlobalSearch__highlight">{content}</mark>
+			? <mark key={`${part}:${index}`} className="GlobalSearchModal__highlight">{content}</mark>
 			: <React.Fragment key={`${part}:${index}`}>{content}</React.Fragment>;
 	});
 }
@@ -76,13 +76,13 @@ function SearchResultRow({ result, query, onOpen }: { result: CampaignSearchResu
 	const activate = (target: EventTarget | null) => { if (!isInteractiveTarget(target)) onOpen(result); };
 	const style = { "--search-result-color": FILTER_COLOR_BY_ID[result.filter] } as CSSProperties;
 	return (
-		<div role="button" tabIndex={0} className={classNames("GlobalSearch__result", `is_${result.filter}`)} style={style} onClick={(event) => activate(event.target)} onKeyDown={(event) => {
+		<div role="button" tabIndex={0} className={classNames("GlobalSearchModal__result", `is_${result.filter}`)} style={style} onClick={(event) => activate(event.target)} onKeyDown={(event) => {
 			if (event.key !== "Enter" && event.key !== " ") return;
 			if (isInteractiveTarget(event.target)) return;
 			event.preventDefault();
 			onOpen(result);
 		}}>
-			<span className="GlobalSearch__resultType">{lang.t(`Search filter: ${result.filter}`)}</span>
+			<span className="GlobalSearchModal__resultType">{lang.t(`Search filter: ${result.filter}`)}</span>
 			{title && <strong><ParsedSearchText text={title} inline highlight={query} /></strong>}
 			<span><ParsedSearchText text={result.subtitle} inline highlight={query} /></span>
 			{snippet && <p><ParsedSearchText text={snippet} inline highlight={query} /></p>}
@@ -91,7 +91,7 @@ function SearchResultRow({ result, query, onOpen }: { result: CampaignSearchResu
 }
 
 export default function CampaignSearchResults({ results, query, onOpen }: { results: CampaignSearchResult[]; query: string; onOpen: (result: CampaignSearchResult) => void }) {
-	return <div className="GlobalSearch__results">{results.length ? results.map((result) => <SearchResultRow key={result.id} result={result} query={query} onOpen={onOpen} />) : <div className="GlobalSearch__state">{lang.t("No results")}</div>}</div>;
+	return <div className="GlobalSearchModal__results">{results.length ? results.map((result) => <SearchResultRow key={result.id} result={result} query={query} onOpen={onOpen} />) : <div className="GlobalSearchModal__state">{lang.t("No results")}</div>}</div>;
 }
 
 export { FILTER_COLOR_BY_ID };

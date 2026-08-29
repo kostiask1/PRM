@@ -199,8 +199,8 @@ export default function CampaignNotesSection({
 	};
 	return (
 		<div className="CampaignView__section">
-			<div className="section_row">
-				<div className="section_title_group" onClick={toggle}>
+			<div className="CampaignView__sectionRow">
+				<div className="CampaignView__sectionTitleGroup" onClick={toggle}>
 					{presentation.canToggleCollapse && (
 						<CollapseToggleButton
 							size={Button.SIZES.MEDIUM}

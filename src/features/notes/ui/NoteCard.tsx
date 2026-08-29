@@ -43,9 +43,9 @@ function NoteCard({
 
 	return (
 		<div
-			className={classNames("note_card_simple", {
+			className={classNames("NoteCard", {
 				is_collapsed: presentation.isCollapsed,
-				note_card_simple__simplified: simplifiedNotesEnabled,
+				NoteCard__simplified: simplifiedNotesEnabled,
 			})}
 			onClick={() => {
 				if (

@@ -25,7 +25,7 @@ const CampaignEntityNoteCard = createNoteCardComponent({
 });
 
 export interface CampaignEntityCardNotesProps<Entity extends CardEntity> {
-	classPrefix: "character_card" | "location_card";
+	classPrefix: "CharacterCard" | "LocationCard";
 	entityId: CampaignCardEntityId;
 	model: CardNoteModel<Entity>;
 	notesForRender: CardNote[];
@@ -59,7 +59,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 	const toggleNotes = () => onChange(entityId, model.withField("isNotesCollapsed", !currentNotesCollapsed));
 	return (
 		<div className={`${classPrefix}__notes`}>
-			<div className={`${classPrefix}__notes_header`} onClick={hasNotesData ? toggleNotes : undefined}>
+			<div className={`${classPrefix}__notesHeader`} onClick={hasNotesData ? toggleNotes : undefined}>
 				{hasNotesData && (
 					<CollapseToggleButton size={Button.SIZES.SMALL} collapsed={isNotesCollapsed} onClick={toggleNotes} />
 				)}
@@ -68,7 +68,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 			{!isNotesCollapsed && (
 				<DraggableList<CardNote>
 					items={notesForRender}
-					className={`${classPrefix}__notes_list`}
+					className={`${classPrefix}__notesList`}
 					onReorder={(notes) => onChange(entityId, model.withField("notes", sanitizeNotesForSave(notes)), { trackUndo: true })}
 					onDrop={onReorderDrop}
 					{...getAiIgnoredNoteListProps((noteId, ignored) => updateNotes(setCampaignNoteAiIgnored(model.notes, noteId, ignored)))}

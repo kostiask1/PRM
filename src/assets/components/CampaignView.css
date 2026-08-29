@@ -124,13 +124,6 @@
 	gap: var(--space-1);
 }
 
-.CampaignView__sessions .session_card__actions {
-	padding: var(--space-3) var(--space-4) var(--space-3) 0;
-	display: flex;
-	align-items: center;
-	gap: var(--space-3);
-}
-
 .CampaignView__headerActions {
 	display: flex;
 	align-items: center;
@@ -173,7 +166,7 @@
 	gap: var(--space-6);
 }
 
-.section_title_group {
+.CampaignView__sectionTitleGroup {
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
@@ -181,7 +174,7 @@
 	cursor: pointer;
 }
 
-.section_row .Button {
+.CampaignView__sectionRow .Button {
 	white-space: nowrap;
 }
 
@@ -217,7 +210,7 @@
 	transform: translateX(-200%);
 }
 
-.CampaignView__notes .note_card_simple {
+.CampaignView__notes .NoteCard {
 	height: 100%;
 	align-items: center;
 }
@@ -228,7 +221,7 @@
 	min-height: 200px;
 }
 
-.CampaignView__notes .note_card_simple .note_card_simple__content {
+.CampaignView__notes .NoteCard .NoteCard__content {
 	width: 100%;
 }
 
@@ -264,7 +257,7 @@
 	user-select: auto;
 }
 
-.section_row {
+.CampaignView__sectionRow {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -392,13 +385,13 @@
 		scrollbar-width: thin;
 	}
 
-	.section_row {
+	.CampaignView__sectionRow {
 		align-items: flex-start;
 		padding: var(--space-1) 0;
 		gap: var(--space-2);
 	}
 
-	.section_title_group {
+	.CampaignView__sectionTitleGroup {
 		width: 100%;
 	}
 

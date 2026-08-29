@@ -52,11 +52,11 @@ interface CharacterSectionProps {
 function CharacterIdentityFields({ character, model, enableHistory, highlightFields, updateField, onNameBlur }: CharacterSectionProps) {
 	const fieldClass = (field: string) => getCampaignEntityFieldClass(highlightFields, field);
 	return (
-		<div className="character_card__info_side">
-			<div className="character_card__grid">
+		<div className="CharacterCard__infoSide">
+			<div className="CharacterCard__grid">
 				<EditableField type="text" value={character.firstName} enableHistory={enableHistory} onChange={(event) => updateField("firstName", event.target.value)} onBlur={onNameBlur} placeholder={lang.t("First name")} className={fieldClass("firstName")} />
 				<EditableField type="text" value={character.lastName} enableHistory={enableHistory} onChange={(event) => updateField("lastName", event.target.value)} onBlur={onNameBlur} placeholder={lang.t("Last name")} className={fieldClass("lastName")} />
-				<div className="character_card__row_trio">
+				<div className="CharacterCard__rowTrio">
 					<EditableField type="text" value={character.race} enableHistory={enableHistory} onChange={(event) => updateField("race", event.target.value)} placeholder={lang.t("Race")} className={fieldClass("race")} />
 					<EditableField type="text" value={character.class} enableHistory={enableHistory} onChange={(event) => updateField("class", event.target.value)} placeholder={lang.t("Class")} className={fieldClass("class")} />
 					<Select value={model.level} onChange={(event) => updateField("level", event.target.value)}>
@@ -73,25 +73,25 @@ function CharacterDetails({ character, model, enableHistory, highlightFields, up
 	const fieldClass = (field: string) => getCampaignEntityFieldClass(highlightFields, field);
 	return (
 		<>
-			<div className="character_card__details">
-				<div className="character_card__field"><label>{lang.t("Motivation")}</label><EditableField type="textarea" value={character.motivation} enableHistory={enableHistory} onChange={(event) => updateField("motivation", event.target.value)} placeholder={lang.t("What does the character want...")} className={fieldClass("motivation")} /></div>
-				<div className="character_card__field"><label>{lang.t("Trait")}</label><EditableField type="textarea" value={model.trait} enableHistory={enableHistory} onChange={(event) => updateField("trait", event.target.value)} placeholder={lang.t("Distinctive trait or habit...")} className={fieldClass("trait")} /></div>
+			<div className="CharacterCard__details">
+				<div className="CharacterCard__field"><label>{lang.t("Motivation")}</label><EditableField type="textarea" value={character.motivation} enableHistory={enableHistory} onChange={(event) => updateField("motivation", event.target.value)} placeholder={lang.t("What does the character want...")} className={fieldClass("motivation")} /></div>
+				<div className="CharacterCard__field"><label>{lang.t("Trait")}</label><EditableField type="textarea" value={model.trait} enableHistory={enableHistory} onChange={(event) => updateField("trait", event.target.value)} placeholder={lang.t("Distinctive trait or habit...")} className={fieldClass("trait")} /></div>
 			</div>
-			<div className="character_card__field"><label>{lang.t("Description")}</label><EditableField type="textarea" value={model.description} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Character description...")} className={fieldClass("description")} /></div>
+			<div className="CharacterCard__field"><label>{lang.t("Description")}</label><EditableField type="textarea" value={model.description} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Character description...")} className={fieldClass("description")} /></div>
 		</>
 	);
 }
 
 function CharacterCardHeader({ character, model, viewMode, canCollapseCard, isCollapsed, showDeleteButton, headerActions, onToggleCollapse, onDelete }: Pick<CharacterCardProps, "character" | "viewMode" | "showDeleteButton" | "headerActions" | "onToggleCollapse" | "onDelete"> & { model: CharacterCardModel; canCollapseCard: boolean; isCollapsed: boolean }) {
 	return (
-		<div className="character_card__header" onClick={!canCollapseCard ? undefined : () => onToggleCollapse?.(character.id)}>
+		<div className="CharacterCard__header" onClick={!canCollapseCard ? undefined : () => onToggleCollapse?.(character.id)}>
 			{canCollapseCard && <CollapseToggleButton size={Button.SIZES.SMALL} collapsed={isCollapsed} onClick={() => onToggleCollapse?.(character.id)} />}
-			{character.imageUrl && isCollapsed && <div className="character_card__mini_portrait"><img src={character.imageUrl} alt="" /></div>}
-			<div className="character_card__title_group">
-				{viewMode !== "modal" && <span className="character_card__name">{model.displayName} {character.lastName}</span>}
-				{isCollapsed && <span className="character_card__meta_brief">{renderMentionText(model.briefMeta)}</span>}
+			{character.imageUrl && isCollapsed && <div className="CharacterCard__miniPortrait"><img src={character.imageUrl} alt="" /></div>}
+			<div className="CharacterCard__titleGroup">
+				{viewMode !== "modal" && <span className="CharacterCard__name">{model.displayName} {character.lastName}</span>}
+				{isCollapsed && <span className="CharacterCard__metaBrief">{renderMentionText(model.briefMeta)}</span>}
 			</div>
-			{headerActions && <div className="character_card__actions" onClick={(event) => event.stopPropagation()}>{headerActions}</div>}
+			{headerActions && <div className="CharacterCard__actions" onClick={(event) => event.stopPropagation()}>{headerActions}</div>}
 			{showDeleteButton && <Button variant="danger" icon="trash" size={Button.SIZES.SMALL} iconSize={14} onClick={(event) => { event.stopPropagation(); onDelete?.(character.id); }} />}
 		</div>
 	);
@@ -127,14 +127,14 @@ export default function CharacterCard({
 	};
 	const sectionProps: CharacterSectionProps = { character, model, campaignSlug, enableHistory, type, highlightFields, updateField, onNameBlur: () => { void handleNameBlur(); } };
 	return (
-		<div className={classNames("character_card", { is_collapsed: presentation.isCollapsed, character_card__modal: viewMode === "modal" })} onClick={!presentation.canCollapseCard ? undefined : () => presentation.isCollapsed && onToggleCollapse?.(character.id)}>
+		<div className={classNames("CharacterCard", { is_collapsed: presentation.isCollapsed, CharacterCard__modal: viewMode === "modal" })} onClick={!presentation.canCollapseCard ? undefined : () => presentation.isCollapsed && onToggleCollapse?.(character.id)}>
 			{showHeader && <CharacterCardHeader character={character} model={model} viewMode={viewMode} canCollapseCard={presentation.canCollapseCard} isCollapsed={presentation.isCollapsed} showDeleteButton={showDeleteButton} headerActions={headerActions} onToggleCollapse={onToggleCollapse} onDelete={onDelete} />}
 			{!presentation.isCollapsed && (
-				<div className="character_card__body">
-					<div className="character_card__image_side"><ImageAssetField imageUrl={character.imageUrl} campaignSlug={campaignSlug} target={type === "npc" ? "npc" : "character"} showClearButton onImageChange={(url) => updateField("imageUrl", url)} imageAlt={lang.t("Portrait")} containerClassName="character_card__portrait_container" wrapperClassName={classNames("character_card__portrait_wrapper", "is_editable")} deleteButtonClassName="character_card__image_delete" previewTitle={model.fullName || lang.t("Portrait")} previewModalClassName="CharacterImageModal" previewContentClassName="CharacterImageModal__content" /></div>
+				<div className="CharacterCard__body">
+					<div className="CharacterCard__imageSide"><ImageAssetField imageUrl={character.imageUrl} campaignSlug={campaignSlug} target={type === "npc" ? "npc" : "character"} showClearButton onImageChange={(url) => updateField("imageUrl", url)} imageAlt={lang.t("Portrait")} containerClassName="CharacterCard__portraitContainer" wrapperClassName={classNames("CharacterCard__portraitWrapper", "is_editable")} deleteButtonClassName="CharacterCard__imageDelete" previewTitle={model.fullName || lang.t("Portrait")} previewModalClassName="CharacterCard__imageModal" previewContentClassName="CharacterCard__imageModalContent" /></div>
 					<CharacterIdentityFields {...sectionProps} />
 					<CharacterDetails {...sectionProps} />
-					<CampaignEntityCardNotes classPrefix="character_card" entityId={character.id} model={model} notesForRender={notesForRender} hasNotesData={presentation.hasNotesData} isNotesCollapsed={presentation.isNotesCollapsed} currentNotesCollapsed={Boolean(character.isNotesCollapsed)} campaignSlug={campaignSlug} enableHistory={enableHistory} label={lang.t("Character notes")} highlightFields={highlightFields} onChange={onChange} onReorderDrop={onReorderDrop} />
+					<CampaignEntityCardNotes classPrefix="CharacterCard" entityId={character.id} model={model} notesForRender={notesForRender} hasNotesData={presentation.hasNotesData} isNotesCollapsed={presentation.isNotesCollapsed} currentNotesCollapsed={Boolean(character.isNotesCollapsed)} campaignSlug={campaignSlug} enableHistory={enableHistory} label={lang.t("Character notes")} highlightFields={highlightFields} onChange={onChange} onReorderDrop={onReorderDrop} />
 				</div>
 			)}
 		</div>

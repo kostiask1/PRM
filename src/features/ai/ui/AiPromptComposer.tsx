@@ -35,12 +35,12 @@ function AiPromptComposer({
 		getAiPromptTokenVisibility(tokenEstimate);
 
 	return (
-		<div className="AiAssistant__prompt_area">
-			<div className="AiAssistant__prompt_row">
-				<div className="AiAssistant__prompt_column">
+		<div className="AiAssistantPanel__prompt_area">
+			<div className="AiAssistantPanel__prompt_row">
+				<div className="AiAssistantPanel__prompt_column">
 					<EditableField
 						type="textarea"
-						className="AiAssistant__prompt_input"
+						className="AiAssistantPanel__prompt_input"
 						placeholder={placeholder}
 						value={userInstructions}
 						onChange={(event) =>
@@ -49,7 +49,7 @@ function AiPromptComposer({
 						disabled={isLoading}
 					/>
 					<div
-						className="AiAssistant__token_estimate"
+						className="AiAssistantPanel__token_estimate"
 						title={lang.t(
 							"Approximate estimate. Actual token usage may differ.",
 						)}
@@ -70,7 +70,7 @@ function AiPromptComposer({
 					</div>
 					<Button
 						variant="create"
-						className="AiAssistant__generate_btn"
+						className="AiAssistantPanel__generate_btn"
 						disabled={isLoading}
 						onClick={onGenerate}
 					>
@@ -81,7 +81,7 @@ function AiPromptComposer({
 					{canCancel && (
 						<Button
 							variant="danger"
-							className="AiAssistant__cancel_btn"
+							className="AiAssistantPanel__cancel_btn"
 							onClick={onCancel}
 						>
 							{lang.t("Cancel")}

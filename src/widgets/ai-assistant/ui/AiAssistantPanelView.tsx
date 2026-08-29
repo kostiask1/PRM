@@ -37,7 +37,7 @@ export default function AiAssistantPanelView({
 			<AiContextSettingsModal {...contextModal} />
 			<AiHistoryResponseDialog {...historyDialog} />
 			<AiAssistantPromptComposer {...promptComposer} />
-			{error ? <div className="AiAssistant__error">{error}</div> : null}
+			{error ? <div className="AiAssistantPanel__error">{error}</div> : null}
 			<AiResponseHistory {...history} />
 		</AiAssistantShell>
 	);

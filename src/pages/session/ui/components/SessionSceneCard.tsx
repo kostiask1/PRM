@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from "react";
+import "../../../../assets/components/SessionSceneCard.css";
 import type { SessionScene } from "../../../../entities/session/index.js";
 import { lang, type SharedNote } from "../../../../shared/lib/index.js";
 import SceneCardFields, {
@@ -38,7 +39,7 @@ export default function SessionSceneCard(props: SessionSceneCardProps) {
 		: lang.t("New encounter");
 
 	return (
-		<div className="SceneCard">
+		<div className="SessionSceneCard">
 			<SceneCardHeader
 				number={props.number}
 				collapsed={props.collapsed}
@@ -49,8 +50,8 @@ export default function SessionSceneCard(props: SessionSceneCardProps) {
 				encounterName={encounterLabel}
 			/>
 			{!props.collapsed && (
-				<div className="SceneCard__content">
-					<div className="SceneCard__text_side">
+				<div className="SessionSceneCard__content">
+					<div className="SessionSceneCard__textSide">
 						<SceneCardFields
 							fields={props.fields}
 							scene={props.scene}

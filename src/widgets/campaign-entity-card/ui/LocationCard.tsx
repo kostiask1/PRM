@@ -47,9 +47,9 @@ interface LocationCardHeaderProps extends Pick<LocationCardProps, "location" | "
 
 function LocationCardHeader({ location, model, displayName, viewMode, canCollapseCard, isCollapsed, showDeleteButton, headerActions, onToggleCollapse, onDelete }: LocationCardHeaderProps) {
 	return (
-		<div className="location_card__header" onClick={!canCollapseCard ? undefined : () => onToggleCollapse?.(location.id)}>
+		<div className="LocationCard__header" onClick={!canCollapseCard ? undefined : () => onToggleCollapse?.(location.id)}>
 			{canCollapseCard && <CollapseToggleButton size={Button.SIZES.SMALL} collapsed={isCollapsed} onClick={() => onToggleCollapse?.(location.id)} />}
-			{location.imageUrl && isCollapsed && <div className="location_card__mini_image"><img src={location.imageUrl} alt="" /></div>}
+			{location.imageUrl && isCollapsed && <div className="LocationCard__miniImage"><img src={location.imageUrl} alt="" /></div>}
 			<LocationHeaderIdentity model={model} displayName={displayName} viewMode={viewMode} isCollapsed={isCollapsed} />
 			<LocationHeaderActions location={location} headerActions={headerActions} showDeleteButton={showDeleteButton} onDelete={onDelete} />
 		</div>
@@ -57,11 +57,11 @@ function LocationCardHeader({ location, model, displayName, viewMode, canCollaps
 }
 
 function LocationHeaderIdentity({ model, displayName, viewMode, isCollapsed }: Pick<LocationCardHeaderProps, "model" | "displayName" | "viewMode" | "isCollapsed">) {
-	return <div className="location_card__title_group">{viewMode !== "modal" && <span className="location_card__name">{displayName}</span>}{isCollapsed && model.briefMeta && <span className="location_card__meta_brief">{renderMentionText(model.briefMeta)}</span>}</div>;
+	return <div className="LocationCard__titleGroup">{viewMode !== "modal" && <span className="LocationCard__name">{displayName}</span>}{isCollapsed && model.briefMeta && <span className="LocationCard__metaBrief">{renderMentionText(model.briefMeta)}</span>}</div>;
 }
 
 function LocationHeaderActions({ location, headerActions, showDeleteButton, onDelete }: Pick<LocationCardHeaderProps, "location" | "headerActions" | "showDeleteButton" | "onDelete">) {
-	return <>{headerActions && <div className="location_card__actions" onClick={(event) => event.stopPropagation()}>{headerActions}</div>}{showDeleteButton && <Button variant="danger" icon="trash" size={Button.SIZES.SMALL} iconSize={14} onClick={(event) => { event.stopPropagation(); onDelete?.(location.id); }} />}</>;
+	return <>{headerActions && <div className="LocationCard__actions" onClick={(event) => event.stopPropagation()}>{headerActions}</div>}{showDeleteButton && <Button variant="danger" icon="trash" size={Button.SIZES.SMALL} iconSize={14} onClick={(event) => { event.stopPropagation(); onDelete?.(location.id); }} />}</>;
 }
 
 export default function LocationCard({
@@ -95,14 +95,14 @@ export default function LocationCard({
 		if (shouldAdvance) editingStartNameRef.current = newName;
 	};
 	return (
-		<div className={classNames("location_card", { is_collapsed: presentation.isCollapsed, is_dragging: isDragging, location_card__modal: viewMode === "modal" })} onClick={() => presentation.isCollapsed && onToggleCollapse?.(location.id)}>
+		<div className={classNames("LocationCard", { is_collapsed: presentation.isCollapsed, is_dragging: isDragging, LocationCard__modal: viewMode === "modal" })} onClick={() => presentation.isCollapsed && onToggleCollapse?.(location.id)}>
 			{showHeader && <LocationCardHeader location={location} model={model} displayName={displayName} viewMode={viewMode} canCollapseCard={presentation.canCollapseCard} isCollapsed={presentation.isCollapsed} showDeleteButton={showDeleteButton} headerActions={headerActions} onToggleCollapse={onToggleCollapse} onDelete={onDelete} />}
 			{!presentation.isCollapsed && (
-				<div className="location_card__body">
-					<div className="location_card__image_side"><ImageAssetField imageUrl={location.imageUrl} campaignSlug={campaignSlug} target="location" showClearButton onImageChange={(url) => updateField("imageUrl", url)} imageAlt={lang.t("Image")} containerClassName="location_card__image_container" wrapperClassName={classNames("location_card__image_wrapper", "is_editable")} deleteButtonClassName="location_card__image_delete" previewTitle={displayName || lang.t("Image")} previewModalClassName="LocationImageModal" previewContentClassName="LocationImageModal__content" /></div>
-					<div className="location_card__info_side"><div className="location_card__grid"><EditableField type="text" value={location.name ?? ""} enableHistory={enableHistory} onChange={(event) => updateField("name", event.target.value)} onBlur={() => { void handleNameBlur(); }} placeholder={lang.t("Name")} className={getCampaignEntityFieldClass(highlightFields, "name")} /></div></div>
-					<div className="location_card__details"><div className="location_card__field"><EditableField type="textarea" value={location.description ?? ""} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Briefly describe the location or faction...")} className={getCampaignEntityFieldClass(highlightFields, "description")} /></div></div>
-					<CampaignEntityCardNotes classPrefix="location_card" entityId={location.id} model={model} notesForRender={notesForRender} hasNotesData={presentation.hasNotesData} isNotesCollapsed={presentation.isNotesCollapsed} currentNotesCollapsed={Boolean(location.isNotesCollapsed)} campaignSlug={campaignSlug} enableHistory={enableHistory} label={lang.t("Notes")} highlightFields={highlightFields} onChange={onChange} onReorderDrop={onReorderDrop} />
+				<div className="LocationCard__body">
+					<div className="LocationCard__imageSide"><ImageAssetField imageUrl={location.imageUrl} campaignSlug={campaignSlug} target="location" showClearButton onImageChange={(url) => updateField("imageUrl", url)} imageAlt={lang.t("Image")} containerClassName="LocationCard__imageContainer" wrapperClassName={classNames("LocationCard__imageWrapper", "is_editable")} deleteButtonClassName="LocationCard__imageDelete" previewTitle={displayName || lang.t("Image")} previewModalClassName="LocationCard__imageModal" previewContentClassName="LocationCard__imageModalContent" /></div>
+					<div><div className="LocationCard__grid"><EditableField type="text" value={location.name ?? ""} enableHistory={enableHistory} onChange={(event) => updateField("name", event.target.value)} onBlur={() => { void handleNameBlur(); }} placeholder={lang.t("Name")} className={getCampaignEntityFieldClass(highlightFields, "name")} /></div></div>
+					<div className="LocationCard__details"><div className="LocationCard__field"><EditableField type="textarea" value={location.description ?? ""} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Briefly describe the location or faction...")} className={getCampaignEntityFieldClass(highlightFields, "description")} /></div></div>
+					<CampaignEntityCardNotes classPrefix="LocationCard" entityId={location.id} model={model} notesForRender={notesForRender} hasNotesData={presentation.hasNotesData} isNotesCollapsed={presentation.isNotesCollapsed} currentNotesCollapsed={Boolean(location.isNotesCollapsed)} campaignSlug={campaignSlug} enableHistory={enableHistory} label={lang.t("Notes")} highlightFields={highlightFields} onChange={onChange} onReorderDrop={onReorderDrop} />
 				</div>
 			)}
 		</div>

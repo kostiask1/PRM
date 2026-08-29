@@ -1,5 +1,6 @@
 import type { SessionChecklistItem } from "../../model/contracts.ts";
 import { lang } from "../../../../shared/lib/index.js";
+import "../../../../assets/components/SessionChecklistOverlay.css";
 import { Modal } from "../../../../shared/ui/index.js";
 import TodoItem from "./TodoItem.tsx";
 
@@ -25,15 +26,15 @@ export default function SessionChecklistOverlay({
 			onCancel={onClose}
 			showFooter={false}
 		>
-			<div className="SessionView__checklistModal">
-				<div className="SessionView__progressWrap">
-					<div className="ProgressBar__label">
+			<div className="SessionChecklistOverlay__modal">
+				<div className="SessionChecklistOverlay__progressWrap">
+					<div className="SessionChecklistOverlay__progressLabel">
 						<span>{lang.t("Preparation progress")}</span>
 						<span>{progress}%</span>
 					</div>
-					<div className="ProgressBar">
+					<div className="SessionChecklistOverlay__progress">
 						<div
-							className="ProgressBar__fill"
+							className="SessionChecklistOverlay__progressFill"
 							style={{ width: `${progress}%` }}
 						/>
 					</div>

@@ -274,7 +274,10 @@ export default function CampaignNotesGraph({
 	};
 
 	const renderConnection = (edge: CampaignGraphEdge): ReactElement | null => {
-		const sourceLabels = formatCampaignGraphSourceList(edge.sources, lang.t);
+		const sourceLabels = formatCampaignGraphSourceList(
+			edge.sources,
+			(key) => lang.t(key),
+		);
 		const presentation = getCampaignGraphConnectionPresentation(
 			edge,
 			selectedNodeId,

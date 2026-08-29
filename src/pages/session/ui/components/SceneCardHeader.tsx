@@ -27,18 +27,18 @@ export default function SceneCardHeader({
 	encounterName,
 }: SceneCardHeaderProps) {
 	return (
-		<div className="SceneCard__header">
-			<div className="SceneCard__titleGroup" onClick={onToggle}>
+		<div className="SessionSceneCard__header">
+			<div className="SessionSceneCard__titleGroup" onClick={onToggle}>
 				<CollapseToggleButton
 					size={Button.SIZES.SMALL}
 					collapsed={collapsed}
 					onClick={onToggle}
 				/>
-				<div className="SceneCard__title">
+				<div className="SessionSceneCard__title">
 					{lang.t("Scene {number}", { number })}
 				</div>
 			</div>
-			<div className="SceneCard__headerActions">
+			<div className="SessionSceneCard__headerActions">
 				<Button
 					variant={hasEncounter ? "primary" : "ghost"}
 					onClick={(event) => {
@@ -47,8 +47,8 @@ export default function SceneCardHeader({
 					}}
 					title={encounterName}
 				>
-					<Icon name="swords" size={18} className="SceneCard__encounter_icon" />
-					<span className="SceneCard__encounter_name">
+					<Icon name="swords" size={18} className="SessionSceneCard__encounterIcon" />
+					<span className="SessionSceneCard__encounterName">
 						{renderMentionText(encounterName)}
 					</span>
 				</Button>

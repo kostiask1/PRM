@@ -184,7 +184,7 @@ export default function Sidebar({
 		void openModal({
 			title: lang.t("Player questions"),
 			type: "confirm",
-			className: "PlayerQuestionsModal",
+			className: "PlayerQuestionsModalContent__modal",
 			showFooter: false,
 			children: <SidebarPlayerQuestionsModalContent />,
 		});

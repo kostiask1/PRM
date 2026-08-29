@@ -3,6 +3,7 @@ import { Button, Modal, Tooltip } from "../../../shared/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import type useImageAssetFieldController from "../model/useImageAssetFieldController.ts";
 import type { ImageAssetFieldContentState } from "../model/imageAssetField.ts";
+import "../../../assets/components/ImageAssetField.css";
 import ImageDropzone from "./ImageDropzone";
 import ImageGallery from "./ImageGallery";
 
@@ -60,13 +61,13 @@ function ImageAssetMissingContent({
 	const imageUrl = controller.presentation.resolvedImageUrl;
 	return (
 		<div className="ImageAssetField__missing">
-			<div className="ImageAssetField__missing_title">
+			<div className="ImageAssetField__missingTitle">
 				{lang.t("Image not found")}
 			</div>
-			<div className="ImageAssetField__missing_url" title={imageUrl}>
+			<div className="ImageAssetField__missingUrl" title={imageUrl}>
 				{imageUrl}
 			</div>
-			<div className="ImageAssetField__missing_actions">
+			<div className="ImageAssetField__missingActions">
 				<Button
 					variant="danger"
 					size={Button.SIZES.SMALL}
