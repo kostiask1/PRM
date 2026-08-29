@@ -2,12 +2,14 @@ const REQUIRED_METHODS = Object.freeze([
 	"listCampaignSlugs",
 	"exportCampaignBundle",
 	"exportCampaignArchiveBundle",
+	"exportApplicationDataArchiveBundle",
 	"exportCampaignPartialArchiveBundle",
 	"importCampaignPartialArchiveBundle",
 	"clearAllCampaignData",
 	"findCampaignSlugById",
 	"importCampaignBundle",
 	"importCampaignArchiveBundleWithStrategy",
+	"importApplicationDataArchiveBundle",
 ]);
 
 function createBackupRepositoryPort(implementation = {}) {

@@ -63588,6 +63588,13 @@ await run("Backup commands own gzip payloads and import strategies", async () =>
 		listCampaignSlugs: async () => ["one", "two"],
 		exportCampaignBundle: async (slug) => ({ meta: { slug } }),
 		exportCampaignArchiveBundle: async (slug) => ({ meta: { slug } }),
+		exportApplicationDataArchiveBundle: async () => ({
+			settings: { language: "uk" },
+			customBestiary: { monster: [] },
+			favorites: [],
+			bestiaryAiResponses: [],
+			images: [],
+		}),
 		exportCampaignPartialArchiveBundle: async (slug, sections) => ({
 			scope: "partial",
 			slug,
@@ -63602,6 +63609,8 @@ await run("Backup commands own gzip payloads and import strategies", async () =>
 		importCampaignBundle: async (...args) => calls.push(["bundle", ...args]),
 		importCampaignArchiveBundleWithStrategy: async (...args) =>
 			calls.push(["archive", ...args]),
+		importApplicationDataArchiveBundle: async (...args) =>
+			calls.push(["application-data", ...args]),
 	};
 	const commands = createBackupCommands(repository, {
 		now: () => new Date("2032-06-07T08:09:10.000Z"),
@@ -63612,6 +63621,8 @@ await run("Backup commands own gzip payloads and import strategies", async () =>
 	assert.equal(payload.scope, "all");
 	assert.equal(payload.exportedAt, "2032-06-07T08:09:10.000Z");
 	assert.equal(payload.campaigns.length, 2);
+	assert.equal(payload.version, 3);
+	assert.deepEqual(payload.applicationData.settings, { language: "uk" });
 
 	await commands.importAll({
 		payload: [
@@ -63631,7 +63642,10 @@ await run("Backup commands own gzip payloads and import strategies", async () =>
 
 	const archiveBuffer = zlib.gzipSync(
 		Buffer.from(
-			JSON.stringify({ campaigns: [{ meta: { id: "one" } }, { meta: { id: "two" } }] }),
+			JSON.stringify({
+				campaigns: [{ meta: { id: "one" } }, { meta: { id: "two" } }],
+				applicationData: { settings: { language: "uk" } },
+			}),
 			"utf8",
 		),
 	);
@@ -63646,6 +63660,17 @@ await run("Backup commands own gzip payloads and import strategies", async () =>
 		{ meta: { id: "one" } },
 		"append",
 	]);
+	await commands.importArchive({
+		payload: {
+			campaigns: [],
+			applicationData: { settings: { language: "uk" } },
+		},
+		mode: "all",
+	});
+	assert.deepEqual(calls.at(-1), [
+		"application-data",
+		{ settings: { language: "uk" } },
+	]);
 	await assert.rejects(
 		commands.importArchive({ buffer: null }),
 		(error) => error.status === 400,
@@ -63656,6 +63681,8 @@ await run("backups archive route sends gzip payload with dated filename", async 
 	const originalListCampaignSlugs = storage.listCampaignSlugs;
 	const originalExportCampaignArchiveBundle =
 		storage.exportCampaignArchiveBundle;
+	const originalExportApplicationDataArchiveBundle =
+		storage.exportApplicationDataArchiveBundle;
 	const layer = backupsRouter.stack.find(
 		(item) => item.route?.path === "/export-all/archive",
 	);
@@ -63665,6 +63692,13 @@ await run("backups archive route sends gzip payload with dated filename", async 
 	storage.listCampaignSlugs = async () => ["alpha"];
 	storage.exportCampaignArchiveBundle = async (slug) => ({
 		meta: { slug, name: "Alpha" },
+	});
+	storage.exportApplicationDataArchiveBundle = async () => ({
+		settings: { language: "uk" },
+		customBestiary: { monster: [] },
+		favorites: [],
+		bestiaryAiResponses: [],
+		images: [],
 	});
 
 	try {
@@ -63691,14 +63725,17 @@ await run("backups archive route sends gzip payload with dated filename", async 
 			/filename="prm-full-backup-\d{4}-\d{2}-\d{2}\.prma\.gz"/,
 		);
 		const payload = JSON.parse(zlib.gunzipSync(sentBuffer).toString("utf8"));
-		assert.equal(payload.version, 2);
+		assert.equal(payload.version, 3);
 		assert.equal(payload.scope, "all");
+		assert.deepEqual(payload.applicationData.settings, { language: "uk" });
 		assert.deepEqual(payload.campaigns, [
 			{ meta: { slug: "alpha", name: "Alpha" } },
 		]);
 	} finally {
 		storage.listCampaignSlugs = originalListCampaignSlugs;
 		storage.exportCampaignArchiveBundle = originalExportCampaignArchiveBundle;
+		storage.exportApplicationDataArchiveBundle =
+			originalExportApplicationDataArchiveBundle;
 	}
 });
 

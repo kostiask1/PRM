@@ -25,8 +25,14 @@ function parseArchivePayload(buffer) {
 	return JSON.parse(raw.toString("utf8"));
 }
 
-function buildArchivePayload(scope, campaigns, exportedAt) {
-	return { version: 2, scope, exportedAt: exportedAt.toISOString(), campaigns };
+function buildArchivePayload(scope, campaigns, exportedAt, applicationData) {
+	return {
+		version: 3,
+		scope,
+		exportedAt: exportedAt.toISOString(),
+		campaigns,
+		...(applicationData === undefined ? {} : { applicationData }),
+	};
 }
 
 function createDownload(payload, filename) {
@@ -64,11 +70,12 @@ function createBackupCommands(repository, { now = () => new Date() } = {}) {
 		},
 		async exportAllArchive() {
 			const slugs = await repository.listCampaignSlugs();
-			const campaigns = await Promise.all(
-				slugs.map(repository.exportCampaignArchiveBundle),
-			);
+			const [campaigns, applicationData] = await Promise.all([
+				Promise.all(slugs.map(repository.exportCampaignArchiveBundle)),
+				repository.exportApplicationDataArchiveBundle(),
+			]);
 			return createDownload(
-				buildArchivePayload("all", campaigns, now()),
+				buildArchivePayload("all", campaigns, now(), applicationData),
 				`prm-full-backup-${date()}.prma.gz`,
 			);
 		},
@@ -128,6 +135,11 @@ function createBackupCommands(repository, { now = () => new Date() } = {}) {
 			if (strategy === "wipe_and_replace") await repository.clearAllCampaignData();
 			for (const bundle of selected) {
 				await repository.importCampaignArchiveBundleWithStrategy(bundle, strategy);
+			}
+			if (mode === "all" && parsed?.applicationData) {
+				await repository.importApplicationDataArchiveBundle(
+					parsed.applicationData,
+				);
 			}
 			return { ok: true, imported: selected.length, strategy };
 		},

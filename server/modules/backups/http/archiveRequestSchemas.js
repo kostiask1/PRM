@@ -101,6 +101,24 @@ function validateArchiveImages(value, path, issues) {
 	validateOptionalArray(value, path, issues);
 }
 
+function validateApplicationData(value, path, issues) {
+	if (value === undefined) return;
+	if (!requireObject(value, path, issues)) return;
+	if (value.settings !== undefined) {
+		requireObject(value.settings, `${path}.settings`, issues);
+	}
+	if (value.customBestiary !== undefined) {
+		requireObject(value.customBestiary, `${path}.customBestiary`, issues);
+	}
+	validateOptionalArray(value.favorites, `${path}.favorites`, issues);
+	validateOptionalArray(
+		value.bestiaryAiResponses,
+		`${path}.bestiaryAiResponses`,
+		issues,
+	);
+	validateArchiveImages(value.images, `${path}.images`, issues);
+}
+
 function validateCampaignArchiveBundle(value, path = "archive") {
 	const issues = [];
 	if (!requireObject(value, path, issues)) return issues;
@@ -144,23 +162,28 @@ function validateCampaignBundleCollection(value, path = "body") {
 
 function validateCampaignArchiveEnvelope(value, path = "archive") {
 	const campaigns = campaignBundlesFromEnvelope(value);
+	const issues = [];
 	if (campaigns.length === 0) {
-		return [
-			validationIssue(
+		if (!isPlainObject(value?.applicationData)) {
+			issues.push(validationIssue(
 				path,
 				"At least one campaign archive is required.",
 				"min_items",
-			),
-		];
+			));
+		}
 	}
-	return campaigns.flatMap((bundle, index) =>
-		validateCampaignArchiveBundle(
-			bundle,
-			campaigns.length > 1
-				? `${path}.campaigns[${index}]`
-				: path,
+	issues.push(
+		...campaigns.flatMap((bundle, index) =>
+			validateCampaignArchiveBundle(
+				bundle,
+				campaigns.length > 1
+					? `${path}.campaigns[${index}]`
+					: path,
+			),
 		),
 	);
+	validateApplicationData(value?.applicationData, `${path}.applicationData`, issues);
+	return issues;
 }
 
 function validatePartialArchiveBundle(value, path = "archive") {

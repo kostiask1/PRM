@@ -1949,6 +1949,37 @@ async function exportCampaignArchiveBundle(slug) {
 	};
 }
 
+async function exportApplicationDataArchiveBundle() {
+	const [settings, customBestiary, favorites, bestiaryAiResponses, images] =
+		await Promise.all([
+			readSettings(),
+			readCustomBestiary(),
+			readFavorites(),
+			readAiResponses("bestiary"),
+			listCampaignImagesForArchive(""),
+		]);
+	return { settings, customBestiary, favorites, bestiaryAiResponses, images };
+}
+
+async function importApplicationDataArchiveBundle(applicationData) {
+	if (!applicationData || typeof applicationData !== "object") return;
+	if (applicationData.settings !== undefined) {
+		await writeJson(SETTINGS_PATH, normalizeSettings(applicationData.settings));
+	}
+	if (applicationData.customBestiary !== undefined) {
+		await writeJson(CUSTOM_BESTIARY_PATH, applicationData.customBestiary);
+	}
+	if (applicationData.favorites !== undefined) {
+		await writeFavorites(applicationData.favorites);
+	}
+	if (applicationData.bestiaryAiResponses !== undefined) {
+		await writeAiResponses("bestiary", applicationData.bestiaryAiResponses);
+	}
+	if (applicationData.images !== undefined) {
+		await restoreCampaignImagesFromArchive("", applicationData.images);
+	}
+}
+
 function normalizePartialArchiveSections(sections = []) {
 	const allowed = new Set([
 		"sessions",
@@ -3134,9 +3165,11 @@ module.exports = {
 	listCampaignsDetailed,
 	exportCampaignBundle,
 	exportCampaignArchiveBundle,
+	exportApplicationDataArchiveBundle,
 	exportCampaignPartialArchiveBundle,
 	importCampaignBundle,
 	importCampaignArchiveBundleWithStrategy,
+	importApplicationDataArchiveBundle,
 	importCampaignPartialArchiveBundle,
 	findCampaignSlugById,
 	campaignHasImages,
