@@ -385,7 +385,7 @@ export default function DiceCalculator({
 								</div>
 							</div>
 						) : (
-							<div className="DiceCalculator__placeholder">
+							<div>
 								{lang.t("Waiting...")}
 							</div>
 						)}
@@ -415,7 +415,7 @@ export default function DiceCalculator({
 						</Tooltip>
 					</div>
 
-					<div className="DiceCalculator__controls">
+					<div>
 						<div className="DiceCalculator__group">
 							{DICE_TYPES.map((sides) => (
 								<Button

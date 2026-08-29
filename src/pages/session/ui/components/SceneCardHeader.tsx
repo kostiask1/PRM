@@ -47,7 +47,7 @@ export default function SceneCardHeader({
 					}}
 					title={encounterName}
 				>
-					<Icon name="swords" size={18} className="SessionSceneCard__encounterIcon" />
+					<Icon name="swords" size={18} />
 					<span className="SessionSceneCard__encounterName">
 						{renderMentionText(encounterName)}
 					</span>

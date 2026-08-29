@@ -92,7 +92,6 @@ export function BestiaryToolbar({
 				icon="star"
 				onClick={() => setOnlyFavorites(!onlyFavorites)}
 				title={lang.t("Only favorites")}
-				className="Bestiary__filter_fav_btn"
 			/>
 			<Button
 				className={classNames("Bestiary__sort_btn", {

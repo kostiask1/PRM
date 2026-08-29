@@ -47,7 +47,7 @@ export default function AiAssistantShell({
 					showFooter={false}
 					cancelDisabled={isLoading}
 				>
-					<div className="AiAssistantPanel__content">{children}</div>
+					<div>{children}</div>
 				</Modal>
 			)}
 

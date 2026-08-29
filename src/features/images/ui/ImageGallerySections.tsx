@@ -346,7 +346,6 @@ function ImageGallerySelectionActions({
 				{lang.t("Move")} ({presentation.selectionCount})
 			</Button>
 			<Button
-				className="ImageGallery__deleteBtn"
 				variant="danger"
 				size={Button.SIZES.SMALL}
 				icon="trash"
