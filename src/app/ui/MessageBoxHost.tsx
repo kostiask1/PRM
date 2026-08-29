@@ -1,4 +1,5 @@
 import { hideMessageBox } from "../../shared/model/index.js";
+import "../../assets/components/MessageBoxHost.css";
 import { useAppDispatch, useAppSelector } from "../model/index.js";
 import { Modal } from "../../shared/ui/index.js";
 
@@ -23,7 +24,7 @@ export default function MessageBoxHost() {
 	return (
 		<Modal
 			{...messageBox}
-			overlayClassName="MessageBox__overlay"
+			overlayClassName="MessageBoxHost__overlay"
 			onConfirm={(value) => handleResolve(value)}
 			onCancel={handleCancel}
 		/>
