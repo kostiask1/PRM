@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from "react";
+import "../../../assets/components/CreateCampaignModalContent.css";
 import { lang } from "../../../shared/lib/index.js";
 import { Button, TextInput } from "../../../shared/ui/index.js";
 
@@ -25,8 +26,8 @@ export default function CreateCampaignModalContent({
 	};
 
 	return (
-		<div className="CreateCampaignModal">
-			<label className="CreateCampaignModal__label">
+		<div className="CreateCampaignModalContent">
+			<label className="CreateCampaignModalContent__label">
 				{lang.t("Campaign name")}
 			</label>
 			<TextInput
@@ -37,8 +38,8 @@ export default function CreateCampaignModalContent({
 				placeholder={lang.t("Enter a campaign name...")}
 			/>
 
-			<div className="CreateCampaignModal__actions">
-				<div className="CreateCampaignModal__import">
+			<div className="CreateCampaignModalContent__actions">
+				<div className="CreateCampaignModalContent__import">
 					<input
 						ref={fileInputRef}
 						type="file"

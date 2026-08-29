@@ -178,33 +178,6 @@
 	justify-content: flex-end;
 }
 
-.CreateCampaignModal {
-	display: grid;
-	gap: var(--space-3);
-}
-
-.CreateCampaignModal__label {
-	font-size: 0.82rem;
-	color: var(--muted);
-}
-
-.CreateCampaignModal__actions {
-	display: flex;
-	gap: var(--space-2);
-	justify-content: flex-end;
-}
-
-.CreateCampaignModal__import {
-	display: grid;
-	gap: var(--space-2);
-}
-
-.CreateCampaignModal__strategyRow {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--space-1);
-}
-
 @media (max-width: 767px) {
 	.Modal__overlay {
 		align-items: stretch;
@@ -261,11 +234,4 @@
 		max-height: none;
 	}
 
-	.CreateCampaignModal__actions {
-		flex-wrap: wrap;
-	}
-
-	.CreateCampaignModal__actions .Button {
-		flex: 1 1 140px;
-	}
 }
