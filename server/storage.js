@@ -274,6 +274,15 @@ async function listCampaignSlugs() {
 	return slugs;
 }
 
+async function listExportableCampaignSlugs() {
+	const slugs = await listCampaignSlugs();
+	const exportable = [];
+	for (const slug of slugs) {
+		if (await exists(campaignMetaPath(slug))) exportable.push(slug);
+	}
+	return exportable;
+}
+
 function addMonstersToBestiaryIndex(index, monsters, fallbackSource = "") {
 	for (const monster of monsters) {
 		const entry = getBestiaryIndexEntry(monster, fallbackSource);
@@ -1909,16 +1918,18 @@ async function importCampaignBundle(bundle, options = {}) {
 	return context.newMeta;
 }
 
-async function listCampaignImagesForArchive(slug) {
+async function listCampaignImagesForArchive(slug, excludedRootDirectories = []) {
 	const root = path.join(IMAGES_DIR, path.basename(String(slug || "")));
 	if (!(await exists(root))) return [];
 
 	const files = [];
-	async function walk(dir) {
+	const excluded = new Set(excludedRootDirectories.map(String));
+	async function walk(dir, isRoot = false) {
 		const entries = await fs.readdir(dir, { withFileTypes: true });
 		for (const entry of entries) {
 			const fullPath = path.join(dir, entry.name);
 			if (entry.isDirectory()) {
+				if (isRoot && excluded.has(entry.name)) continue;
 				await walk(fullPath);
 				continue;
 			}
@@ -1932,7 +1943,7 @@ async function listCampaignImagesForArchive(slug) {
 		}
 	}
 
-	await walk(root);
+	await walk(root, true);
 	return files;
 }
 
@@ -1949,14 +1960,14 @@ async function exportCampaignArchiveBundle(slug) {
 	};
 }
 
-async function exportApplicationDataArchiveBundle() {
+async function exportApplicationDataArchiveBundle(campaignSlugs = []) {
 	const [settings, customBestiary, favorites, bestiaryAiResponses, images] =
 		await Promise.all([
 			readSettings(),
 			readCustomBestiary(),
 			readFavorites(),
 			readAiResponses("bestiary"),
-			listCampaignImagesForArchive(""),
+			listCampaignImagesForArchive("", campaignSlugs),
 		]);
 	return { settings, customBestiary, favorites, bestiaryAiResponses, images };
 }
@@ -3159,6 +3170,7 @@ module.exports = {
 	readSettings,
 	updateSettings,
 	listCampaignSlugs,
+	listExportableCampaignSlugs,
 	readCampaign,
 	readSession,
 	listSessions,

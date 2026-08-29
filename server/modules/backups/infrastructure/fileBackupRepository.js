@@ -4,12 +4,12 @@ const {
 
 function createFileBackupRepository(storage) {
 	return createBackupRepositoryPort({
-		listCampaignSlugs: () => storage.listCampaignSlugs(),
+		listCampaignSlugs: () => storage.listExportableCampaignSlugs(),
 		exportCampaignBundle: (...args) => storage.exportCampaignBundle(...args),
 		exportCampaignArchiveBundle: (...args) =>
 			storage.exportCampaignArchiveBundle(...args),
-		exportApplicationDataArchiveBundle: () =>
-			storage.exportApplicationDataArchiveBundle(),
+		exportApplicationDataArchiveBundle: (...args) =>
+			storage.exportApplicationDataArchiveBundle(...args),
 		exportCampaignPartialArchiveBundle: (...args) =>
 			storage.exportCampaignPartialArchiveBundle(...args),
 		importCampaignPartialArchiveBundle: (...args) =>

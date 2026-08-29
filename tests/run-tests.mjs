@@ -51665,6 +51665,28 @@ await run("storage core helpers sanitize and build identifiers", () => {
 	);
 });
 
+await run("backup campaign discovery skips orphan directories", async () => {
+	const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	const orphanSlug = `autotest-backup-orphan-${suffix}`;
+	const campaignSlug = `autotest-backup-campaign-${suffix}`;
+	const orphanPath = path.join(storage.CAMPAIGNS_DIR, orphanSlug);
+	const campaignPath = path.join(storage.CAMPAIGNS_DIR, campaignSlug);
+	await fs.mkdir(orphanPath, { recursive: true });
+	await fs.mkdir(campaignPath, { recursive: true });
+	await storage.writeJson(path.join(campaignPath, "_campaign.json"), {
+		name: "Українська кампанія",
+	});
+
+	try {
+		const slugs = await storage.listExportableCampaignSlugs();
+		assert.equal(slugs.includes(orphanSlug), false);
+		assert.equal(slugs.includes(campaignSlug), true);
+	} finally {
+		await fs.rm(orphanPath, { recursive: true, force: true });
+		await fs.rm(campaignPath, { recursive: true, force: true });
+	}
+});
+
 async function withMockedStorageSettingsFile(testBody) {
 	const originalAccess = fs.access;
 	const originalReadFile = fs.readFile;
@@ -63679,6 +63701,8 @@ await run("Backup commands own gzip payloads and import strategies", async () =>
 
 await run("backups archive route sends gzip payload with dated filename", async () => {
 	const originalListCampaignSlugs = storage.listCampaignSlugs;
+	const originalListExportableCampaignSlugs =
+		storage.listExportableCampaignSlugs;
 	const originalExportCampaignArchiveBundle =
 		storage.exportCampaignArchiveBundle;
 	const originalExportApplicationDataArchiveBundle =
@@ -63690,6 +63714,7 @@ await run("backups archive route sends gzip payload with dated filename", async 
 	const handler = layer.route.stack[0].handle;
 
 	storage.listCampaignSlugs = async () => ["alpha"];
+	storage.listExportableCampaignSlugs = async () => ["alpha"];
 	storage.exportCampaignArchiveBundle = async (slug) => ({
 		meta: { slug, name: "Alpha" },
 	});
@@ -63733,6 +63758,7 @@ await run("backups archive route sends gzip payload with dated filename", async 
 		]);
 	} finally {
 		storage.listCampaignSlugs = originalListCampaignSlugs;
+		storage.listExportableCampaignSlugs = originalListExportableCampaignSlugs;
 		storage.exportCampaignArchiveBundle = originalExportCampaignArchiveBundle;
 		storage.exportApplicationDataArchiveBundle =
 			originalExportApplicationDataArchiveBundle;

@@ -72,7 +72,7 @@ function createBackupCommands(repository, { now = () => new Date() } = {}) {
 			const slugs = await repository.listCampaignSlugs();
 			const [campaigns, applicationData] = await Promise.all([
 				Promise.all(slugs.map(repository.exportCampaignArchiveBundle)),
-				repository.exportApplicationDataArchiveBundle(),
+				repository.exportApplicationDataArchiveBundle(slugs),
 			]);
 			return createDownload(
 				buildArchivePayload("all", campaigns, now(), applicationData),
