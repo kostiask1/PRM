@@ -124,6 +124,8 @@ export default function useEncounterView(): EncounterViewModel {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const processedDiceResultIdRef = useRef<string | number | null>(null);
 	const encounterRef = useRef<EncounterViewState | null>(null);
+	const encounterLoadRequestRef = useRef(0);
+	const encounterLoadRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const isUpdatingHistoryRef = useRef(false);
 	const reorderStartRef = useRef<EncounterViewState | null>(null);
 	const handleEncounterSaved = useCallback(
@@ -174,17 +176,31 @@ export default function useEncounterView(): EncounterViewModel {
 
 	const loadEncounter = useCallback(
 		async ({ retries = 3, resetHistory = true } = {}) => {
+			if (!sessionId || encounterId === "") return;
+
+			const requestId = ++encounterLoadRequestRef.current;
+			if (encounterLoadRetryRef.current) {
+				clearTimeout(encounterLoadRetryRef.current);
+				encounterLoadRetryRef.current = null;
+			}
+			const isCurrentRequest = () =>
+				encounterLoadRequestRef.current === requestId;
+
 			try {
 				const session = await api.getSession(campaign.slug, sessionId);
+				if (!isCurrentRequest()) return;
 				setActiveSession(session);
 				executeEncounterLoadPlan(
 					getEncounterLoadPlan(session, encounterId, retries, resetHistory),
 					{
 						onRetry: (nextRetries, shouldResetHistory) => {
-							setTimeout(() => loadEncounter({
-								retries: nextRetries,
-								resetHistory: shouldResetHistory,
-							}), 300);
+							encounterLoadRetryRef.current = setTimeout(() => {
+								if (!isCurrentRequest()) return;
+								loadEncounter({
+									retries: nextRetries,
+									resetHistory: shouldResetHistory,
+								});
+							}, 300);
 						},
 						onNotFound: () => {
 							showMessage({
@@ -204,6 +220,7 @@ export default function useEncounterView(): EncounterViewModel {
 					},
 				);
 			} catch (err) {
+				if (!isCurrentRequest()) return;
 				console.error("Failed to load encounter", err);
 			}
 		},
@@ -219,6 +236,13 @@ export default function useEncounterView(): EncounterViewModel {
 
 	useEffect(() => {
 		loadEncounter();
+		return () => {
+			encounterLoadRequestRef.current += 1;
+			if (encounterLoadRetryRef.current) {
+				clearTimeout(encounterLoadRetryRef.current);
+				encounterLoadRetryRef.current = null;
+			}
+		};
 	}, [loadEncounter]);
 
 	useEffect(() => {
