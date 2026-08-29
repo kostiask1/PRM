@@ -12,6 +12,7 @@
   - Backend: `express`, `multer`, `dotenv`, `@google/generative-ai`.
   - Tooling: `vite`, `eslint`, `sass`, `concurrently`.
 - AI потребує `GEMINI_API_KEY` у `.env`.
+- auto commit changes while working
 
 ## Architecture Map
 

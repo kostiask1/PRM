@@ -565,7 +565,6 @@
 }
 
 .CampaignNotesGraph__details {
-	max-height: 720px;
 	padding: calc(var(--space-3) + 42px) var(--space-3) var(--space-3);
 	overflow: auto;
 	overscroll-behavior: contain;
