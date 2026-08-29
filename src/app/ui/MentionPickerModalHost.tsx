@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { campaignApi } from "../../entities/campaign/index.js";
+import "../../assets/components/MentionPickerModalHost.css";
 import { MentionPickerModalContent } from "../../features/editor/ui/index.js";
 import { lang } from "../../shared/lib/index.js";
 import { closeMentionPickerAction } from "../../shared/model/index.js";
