@@ -138,7 +138,7 @@ function EncounterHeaderIdentity({
 }: Pick<EncounterHeaderProps, "view"> & EncounterHeaderTooltips) {
 	return (
 		<div className="EncounterView__header">
-			<Button variant="ghost" size={Button.SIZES.SMALL} onClick={view.handleBack} icon="back" className="SessionView__backBtn" />
+			<Button variant="ghost" size={Button.SIZES.SMALL} onClick={view.handleBack} icon="back" className="EncounterHeader__backButton" />
 			<Tooltip content={lang.t("Click to rename")}>
 				<h2 className="editable_title" onClick={view.handleRename}>{renderMentionText(view.encounter?.name || "")}</h2>
 			</Tooltip>

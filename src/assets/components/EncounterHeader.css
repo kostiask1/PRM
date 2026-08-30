@@ -1,3 +1,8 @@
+.EncounterHeader__backButton {
+	padding: var(--space-1) !important;
+	min-width: unset !important;
+}
+
 .EncounterHeader__metric {
 	min-width: 86px;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);
