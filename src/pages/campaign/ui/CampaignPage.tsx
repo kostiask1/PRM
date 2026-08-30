@@ -249,7 +249,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							items={view.characters}
 							hasData={hasCharactersData}
 							isCollapsed={isCharactersCollapsed}
-							listClassName="CampaignView__characters"
+							listVariant="person"
 							dropType="characters"
 							actions={
 								<CreateCharacterButton
@@ -298,7 +298,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							items={view.npcs}
 							hasData={hasNpcsData}
 							isCollapsed={isNpcsCollapsed}
-							listClassName="CampaignView__characters"
+							listVariant="person"
 							dropType="npc"
 							actions={
 								<CreateCharacterButton
@@ -356,7 +356,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							items={view.locations}
 							hasData={hasLocationsData}
 							isCollapsed={isLocationsCollapsed}
-							listClassName="CampaignView__locations"
+							listVariant="location"
 							actions={<CreateLocationButton campaignSlug={campaign.slug} />}
 							onToggle={locationSectionControls.onToggle}
 							onBulkCollapse={locationSectionControls.onBulkCollapse}

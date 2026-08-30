@@ -1,0 +1,112 @@
+.CampaignNotesSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.CampaignNotesSection h3 {
+	font-size: 1.05rem;
+	color: var(--text-bright);
+	font-family: var(--font-heading);
+}
+
+.CampaignNotesSection__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	position: sticky;
+	top: calc(-1 * var(--space-3));
+	background: var(--panel);
+	padding: var(--space-2) 0;
+	z-index: 1;
+}
+
+.CampaignNotesSection__titleGroup {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	user-select: none;
+	cursor: pointer;
+}
+
+.CampaignNotesSection__viewToggle {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	flex-wrap: wrap;
+}
+
+.CampaignNotesSection__list {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+}
+
+.CampaignNotesSection__list .DraggableList__itemControl {
+	top: var(--space-2);
+	left: 0;
+	transform: translateX(-100%);
+}
+
+.CampaignNotesSection__list .DraggableList > div:hover .DraggableList__handle {
+	transform: translateX(-200%);
+}
+
+.CampaignNotesSection__list .NoteCard {
+	height: 100%;
+	align-items: center;
+}
+
+.CampaignNotesSection__list .NoteCard .NoteCard__content {
+	width: 100%;
+}
+
+.CampaignNotesSection__list > div {
+	flex: 1 1 550px;
+	max-width: 100%;
+}
+
+@media (max-width: 1024px) {
+	.CampaignNotesSection__viewToggle {
+		max-width: 100%;
+	}
+
+	.CampaignNotesSection__viewToggle .Button {
+		flex: 0 0 auto;
+		min-height: var(--control-h-sm);
+	}
+}
+
+@media (max-width: 767px) {
+	.CampaignNotesSection__row {
+		align-items: flex-start;
+		padding: var(--space-1) 0;
+		gap: var(--space-2);
+	}
+
+	.CampaignNotesSection__titleGroup {
+		width: 100%;
+	}
+
+	.CampaignNotesSection__viewToggle {
+		width: 100%;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		justify-content: flex-end;
+		padding-bottom: var(--space-1);
+		scrollbar-width: thin;
+	}
+
+	.CampaignNotesSection__viewToggle .Button span {
+		display: none;
+	}
+
+	.CampaignNotesSection__list {
+		gap: var(--space-2);
+	}
+
+	.CampaignNotesSection__list > div {
+		flex-basis: 100%;
+	}
+}

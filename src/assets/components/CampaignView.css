@@ -147,18 +147,6 @@
 	gap: var(--space-2);
 }
 
-.CampaignView__section {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
-}
-
-.CampaignView__section h3 {
-	font-size: 1.05rem;
-	color: var(--text-bright);
-	font-family: var(--font-heading);
-}
-
 .CampaignView__header {
 	width: 100%;
 	display: flex;
@@ -166,106 +154,10 @@
 	gap: var(--space-6);
 }
 
-.CampaignView__sectionTitleGroup {
-	display: flex;
-	align-items: center;
-	gap: var(--space-2);
-	user-select: none;
-	cursor: pointer;
-}
-
-.CampaignView__sectionRow .Button {
-	white-space: nowrap;
-}
-
-.CampaignView__notesViewToggle {
-	display: flex;
-	align-items: center;
-	gap: var(--space-1);
-	flex-wrap: wrap;
-}
-
-.CampaignView__sectionActions {
-	display: flex;
-	align-items: center;
-	gap: var(--space-2);
-	flex-wrap: wrap;
-	justify-content: flex-end;
-}
-
-.CampaignView__notes {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: var(--space-3);
-}
-
-.CampaignView__notes .DraggableList__itemControl {
-	top: var(--space-2);
-	left: 0;
-	transform: translateX(-100%);
-}
-
-.CampaignView__notes .DraggableList>div:hover .DraggableList__handle {
-	transform: translateX(-200%);
-}
-
-.CampaignView__notes .NoteCard {
-	height: 100%;
-	align-items: center;
-}
-
 .CampaignView__script,
 .CampaignView__script.Input,
 .CampaignView__script .MarkdownView {
 	min-height: 200px;
-}
-
-.CampaignView__notes .NoteCard .NoteCard__content {
-	width: 100%;
-}
-
-.CampaignView__notes>div {
-	flex: 1 1 550px;
-	max-width: 100%;
-}
-
-.CampaignView__characters {
-	display: flex;
-	flex-wrap: wrap;
-	flex-direction: row;
-	gap: var(--space-3);
-}
-
-.CampaignView__characters>div {
-	flex: 1 1 650px;
-	max-width: 100%;
-	user-select: auto;
-}
-
-
-.CampaignView__locations {
-	display: flex;
-	flex-wrap: wrap;
-	flex-direction: row;
-	gap: var(--space-3);
-}
-
-.CampaignView__locations>div {
-	flex: 1 1 800px;
-	max-width: 100%;
-	user-select: auto;
-}
-
-.CampaignView__sectionRow {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	position: sticky;
-	top: calc(-1 * var(--space-3));
-	background: var(--panel);
-	padding: var(--space-2) 0;
-	z-index: 1;
 }
 
 @media (max-width: 1024px) {
@@ -282,16 +174,6 @@
 
 	.CampaignView__header .muted {
 		display: none;
-	}
-
-	.CampaignView__sectionActions {
-		justify-content: flex-start;
-	}
-
-	.CampaignView__headerActions,
-	.CampaignView__sectionActions,
-	.CampaignView__notesViewToggle {
-		max-width: 100%;
 	}
 
 	.CampaignView__headerActions {
@@ -323,9 +205,7 @@
 		display: flex;
 	}
 
-	.CampaignView__headerActions .Button,
-	.CampaignView__sectionActions .Button,
-	.CampaignView__notesViewToggle .Button {
+	.CampaignView__headerActions .Button {
 		flex: 0 0 auto;
 		min-height: var(--control-h-sm);
 	}
@@ -376,8 +256,7 @@
 		padding-bottom: var(--space-6);
 	}
 
-	.CampaignView__headerActions,
-	.CampaignView__sectionActions {
+	.CampaignView__headerActions {
 		width: 100%;
 		overflow-x: auto;
 		justify-content: flex-end;
@@ -385,41 +264,8 @@
 		scrollbar-width: thin;
 	}
 
-	.CampaignView__sectionRow {
-		align-items: flex-start;
-		padding: var(--space-1) 0;
-		gap: var(--space-2);
-	}
-
-	.CampaignView__sectionTitleGroup {
-		width: 100%;
-	}
-
-	.CampaignView__notesViewToggle {
-		width: 100%;
-		flex-wrap: nowrap;
-		overflow-x: auto;
-		justify-content: flex-end;
-		padding-bottom: var(--space-1);
-		scrollbar-width: thin;
-	}
-
-	.CampaignView__notesViewToggle .Button span,
-	.CampaignView__headerActions .Button span,
-	.CampaignView__sectionActions .Button span {
+	.CampaignView__headerActions .Button span {
 		display: none;
-	}
-
-	.CampaignView__notes,
-	.CampaignView__characters,
-	.CampaignView__locations {
-		gap: var(--space-2);
-	}
-
-	.CampaignView__notes>div,
-	.CampaignView__characters>div,
-	.CampaignView__locations>div {
-		flex-basis: 100%;
 	}
 
 	.CampaignView__script,

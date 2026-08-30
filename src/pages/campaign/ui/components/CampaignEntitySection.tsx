@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../../../../assets/components/CampaignEntitySection.css";
 import {
 	Button,
 	CollapseToggleButton,
@@ -13,7 +14,7 @@ interface CampaignEntitySectionProps {
 	items: CampaignPageEntity[];
 	hasData: boolean;
 	isCollapsed: boolean;
-	listClassName: string;
+	listVariant: "person" | "location";
 	dropType?: "characters" | "npc";
 	actions: ReactNode;
 	dragData?: (entity: CampaignPageEntity) => unknown;
@@ -34,7 +35,7 @@ export default function CampaignEntitySection({
 	items,
 	hasData,
 	isCollapsed,
-	listClassName,
+	listVariant,
 	dropType,
 	actions,
 	dragData,
@@ -48,11 +49,11 @@ export default function CampaignEntitySection({
 }: CampaignEntitySectionProps) {
 	return (
 		<div
-			className="CampaignView__section"
+			className="CampaignEntitySection"
 			data-character-drop-type={dropType}
 		>
-			<div className="CampaignView__sectionRow">
-				<div className="CampaignView__sectionTitleGroup" onClick={onToggle}>
+			<div className="CampaignEntitySection__row">
+				<div className="CampaignEntitySection__titleGroup" onClick={onToggle}>
 					{hasData && (
 						<CollapseToggleButton
 							size={Button.SIZES.MEDIUM}
@@ -63,7 +64,7 @@ export default function CampaignEntitySection({
 					<h3>{title}</h3>
 				</div>
 				{!isCollapsed && (
-					<div className="CampaignView__sectionActions">
+					<div className="CampaignEntitySection__actions">
 						<BulkCollapseButton
 							items={items}
 							onChange={(collapsed) => onBulkCollapse(items, collapsed)}
@@ -75,7 +76,7 @@ export default function CampaignEntitySection({
 			{!isCollapsed && (
 				<DraggableList
 					items={items}
-					className={listClassName}
+					className={`CampaignEntitySection__list CampaignEntitySection__list_${listVariant}`}
 					onReorder={onReorder}
 					onDrop={onReorderDrop}
 					dragData={dragData}

@@ -1,4 +1,5 @@
 import { Button, CollapseToggleButton, DraggableList } from "../../../../shared/ui/index.js";
+import "../../../../assets/components/CampaignNotesSection.css";
 import {
 	BulkCollapseButton,
 	createNoteCardComponent,
@@ -48,7 +49,7 @@ function CampaignNotesList({
 	return (
 		<DraggableList
 			items={notes}
-			className="CampaignView__notes"
+			className="CampaignNotesSection__list"
 			onReorder={view.handleNotesReorder}
 			onDrop={view.finishTrackedReorder}
 			{...getAiIgnoredNoteListProps(onToggleIgnored, {
@@ -86,7 +87,7 @@ function CampaignNotesViewToggle({
 	onBulkCollapse,
 }: CampaignNotesViewToggleProps) {
 	return (
-		<div className="CampaignView__notesViewToggle">
+		<div className="CampaignNotesSection__viewToggle">
 			{presentation.showBulkCollapse && (
 				<BulkCollapseButton items={items} onChange={onBulkCollapse} />
 			)}
@@ -198,9 +199,9 @@ export default function CampaignNotesSection({
 		view.triggerSave(patch);
 	};
 	return (
-		<div className="CampaignView__section">
-			<div className="CampaignView__sectionRow">
-				<div className="CampaignView__sectionTitleGroup" onClick={toggle}>
+		<div className="CampaignNotesSection">
+			<div className="CampaignNotesSection__row">
+				<div className="CampaignNotesSection__titleGroup" onClick={toggle}>
 					{presentation.canToggleCollapse && (
 						<CollapseToggleButton
 							size={Button.SIZES.MEDIUM}

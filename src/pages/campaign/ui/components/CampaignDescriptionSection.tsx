@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../../../../assets/components/CampaignDescriptionSection.css";
 import { Button, CollapseToggleButton } from "../../../../shared/ui/index.js";
 import { lang, makeDomId } from "../../../../shared/lib/index.js";
 
@@ -17,11 +18,11 @@ export default function CampaignDescriptionSection({
 }: CampaignDescriptionSectionProps) {
 	return (
 		<div
-			className="CampaignView__section"
+			className="CampaignDescriptionSection"
 			id={makeDomId("campaign", "description")}
 		>
-			<div className="CampaignView__sectionRow">
-				<div className="CampaignView__sectionTitleGroup" onClick={onToggle}>
+			<div className="CampaignDescriptionSection__row">
+				<div className="CampaignDescriptionSection__titleGroup" onClick={onToggle}>
 					{hasData && (
 						<CollapseToggleButton
 							size={Button.SIZES.MEDIUM}
