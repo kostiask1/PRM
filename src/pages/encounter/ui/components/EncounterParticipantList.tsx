@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../../../../assets/components/EncounterParticipantList.css";
 import { lang } from "../../../../shared/lib/index.js";
 import { Button, DraggableList } from "../../../../shared/ui/index.js";
 import type { EncounterViewParticipant } from "../../model/contracts.ts";
@@ -21,10 +22,10 @@ export default function EncounterParticipantList({
 	renderRow,
 }: EncounterParticipantListProps) {
 	return (
-		<div className="EncounterView__list">
-			<div className="EncounterView__addActions">
-				<Button variant="create" onClick={onOpenBestiary} icon="plus" className="EncounterView__addBtn">{lang.t("Add monster")}</Button>
-				<Button variant="ghost" onClick={onOpenCharacterPicker} icon="user" className="EncounterView__addBtn">{lang.t("Add player")}</Button>
+		<div className="EncounterParticipantList">
+			<div className="EncounterParticipantList__actions">
+				<Button variant="create" onClick={onOpenBestiary} icon="plus" className="EncounterParticipantList__addButton">{lang.t("Add monster")}</Button>
+				<Button variant="ghost" onClick={onOpenCharacterPicker} icon="user" className="EncounterParticipantList__addButton">{lang.t("Add player")}</Button>
 			</div>
 			<DraggableList
 				items={monsters}

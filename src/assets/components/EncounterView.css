@@ -53,47 +53,11 @@
 	color: var(--text-bright);
 }
 
-.EncounterView__list {
-	width: 290px;
-	min-width: 290px;
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
-	height: 100%;
-	overflow-y: scroll;
-	margin-right: calc(-1 * var(--space-1));
-	padding-top: var(--space-2);
-}
-
 .DraggableList>div:hover>.DraggableList__handle,
 .DraggableList>div.is_dragging>.DraggableList__handle {
 	opacity: 1;
 	background-color: var(--panel-2);
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
-}
-
-.EncounterView__list .DraggableList__handle {
-	transform: translate(0, 0);
-	border-radius: var(--radius-xxs) var(--radius-md) 0 var(--radius-xxs);
-	top: 0;
-	left: unset;
-	right: 0;
-	transition: border-radius .125s ease-in-out;
-}
-
-.EncounterView__list .DraggableList>div:hover>.DraggableList__handle:hover {
-	border-radius: var(--radius-xxs);
-}
-
-.EncounterView__addBtn {
-	width: 100%;
-	justify-content: center;
-}
-
-.EncounterView__addActions {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: var(--space-2);
 }
 
 .EncounterView__detailView {
@@ -290,11 +254,6 @@
 }
 
 @media (max-width: 1024px) {
-	.EncounterView__addActions {
-		display: flex;
-		flex-direction: row;
-	}
-
 	.EncounterView__header {
 		display: flex;
 		gap: var(--space-2);
@@ -357,15 +316,6 @@
 		gap: var(--space-3);
 		height: auto;
 		margin-top: 0;
-	}
-
-	.EncounterView__list {
-		width: 100%;
-		min-width: 0;
-		max-height: 38dvh;
-		margin: 0;
-		padding: 0;
-		overflow-y: auto;
 	}
 
 	.EncounterView__detailView {
