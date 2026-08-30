@@ -1,4 +1,5 @@
 import { MonsterStatBlockModel, getMonsterTypeString, type BestiaryMonster } from "../../../entities/bestiary/index.js";
+import "../../../assets/components/RulesReferenceListItem.css";
 import { getSourceFullName } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { ListCard, Tooltip, highlightText } from "../../../shared/ui/index.js";
@@ -46,21 +47,21 @@ function CreatureListContent({ item, query }: { item: ReferenceItem; query: stri
 	const monster = item as BestiaryMonster;
 	const presentation = getCreatureListPresentation(monster);
 	return (
-		<div className="Bestiary__item_content">
-			<img className="Bestiary__item_token" src={presentation.tokenSrc} alt="" loading="lazy" draggable={false} onError={(event) => { event.currentTarget.hidden = true; }} />
-			<div className="Bestiary__item_info">
+		<div className="RulesReferenceListItem__content">
+			<img className="RulesReferenceListItem__token" src={presentation.tokenSrc} alt="" loading="lazy" draggable={false} onError={(event) => { event.currentTarget.hidden = true; }} />
+			<div className="RulesReferenceListItem__info">
 				<div className="ListCard__title">{highlightText(monster.name, query)}</div>
 				<div className="ListCard__meta">
 					{highlightText(presentation.size, query)} {highlightText(presentation.type, query)}
 					{presentation.source && (
 						<Tooltip content={presentation.sourceFullName} disabled={!presentation.sourceFullName}>
-							<span className="Bestiary__item_source"> • {highlightText(presentation.source, query)}</span>
+							<span className="RulesReferenceListItem__source"> • {highlightText(presentation.source, query)}</span>
 						</Tooltip>
 					)}
 				</div>
 			</div>
 			<Tooltip content={lang.t("Challenge Rating")}>
-				<div className="Bestiary__item_cr"><div className="Bestiary__cr_label">CR</div><div className="Bestiary__cr_value">{presentation.cr}</div></div>
+				<div className="RulesReferenceListItem__cr"><div className="RulesReferenceListItem__crLabel">CR</div><div className="RulesReferenceListItem__crValue">{presentation.cr}</div></div>
 			</Tooltip>
 		</div>
 	);

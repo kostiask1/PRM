@@ -46467,7 +46467,7 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesReferenceSource, /referenceApi\.getConditions\(options\)/);
 	assert.doesNotMatch(rulesReferenceSource, /<Bestiary(?:\s|\/|>)/);
 	assert.match(rulesReferenceSource, /<MonsterStatBlock/);
-	assert.match(rulesReferenceSource, /Bestiary__item_token/);
+	assert.match(rulesReferenceSource, /RulesReferenceListItem__token/);
 	assert.match(rulesReferenceSource, /getCreatureReferenceMatchRank/);
 	assert.doesNotMatch(rulesReferenceSource, new RegExp("is" + "Embedded"));
 	assert.match(rulesReferenceSource, /renderRulesReferenceContent\(item\.entries/);
