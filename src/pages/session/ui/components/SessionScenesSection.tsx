@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../../../../assets/components/SessionScenesSection.css";
 import type { SessionScene } from "../../../../entities/session/index.js";
 import { BulkCollapseButton } from "../../../../features/notes/ui/index.js";
 import { lang } from "../../../../shared/lib/index.js";
@@ -24,7 +25,7 @@ export default function SessionScenesSection({
 		<TodoSection
 			title={lang.t("Scenes")}
 			action={
-				<div className="SessionView__sectionActions">
+				<div className="SessionScenesSection__actions">
 					<BulkCollapseButton items={scenes} onChange={onBulkCollapse} />
 					<Button
 						variant="primary"
@@ -32,7 +33,7 @@ export default function SessionScenesSection({
 						onClick={onAddScene}
 						icon="plus"
 						iconSize={16}
-						className="SessionView__mobileIconOnly"
+						className="SessionScenesSection__mobileIconOnly"
 					>
 						{lang.t("Add")}
 					</Button>

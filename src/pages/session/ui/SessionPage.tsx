@@ -380,14 +380,14 @@ function SessionView() {
 										campaignSlug={view.campaignSlug}
 										entityType="npc"
 										buttonLabel={lang.t("New session NPC")}
-										buttonClassName="SessionView__mobileIconOnly"
+										buttonClassName="SessionEntitySection__mobileIconOnly"
 										onCreate={view.handleCreateSessionNpc}
 									/>
 									<Button
 										variant="ghost"
 										size={Button.SIZES.SMALL}
 										icon="import"
-										className="SessionView__mobileIconOnly"
+										className="SessionEntitySection__mobileIconOnly"
 										onClick={() => view.openCampaignScopeImport("npc")}
 									>
 										{lang.t("Move from campaign")}
@@ -396,7 +396,7 @@ function SessionView() {
 							}
 							emptyText={lang.t("No session NPCs yet.")}
 							items={view.sessionNpcs}
-							listClassName="SessionView__characters"
+							listVariant="person"
 							onBulkCollapse={(items, collapsed) =>
 								handleBulkSessionEntitiesCollapse("npc", items, collapsed)
 							}
@@ -439,14 +439,14 @@ function SessionView() {
 										buttonVariant="primary"
 										campaignSlug={view.campaignSlug}
 										buttonLabel={lang.t("New session location/faction")}
-										buttonClassName="SessionView__mobileIconOnly"
+										buttonClassName="SessionEntitySection__mobileIconOnly"
 										onCreate={view.handleCreateSessionLocation}
 									/>
 									<Button
 										variant="ghost"
 										size={Button.SIZES.SMALL}
 										icon="import"
-										className="SessionView__mobileIconOnly"
+										className="SessionEntitySection__mobileIconOnly"
 										onClick={() => view.openCampaignScopeImport("locations")}
 									>
 										{lang.t("Move from campaign")}
@@ -455,7 +455,7 @@ function SessionView() {
 							}
 							emptyText={lang.t("No session locations/factions yet.")}
 							items={view.sessionLocations}
-							listClassName="SessionView__locations"
+							listVariant="location"
 							onBulkCollapse={(items, collapsed) =>
 								handleBulkSessionEntitiesCollapse("locations", items, collapsed)
 							}

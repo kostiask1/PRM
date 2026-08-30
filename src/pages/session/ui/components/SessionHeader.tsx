@@ -1,4 +1,5 @@
 import type { MouseEvent, RefObject } from "react";
+import "../../../../assets/components/SessionHeader.css";
 import { Button } from "../../../../shared/ui/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
@@ -46,26 +47,26 @@ export default function SessionHeader({
 }: SessionHeaderProps) {
 	return (
 		<div className="Panel__header">
-			<div className="SessionView__header">
-				<div className="SessionView__titleGroup">
-					<div className="SessionView__titleRow">
+			<div className="SessionHeader">
+				<div className="SessionHeader__titleGroup">
+					<div className="SessionHeader__titleRow">
 						<Button
 							variant="ghost"
 							size={Button.SIZES.SMALL}
 							onClick={onBack}
 							icon="back"
-							className="SessionView__backBtn"
+							className="SessionHeader__backButton"
 						/>
 						<h2 className="editable_title" onClick={onRename}>
 							{sessionName}
 						</h2>
 					</div>
 					{encounters.length > 0 && (
-						<div className="SessionView__encountersQuickAccess">
-							<span className="SessionView__encountersLabel">
+						<div className="SessionHeader__encounters">
+							<span className="SessionHeader__encountersLabel">
 								{lang.t("Combat encounters")}:
 							</span>
-							<div className="SessionView__encountersList">
+							<div className="SessionHeader__encountersList">
 								{encounters.map((encounter) => (
 									<Button
 										key={encounter.id}

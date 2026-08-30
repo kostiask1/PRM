@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import "../../../../assets/components/SessionHeaderActions.css";
 
 import { classNames, lang } from "../../../../shared/lib/index.js";
 import { Button, UndoRedoButtons } from "../../../../shared/ui/index.js";
@@ -31,7 +32,7 @@ export default function SessionHeaderActions({
 	return (
 		<div
 			ref={actionsRef}
-			className={classNames("SessionView__headerActions", {
+			className={classNames("SessionHeaderActions", {
 				is_open: isOpen,
 			})}
 		>
@@ -39,11 +40,11 @@ export default function SessionHeaderActions({
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="menu"
-				className="SessionView__headerActionsToggle"
+				className="SessionHeaderActions__toggle"
 				onClick={onToggle}
 				title={lang.t("Session actions")}
 			/>
-			<div className="SessionView__headerActionsMenu">
+			<div className="SessionHeaderActions__menu">
 				<Button
 					variant="ghost"
 					size={Button.SIZES.SMALL}

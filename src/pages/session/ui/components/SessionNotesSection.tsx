@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../../../../assets/components/SessionNotesSection.css";
 import {
 	BulkCollapseButton,
 	getAiIgnoredNoteListProps,
@@ -57,7 +58,7 @@ export default function SessionNotesSection({
 			{!isCollapsed && (
 				<DraggableList
 					items={renderableNotes}
-					className="SessionView__notes"
+					className="SessionNotesSection__list"
 					onReorder={onReorder}
 					{...getAiIgnoredNoteListProps(onToggleAiIgnored, {
 						isolateDragEvents: false,

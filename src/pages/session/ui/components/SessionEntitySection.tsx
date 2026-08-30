@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../../../../assets/components/SessionEntitySection.css";
 import {
 	AiContextIgnoreButton,
 	BulkCollapseButton,
@@ -17,7 +18,7 @@ interface SessionEntitySectionProps<Item extends SessionEntityListItem> {
 	actions: ReactNode;
 	emptyText: ReactNode;
 	items: Item[];
-	listClassName: string;
+	listVariant: "person" | "location";
 	onBulkCollapse: (items: Item[], collapsed: boolean) => void;
 	onReorder: (items: Item[]) => void;
 	onToggleAiIgnored: (entityId: Item["id"], ignored: boolean) => void;
@@ -29,7 +30,7 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 	actions,
 	emptyText,
 	items,
-	listClassName,
+	listVariant,
 	onBulkCollapse,
 	onReorder,
 	onToggleAiIgnored,
@@ -39,7 +40,7 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 		<TodoSection
 			title={title}
 			action={
-				<div className="SessionView__sectionActions">
+				<div className="SessionEntitySection__actions">
 					<BulkCollapseButton
 						items={items}
 						onChange={(collapsed) => onBulkCollapse(items, collapsed)}
@@ -51,7 +52,7 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 			{items.length > 0 ? (
 				<DraggableList
 					items={items}
-					className={listClassName}
+					className={`SessionEntitySection__list SessionEntitySection__list_${listVariant}`}
 					onReorder={onReorder}
 					keyExtractor={(entity) => entity.id}
 					isItemControlActive={(entity) => Boolean(entity._aiIgnored)}
@@ -66,7 +67,7 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 					renderItem={renderItem}
 				/>
 			) : (
-				<div className="muted SessionView__emptySection">{emptyText}</div>
+				<div className="muted SessionEntitySection__empty">{emptyText}</div>
 			)}
 		</TodoSection>
 	);

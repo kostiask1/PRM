@@ -1,0 +1,69 @@
+.SessionEntitySection__actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--space-2);
+}
+
+.SessionEntitySection__actions span {
+	white-space: nowrap;
+}
+
+.SessionEntitySection__list {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+}
+
+.SessionEntitySection__list_person > div {
+	flex: 1 1 650px;
+	max-width: 100%;
+	user-select: auto;
+}
+
+.SessionEntitySection__list_location > div {
+	flex: 1 1 800px;
+	max-width: 100%;
+	user-select: auto;
+}
+
+.SessionEntitySection__empty {
+	padding: var(--space-2);
+}
+
+@media (max-width: 767px) {
+	.SessionEntitySection__actions {
+		width: 100%;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: var(--space-1);
+		scrollbar-width: thin;
+	}
+
+	.SessionEntitySection__actions .Button {
+		flex: 0 0 auto;
+		min-height: var(--control-h-sm);
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
+	}
+
+	.SessionEntitySection__mobileIconOnly {
+		width: 40px;
+		min-width: 40px;
+		padding-inline: 0 !important;
+	}
+
+	.SessionEntitySection__mobileIconOnly > span {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	.SessionEntitySection__list > div {
+		flex-basis: 100%;
+	}
+}

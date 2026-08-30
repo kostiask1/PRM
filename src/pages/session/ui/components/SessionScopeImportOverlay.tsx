@@ -1,4 +1,5 @@
 import { Button, Modal } from "../../../../shared/ui/index.js";
+import "../../../../assets/components/SessionScopeImportOverlay.css";
 import { lang } from "../../../../shared/lib/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
 import type { ScopeImportModalState } from "../../../../features/campaign-entity/index.js";
@@ -34,7 +35,7 @@ function SessionScopeImportItem({
 }: SessionScopeImportItemProps) {
 	const name = getSessionEntityDisplayName(type, entity, lang.t("Untitled"));
 	return (
-		<div className="SessionView__scopeImportItem">
+		<div className="SessionScopeImportOverlay__item">
 			<span>{renderMentionText(name)}</span>
 			<Button
 				variant="primary"
@@ -99,7 +100,7 @@ export default function SessionScopeImportOverlay({
 			onCancel={onClose}
 			showFooter={false}
 		>
-			<div className="SessionView__scopeImportList">
+			<div className="SessionScopeImportOverlay__list">
 				<SessionScopeImportList
 					modal={modal}
 					copy={copy}

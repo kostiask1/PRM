@@ -1,0 +1,42 @@
+.SessionScenesSection__actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--space-2);
+}
+
+.SessionScenesSection__actions span {
+	white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+	.SessionScenesSection__actions {
+		width: 100%;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: var(--space-1);
+		scrollbar-width: thin;
+	}
+
+	.SessionScenesSection__actions .Button {
+		flex: 0 0 auto;
+		min-height: var(--control-h-sm);
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
+	}
+
+	.SessionScenesSection__mobileIconOnly {
+		width: 40px;
+		min-width: 40px;
+		padding-inline: 0 !important;
+	}
+
+	.SessionScenesSection__mobileIconOnly > span {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+}
