@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../../../../assets/components/CampaignSessionsSection.css";
 
 import { lang } from "../../../../shared/lib/index.js";
 import { Button, DraggableList } from "../../../../shared/ui/index.js";
@@ -26,8 +27,8 @@ export default function CampaignSessionsSection({
 	sessionSearch,
 }: CampaignSessionsSectionProps) {
 	return (
-		<aside className="CampaignView__sessionsPane" id="campaign-sessions">
-			<div className="CampaignView__sessionsPaneHeader">
+		<aside className="CampaignSessionsSection" id="campaign-sessions">
+			<div className="CampaignSessionsSection__header">
 				<h3>{lang.t("Sessions")}</h3>
 				<Button
 					variant="create"
@@ -38,15 +39,15 @@ export default function CampaignSessionsSection({
 					{lang.t("New session")}
 				</Button>
 			</div>
-			<div className="CampaignView__sessionsPaneControls">
+			<div className="CampaignSessionsSection__controls">
 				<input
-					className="CampaignView__sessionSearch"
+					className="CampaignSessionsSection__search"
 					placeholder={lang.t("Search sessions...")}
 					value={sessionSearch}
 					onChange={(event) => onSessionSearchChange(event.target.value)}
 				/>
 			</div>
-			<div className="CampaignView__sessionsPaneList">
+			<div className="CampaignSessionsSection__list">
 				{canReorderSessions ? (
 					<DraggableList
 						items={filteredSessions}
@@ -56,12 +57,12 @@ export default function CampaignSessionsSection({
 						renderItem={renderSessionCard}
 					/>
 				) : (
-					<div className="CampaignView__sessions">
+					<div className="CampaignSessionsSection__items">
 						{filteredSessions.map(renderSessionCard)}
 					</div>
 				)}
 				{filteredSessions.length === 0 && (
-					<div className="muted CampaignView__emptySessions">
+					<div className="muted CampaignSessionsSection__empty">
 						{lang.t("No sessions found.")}
 					</div>
 				)}
