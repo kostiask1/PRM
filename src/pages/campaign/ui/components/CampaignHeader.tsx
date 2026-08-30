@@ -1,4 +1,5 @@
 import { Tooltip } from "../../../../shared/ui/index.js";
+import "../../../../assets/components/CampaignHeader.css";
 import type { CampaignViewModel } from "../../../../entities/campaign/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import CampaignHeaderActions from "./CampaignHeaderActions.tsx";
@@ -28,7 +29,7 @@ export default function CampaignHeader({
 }: CampaignHeaderProps) {
 	return (
 		<div className="Panel__header">
-			<div className="CampaignView__header">
+			<div className="CampaignHeader">
 				<Tooltip content={lang.t("Click to rename")}>
 					<h2 className="editable_title" onClick={view.handleRename}>
 						{viewModel.name}

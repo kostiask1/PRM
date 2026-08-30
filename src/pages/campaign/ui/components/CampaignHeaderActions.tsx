@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import "../../../../assets/components/CampaignHeaderActions.css";
 
 import { classNames, lang } from "../../../../shared/lib/index.js";
 import {
@@ -42,7 +43,7 @@ export default function CampaignHeaderActions({
 	return (
 		<div
 			ref={headerActionsRef}
-			className={classNames("CampaignView__headerActions", {
+			className={classNames("CampaignHeaderActions", {
 				is_open: isHeaderActionsOpen,
 			})}
 		>
@@ -65,11 +66,11 @@ export default function CampaignHeaderActions({
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="menu"
-				className="CampaignView__headerActionsToggle"
+				className="CampaignHeaderActions__toggle"
 				onClick={() => setIsHeaderActionsOpen((value) => !value)}
 				title={lang.t("Campaign actions")}
 			/>
-			<div className="CampaignView__headerActionsMenu">
+			<div className="CampaignHeaderActions__menu">
 				<Button
 					variant="ghost"
 					size={Button.SIZES.SMALL}

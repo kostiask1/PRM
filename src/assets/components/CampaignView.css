@@ -124,36 +124,6 @@
 	gap: var(--space-1);
 }
 
-.CampaignView__headerActions {
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
-	gap: var(--space-3);
-	position: relative;
-	width: 100%;
-}
-
-.CampaignView__headerActions .Button {
-	white-space: nowrap;
-}
-
-.CampaignView__headerActionsToggle {
-	display: none !important;
-}
-
-.CampaignView__headerActionsMenu {
-	display: flex;
-	align-items: center;
-	gap: var(--space-2);
-}
-
-.CampaignView__header {
-	width: 100%;
-	display: flex;
-	align-items: flex-end;
-	gap: var(--space-6);
-}
-
 .CampaignView__script,
 .CampaignView__script.Input,
 .CampaignView__script .MarkdownView {
@@ -166,67 +136,6 @@
 		gap: var(--space-3);
 	}
 
-	.CampaignView__header {
-		align-items: flex-start;
-		gap: var(--space-3);
-		flex-direction: column;
-	}
-
-	.CampaignView__header .muted {
-		display: none;
-	}
-
-	.CampaignView__headerActions {
-		gap: var(--space-2);
-		overflow-x: visible;
-	}
-
-	.CampaignView__headerActionsToggle {
-		display: inline-flex !important;
-	}
-
-	.CampaignView__headerActionsMenu {
-		position: absolute;
-		top: calc(100% + var(--space-1));
-		right: 0;
-		z-index: 20;
-		display: none;
-		flex-direction: column;
-		align-items: stretch;
-		min-width: min(280px, calc(100vw - var(--space-6)));
-		padding: var(--space-2);
-		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
-		border-radius: var(--radius-md);
-		background: var(--panel);
-		box-shadow: var(--shadow);
-	}
-
-	.CampaignView__headerActions.is_open .CampaignView__headerActionsMenu {
-		display: flex;
-	}
-
-	.CampaignView__headerActions .Button {
-		flex: 0 0 auto;
-		min-height: var(--control-h-sm);
-	}
-
-	.CampaignView__headerActions .Button {
-		font-size: 0.82rem;
-		padding-inline: var(--space-2);
-	}
-
-	.CampaignView__headerActionsMenu .Button {
-		width: 100%;
-		justify-content: flex-start;
-		padding-inline: var(--space-3);
-	}
-
-	.CampaignView__headerActions>.Button:not(:has(span)),
-	.CampaignView__headerActions>.Button__danger {
-		min-width: 44px;
-		width: 44px;
-		padding-inline: 0;
-	}
 }
 
 @media (max-width: 767px) {
@@ -254,18 +163,6 @@
 
 	.CampaignView__contentPanel {
 		padding-bottom: var(--space-6);
-	}
-
-	.CampaignView__headerActions {
-		width: 100%;
-		overflow-x: auto;
-		justify-content: flex-end;
-		padding-bottom: var(--space-1);
-		scrollbar-width: thin;
-	}
-
-	.CampaignView__headerActions .Button span {
-		display: none;
 	}
 
 	.CampaignView__script,

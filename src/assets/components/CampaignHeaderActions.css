@@ -1,0 +1,87 @@
+.CampaignHeaderActions {
+	display: flex;
+	position: relative;
+	width: 100%;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--space-3);
+}
+
+.CampaignHeaderActions .Button {
+	white-space: nowrap;
+}
+
+.CampaignHeaderActions__toggle {
+	display: none !important;
+}
+
+.CampaignHeaderActions__menu {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+@media (max-width: 1024px) {
+	.CampaignHeaderActions {
+		gap: var(--space-2);
+		overflow-x: visible;
+	}
+
+	.CampaignHeaderActions__toggle {
+		display: inline-flex !important;
+	}
+
+	.CampaignHeaderActions__menu {
+		position: absolute;
+		top: calc(100% + var(--space-1));
+		right: 0;
+		z-index: 20;
+		display: none;
+		flex-direction: column;
+		align-items: stretch;
+		min-width: min(280px, calc(100vw - var(--space-6)));
+		padding: var(--space-2);
+		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		border-radius: var(--radius-md);
+		background: var(--panel);
+		box-shadow: var(--shadow);
+	}
+
+	.CampaignHeaderActions.is_open .CampaignHeaderActions__menu {
+		display: flex;
+	}
+
+	.CampaignHeaderActions .Button {
+		flex: 0 0 auto;
+		min-height: var(--control-h-sm);
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
+	}
+
+	.CampaignHeaderActions__menu .Button {
+		width: 100%;
+		justify-content: flex-start;
+		padding-inline: var(--space-3);
+	}
+
+	.CampaignHeaderActions > .Button:not(:has(span)),
+	.CampaignHeaderActions > .Button__danger {
+		width: 44px;
+		min-width: 44px;
+		padding-inline: 0;
+	}
+}
+
+@media (max-width: 767px) {
+	.CampaignHeaderActions {
+		width: 100%;
+		overflow-x: auto;
+		justify-content: flex-end;
+		padding-bottom: var(--space-1);
+		scrollbar-width: thin;
+	}
+
+	.CampaignHeaderActions .Button span {
+		display: none;
+	}
+}
