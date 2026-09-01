@@ -53,264 +53,11 @@
 	color: var(--text-bright);
 }
 
-.EncounterViewMetric {
-	min-width: 86px;
-	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);
-	border-radius: var(--radius-md);
-	background: color-mix(in srgb, var(--bg), transparent 20%);
-	padding: var(--space-2) var(--space-2);
-	display: flex;
-	align-items: center;
-	flex-direction: column;
-	justify-content: center;
-}
-
-.EncounterViewMetric__tooltip {
-	display: flex;
-	align-items: center;
-	flex-direction: column;
-	gap: var(--space-1);
-	height: 100%;
-}
-
-.EncounterViewMetric__accent {
-	border-color: color-mix(in srgb, var(--accent), transparent 45%);
-	background: color-mix(in srgb, var(--accent), transparent 92%);
-}
-
-.EncounterViewMetric__label {
-	color: var(--muted);
-	font-size: 0.66rem;
-	font-weight: 600;
-	line-height: 1.1;
-	text-transform: uppercase;
-}
-
-.EncounterViewMetric__value {
-	color: var(--text-bright);
-	font-size: 1rem;
-	font-weight: 700;
-	line-height: 1;
-}
-
-.EncounterViewMetric__accent .EncounterViewMetric__value {
-	color: var(--accent);
-}
-
-.EncounterView__list {
-	width: 290px;
-	min-width: 290px;
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
-	height: 100%;
-	overflow-y: scroll;
-	margin-right: calc(-1 * var(--space-1));
-	padding-top: var(--space-2);
-}
-
 .DraggableList>div:hover>.DraggableList__handle,
 .DraggableList>div.is_dragging>.DraggableList__handle {
 	opacity: 1;
 	background-color: var(--panel-2);
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
-}
-
-.EncounterView__list .DraggableList__handle {
-	transform: translate(0, 0);
-	border-radius: var(--radius-xxs) var(--radius-md) 0 var(--radius-xxs);
-	top: 0;
-	left: unset;
-	right: 0;
-	transition: border-radius .125s ease-in-out;
-}
-
-.EncounterView__list .DraggableList>div:hover>.DraggableList__handle:hover {
-	border-radius: var(--radius-xxs);
-}
-
-.EncounterView__addBtn {
-	width: 100%;
-	justify-content: center;
-}
-
-.EncounterView__addActions {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: var(--space-2);
-}
-
-.EncounterMonsterRow {
-	position: relative;
-	background: color-mix(in srgb, var(--bg), transparent 45%);
-	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
-	border-radius: var(--radius-md);
-	padding: var(--space-2) var(--space-2);
-	cursor: pointer;
-	transition: all 0.2s ease;
-	display: flex;
-	align-items: center;
-	gap: var(--space-3);
-	justify-content: space-between;
-	border-left: 3px solid transparent;
-}
-
-.EncounterMonsterRow:hover {
-	border-color: var(--accent);
-	background: color-mix(in srgb, var(--accent), transparent 95%);
-}
-
-.EncounterMonsterRow.is_active {
-	border-color: color-mix(in srgb, var(--accent), transparent 60%);
-	border-left-color: var(--accent);
-	background: color-mix(in srgb, var(--accent), transparent 92%);
-	box-shadow: 0 0 20px color-mix(in srgb, var(--accent), transparent 92%) !important;
-}
-
-.EncounterMonsterRow.is_dragging {
-	opacity: 0.4;
-	border: 1px dashed var(--accent);
-	background: color-mix(in srgb, var(--accent), transparent 95%);
-}
-
-.EncounterMonsterRow__character {
-	border-left-color: color-mix(in srgb, var(--warning), transparent 60%);
-	background: color-mix(in srgb, var(--warning), transparent 95%);
-}
-
-.EncounterMonsterRow__content {
-	flex: 1;
-	min-width: 0;
-}
-
-.EncounterMonsterRow__content .EncounterMonsterRow__name {
-	display: inline-block;
-	font-weight: 600;
-	font-size: 0.95rem;
-	min-width: 0;
-	margin-bottom: var(--space-1);
-	max-width: 250px;
-	color: var(--text-bright);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.EncounterMonsterRow__renameBtn {
-	flex: 0 0 auto;
-	padding: 0 !important;
-	min-width: 22px !important;
-	width: 22px !important;
-	height: 22px !important;
-	min-height: 22px !important;
-	opacity: 0.65;
-}
-
-.EncounterMonsterRow__renameBtn:hover {
-	opacity: 1;
-}
-
-.EncounterMonsterRow__renameBtn svg {
-	width: 13px;
-	height: 13px;
-}
-
-.EncounterMonsterRow__stats {
-	display: flex;
-	align-items: center;
-	gap: var(--space-3);
-}
-
-.EncounterMonsterRow__hp {
-	display: flex;
-	align-items: center;
-	gap: var(--space-1);
-}
-
-.EncounterMonsterRow__hpInput,
-.EncounterMonsterRow__maxHpInput {
-	width: 42px;
-	background: color-mix(in srgb, var(--bg), transparent 40%);
-	border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
-	border-radius: var(--radius-xxs);
-	padding: var(--space-1) 0;
-	text-align: center;
-	font-size: 0.8rem;
-	font-weight: 700;
-	transition: border-color 0.2s;
-	appearance: textfield;
-	/* Hide arrows in Firefox. */
-}
-
-/* Hide default arrows for Chrome, Safari, Edge, and Opera. */
-.EncounterMonsterRow__hpInput::-webkit-outer-spin-button,
-.EncounterMonsterRow__hpInput::-webkit-inner-spin-button,
-.EncounterMonsterRow__maxHpInput::-webkit-outer-spin-button,
-.EncounterMonsterRow__maxHpInput::-webkit-inner-spin-button {
-	-webkit-appearance: none;
-	margin: 0;
-}
-
-.EncounterMonsterRow__hpInput:hover,
-.EncounterMonsterRow__maxHpInput:hover {
-	border-color: color-mix(in srgb, var(--accent), transparent 50%);
-	background: color-mix(in srgb, var(--bg), transparent 20%);
-}
-
-.EncounterMonsterRow__hpInput:focus,
-.EncounterMonsterRow__maxHpInput:focus {
-	border-color: var(--accent);
-	outline: none;
-	background: var(--bg);
-}
-
-.EncounterMonsterRow__hpInput {
-	color: var(--accent);
-}
-
-.EncounterMonsterRow__maxHpInput {
-	color: var(--muted);
-}
-
-.EncounterMonsterRow__ac {
-	font-size: 0.75rem;
-	font-weight: 700;
-	color: var(--text);
-	background: color-mix(in srgb, var(--border), transparent 60%);
-	padding: var(--space-1) var(--space-2);
-	border-radius: var(--radius-sm);
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-}
-
-.EncounterMonsterRow__playerBadge {
-	font-size: 0.72rem;
-	font-weight: 800;
-	color: var(--accent);
-	background: color-mix(in srgb, var(--accent), transparent 88%);
-	border: 1px solid color-mix(in srgb, var(--accent), transparent 55%);
-	border-radius: var(--radius-sm);
-	padding: var(--space-1) var(--space-2);
-	text-transform: uppercase;
-}
-
-.EncounterMonsterRow__actions {
-	margin-left: auto;
-	display: flex;
-	gap: var(--space-1);
-}
-
-.EncounterMonsterRow__action {
-	padding: 0 !important;
-	min-width: 22px !important;
-	width: 22px !important;
-	height: 22px !important;
-	min-height: 22px !important;
-}
-
-.EncounterMonsterRow__action svg {
-	width: 14px;
-	height: 14px;
 }
 
 .EncounterView__detailView {
@@ -425,16 +172,16 @@
 	max-height: 72vh;
 }
 
-.EncounterView__gridItem .character_card {
+.EncounterView__gridItem .CharacterCard {
 	border: 0;
 	background: transparent;
 }
 
-.EncounterView .character_card__header {
+.EncounterView .CharacterCard__header {
 	display: none;
 }
 
-.EncounterView__gridItem .character_card__body {
+.EncounterView__gridItem .CharacterCard__body {
 	padding: 0;
 }
 
@@ -458,7 +205,7 @@
 	transform: translate(-150%, 150%) scale(4);
 }
 
-.EncounterView__gridItem .MonsterStatBlock__replace_token_btn {
+.EncounterView__gridItem .MonsterStatBlock__replaceTokenButton {
 	right: 0;
 	bottom: 0;
 	width: var(--size-7);
@@ -466,76 +213,10 @@
 	min-width: var(--size-7);
 }
 
-.EncounterCharacterPicker {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
-	min-width: min(460px, 80vw);
-}
-
-.EncounterCharacterPicker__createBtn {
-	width: 100%;
-	justify-content: center;
-}
-
-.EncounterCharacterPicker__create {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-4);
-}
-
-.EncounterCharacterPicker__createActions {
-	display: flex;
-	justify-content: flex-end;
-	gap: var(--space-2);
-}
-
-.EncounterCharacterPicker__item {
-	text-align: left;
-	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);
-	border-radius: var(--radius-md);
-	background: color-mix(in srgb, var(--bg), transparent 30%);
-	color: var(--text);
-	padding: var(--space-3);
-	cursor: pointer;
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-1);
-	transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.EncounterCharacterPicker__item:hover {
-	border-color: var(--accent);
-	background: color-mix(in srgb, var(--accent), transparent 92%);
-}
-
-.EncounterCharacterPicker__name {
-	color: var(--text-bright);
-	font-weight: 800;
-}
-
-.EncounterCharacterPicker__meta {
-	color: var(--muted);
-	font-size: 0.85rem;
-}
-
 @media (max-width: 1599px) {
 
 	.EncounterView__metrics {
 		gap: var(--space-1);
-	}
-
-	.EncounterViewMetric {
-		min-width: 68px;
-		padding: var(--space-1) var(--space-2);
-	}
-
-	.EncounterViewMetric__label {
-		font-size: 0.58rem;
-	}
-
-	.EncounterViewMetric__value {
-		font-size: 0.88rem;
 	}
 
 	.EncounterView__headerActions {
@@ -573,11 +254,6 @@
 }
 
 @media (max-width: 1024px) {
-	.EncounterView__addActions {
-		display: flex;
-		flex-direction: row;
-	}
-
 	.EncounterView__header {
 		display: flex;
 		gap: var(--space-2);
@@ -635,47 +311,11 @@
 		display: none;
 	}
 
-	.EncounterViewMetric {
-		min-width: 0;
-	}
-
 	.EncounterView__main {
 		flex-direction: column;
 		gap: var(--space-3);
 		height: auto;
 		margin-top: 0;
-	}
-
-	.EncounterView__list {
-		width: 100%;
-		min-width: 0;
-		max-height: 38dvh;
-		margin: 0;
-		padding: 0;
-		overflow-y: auto;
-	}
-
-	.EncounterMonsterRow {
-		min-height: 56px;
-		gap: var(--space-2);
-	}
-
-	.EncounterMonsterRow__content .EncounterMonsterRow__name {
-		max-width: 100%;
-		white-space: normal;
-		overflow-wrap: anywhere;
-	}
-
-	.EncounterMonsterRow__stats {
-		gap: var(--space-2);
-	}
-
-	.EncounterMonsterRow__action,
-	.EncounterMonsterRow__renameBtn {
-		width: 32px !important;
-		height: 32px !important;
-		min-width: 32px !important;
-		min-height: 32px !important;
 	}
 
 	.EncounterView__detailView {

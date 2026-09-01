@@ -1,91 +1,127 @@
 const express = require("express");
 const multer = require("multer");
-const zlib = require("zlib");
 const storage = require("../storage");
+const { historyService } = require("../modules/history/runtime");
+const {
+	createBackupCommands,
+	normalizeImportStrategy,
+	parseArchivePayload,
+	parseList,
+} = require("../modules/backups/application/backupCommands");
+const {
+	createFileBackupRepository,
+} = require("../modules/backups/infrastructure/fileBackupRepository");
+const {
+	validateCampaignArchiveEnvelope,
+	validateCampaignBundleCollection,
+	validatePartialArchiveBundle,
+} = require("../modules/backups/http/archiveRequestSchemas");
+const {
+	assertValidRequest,
+	createRequestValidationError,
+	validateBody,
+	validationIssue,
+} = require("../http/requestValidation");
 
 const router = express.Router();
-
+const backupCommands = createBackupCommands(createFileBackupRepository(storage));
 const archiveUpload = multer({
 	storage: multer.memoryStorage(),
 	limits: { fileSize: 200 * 1024 * 1024 },
 });
 
-function parseArchivePayload(buffer) {
-	const isGzip =
-		buffer?.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
-	const raw = isGzip ? zlib.gunzipSync(buffer) : buffer;
-	return JSON.parse(raw.toString("utf8"));
-}
-
-function readUploadedArchivePayload(req, res) {
-	if (!req.file?.buffer) {
-		res.status(400).json({ error: "Archive file was not provided." });
-		return null;
-	}
-	return parseArchivePayload(req.file.buffer);
-}
-
-function normalizeImportStrategy(strategy) {
-	const value = String(strategy || "append").toLowerCase();
-	if (["append", "replace_by_id", "wipe_and_replace"].includes(value)) {
-		return value;
-	}
-	return "append";
-}
-
 function asciiFallbackFilename(filename) {
-	const cleaned = String(filename || "download")
-		.normalize("NFKD")
-		.replace(/[\u0300-\u036f]/g, "")
-		.replace(/[^\x20-\x7E]/g, "-")
-		.replace(/[\\"]/g, "-")
-		.replace(/\s+/g, " ")
-		.replace(/-+/g, "-")
-		.trim();
-	return cleaned || "download";
-}
-
-function encodeHeaderFilename(filename) {
-	return encodeURIComponent(String(filename || "download")).replace(
-		/['()*]/g,
-		(char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+	return (
+		String(filename || "download")
+			.normalize("NFKD")
+			.replace(/[\u0300-\u036f]/g, "")
+			.replace(/[^\x20-\x7E]/g, "-")
+			.replace(/[\\"]/g, "-")
+			.replace(/\s+/g, " ")
+			.replace(/-+/g, "-")
+			.trim() || "download"
 	);
 }
 
 function attachmentDisposition(filename) {
-	const fallback = asciiFallbackFilename(filename);
-	return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeHeaderFilename(filename)}`;
+	const encoded = encodeURIComponent(String(filename || "download")).replace(
+		/['()*]/g,
+		(character) =>
+			`%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+	);
+	return `attachment; filename="${asciiFallbackFilename(filename)}"; filename*=UTF-8''${encoded}`;
 }
 
-function sendArchive(res, payload, filename) {
-	const buffer = zlib.gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
-	res.setHeader("Content-Type", "application/gzip");
-	res.setHeader("Content-Disposition", attachmentDisposition(filename));
-	res.send(buffer);
+function sendDownload(res, download) {
+	res.setHeader("Content-Type", download.contentType);
+	res.setHeader("Content-Disposition", attachmentDisposition(download.filename));
+	res.send(download.buffer);
 }
 
-function sendDatedArchive(res, payload, getFilename) {
-	const date = new Date().toISOString().slice(0, 10);
-	sendArchive(res, payload, getFilename(date));
+function readUploadedArchivePayload(req) {
+	if (!req.file?.buffer) {
+		throw createRequestValidationError(
+			[
+				validationIssue(
+					"archive",
+					"Archive file was not provided.",
+					"required",
+				),
+			],
+			"Invalid archive file.",
+		);
+	}
+
+	try {
+		return parseArchivePayload(req.file.buffer);
+	} catch {
+		throw createRequestValidationError(
+			[
+				validationIssue(
+					"archive",
+					"Archive must contain valid JSON or gzip-compressed JSON.",
+					"invalid_archive",
+				),
+			],
+			"Invalid archive file.",
+		);
+	}
 }
 
-function buildArchivePayload(scope, campaigns) {
-	return {
-		version: 2,
-		scope,
-		exportedAt: new Date().toISOString(),
-		campaigns,
-	};
+function campaignBundlesFromImportPayload(payload) {
+	if (Array.isArray(payload)) return payload;
+	if (Array.isArray(payload?.campaigns)) return payload.campaigns;
+	return payload?.meta || payload?.bundle?.meta ? [payload] : [];
+}
+
+async function findReplacedCampaignSlugs(payload, strategy) {
+	if (strategy === "wipe_and_replace") {
+		return storage.listExportableCampaignSlugs();
+	}
+	if (strategy !== "replace_by_id") return [];
+
+	const slugs = [];
+	for (const entry of campaignBundlesFromImportPayload(payload)) {
+		const bundle = entry?.bundle || entry;
+		const campaignId = bundle?.meta?.id;
+		if (campaignId == null) continue;
+		const slug = await storage.findCampaignSlugById(campaignId);
+		if (slug) slugs.push(slug);
+	}
+	return [...new Set(slugs)];
+}
+
+async function resetImportedChangeHistory(payload, strategy) {
+	const affectedCampaigns = await findReplacedCampaignSlugs(payload, strategy);
+	await historyService.clearApplicationHistory();
+	for (const slug of affectedCampaigns) {
+		await historyService.clearCampaignHistory(slug);
+	}
 }
 
 router.get("/export-all", async (_req, res, next) => {
 	try {
-		const slugs = await storage.listCampaignSlugs();
-		res.json(
-			await Promise.all(
-				slugs.map((slug) => storage.exportCampaignBundle(slug)),
-			),
-		);
+		res.json(await backupCommands.exportAll());
 	} catch (error) {
 		next(error);
 	}
@@ -93,16 +129,7 @@ router.get("/export-all", async (_req, res, next) => {
 
 router.get("/export-all/archive", async (_req, res, next) => {
 	try {
-		const slugs = await storage.listCampaignSlugs();
-		const campaigns = await Promise.all(
-			slugs.map((slug) => storage.exportCampaignArchiveBundle(slug)),
-		);
-		const payload = buildArchivePayload("all", campaigns);
-		sendDatedArchive(
-			res,
-			payload,
-			(date) => `prm-full-backup-${date}.prma.gz`,
-		);
+		sendDownload(res, await backupCommands.exportAllArchive());
 	} catch (error) {
 		next(error);
 	}
@@ -110,133 +137,102 @@ router.get("/export-all/archive", async (_req, res, next) => {
 
 router.get("/campaigns/:slug/export/archive", async (req, res, next) => {
 	try {
-		const payload = buildArchivePayload("campaign", [
-			await storage.exportCampaignArchiveBundle(req.params.slug),
-		]);
-		sendDatedArchive(
+		sendDownload(
 			res,
-			payload,
-			(date) => `campaign-${req.params.slug}-${date}.prma.gz`,
+			await backupCommands.exportCampaignArchive({ slug: req.params.slug }),
 		);
 	} catch (error) {
 		next(error);
 	}
 });
 
-router.get(
-	"/campaigns/:slug/export/partial-archive",
-	async (req, res, next) => {
-		try {
-			const sections = String(req.query.sections || "")
-				.split(",")
-				.map((section) => section.trim())
-				.filter(Boolean);
-			const payload = await storage.exportCampaignPartialArchiveBundle(
-				req.params.slug,
-				sections,
-			);
-			sendDatedArchive(
-				res,
-				payload,
-				(date) => `campaign-${req.params.slug}-partial-${date}.prma.gz`,
-			);
-		} catch (error) {
-			next(error);
-		}
-	},
-);
-
-router.post(
-	"/campaigns/:slug/import/partial-archive",
-	archiveUpload.single("archive"),
-	async (req, res, next) => {
-		try {
-			const parsed = readUploadedArchivePayload(req, res);
-			if (!parsed) return;
-			const archiveBundle = Array.isArray(parsed?.campaigns)
-				? parsed.campaigns[0]
-				: parsed;
-			const selectedSections = String(req.body?.sections || "")
-				.split(",")
-				.map((section) => section.trim())
-				.filter(Boolean);
-			res
-				.status(201)
-				.json(
-					await storage.importCampaignPartialArchiveBundle(
-						req.params.slug,
-						selectedSections.length > 0
-							? { ...archiveBundle, sections: selectedSections }
-							: archiveBundle,
-					),
-				);
-		} catch (error) {
-			next(error);
-		}
-	},
-);
-
-router.post("/import-all", async (req, res, next) => {
+router.get("/campaigns/:slug/export/partial-archive", async (req, res, next) => {
 	try {
-		const strategy = normalizeImportStrategy(req.query.strategy);
-		const bundles = Array.isArray(req.body) ? req.body : [req.body];
-		if (strategy === "wipe_and_replace") {
-			await storage.clearAllCampaignData();
-		}
-		for (const bundle of bundles) {
-			if (strategy === "replace_by_id") {
-				const existingSlug = await storage.findCampaignSlugById(
-					bundle?.meta?.id,
-				);
-				if (existingSlug) {
-					await storage.importCampaignBundle(bundle, {
-						forcedSlug: existingSlug,
-						replaceExisting: true,
-					});
-					continue;
-				}
-			}
-			await storage.importCampaignBundle(bundle);
-		}
-		res.status(201).json({ ok: true, imported: bundles.length, strategy });
+		sendDownload(
+			res,
+			await backupCommands.exportPartialArchive({
+				slug: req.params.slug,
+				sections: req.query.sections,
+			}),
+		);
 	} catch (error) {
 		next(error);
 	}
 });
 
 router.post(
+	"/campaigns/:slug/import/partial-archive",
+	archiveUpload.single("archive"),
+	async (req, res, next) => {
+		try {
+			const parsed = readUploadedArchivePayload(req);
+			const archiveBundle = Array.isArray(parsed?.campaigns)
+				? parsed.campaigns[0]
+				: parsed;
+			const selectedSections = parseList(req.body?.sections);
+			const validatedArchive = assertValidRequest(
+				selectedSections.length > 0
+					? {
+							...archiveBundle,
+							sections: selectedSections,
+						}
+					: archiveBundle,
+				validatePartialArchiveBundle,
+				"archive",
+			);
+			await historyService.clearApplicationHistory();
+			await historyService.clearCampaignHistory(req.params.slug);
+			const result = await backupCommands.importPartialArchive({
+				slug: req.params.slug,
+				payload: validatedArchive,
+			});
+			res.status(201).json(result);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
+
+router.post(
+	"/import-all",
+	validateBody(validateCampaignBundleCollection),
+	async (req, res, next) => {
+		try {
+			const strategy = normalizeImportStrategy(req.query.strategy);
+			await resetImportedChangeHistory(req.validatedBody, strategy);
+			const result = await backupCommands.importAll({
+				payload: req.validatedBody,
+				strategy,
+			});
+			res.status(201).json(result);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
+
+router.post(
 	"/import-archive",
 	archiveUpload.single("archive"),
 	async (req, res, next) => {
 		try {
+			const payload = assertValidRequest(
+				readUploadedArchivePayload(req),
+				validateCampaignArchiveEnvelope,
+				"archive",
+			);
 			const mode = req.query.mode === "campaign" ? "campaign" : "all";
-			const strategy = normalizeImportStrategy(req.query.strategy);
-			const effectiveStrategy = mode === "all" ? strategy : "append";
-			const parsed = readUploadedArchivePayload(req, res);
-			if (!parsed) return;
-			const campaigns = Array.isArray(parsed)
-				? parsed
-				: Array.isArray(parsed?.campaigns)
-					? parsed.campaigns
-					: [parsed];
-			const selected = mode === "campaign" ? campaigns.slice(0, 1) : campaigns;
-
-			if (effectiveStrategy === "wipe_and_replace") {
-				await storage.clearAllCampaignData();
-			}
-
-			for (const archiveBundle of selected) {
-				await storage.importCampaignArchiveBundleWithStrategy(
-					archiveBundle,
-					effectiveStrategy,
-				);
-			}
-
-			res.status(201).json({
-				ok: true,
-				imported: selected.length,
-				strategy: effectiveStrategy,
+			const strategy =
+				mode === "all"
+					? normalizeImportStrategy(req.query.strategy)
+					: "append";
+			await resetImportedChangeHistory(payload, strategy);
+			const result = await backupCommands.importArchive({
+				payload,
+				mode,
+				strategy,
 			});
+			res.status(201).json(result);
 		} catch (error) {
 			next(error);
 		}

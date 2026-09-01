@@ -1,0 +1,18 @@
+.CampaignHeader {
+	display: flex;
+	width: 100%;
+	align-items: flex-end;
+	gap: var(--space-6);
+}
+
+@media (max-width: 1024px) {
+	.CampaignHeader {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-3);
+	}
+
+	.CampaignHeader .muted {
+		display: none;
+	}
+}

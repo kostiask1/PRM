@@ -1,0 +1,224 @@
+.SessionSceneCard {
+	margin-bottom: var(--space-2);
+	display: grid;
+	gap: var(--space-3);
+	background: color-mix(in srgb, var(--text-bright), transparent 98%);
+	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
+	border-radius: var(--radius-lg);
+	overflow: hidden;
+}
+
+.SessionSceneCard__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-2);
+	background: color-mix(in srgb, var(--text-bright), transparent 98%);
+	border-radius: var(--radius-lg);
+	gap: var(--space-2);
+}
+
+.SessionSceneCard__headerActions {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.SessionSceneCard__headerActions .Button {
+	height: var(--control-h);
+	min-height: unset;
+}
+
+.SessionSceneCard__headerActions .Button__danger {
+	padding: 0;
+	width: var(--control-h);
+}
+
+.SessionSceneCard__titleGroup {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	cursor: pointer;
+}
+
+.SessionSceneCard__title {
+	font-weight: 700;
+}
+
+.SessionSceneCard__content {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 1fr;
+	align-items: start;
+	gap: var(--space-3);
+	padding: 0 var(--space-2) var(--space-2);
+}
+
+.SessionSceneCard__textSide {
+	min-width: 0;
+}
+
+.SessionSceneCard__imageSide {
+	margin-top: var(--space-7);
+	width: 100%;
+}
+
+.SessionSceneCard__portraitContainer {
+	width: 100%;
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	position: relative;
+}
+
+.SessionSceneCard__portraitWrapper {
+	width: 100%;
+	height: 100%;
+}
+
+.SessionSceneCard__portraitWrapper img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	cursor: pointer;
+}
+
+.SessionSceneCard__grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--space-3);
+	padding: 0;
+}
+
+.SessionSceneCard__imageDelete {
+	position: absolute;
+	top: var(--space-2);
+	right: var(--space-2);
+	opacity: 0;
+	transition: opacity 0.2s;
+}
+
+.SessionSceneCard__portraitWrapper:hover .SessionSceneCard__imageDelete {
+	opacity: 1;
+}
+
+.SessionSceneCard__imageSide .ImageDropzone {
+	height: 100%;
+	min-height: 180px;
+	margin: 0;
+}
+
+.SessionSceneCard__imageSide .ImageDropzone__content {
+	padding: var(--space-3);
+}
+
+.SessionSceneCard__encounterName {
+	font-weight: 600;
+}
+
+.SessionSceneCard__notes {
+	margin-top: var(--space-3);
+}
+
+.SessionSceneCard__notesHeaderRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+	margin-top: var(--space-6);
+	margin-bottom: var(--space-2);
+}
+
+.SessionSceneCard__notesHeader {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-3);
+	cursor: pointer;
+}
+
+.SessionSceneCard__notesHeader label {
+	font-weight: 600;
+}
+
+.SessionSceneCard__notesList {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.SessionSceneCard__imageModal {
+	width: min(98vw, 1600px);
+	max-width: 98vw;
+	height: 96vh;
+}
+
+.SessionSceneCard__imageModal .Modal__body {
+	padding: var(--space-1);
+	height: 100%;
+	overflow: hidden;
+}
+
+.SessionSceneCard__imageModalContent {
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: color-mix(in srgb, var(--bg-2), black 20%);
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+}
+
+.SessionSceneCard__imageModalContent img {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+}
+
+@media (max-width: 1024px) {
+	.SessionSceneCard__content {
+		gap: var(--space-2);
+	}
+
+	.SessionSceneCard__imageSide {
+		margin-top: var(--space-4);
+	}
+}
+
+@media (max-width: 767px) {
+	.SessionSceneCard__headerActions {
+		width: 100%;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: var(--space-1);
+		scrollbar-width: thin;
+	}
+
+	.SessionSceneCard__headerActions .Button {
+		flex: 0 0 auto;
+		min-height: var(--control-h-sm);
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
+	}
+
+	.SessionSceneCard__headerActions .Button__danger {
+		width: 44px;
+		min-width: 44px;
+	}
+
+	.SessionSceneCard__titleGroup,
+	.SessionSceneCard__title {
+		width: 100%;
+	}
+
+	.SessionSceneCard__content,
+	.SessionSceneCard__grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.SessionSceneCard__imageSide {
+		margin-top: 0;
+	}
+
+	.SessionSceneCard__imageModal {
+		width: 100vw;
+		max-width: 100vw;
+		height: 100dvh;
+	}
+}

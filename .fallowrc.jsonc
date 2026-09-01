@@ -1,4 +1,22 @@
 {
-	// Registered at runtime from src/main.jsx via navigator.serviceWorker.register.
-	"dynamicallyLoaded": ["public/service-worker.js"]
+	// Registered at runtime from src/main.tsx via navigator.serviceWorker.register.
+	"dynamicallyLoaded": ["public/service-worker.js"],
+	"boundaries": {
+		"zones": [
+			{ "name": "app", "patterns": ["src/app/**", "src/App.tsx", "src/main.tsx"] },
+			{ "name": "pages", "patterns": ["src/pages/**"] },
+			{ "name": "widgets", "patterns": ["src/widgets/**"] },
+			{ "name": "features", "patterns": ["src/features/**"] },
+			{ "name": "entities", "autoDiscover": ["src/entities"] },
+			{ "name": "shared", "patterns": ["src/shared/**"] }
+		],
+		"rules": [
+			{ "from": "app", "allow": ["app", "pages", "widgets", "features", "entities", "shared"] },
+			{ "from": "pages", "allow": ["pages", "widgets", "features", "entities", "shared"] },
+			{ "from": "widgets", "allow": ["widgets", "features", "entities", "shared"] },
+			{ "from": "features", "allow": ["features", "entities", "shared"] },
+			{ "from": "entities", "allow": ["shared"] },
+			{ "from": "shared", "allow": ["shared"] }
+		]
+	}
 }

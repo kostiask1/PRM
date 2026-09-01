@@ -1,4 +1,4 @@
-.PlayerQuestionsModal {
+.PlayerQuestionsModalContent__modal {
 	width: min(96vw, 980px);
 	height: min(90vh, 820px);
 }

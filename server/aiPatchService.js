@@ -28,56 +28,93 @@ function firstOwnedValue(value, keys) {
 	return undefined;
 }
 
-function parseNameParts(raw = {}) {
-	const firstName = sanitizeEntityName(raw.firstName || raw.first_name);
-	const lastName = sanitizeEntityName(raw.lastName || raw.last_name);
-	if (firstName || lastName) {
-		return { firstName, lastName };
-	}
+function asNormalizationRecord(value) {
+	return value && typeof value === "object" && !Array.isArray(value)
+		? value
+		: {};
+}
 
-	const fullName = sanitizeEntityName(raw.name || raw.fullName || raw.title);
-	if (!fullName) return { firstName: "", lastName: "" };
-	const parts = fullName.split(/\s+/).filter(Boolean);
-	if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+function getExplicitNameParts(raw) {
 	return {
-		firstName: parts[0],
+		firstName: sanitizeEntityName(raw.firstName || raw.first_name),
+		lastName: sanitizeEntityName(raw.lastName || raw.last_name),
+	};
+}
+
+function hasExplicitNamePart(parts) {
+	return Boolean(parts.firstName || parts.lastName);
+}
+
+function getFullNameParts(raw) {
+	const fullName = sanitizeEntityName(raw.name || raw.fullName || raw.title);
+	return fullName ? fullName.split(/\s+/).filter(Boolean) : [];
+}
+
+function projectFullNameParts(parts) {
+	return {
+		firstName: parts[0] || "",
 		lastName: parts.slice(1).join(" "),
 	};
 }
 
-function normalizeLevel(rawLevel) {
-	if (typeof rawLevel === "string" && rawLevel.trim() === "") return "";
-	const parsed = Number.parseInt(String(rawLevel ?? "1"), 10);
-	if (!Number.isFinite(parsed)) return 1;
-	if (parsed < 1) return 1;
-	if (parsed > 20) return 20;
-	return parsed;
+function parseNameParts(raw = {}) {
+	const source = asNormalizationRecord(raw);
+	const explicit = getExplicitNameParts(source);
+	return hasExplicitNamePart(explicit)
+		? explicit
+		: projectFullNameParts(getFullNameParts(source));
 }
 
-function normalizeNote(note, { simplifiedNotes = false } = {}) {
-	if (typeof note === "string") {
-		const text = note.trim();
-		return {
-			id: makeId(),
-			title: "",
-			text,
-			collapsed: false,
-		};
-	}
+function isEmptyLevelString(value) {
+	return typeof value === "string" && value.trim() === "";
+}
 
-	if (!note || typeof note !== "object") {
-		return null;
-	}
+function parseLevelNumber(value) {
+	return Number.parseInt(String(value ?? "1"), 10);
+}
 
-	const rawTitle = simplifiedNotes ? "" : asText(note.title || note.name);
-	const rawText = String(note.text ?? note.description ?? note.content ?? "");
+function clampLevel(parsed) {
+	return Number.isFinite(parsed) ? Math.min(20, Math.max(1, parsed)) : 1;
+}
 
+function normalizeLevel(rawLevel) {
+	return isEmptyLevelString(rawLevel) ? "" : clampLevel(parseLevelNumber(rawLevel));
+}
+
+function buildStringNote(note) {
+	return {
+		id: makeId(),
+		title: "",
+		text: note.trim(),
+		collapsed: false,
+	};
+}
+
+function isNoteRecord(note) {
+	return Boolean(note && typeof note === "object" && !Array.isArray(note));
+}
+
+function getNormalizedNoteTitle(note, simplifiedNotes) {
+	return simplifiedNotes ? "" : asText(note.title || note.name);
+}
+
+function getNormalizedNoteText(note) {
+	return String(note.text ?? note.description ?? note.content ?? "");
+}
+
+function buildObjectNote(note, simplifiedNotes) {
 	return {
 		id: note.id || makeId(),
-		title: rawTitle,
-		text: rawText,
+		title: getNormalizedNoteTitle(note, simplifiedNotes),
+		text: getNormalizedNoteText(note),
 		collapsed: Boolean(note.collapsed),
 	};
+}
+
+function normalizeNote(note, options = {}) {
+	if (typeof note === "string") return buildStringNote(note);
+	if (!isNoteRecord(note)) return null;
+	return buildObjectNote(note, Boolean(options?.simplifiedNotes));
 }
 
 function normalizeNotes(
@@ -142,48 +179,179 @@ function normalizeNotesPreservingExisting(
 	});
 }
 
-function mergeAiIgnoredNotes(existingNotes = [], visibleNotes = []) {
-	const existing = Array.isArray(existingNotes) ? existingNotes : [];
-	if (!existing.some(isAiIgnored)) return visibleNotes;
-	const ignoredNotes = existing.filter(isAiIgnored);
-	const ignoredIds = new Set(
-		ignoredNotes.map((note) => asText(note?.id)).filter(Boolean),
-	);
-	const result = (Array.isArray(visibleNotes) ? visibleNotes : []).filter(
-		(note) => {
-			const id = asText(note?.id);
-			return !id || !ignoredIds.has(id);
-		},
-	);
-	const visibleIndexById = () =>
-		new Map(
-			result
-				.map((note, index) => [asText(note?.id), index])
-				.filter(([id]) => Boolean(id)),
-		);
+function asNoteCollection(value) {
+	return Array.isArray(value) ? value : [];
+}
 
-	for (const ignoredNote of ignoredNotes) {
-		const originalIndex = existing.indexOf(ignoredNote);
-		const previousVisible = [...existing.slice(0, originalIndex)]
-			.reverse()
-			.find((note) => !isAiIgnored(note) && asText(note?.id));
-		const nextVisible = existing
-			.slice(originalIndex + 1)
-			.find((note) => !isAiIgnored(note) && asText(note?.id));
-		const indexes = visibleIndexById();
-		const previousIndex = indexes.get(asText(previousVisible?.id));
-		const nextIndex = indexes.get(asText(nextVisible?.id));
+function getNoteId(note) {
+	return asText(note?.id);
+}
 
-		if (previousIndex !== undefined) {
-			result.splice(previousIndex + 1, 0, ignoredNote);
-		} else if (nextIndex !== undefined) {
-			result.splice(nextIndex, 0, ignoredNote);
-		} else {
-			result.splice(Math.min(originalIndex, result.length), 0, ignoredNote);
-		}
+function collectIgnoredNoteEntries(notes) {
+	return notes.flatMap((note, originalIndex) =>
+		isAiIgnored(note) ? [{ note, originalIndex }] : [],
+	);
+}
+
+function getIgnoredNoteIds(entries) {
+	return new Set(entries.map(({ note }) => getNoteId(note)).filter(Boolean));
+}
+
+function removeIgnoredIdCollisions(notes, ignoredIds) {
+	return asNoteCollection(notes).filter((note) => {
+		const id = getNoteId(note);
+		return !id || !ignoredIds.has(id);
+	});
+}
+
+function indexNotesById(notes) {
+	return new Map(
+		notes
+			.map((note, index) => [getNoteId(note), index])
+			.filter(([id]) => Boolean(id)),
+	);
+}
+
+function findPreviousVisibleId(notes, originalIndex) {
+	for (let index = originalIndex - 1; index >= 0; index -= 1) {
+		const note = notes[index];
+		const id = getNoteId(note);
+		if (!isAiIgnored(note) && id) return id;
 	}
+	return "";
+}
 
-	return result;
+function findNextVisibleId(notes, originalIndex) {
+	for (let index = originalIndex + 1; index < notes.length; index += 1) {
+		const note = notes[index];
+		const id = getNoteId(note);
+		if (!isAiIgnored(note) && id) return id;
+	}
+	return "";
+}
+
+function getIgnoredNoteInsertionIndex(
+	entry,
+	existingNotes,
+	visibleIndexById,
+	visibleCount,
+) {
+	const previousIndex = visibleIndexById.get(
+		findPreviousVisibleId(existingNotes, entry.originalIndex),
+	);
+	if (previousIndex !== undefined) return previousIndex + 1;
+
+	const nextIndex = visibleIndexById.get(
+		findNextVisibleId(existingNotes, entry.originalIndex),
+	);
+	return nextIndex ?? Math.min(entry.originalIndex, visibleCount);
+}
+
+function planIgnoredNoteInsertions(entries, existingNotes, visibleNotes) {
+	const buckets = Array.from({ length: visibleNotes.length + 1 }, () => []);
+	const visibleIndexById = indexNotesById(visibleNotes);
+	for (const entry of entries) {
+		const index = getIgnoredNoteInsertionIndex(
+			entry,
+			existingNotes,
+			visibleIndexById,
+			visibleNotes.length,
+		);
+		buckets[index].push(entry.note);
+	}
+	return buckets;
+}
+
+function materializeNoteInsertions(visibleNotes, buckets) {
+	return visibleNotes
+		.flatMap((note, index) => [...buckets[index], note])
+		.concat(buckets[visibleNotes.length]);
+}
+
+function mergeAiIgnoredNotes(existingNotes = [], visibleNotes = []) {
+	const existing = asNoteCollection(existingNotes);
+	const ignoredEntries = collectIgnoredNoteEntries(existing);
+	if (ignoredEntries.length === 0) return visibleNotes;
+
+	const visible = removeIgnoredIdCollisions(
+		visibleNotes,
+		getIgnoredNoteIds(ignoredEntries),
+	);
+	const insertions = planIgnoredNoteInsertions(
+		ignoredEntries,
+		existing,
+		visible,
+	);
+	return materializeNoteInsertions(visible, insertions);
+}
+
+const CHARACTER_NAME_KEYS = Object.freeze([
+	"name",
+	"fullName",
+	"title",
+	"firstName",
+	"first_name",
+	"lastName",
+	"last_name",
+]);
+
+const CHARACTER_FIELD_ALIASES = Object.freeze({
+	race: Object.freeze(["race", "species"]),
+	class: Object.freeze(["class", "role"]),
+	motivation: Object.freeze(["motivation", "goal"]),
+	description: Object.freeze(["description", "bio", "backstory"]),
+	trait: Object.freeze(["trait", "personality", "quirk"]),
+});
+
+function hasCharacterNameInput(raw) {
+	return CHARACTER_NAME_KEYS.some((key) => hasOwn(raw, key));
+}
+
+function getExistingEntityNotes(existing) {
+	return Array.isArray(existing?.notes) ? existing.notes : [];
+}
+
+function getEntityNotesSource(raw, existingNotes) {
+	return Array.isArray(raw.notes) ? raw.notes : existingNotes;
+}
+
+function normalizeEntityNotes(raw, existing, simplifiedNotes) {
+	const existingNotes = getExistingEntityNotes(existing);
+	const notes = normalizeNotesPreservingExisting(
+		getEntityNotesSource(raw, existingNotes),
+		existingNotes,
+		{ keepAtLeastOne: true, simplifiedNotes },
+	);
+	return mergeAiIgnoredNotes(existingNotes, notes);
+}
+
+function getCharacterNamePart(hasNameInput, parsedValue, existingValue) {
+	return hasNameInput ? parsedValue : existingValue || "";
+}
+
+function getCharacterFieldValue(raw, aliases, existingValue) {
+	const rawValue = firstOwnedValue(raw, aliases);
+	return rawValue !== undefined ? asText(rawValue) : existingValue || "";
+}
+
+function getCharacterLevel(raw, existing) {
+	return normalizeLevel(hasOwn(raw, "level") ? raw.level : existing?.level);
+}
+
+function getEntityBooleanState(raw, existing, key) {
+	return Boolean(existing?.[key] ?? raw[key] ?? false);
+}
+
+function getEntityImageUrl(raw, existing) {
+	return existing?.imageUrl ?? raw.imageUrl ?? null;
+}
+
+function getExistingEntity(existing) {
+	return existing || {};
+}
+
+function getEntityId(existing) {
+	return existing.id || makeId();
 }
 
 function normalizeCharacter(
@@ -191,65 +359,75 @@ function normalizeCharacter(
 	existing = null,
 	{ simplifiedNotes = false } = {},
 ) {
+	const previous = getExistingEntity(existing);
 	const nameParts = parseNameParts(raw);
-	const rawHasName = [
-		"name",
-		"fullName",
-		"title",
-		"firstName",
-		"first_name",
-		"lastName",
-		"last_name",
-	].some((key) => hasOwn(raw, key));
-	const notesSource = Array.isArray(raw.notes)
-		? raw.notes
-		: existing
-			? existing.notes || []
-			: [];
-	const rawRace = firstOwnedValue(raw, ["race", "species"]);
-	const rawClass = firstOwnedValue(raw, ["class", "role"]);
-	const rawMotivation = firstOwnedValue(raw, ["motivation", "goal"]);
-	const rawDescription = firstOwnedValue(raw, [
-		"description",
-		"bio",
-		"backstory",
-	]);
-	const rawTrait = firstOwnedValue(raw, ["trait", "personality", "quirk"]);
-
-	const notes = normalizeNotesPreservingExisting(
-		notesSource,
-		existing?.notes || [],
-		{
-			keepAtLeastOne: true,
-			simplifiedNotes,
-		},
-	);
-
+	const hasNameInput = hasCharacterNameInput(raw);
 	return {
-		id: existing?.id || makeId(),
-		firstName: rawHasName ? nameParts.firstName : existing?.firstName || "",
-		lastName: rawHasName ? nameParts.lastName : existing?.lastName || "",
-		race: rawRace !== undefined ? asText(rawRace) : existing?.race || "",
-		class: rawClass !== undefined ? asText(rawClass) : existing?.class || "",
-		level: hasOwn(raw, "level")
-			? normalizeLevel(raw.level)
-			: normalizeLevel(existing?.level),
-		motivation:
-			rawMotivation !== undefined
-				? asText(rawMotivation)
-				: existing?.motivation || "",
-		description:
-			rawDescription !== undefined
-				? asText(rawDescription)
-				: existing?.description || "",
-		trait: rawTrait !== undefined ? asText(rawTrait) : existing?.trait || "",
-		notes: mergeAiIgnoredNotes(existing?.notes || [], notes),
-		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),
-		isNotesCollapsed: Boolean(
-			existing?.isNotesCollapsed ?? raw.isNotesCollapsed ?? false,
+		id: getEntityId(previous),
+		firstName: getCharacterNamePart(
+			hasNameInput,
+			nameParts.firstName,
+			previous.firstName,
 		),
-		imageUrl: existing?.imageUrl ?? raw.imageUrl ?? null,
+		lastName: getCharacterNamePart(
+			hasNameInput,
+			nameParts.lastName,
+			previous.lastName,
+		),
+		race: getCharacterFieldValue(
+			raw,
+			CHARACTER_FIELD_ALIASES.race,
+			previous.race,
+		),
+		class: getCharacterFieldValue(
+			raw,
+			CHARACTER_FIELD_ALIASES.class,
+			previous.class,
+		),
+		level: getCharacterLevel(raw, previous),
+		motivation: getCharacterFieldValue(
+			raw,
+			CHARACTER_FIELD_ALIASES.motivation,
+			previous.motivation,
+		),
+		description: getCharacterFieldValue(
+			raw,
+			CHARACTER_FIELD_ALIASES.description,
+			previous.description,
+		),
+		trait: getCharacterFieldValue(
+			raw,
+			CHARACTER_FIELD_ALIASES.trait,
+			previous.trait,
+		),
+		notes: normalizeEntityNotes(raw, previous, simplifiedNotes),
+		collapsed: getEntityBooleanState(raw, previous, "collapsed"),
+		isNotesCollapsed: getEntityBooleanState(
+			raw,
+			previous,
+			"isNotesCollapsed",
+		),
+		imageUrl: getEntityImageUrl(raw, previous),
 	};
+}
+
+const LOCATION_NAME_ALIASES = Object.freeze(["name", "title"]);
+const LOCATION_DESCRIPTION_ALIASES = Object.freeze([
+	"description",
+	"summary",
+	"text",
+]);
+
+function getLocationName(raw, existing) {
+	const rawName = firstOwnedValue(raw, LOCATION_NAME_ALIASES);
+	if (rawName === undefined) return existing.name || "";
+	return sanitizeEntityName(rawName);
+}
+
+function getLocationDescription(raw, existing) {
+	const rawDescription = firstOwnedValue(raw, LOCATION_DESCRIPTION_ALIASES);
+	if (rawDescription === undefined) return existing.description || "";
+	return asText(rawDescription);
 }
 
 function normalizeLocation(
@@ -257,109 +435,148 @@ function normalizeLocation(
 	existing = null,
 	{ simplifiedNotes = false } = {},
 ) {
-	const rawName = firstOwnedValue(raw, ["name", "title"]);
-	const rawDescription = firstOwnedValue(raw, [
-		"description",
-		"summary",
-		"text",
-	]);
-	const fallbackDescription =
-		rawDescription !== undefined
-			? asText(rawDescription)
-			: existing?.description || "";
-	const notesSource = Array.isArray(raw.notes)
-		? raw.notes
-		: existing
-			? existing.notes || []
-			: [];
-
-	const notes = normalizeNotesPreservingExisting(
-		notesSource,
-		existing?.notes || [],
-		{
-			keepAtLeastOne: true,
-			simplifiedNotes,
-		},
-	);
-
+	const previous = getExistingEntity(existing);
 	return {
-		id: existing?.id || makeId(),
-		name:
-			rawName !== undefined
-				? sanitizeEntityName(rawName)
-				: existing?.name || "",
-		description: fallbackDescription,
-		notes: mergeAiIgnoredNotes(existing?.notes || [], notes),
-		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),
-		isNotesCollapsed: Boolean(
-			existing?.isNotesCollapsed ?? raw.isNotesCollapsed ?? false,
+		id: getEntityId(previous),
+		name: getLocationName(raw, previous),
+		description: getLocationDescription(raw, previous),
+		notes: normalizeEntityNotes(raw, previous, simplifiedNotes),
+		collapsed: getEntityBooleanState(raw, previous, "collapsed"),
+		isNotesCollapsed: getEntityBooleanState(
+			raw,
+			previous,
+			"isNotesCollapsed",
 		),
-		imageUrl: existing?.imageUrl ?? raw.imageUrl ?? null,
+		imageUrl: getEntityImageUrl(raw, previous),
 	};
+}
+
+const SCENE_TEXT_FIELDS = Object.freeze([
+	"summary",
+	"goal",
+	"stakes",
+	"location",
+]);
+
+function getSceneTextSource(rawScene) {
+	if (rawScene.texts && typeof rawScene.texts === "object") {
+		return rawScene.texts;
+	}
+	return rawScene;
+}
+
+function getSceneTextValue(source, existingTexts, field) {
+	if (hasOwn(source, field)) return asText(source[field]);
+	return existingTexts?.[field] || "";
 }
 
 function normalizeSceneTexts(rawScene = {}, existingTexts = {}) {
-	const source =
-		rawScene.texts && typeof rawScene.texts === "object"
-			? rawScene.texts
-			: rawScene;
+	const source = getSceneTextSource(rawScene);
 	return {
-		summary: hasOwn(source, "summary")
-			? asText(source.summary)
-			: existingTexts?.summary || "",
-		goal: hasOwn(source, "goal")
-			? asText(source.goal)
-			: existingTexts?.goal || "",
-		stakes: hasOwn(source, "stakes")
-			? asText(source.stakes)
-			: existingTexts?.stakes || "",
-		location: hasOwn(source, "location")
-			? asText(source.location)
-			: existingTexts?.location || "",
+		summary: getSceneTextValue(source, existingTexts, "summary"),
+		goal: getSceneTextValue(source, existingTexts, "goal"),
+		stakes: getSceneTextValue(source, existingTexts, "stakes"),
+		location: getSceneTextValue(source, existingTexts, "location"),
 	};
 }
 
-function hasSceneContent(scene = {}) {
+function getSceneContentList(value) {
+	return Array.isArray(value) ? value : [];
+}
+
+function hasSceneTextContent(scene) {
 	const texts = scene.texts || {};
-	const hasTextContent = ["summary", "goal", "stakes", "location"].some((key) =>
-		asText(texts?.[key]),
-	);
-	return (
-		hasTextContent ||
-		(scene.notes || []).some((note) => asText(note?.title || note?.text)) ||
-		(scene.npcs || []).some((npc) => asText(npc?.name || npc?.description)) ||
-		Boolean(asText(scene.encounterId) || asText(scene.imageUrl))
-	);
+	return SCENE_TEXT_FIELDS.some((field) => Boolean(asText(texts?.[field])));
+}
+
+function hasAliasedSceneItemContent(item, primaryField, secondaryField) {
+	return Boolean(asText(item?.[primaryField] || item?.[secondaryField]));
+}
+
+function hasSceneNoteContent(note) {
+	return hasAliasedSceneItemContent(note, "title", "text");
+}
+
+function hasSceneNpcContent(npc) {
+	return hasAliasedSceneItemContent(npc, "name", "description");
+}
+
+function hasSceneCollectionContent(value, predicate) {
+	return getSceneContentList(value).some(predicate);
+}
+
+function hasSceneResourceContent(scene) {
+	return Boolean(asText(scene.encounterId) || asText(scene.imageUrl));
+}
+
+function hasSceneContent(scene = {}) {
+	return [
+		hasSceneTextContent(scene),
+		hasSceneCollectionContent(scene.notes, hasSceneNoteContent),
+		hasSceneCollectionContent(scene.npcs, hasSceneNpcContent),
+		hasSceneResourceContent(scene),
+	].some(Boolean);
+}
+
+function createSceneNpc(name, description = "") {
+	if (!name) return null;
+	return { name, description };
+}
+
+function normalizeSceneNpcString(npc) {
+	return createSceneNpc(asText(npc));
+}
+
+function normalizeSceneNpcObject(npc) {
+	const name = asText(npc.name || npc.firstName);
+	const description = asText(npc.description || npc.trait || "");
+	return createSceneNpc(name, description);
+}
+
+function normalizeSceneNpc(npc) {
+	if (typeof npc === "string") return normalizeSceneNpcString(npc);
+	if (!npc || typeof npc !== "object") return null;
+	return normalizeSceneNpcObject(npc);
 }
 
 function normalizeSceneNpcs(npcs) {
-	if (!Array.isArray(npcs)) return [];
-	return npcs
-		.map((npc) => {
-			if (typeof npc === "string") {
-				const name = asText(npc);
-				return name ? { name, description: "" } : null;
-			}
-			if (!npc || typeof npc !== "object") return null;
-			const name = asText(npc.name || npc.firstName);
-			if (!name) return null;
-			return {
-				name,
-				description: asText(npc.description || npc.trait || ""),
-			};
-		})
-		.filter(Boolean);
+	return getSceneContentList(npcs).map(normalizeSceneNpc).filter(Boolean);
+}
+
+function getDirectSceneEncounterId(raw) {
+	return asText(raw?.encounterId);
+}
+
+function getMappedSceneEncounterId(raw, clientIdMap) {
+	const clientId = asText(raw?.encounterClientId);
+	if (!clientId) return null;
+	const mapped = clientIdMap.get(clientId);
+	return mapped?.entity === "encounter" ? mapped.id : null;
 }
 
 function resolveEncounterId(raw, clientIdMap, existingEncounterId = "") {
-	const direct = asText(raw?.encounterId);
+	const direct = getDirectSceneEncounterId(raw);
 	if (direct) return direct;
-	const clientId = asText(raw?.encounterClientId);
-	if (clientId) {
-		const mapped = clientIdMap.get(clientId);
-		if (mapped?.entity === "encounter") return mapped.id;
-	}
-	return existingEncounterId || "";
+	const mapped = getMappedSceneEncounterId(raw, clientIdMap);
+	return mapped !== null ? mapped : existingEncounterId || "";
+}
+
+function normalizeSceneNotes(scene, existing, simplifiedNotes) {
+	const existingNotes = getSceneContentList(existing.notes);
+	if (!Array.isArray(scene.notes)) return existingNotes;
+	const notes = normalizeNotesPreservingExisting(scene.notes, existingNotes, {
+		simplifiedNotes,
+	});
+	return mergeAiIgnoredNotes(existingNotes, notes);
+}
+
+function normalizeSceneParticipants(scene, existing) {
+	if (!Array.isArray(scene.npcs)) return getSceneContentList(existing.npcs);
+	return normalizeSceneNpcs(scene.npcs);
+}
+
+function getSceneBooleanState(existing, key) {
+	return Boolean(existing[key]);
 }
 
 function normalizeScene(
@@ -368,77 +585,111 @@ function normalizeScene(
 	clientIdMap,
 	{ simplifiedNotes = false } = {},
 ) {
-	const hasNotes = Array.isArray(scene.notes);
-	const notesFromAi = hasNotes
-		? mergeAiIgnoredNotes(
-				existing?.notes || [],
-				normalizeNotesPreservingExisting(
-					scene.notes || [],
-					existing?.notes || [],
-					{
-						simplifiedNotes,
-					},
-				),
-			)
-		: existing?.notes || [];
-	const hasNpcs = Array.isArray(scene.npcs);
-
+	const previous = getExistingEntity(existing);
 	return {
-		id: existing?.id || makeId(),
-		texts: normalizeSceneTexts(scene, existing?.texts || {}),
-		notes: hasNotes ? notesFromAi : existing?.notes || [],
-		isNotesCollapsed: Boolean(existing?.isNotesCollapsed),
-		npcs: hasNpcs ? normalizeSceneNpcs(scene.npcs) : existing?.npcs || [],
-		collapsed: Boolean(existing?.collapsed),
-		encounterId: resolveEncounterId(scene, clientIdMap, existing?.encounterId),
-		imageUrl: existing?.imageUrl ?? scene.imageUrl ?? null,
+		id: getEntityId(previous),
+		texts: normalizeSceneTexts(scene, previous.texts || {}),
+		notes: normalizeSceneNotes(scene, previous, simplifiedNotes),
+		isNotesCollapsed: getSceneBooleanState(previous, "isNotesCollapsed"),
+		npcs: normalizeSceneParticipants(scene, previous),
+		collapsed: getSceneBooleanState(previous, "collapsed"),
+		encounterId: resolveEncounterId(
+			scene,
+			clientIdMap,
+			previous.encounterId,
+		),
+		imageUrl: getEntityImageUrl(scene, previous),
+	};
+}
+
+function getMonsterLookupName(monster) {
+	return asText(monster?.monsterName || monster?.name);
+}
+
+function findBestiaryMonsterByName(bestiaryIndex, monsterName) {
+	const searchPrefix = `${monsterName.toLowerCase()}|`;
+	for (const [key, monster] of bestiaryIndex.entries()) {
+		if (key.startsWith(searchPrefix)) return monster;
+	}
+	return null;
+}
+
+function createMonsterInstanceId(now = Date.now(), random = Math.random()) {
+	return `inst-${now}-${Math.floor(random * 10000)}`;
+}
+
+function getMonsterInstanceId(monster, resolved) {
+	return asText(monster?.id) || asText(resolved?.id) || makeId();
+}
+
+function getMonsterDisplayName(monster, resolved, fallbackName) {
+	if (asText(monster?.name)) return asText(monster.name);
+	return resolved ? resolved.name : fallbackName;
+}
+
+function getOriginalBestiaryName(resolved, fallbackName) {
+	return resolved ? resolved.name : fallbackName;
+}
+
+function getMonsterSource(monster, resolved) {
+	if (resolved) return resolved.source;
+	return asText(monster?.source) || "Unknown";
+}
+
+function projectMonsterIdentity(monster, resolved, monsterName) {
+	return {
+		...resolved,
+		id: getMonsterInstanceId(monster, resolved),
+		instanceId: createMonsterInstanceId(),
+		name: getMonsterDisplayName(monster, resolved, monsterName),
+		originalBestiaryName: getOriginalBestiaryName(resolved, monsterName),
+		source: getMonsterSource(monster, resolved),
+	};
+}
+
+function getOfficialMonsterHp(monster) {
+	if (monster.hp && typeof monster.hp === "object") {
+		return monster.hp.average || 0;
+	}
+	return monster.hit_points || 0;
+}
+
+function getFirstArmorClass(monster) {
+	if (!Array.isArray(monster.ac)) return null;
+	return monster.ac[0] || null;
+}
+
+function getArmorClassValue(entry) {
+	if (typeof entry !== "object") return entry;
+	return entry.ac || 0;
+}
+
+function getOfficialMonsterArmorClass(monster) {
+	const firstArmorClass = getFirstArmorClass(monster);
+	if (!firstArmorClass) return monster.armor_class || 0;
+	return getArmorClassValue(firstArmorClass);
+}
+
+function projectMonsterCombatStats(resolved) {
+	if (!resolved) {
+		return { currentHp: 0, hit_points: 0, armor_class: 0 };
+	}
+	const hitPoints = getOfficialMonsterHp(resolved);
+	return {
+		currentHp: hitPoints,
+		hit_points: hitPoints,
+		armor_class: getOfficialMonsterArmorClass(resolved),
 	};
 }
 
 function buildMonsterInstance(monster, bestiaryIndex) {
-	const monsterName = asText(monster?.monsterName || monster?.name);
+	const monsterName = getMonsterLookupName(monster);
 	if (!monsterName) return null;
-
-	let foundBase = null;
-	const searchKey = monsterName.toLowerCase();
-	for (const [key, data] of bestiaryIndex.entries()) {
-		if (key.startsWith(`${searchKey}|`)) {
-			foundBase = data;
-			break;
-		}
-	}
-
-	const resolved = foundBase || null;
-	const instance = {
-		...(resolved || {}),
-		id: asText(monster?.id) || asText(resolved?.id) || makeId(),
-		instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-		name: asText(monster?.name) || (resolved ? resolved.name : monsterName),
-		originalBestiaryName: resolved ? resolved.name : monsterName,
-		source: resolved ? resolved.source : asText(monster?.source) || "Unknown",
+	const resolved = findBestiaryMonsterByName(bestiaryIndex, monsterName);
+	return {
+		...projectMonsterIdentity(monster, resolved, monsterName),
+		...projectMonsterCombatStats(resolved),
 	};
-
-	if (resolved) {
-		const hpVal =
-			typeof resolved.hp === "object"
-				? resolved.hp.average || 0
-				: resolved.hit_points || 0;
-		instance.currentHp = hpVal;
-		instance.hit_points = hpVal;
-
-		let acVal = resolved.armor_class || 0;
-		if (Array.isArray(resolved.ac) && resolved.ac[0]) {
-			const entry = resolved.ac[0];
-			acVal = typeof entry === "object" ? entry.ac || 0 : entry;
-		}
-		instance.armor_class = acVal;
-	} else {
-		instance.currentHp = 0;
-		instance.hit_points = 0;
-		instance.armor_class = 0;
-	}
-
-	return instance;
 }
 
 function normalizeEncounterFromAi(rawEncounter, bestiaryIndex, fallbackName) {
@@ -505,35 +756,67 @@ function mapClientIdToEntity(clientIdMap, operation, type, scope, entity) {
 	});
 }
 
+function asEntityRecord(value) {
+	return value && typeof value === "object" && !Array.isArray(value)
+		? value
+		: {};
+}
+
+function firstIdentityValue(...values) {
+	for (const value of values) {
+		if (asText(value)) return value;
+	}
+	return undefined;
+}
+
+function firstIdentityText(...values) {
+	return asText(firstIdentityValue(...values));
+}
+
+function normalizeEntityIdentity(identity, type) {
+	const source = asEntityRecord(identity);
+	const name = firstIdentityText(source.name, source.targetName);
+	return {
+		id: firstIdentityText(source.id, source.targetId),
+		slug: asText(source.slug),
+		nameKey: name
+			? getEntityNameKey(type, { name, fullName: name })
+			: "",
+	};
+}
+
+function findIdentityValue(items, expected, readValue) {
+	if (!expected) return null;
+	return items.find((item) => readValue(item) === expected) || null;
+}
+
 function findByIdentity(items = [], identity, type) {
-	const id = asText(identity?.id || identity?.targetId);
-	const slug = asText(identity?.slug);
-	const name = asText(identity?.name || identity?.targetName);
-	const key = name ? getEntityNameKey(type, { name, fullName: name }) : "";
+	const list = Array.isArray(items) ? items : [];
+	const normalized = normalizeEntityIdentity(identity, type);
 	return (
-		(items || []).find((item) => {
-			const itemId = asText(item?.id);
-			const itemSlug = asText(item?.slug);
-			const itemName = getEntityNameKey(type, item);
-			return (
-				(id && itemId === id) ||
-				(slug && itemSlug === slug) ||
-				(key && itemName === key)
-			);
-		}) || null
+		findIdentityValue(list, normalized.id, (item) => asText(item?.id)) ||
+		findIdentityValue(list, normalized.slug, (item) => asText(item?.slug)) ||
+		findIdentityValue(list, normalized.nameKey, (item) =>
+			getEntityNameKey(type, item),
+		) ||
+		null
 	);
 }
 
 function getOperationTargetIdentity(operation = {}, clientIdMap = null) {
-	const ownerClientId = asText(
-		operation.targetClientId || operation.ownerClientId,
+	const source = asEntityRecord(operation);
+	const ownerClientId = firstIdentityText(
+		source.targetClientId,
+		source.ownerClientId,
 	);
 	const mapped =
-		ownerClientId && clientIdMap ? clientIdMap.get(ownerClientId) : null;
+		ownerClientId && typeof clientIdMap?.get === "function"
+			? clientIdMap.get(ownerClientId)
+			: null;
 	return {
-		id: mapped?.id || operation.id || operation.targetId,
-		slug: operation.slug,
-		name: operation.name || operation.targetName,
+		id: firstIdentityValue(mapped?.id, source.id, source.targetId),
+		slug: source.slug,
+		name: firstIdentityValue(source.name, source.targetName),
 	};
 }
 
@@ -544,17 +827,61 @@ function normalizeEntityPayload(type, raw, existing, options) {
 }
 
 function mergeEntityPatch(existing, patch = {}) {
+	const current = asEntityRecord(existing);
+	const changes = asEntityRecord(patch);
 	return {
-		...(existing || {}),
-		...(patch && typeof patch === "object" ? patch : {}),
-		id: existing?.id || patch?.id,
-		slug: existing?.slug || patch?.slug,
-		imageUrl: existing?.imageUrl ?? patch?.imageUrl ?? null,
+		...current,
+		...changes,
+		id: firstIdentityValue(current.id, changes.id),
+		slug: firstIdentityValue(current.slug, changes.slug),
+		imageUrl: current.imageUrl ?? changes.imageUrl ?? null,
 	};
 }
 
 async function readCampaignEntityList(campaignSlug, type) {
 	return storage.listEntities(campaignSlug, type);
+}
+
+function getLocationEntityBaseName(payload) {
+	return payload.name || "locations";
+}
+
+function getCharacterEntityBaseName(payload, type) {
+	return payload.firstName || payload.name || type;
+}
+
+function getCampaignEntityBaseName(type, payload) {
+	return type === "locations"
+		? getLocationEntityBaseName(payload)
+		: getCharacterEntityBaseName(payload, type);
+}
+
+function getCampaignEntitySuppliedSlug(payload, existing) {
+	if (existing?.slug) return existing.slug;
+	return payload.slug;
+}
+
+async function allocateCampaignEntitySlug(campaignSlug, type, payload) {
+	const baseName = getCampaignEntityBaseName(type, payload);
+	const baseSlug = storage.campaignSlug(baseName);
+	return storage.ensureUniqueEntitySlug(campaignSlug, type, baseSlug);
+}
+
+async function resolveCampaignEntitySlug(
+	campaignSlug,
+	type,
+	payload,
+	existing,
+) {
+	const supplied = getCampaignEntitySuppliedSlug(payload, existing);
+	return supplied || allocateCampaignEntitySlug(campaignSlug, type, payload);
+}
+
+function buildCampaignEntityWritePayload(payload, entitySlug) {
+	return {
+		...payload,
+		slug: entitySlug,
+	};
 }
 
 async function writeCampaignEntity(
@@ -563,23 +890,14 @@ async function writeCampaignEntity(
 	payload,
 	existing = null,
 ) {
-	const baseName =
-		type === "locations"
-			? payload.name || "locations"
-			: payload.firstName || payload.name || type;
-	const entitySlug =
-		existing?.slug ||
-		payload.slug ||
-		(await storage.ensureUniqueEntitySlug(
-			campaignSlug,
-			type,
-			storage.campaignSlug(baseName),
-		));
-	const saved = await storage.writeEntity(campaignSlug, type, entitySlug, {
-		...payload,
-		slug: entitySlug,
-	});
-	return saved;
+	const entitySlug = await resolveCampaignEntitySlug(
+		campaignSlug,
+		type,
+		payload,
+		existing,
+	);
+	const persisted = buildCampaignEntityWritePayload(payload, entitySlug);
+	return storage.writeEntity(campaignSlug, type, entitySlug, persisted);
 }
 
 function buildDuplicateIdentity(type, rawData) {
@@ -589,23 +907,39 @@ function buildDuplicateIdentity(type, rawData) {
 	};
 }
 
+function asExistingEntityRecord(value) {
+	return value && typeof value === "object" && !Array.isArray(value)
+		? value
+		: null;
+}
+
+function buildNewEntityNormalizationSource(source, current) {
+	return {
+		...source,
+		id: firstIdentityValue(current.id, source.id) ?? makeId(),
+	};
+}
+
+function projectNewEntityVersion(current, source, normalized) {
+	return {
+		...current,
+		...normalized,
+		id: firstIdentityValue(current.id, normalized.id),
+		slug: firstIdentityValue(current.slug, normalized.slug, source.slug),
+		imageUrl: normalized.imageUrl ?? current.imageUrl ?? null,
+	};
+}
+
 function mergeNewEntityVersion(type, rawData, existing, options) {
+	const source = asEntityRecord(rawData);
+	const current = asEntityRecord(existing);
 	const normalized = normalizeEntityPayload(
 		type,
-		{
-			...rawData,
-			id: existing?.id || rawData.id || makeId(),
-		},
-		existing || null,
+		buildNewEntityNormalizationSource(source, current),
+		asExistingEntityRecord(existing),
 		options,
 	);
-	return {
-		...(existing || {}),
-		...normalized,
-		id: existing?.id || normalized.id,
-		slug: existing?.slug || normalized.slug || rawData.slug,
-		imageUrl: normalized.imageUrl ?? existing?.imageUrl ?? null,
-	};
+	return projectNewEntityVersion(current, source, normalized);
 }
 
 function buildSessionEntityFromPayload(type, payload) {
@@ -701,18 +1035,36 @@ function deleteNote(target, noteId) {
 	return deleted;
 }
 
-function operationScope(operation, defaultScope, clientIdMap = null) {
-	const scope = asText(operation.scope).toLowerCase();
-	if (scope === "campaign" || scope === "session") return scope;
-	const ownerClientId = asText(
-		operation.targetClientId || operation.ownerClientId,
+const ENTITY_SCOPES = new Set(["campaign", "session"]);
+
+function normalizeEntityScope(value) {
+	const scope = asText(value).toLowerCase();
+	return ENTITY_SCOPES.has(scope) ? scope : "";
+}
+
+function getMappedOperationEntity(operation, clientIdMap) {
+	const source = asEntityRecord(operation);
+	const ownerClientId = firstIdentityText(
+		source.targetClientId,
+		source.ownerClientId,
 	);
-	const mapped =
-		ownerClientId && clientIdMap ? clientIdMap.get(ownerClientId) : null;
-	if (mapped?.scope === "campaign" || mapped?.scope === "session") {
-		return mapped.scope;
-	}
-	return defaultScope || "campaign";
+	return ownerClientId && typeof clientIdMap?.get === "function"
+		? clientIdMap.get(ownerClientId)
+		: null;
+}
+
+function operationScope(operation, defaultScope, clientIdMap = null) {
+	const source = asEntityRecord(operation);
+	const explicitScope = normalizeEntityScope(source.scope);
+	const mappedScope = normalizeEntityScope(
+		getMappedOperationEntity(source, clientIdMap)?.scope,
+	);
+	return (
+		explicitScope ||
+		mappedScope ||
+		normalizeEntityScope(defaultScope) ||
+		"campaign"
+	);
 }
 
 function isOperationAllowed(type, permissions) {
@@ -722,37 +1074,53 @@ function isOperationAllowed(type, permissions) {
 	return true;
 }
 
-function operationData(operation) {
-	if (operation.data && typeof operation.data === "object")
-		return operation.data;
-	if (operation.value && typeof operation.value === "object")
-		return operation.value;
-	if (operation.patch && typeof operation.patch === "object")
-		return operation.patch;
+const OPERATION_DATA_KEYS = Object.freeze(["data", "value", "patch"]);
+const OPERATION_PATCH_KEYS = Object.freeze(["patch", "data"]);
+const SCENE_LINK_OPERATION_NAMES = new Set(["create", "update"]);
+const SCENE_OPERATION_ENTITIES = new Set(["scene", "scenes"]);
+
+function getObjectOperationPayload(operation, key) {
+	const payload = operation?.[key];
+	return payload && typeof payload === "object" ? payload : null;
+}
+
+function firstObjectOperationPayload(operation, keys) {
+	for (const key of keys) {
+		const payload = getObjectOperationPayload(operation, key);
+		if (payload) return payload;
+	}
 	return {};
 }
 
+function operationData(operation) {
+	return firstObjectOperationPayload(operation, OPERATION_DATA_KEYS);
+}
+
 function operationPatch(operation) {
-	if (operation.patch && typeof operation.patch === "object")
-		return operation.patch;
-	if (operation.data && typeof operation.data === "object")
-		return operation.data;
-	return {};
+	return firstObjectOperationPayload(operation, OPERATION_PATCH_KEYS);
+}
+
+function isSceneEncounterLinkOperation(operation) {
+	if (!operation || typeof operation !== "object") return false;
+	const operationName = asText(operation.op).toLowerCase();
+	const entity = asText(operation.entity).toLowerCase();
+	return (
+		SCENE_LINK_OPERATION_NAMES.has(operationName) &&
+		SCENE_OPERATION_ENTITIES.has(entity)
+	);
+}
+
+function getSceneEncounterClientId(operation) {
+	const data = operationData(operation);
+	const patch = operationPatch(operation);
+	return asText(data.encounterClientId || patch.encounterClientId);
 }
 
 function collectSceneEncounterClientIds(operations = []) {
 	const ids = new Set();
 	for (const operation of operations) {
-		if (!operation || typeof operation !== "object") continue;
-		const op = asText(operation.op).toLowerCase();
-		const entity = asText(operation.entity).toLowerCase();
-		if (!["create", "update"].includes(op)) continue;
-		if (!["scene", "scenes"].includes(entity)) continue;
-		const data = operationData(operation);
-		const patch = operationPatch(operation);
-		const encounterClientId = asText(
-			data.encounterClientId || patch.encounterClientId,
-		);
+		if (!isSceneEncounterLinkOperation(operation)) continue;
+		const encounterClientId = getSceneEncounterClientId(operation);
 		if (encounterClientId) ids.add(encounterClientId);
 	}
 	return ids;
@@ -767,26 +1135,55 @@ function queuePendingSceneEncounterLink(state, scene, raw) {
 	});
 }
 
+function hasPendingSceneEncounterLinks(state) {
+	return Boolean(
+		state.sessionData && state.pendingSceneEncounterLinks.length > 0,
+	);
+}
+
+function getMappedEncounter(clientIdMap, encounterClientId) {
+	const mapped = clientIdMap.get(encounterClientId);
+	return mapped?.entity === "encounter" && mapped.id ? mapped : null;
+}
+
+function addUnresolvedSceneEncounterWarning(warnings, encounterClientId) {
+	warnings.push(
+		`Scene encounterClientId "${encounterClientId}" could not be resolved to a created encounter.`,
+	);
+}
+
+function findPendingLinkScene(scenes, sceneId) {
+	return scenes.find((scene) => asText(scene.id) === sceneId) || null;
+}
+
+function applySceneEncounterLink(scene, encounterId) {
+	if (scene.encounterId === encounterId) return false;
+	scene.encounterId = encounterId;
+	return true;
+}
+
+function resolvePendingSceneEncounterLink(state, scenes, link) {
+	const mapped = getMappedEncounter(
+		state.clientIdMap,
+		link.encounterClientId,
+	);
+	if (!mapped) {
+		addUnresolvedSceneEncounterWarning(
+			state.warnings,
+			link.encounterClientId,
+		);
+		return false;
+	}
+	const scene = findPendingLinkScene(scenes, link.sceneId);
+	return scene ? applySceneEncounterLink(scene, mapped.id) : false;
+}
+
 function resolvePendingSceneEncounterLinks(state) {
-	const { sessionData, clientIdMap, pendingSceneEncounterLinks, warnings } =
-		state;
-	if (!sessionData || pendingSceneEncounterLinks.length === 0) return false;
+	if (!hasPendingSceneEncounterLinks(state)) return false;
+	const scenes = getSessionScenes(state.sessionData);
 	let changed = false;
-	const scenes = getSessionScenes(sessionData);
-	for (const link of pendingSceneEncounterLinks) {
-		const mapped = clientIdMap.get(link.encounterClientId);
-		if (mapped?.entity !== "encounter" || !mapped.id) {
-			warnings.push(
-				`Scene encounterClientId "${link.encounterClientId}" could not be resolved to a created encounter.`,
-			);
-			continue;
-		}
-		const scene = scenes.find((item) => asText(item.id) === link.sceneId);
-		if (!scene) continue;
-		if (scene.encounterId !== mapped.id) {
-			scene.encounterId = mapped.id;
-			changed = true;
-		}
+	for (const link of state.pendingSceneEncounterLinks) {
+		changed = resolvePendingSceneEncounterLink(state, scenes, link) || changed;
 	}
 	return changed;
 }
@@ -814,379 +1211,752 @@ function removeCreatedUnlinkedEncounters(state) {
 	return true;
 }
 
-async function applyCampaignEntityOperation(state, operation, type, options) {
-	const { campaignSlug, clientIdMap, permissions, warnings } = state;
-	if (!isOperationAllowed(type, permissions)) {
-		warnings.push(`Skipped ${operation.op} for disabled ${type}.`);
-		return null;
-	}
-	const existingList = await readCampaignEntityList(campaignSlug, type);
-	const existing = findByIdentity(
+function canApplyCampaignEntityOperation(state, operation, type) {
+	if (isOperationAllowed(type, state.permissions)) return true;
+	state.warnings.push(`Skipped ${operation.op} for disabled ${type}.`);
+	return false;
+}
+
+async function getCampaignEntityOperationContext(
+	state,
+	operation,
+	type,
+	options,
+) {
+	const existingList = await readCampaignEntityList(state.campaignSlug, type);
+	return {
+		state,
+		operation,
+		type,
+		options,
 		existingList,
-		getOperationTargetIdentity(operation, clientIdMap),
-		type,
-	);
-	const normalizedOp = asText(operation.op).toLowerCase();
-
-	if (normalizedOp === "delete") {
-		if (!existing) return null;
-		await storage.deleteEntity(campaignSlug, type, existing.slug);
-		return { type, scope: "campaign", deleted: existing };
-	}
-
-	if (normalizedOp === "create") {
-		const rawData = {
-			...operationData(operation),
-			id: makeId(),
-		};
-		const duplicate = findByIdentity(
+		existing: findByIdentity(
 			existingList,
-			buildDuplicateIdentity(type, rawData),
+			getOperationTargetIdentity(operation, state.clientIdMap),
 			type,
-		);
-		if (duplicate) {
-			const payload = mergeNewEntityVersion(type, rawData, duplicate, options);
-			if (type === "locations" && !payload.name) return null;
-			if (type !== "locations" && !payload.firstName && !payload.lastName) {
-				return null;
-			}
-			const saved = await writeCampaignEntity(
-				campaignSlug,
-				type,
-				payload,
-				duplicate,
-			);
-			mapClientIdToEntity(clientIdMap, operation, type, "campaign", saved);
-			warnings.push(
-				`Replaced duplicate campaign ${type} with new AI version for "${getEntityDisplayName(
-					type,
-					saved,
-				)}".`,
-			);
-			return { type, scope: "campaign", saved };
-		}
-		const sessionList = state.sessionData
-			? getSessionEntityList(state.sessionData, type)
-			: [];
-		const duplicateSessionEntity = findByIdentity(
-			sessionList,
-			buildDuplicateIdentity(type, rawData),
-			type,
-		);
-		if (duplicateSessionEntity) {
-			const payload = mergeNewEntityVersion(
-				type,
-				rawData,
-				duplicateSessionEntity,
-				options,
-			);
-			if (type === "locations" && !payload.name) return null;
-			if (type !== "locations" && !payload.firstName && !payload.lastName) {
-				return null;
-			}
-			const saved = await writeCampaignEntity(campaignSlug, type, payload);
-			removeSessionEntity(state.sessionData, type, duplicateSessionEntity);
-			mapClientIdToEntity(clientIdMap, operation, type, "campaign", saved);
-			warnings.push(
-				`Moved duplicate session ${type} to campaign with new AI version for "${getEntityDisplayName(
-					type,
-					saved,
-				)}".`,
-			);
-			return { type, scope: "campaign", saved, sessionChanged: true };
-		}
-		const normalized = normalizeEntityPayload(type, rawData, null, options);
-		if (type === "locations" && !normalized.name) return null;
-		if (type !== "locations" && !normalized.firstName && !normalized.lastName) {
-			return null;
-		}
-		const saved = await writeCampaignEntity(campaignSlug, type, normalized);
-		mapClientIdToEntity(clientIdMap, operation, type, "campaign", saved);
-		return { type, scope: "campaign", saved };
-	}
-
-	if (normalizedOp === "update") {
-		if (!existing) return null;
-		const oldDisplayName = getEntityDisplayName(type, existing);
-		const raw = mergeEntityPatch(existing, operationPatch(operation));
-		const normalized = normalizeEntityPayload(type, raw, existing, options);
-		const payload = {
-			...existing,
-			...normalized,
-			id: existing.id,
-			slug: existing.slug,
-			imageUrl: existing.imageUrl ?? normalized.imageUrl ?? null,
-		};
-		const saved = await writeCampaignEntity(
-			campaignSlug,
-			type,
-			payload,
-			existing,
-		);
-		const newDisplayName = getEntityDisplayName(type, saved);
-		if (oldDisplayName && newDisplayName && oldDisplayName !== newDisplayName) {
-			await storage.updateCampaignMentionReferences(
-				campaignSlug,
-				oldDisplayName,
-				newDisplayName,
-			);
-		}
-		return { type, scope: "campaign", saved };
-	}
-
-	return null;
+		),
+	};
 }
 
-async function applySessionEntityOperation(state, operation, type, options) {
-	const { campaignSlug, sessionData, clientIdMap, permissions, warnings } =
-		state;
-	if (!sessionData) {
-		warnings.push(`Skipped session ${operation.op}; no session target.`);
-		return null;
-	}
-	if (!isOperationAllowed(type, permissions)) {
-		warnings.push(`Skipped ${operation.op} for disabled ${type}.`);
-		return null;
-	}
+function isValidEntityPayload(type, payload) {
+	if (type === "locations") return Boolean(payload.name);
+	return Boolean(payload.firstName || payload.lastName);
+}
 
-	const list = getSessionEntityList(sessionData, type);
-	const existing = findByIdentity(
-		list,
-		getOperationTargetIdentity(operation, clientIdMap),
-		type,
+function createCampaignEntityRawData(operation) {
+	return { ...operationData(operation), id: makeId() };
+}
+
+function findCampaignCreateDuplicate(context, rawData) {
+	return findByIdentity(
+		context.existingList,
+		buildDuplicateIdentity(context.type, rawData),
+		context.type,
 	);
-	const normalizedOp = asText(operation.op).toLowerCase();
-
-	if (normalizedOp === "delete") {
-		if (!existing) return null;
-		setSessionEntityList(
-			sessionData,
-			type,
-			list.filter((item) => item !== existing),
-		);
-		return { type, scope: "session", deleted: existing };
-	}
-
-	if (normalizedOp === "create") {
-		const rawData = {
-			...operationData(operation),
-			id: makeId(),
-		};
-		const duplicateSessionEntity = findByIdentity(
-			list,
-			buildDuplicateIdentity(type, rawData),
-			type,
-		);
-		if (duplicateSessionEntity) {
-			const payload = mergeNewEntityVersion(
-				type,
-				rawData,
-				duplicateSessionEntity,
-				options,
-			);
-			if (type === "locations" && !payload.name) return null;
-			if (type !== "locations" && !payload.firstName && !payload.lastName) {
-				return null;
-			}
-			const saved = replaceSessionEntity(
-				sessionData,
-				type,
-				duplicateSessionEntity,
-				buildSessionEntityFromPayload(type, payload),
-			);
-			mapClientIdToEntity(clientIdMap, operation, type, "session", saved);
-			warnings.push(
-				`Replaced duplicate session ${type} with new AI version for "${getEntityDisplayName(
-					type,
-					saved,
-				)}".`,
-			);
-			return { type, scope: "session", saved };
-		}
-		const campaignEntities = campaignSlug
-			? await storage.listEntities(campaignSlug, type).catch(() => [])
-			: [];
-		const duplicateCampaignEntity = findByIdentity(
-			campaignEntities,
-			buildDuplicateIdentity(type, rawData),
-			type,
-		);
-		if (duplicateCampaignEntity) {
-			const payload = mergeNewEntityVersion(
-				type,
-				rawData,
-				duplicateCampaignEntity,
-				options,
-			);
-			if (type === "locations" && !payload.name) return null;
-			if (type !== "locations" && !payload.firstName && !payload.lastName) {
-				return null;
-			}
-			const saved = buildSessionEntityFromPayload(type, payload);
-			list.push(saved);
-			await storage.deleteEntity(
-				campaignSlug,
-				type,
-				duplicateCampaignEntity.slug,
-			);
-			mapClientIdToEntity(clientIdMap, operation, type, "session", saved);
-			warnings.push(
-				`Moved duplicate campaign ${type} to session with new AI version for "${getEntityDisplayName(
-					type,
-					saved,
-				)}".`,
-			);
-			return { type, scope: "session", saved };
-		}
-		const normalized = normalizeEntityPayload(type, rawData, null, options);
-		if (type === "locations" && !normalized.name) return null;
-		if (type !== "locations" && !normalized.firstName && !normalized.lastName) {
-			return null;
-		}
-		const saved = {
-			...normalized,
-			id: normalized.id,
-			slug:
-				normalized.slug ||
-				storage.campaignSlug(
-					type === "locations"
-						? normalized.name || "locations"
-						: getCharacterDisplayName(normalized) || type,
-				),
-		};
-		list.push(saved);
-		mapClientIdToEntity(clientIdMap, operation, type, "session", saved);
-		return { type, scope: "session", saved };
-	}
-
-	if (normalizedOp === "update") {
-		if (!existing) return null;
-		const raw = mergeEntityPatch(existing, operationPatch(operation));
-		const normalized = normalizeEntityPayload(type, raw, existing, options);
-		const saved = {
-			...existing,
-			...normalized,
-			id: existing.id,
-			slug: existing.slug,
-			imageUrl: existing.imageUrl ?? normalized.imageUrl ?? null,
-		};
-		const index = list.indexOf(existing);
-		list[index] = saved;
-		return { type, scope: "session", saved };
-	}
-
-	return null;
 }
 
-async function applyMoveScopeOperation(state, operation, type, options) {
-	const { campaignSlug, sessionData, warnings } = state;
-	if (!sessionData) {
-		warnings.push("Skipped moveScope; no session target.");
-		return null;
-	}
-	const from = asText(operation.from || operation.scope).toLowerCase();
-	const to = asText(operation.to || operation.targetScope).toLowerCase();
-	if (
-		!["campaign", "session"].includes(from) ||
-		!["campaign", "session"].includes(to)
-	) {
-		warnings.push("Skipped moveScope with invalid scope.");
-		return null;
-	}
-	if (from === to) return null;
+function findDuplicateInSessionEntityList(context, rawData) {
+	const sessionList = context.state.sessionData
+		? getSessionEntityList(context.state.sessionData, context.type)
+		: [];
+	return findByIdentity(
+		sessionList,
+		buildDuplicateIdentity(context.type, rawData),
+		context.type,
+	);
+}
 
-	if (from === "session") {
-		const list = getSessionEntityList(sessionData, type);
-		const existing = findByIdentity(
+function mapCampaignEntityClientId(context, saved) {
+	mapClientIdToEntity(
+		context.state.clientIdMap,
+		context.operation,
+		context.type,
+		"campaign",
+		saved,
+	);
+}
+
+function addCampaignEntityCreateWarning(context, action, saved) {
+	context.state.warnings.push(
+		`${action} ${context.type} with new AI version for "${getEntityDisplayName(
+			context.type,
+			saved,
+		)}".`,
+	);
+}
+
+async function replaceDuplicateCampaignEntity(context, rawData, duplicate) {
+	const payload = mergeNewEntityVersion(
+		context.type,
+		rawData,
+		duplicate,
+		context.options,
+	);
+	if (!isValidEntityPayload(context.type, payload)) return null;
+	const saved = await writeCampaignEntity(
+		context.state.campaignSlug,
+		context.type,
+		payload,
+		duplicate,
+	);
+	mapCampaignEntityClientId(context, saved);
+	addCampaignEntityCreateWarning(
+		context,
+		"Replaced duplicate campaign",
+		saved,
+	);
+	return { type: context.type, scope: "campaign", saved };
+}
+
+async function promoteDuplicateSessionEntity(context, rawData, duplicate) {
+	const payload = mergeNewEntityVersion(
+		context.type,
+		rawData,
+		duplicate,
+		context.options,
+	);
+	if (!isValidEntityPayload(context.type, payload)) return null;
+	const saved = await writeCampaignEntity(
+		context.state.campaignSlug,
+		context.type,
+		payload,
+	);
+	removeSessionEntity(context.state.sessionData, context.type, duplicate);
+	mapCampaignEntityClientId(context, saved);
+	addCampaignEntityCreateWarning(
+		context,
+		"Moved duplicate session",
+		saved,
+	);
+	return {
+		type: context.type,
+		scope: "campaign",
+		saved,
+		sessionChanged: true,
+	};
+}
+
+async function createNewCampaignEntity(context, rawData) {
+	const normalized = normalizeEntityPayload(
+		context.type,
+		rawData,
+		null,
+		context.options,
+	);
+	if (!isValidEntityPayload(context.type, normalized)) return null;
+	const saved = await writeCampaignEntity(
+		context.state.campaignSlug,
+		context.type,
+		normalized,
+	);
+	mapCampaignEntityClientId(context, saved);
+	return { type: context.type, scope: "campaign", saved };
+}
+
+async function applyCampaignEntityCreate(context) {
+	const rawData = createCampaignEntityRawData(context.operation);
+	const campaignDuplicate = findCampaignCreateDuplicate(context, rawData);
+	if (campaignDuplicate) {
+		return replaceDuplicateCampaignEntity(
+			context,
+			rawData,
+			campaignDuplicate,
+		);
+	}
+	const sessionDuplicate = findDuplicateInSessionEntityList(context, rawData);
+	if (sessionDuplicate) {
+		return promoteDuplicateSessionEntity(context, rawData, sessionDuplicate);
+	}
+	return createNewCampaignEntity(context, rawData);
+}
+
+async function applyCampaignEntityDelete(context) {
+	if (!context.existing) return null;
+	await storage.deleteEntity(
+		context.state.campaignSlug,
+		context.type,
+		context.existing.slug,
+	);
+	return {
+		type: context.type,
+		scope: "campaign",
+		deleted: context.existing,
+	};
+}
+
+function buildCampaignEntityUpdatePayload(context) {
+	const raw = mergeEntityPatch(
+		context.existing,
+		operationPatch(context.operation),
+	);
+	const normalized = normalizeEntityPayload(
+		context.type,
+		raw,
+		context.existing,
+		context.options,
+	);
+	return {
+		...context.existing,
+		...normalized,
+		id: context.existing.id,
+		slug: context.existing.slug,
+		imageUrl:
+			context.existing.imageUrl ?? normalized.imageUrl ?? null,
+	};
+}
+
+async function updateCampaignEntityMentionReferences(
+	context,
+	oldDisplayName,
+	saved,
+) {
+	const newDisplayName = getEntityDisplayName(context.type, saved);
+	if (!oldDisplayName || !newDisplayName || oldDisplayName === newDisplayName) {
+		return;
+	}
+	await storage.updateCampaignMentionReferences(
+		context.state.campaignSlug,
+		oldDisplayName,
+		newDisplayName,
+	);
+}
+
+async function applyCampaignEntityUpdate(context) {
+	if (!context.existing) return null;
+	const oldDisplayName = getEntityDisplayName(context.type, context.existing);
+	const saved = await writeCampaignEntity(
+		context.state.campaignSlug,
+		context.type,
+		buildCampaignEntityUpdatePayload(context),
+		context.existing,
+	);
+	await updateCampaignEntityMentionReferences(context, oldDisplayName, saved);
+	return { type: context.type, scope: "campaign", saved };
+}
+
+const CAMPAIGN_ENTITY_OPERATION_HANDLERS = new Map([
+	["create", applyCampaignEntityCreate],
+	["update", applyCampaignEntityUpdate],
+	["delete", applyCampaignEntityDelete],
+]);
+
+async function applyCampaignEntityOperation(state, operation, type, options) {
+	if (!canApplyCampaignEntityOperation(state, operation, type)) return null;
+	const context = await getCampaignEntityOperationContext(
+		state,
+		operation,
+		type,
+		options,
+	);
+	const handler = CAMPAIGN_ENTITY_OPERATION_HANDLERS.get(
+		asText(operation.op).toLowerCase(),
+	);
+	return handler ? handler(context) : null;
+}
+
+function canApplySessionEntityOperation(state, operation, type) {
+	if (!state.sessionData) {
+		state.warnings.push(`Skipped session ${operation.op}; no session target.`);
+		return false;
+	}
+	if (!isOperationAllowed(type, state.permissions)) {
+		state.warnings.push(`Skipped ${operation.op} for disabled ${type}.`);
+		return false;
+	}
+	return true;
+}
+
+function getSessionEntityOperationContext(state, operation, type, options) {
+	const list = getSessionEntityList(state.sessionData, type);
+	return {
+		state,
+		operation,
+		type,
+		options,
+		list,
+		existing: findByIdentity(
 			list,
 			getOperationTargetIdentity(operation, state.clientIdMap),
 			type,
-		);
-		if (!existing) return null;
-		const campaignEntities = await storage.listEntities(campaignSlug, type);
-		const duplicateCampaignEntity = findByIdentity(
-			campaignEntities,
-			buildDuplicateIdentity(type, existing),
-			type,
-		);
-		const payload = mergeNewEntityVersion(
-			type,
-			existing,
-			duplicateCampaignEntity || existing,
-			options,
-		);
-		const saved = await writeCampaignEntity(
-			campaignSlug,
-			type,
-			payload,
-			duplicateCampaignEntity,
-		);
-		removeSessionEntity(sessionData, type, existing);
-		if (duplicateCampaignEntity) {
-			warnings.push(
-				`Replaced duplicate campaign ${type} during moveScope with "${getEntityDisplayName(
-					type,
-					saved,
-				)}".`,
-			);
-		}
-		return { type, moved: true, from, to, saved };
-	}
-
-	const campaignEntities = await storage.listEntities(campaignSlug, type);
-	const existing = findByIdentity(
-		campaignEntities,
-		getOperationTargetIdentity(operation, state.clientIdMap),
-		type,
-	);
-	if (!existing) return null;
-	const list = getSessionEntityList(sessionData, type);
-	const duplicateSessionEntity = findByIdentity(
-		list,
-		buildDuplicateIdentity(type, existing),
-		type,
-	);
-	const payload = mergeNewEntityVersion(
-		type,
-		existing,
-		duplicateSessionEntity || existing,
-		options,
-	);
-	const saved = duplicateSessionEntity
-		? replaceSessionEntity(
-				sessionData,
-				type,
-				duplicateSessionEntity,
-				buildSessionEntityFromPayload(type, payload),
-			)
-		: buildSessionEntityFromPayload(type, payload);
-	if (!duplicateSessionEntity) {
-		list.push(saved);
-	} else {
-		warnings.push(
-			`Replaced duplicate session ${type} during moveScope with "${getEntityDisplayName(
-				type,
-				saved,
-			)}".`,
-		);
-	}
-	await storage.deleteEntity(campaignSlug, type, existing.slug);
-	return { type, moved: true, from, to, saved };
+		),
+	};
 }
 
-async function applyEntityOperation(state, operation, options) {
+function createSessionEntityRawData(operation) {
+	return {
+		...operationData(operation),
+		id: makeId(),
+	};
+}
+
+function buildSessionEntityVersion(context, rawData, existing) {
+	const payload = mergeNewEntityVersion(
+		context.type,
+		rawData,
+		existing,
+		context.options,
+	);
+	return isValidEntityPayload(context.type, payload) ? payload : null;
+}
+
+function mapSessionEntityClientId(context, saved) {
+	mapClientIdToEntity(
+		context.state.clientIdMap,
+		context.operation,
+		context.type,
+		"session",
+		saved,
+	);
+}
+
+function addSessionEntityCreateWarning(context, prefix, saved, scopePhrase = "") {
+	context.state.warnings.push(
+		`${prefix} ${context.type}${scopePhrase} with new AI version for "${getEntityDisplayName(
+			context.type,
+			saved,
+		)}".`,
+	);
+}
+
+function findSessionCreateDuplicate(context, rawData) {
+	return findByIdentity(
+		context.list,
+		buildDuplicateIdentity(context.type, rawData),
+		context.type,
+	);
+}
+
+async function readCampaignEntitiesForSessionCreate(context) {
+	if (!context.state.campaignSlug) return [];
+	return storage
+		.listEntities(context.state.campaignSlug, context.type)
+		.catch(() => []);
+}
+
+async function findCampaignCreateDuplicateForSession(context, rawData) {
+	const campaignEntities = await readCampaignEntitiesForSessionCreate(context);
+	return findByIdentity(
+		campaignEntities,
+		buildDuplicateIdentity(context.type, rawData),
+		context.type,
+	);
+}
+
+function replaceDuplicateSessionEntity(context, rawData, duplicate) {
+	const payload = buildSessionEntityVersion(context, rawData, duplicate);
+	if (!payload) return null;
+	const saved = replaceSessionEntity(
+		context.state.sessionData,
+		context.type,
+		duplicate,
+		buildSessionEntityFromPayload(context.type, payload),
+	);
+	mapSessionEntityClientId(context, saved);
+	addSessionEntityCreateWarning(
+		context,
+		"Replaced duplicate session",
+		saved,
+	);
+	return { type: context.type, scope: "session", saved };
+}
+
+async function appendSessionEntityAndDeleteCampaignDuplicate(
+	context,
+	saved,
+	duplicate,
+) {
+	context.list.push(saved);
+	try {
+		await storage.deleteEntity(
+			context.state.campaignSlug,
+			context.type,
+			duplicate.slug,
+		);
+	} catch (error) {
+		const index = context.list.indexOf(saved);
+		if (index >= 0) context.list.splice(index, 1);
+		throw error;
+	}
+}
+
+async function moveDuplicateCampaignEntityToSession(
+	context,
+	rawData,
+	duplicate,
+) {
+	const payload = buildSessionEntityVersion(context, rawData, duplicate);
+	if (!payload) return null;
+	const saved = buildSessionEntityFromPayload(context.type, payload);
+	await appendSessionEntityAndDeleteCampaignDuplicate(context, saved, duplicate);
+	mapSessionEntityClientId(context, saved);
+	addSessionEntityCreateWarning(
+		context,
+		"Moved duplicate campaign",
+		saved,
+		" to session",
+	);
+	return { type: context.type, scope: "session", saved };
+}
+
+function createNewSessionEntity(context, rawData) {
+	const normalized = normalizeEntityPayload(
+		context.type,
+		rawData,
+		null,
+		context.options,
+	);
+	if (!isValidEntityPayload(context.type, normalized)) return null;
+	const saved = buildSessionEntityFromPayload(context.type, normalized);
+	context.list.push(saved);
+	mapSessionEntityClientId(context, saved);
+	return { type: context.type, scope: "session", saved };
+}
+
+async function applySessionEntityCreate(context) {
+	const rawData = createSessionEntityRawData(context.operation);
+	const sessionDuplicate = findSessionCreateDuplicate(context, rawData);
+	if (sessionDuplicate) {
+		return replaceDuplicateSessionEntity(context, rawData, sessionDuplicate);
+	}
+	const campaignDuplicate = await findCampaignCreateDuplicateForSession(
+		context,
+		rawData,
+	);
+	return campaignDuplicate
+		? moveDuplicateCampaignEntityToSession(
+				context,
+				rawData,
+				campaignDuplicate,
+			)
+		: createNewSessionEntity(context, rawData);
+}
+
+function applySessionEntityDelete(context) {
+	if (!context.existing) return null;
+	setSessionEntityList(
+		context.state.sessionData,
+		context.type,
+		context.list.filter((item) => item !== context.existing),
+	);
+	return {
+		type: context.type,
+		scope: "session",
+		deleted: context.existing,
+	};
+}
+
+function buildSessionEntityUpdate(context) {
+	const raw = mergeEntityPatch(
+		context.existing,
+		operationPatch(context.operation),
+	);
+	const normalized = normalizeEntityPayload(
+		context.type,
+		raw,
+		context.existing,
+		context.options,
+	);
+	return {
+		...context.existing,
+		...normalized,
+		id: context.existing.id,
+		slug: context.existing.slug,
+		imageUrl: context.existing.imageUrl ?? normalized.imageUrl ?? null,
+	};
+}
+
+function applySessionEntityUpdate(context) {
+	if (!context.existing) return null;
+	const saved = buildSessionEntityUpdate(context);
+	const index = context.list.indexOf(context.existing);
+	context.list[index] = saved;
+	return { type: context.type, scope: "session", saved };
+}
+
+const SESSION_ENTITY_OPERATION_HANDLERS = new Map([
+	["create", applySessionEntityCreate],
+	["update", applySessionEntityUpdate],
+	["delete", applySessionEntityDelete],
+]);
+
+async function applySessionEntityOperation(state, operation, type, options) {
+	if (!canApplySessionEntityOperation(state, operation, type)) return null;
+	const context = getSessionEntityOperationContext(
+		state,
+		operation,
+		type,
+		options,
+	);
+	const handler = SESSION_ENTITY_OPERATION_HANDLERS.get(
+		asText(operation.op).toLowerCase(),
+	);
+	return handler ? handler(context) : null;
+}
+
+function hasMoveScopeSession(state) {
+	if (!state.sessionData) {
+		state.warnings.push("Skipped moveScope; no session target.");
+		return false;
+	}
+	return true;
+}
+
+function readMoveScopes(operation) {
+	return {
+		from: asText(operation.from || operation.scope).toLowerCase(),
+		to: asText(operation.to || operation.targetScope).toLowerCase(),
+	};
+}
+
+function hasValidMoveScopes(state, scopes) {
+	if (!ENTITY_SCOPES.has(scopes.from) || !ENTITY_SCOPES.has(scopes.to)) {
+		state.warnings.push("Skipped moveScope with invalid scope.");
+		return false;
+	}
+	return true;
+}
+
+function getMoveScopeContext(state, operation, type, options) {
+	if (!hasMoveScopeSession(state)) return null;
+	const scopes = readMoveScopes(operation);
+	if (!hasValidMoveScopes(state, scopes) || scopes.from === scopes.to) {
+		return null;
+	}
+	return { state, operation, type, options, ...scopes };
+}
+
+function getMoveScopeTarget(context, items) {
+	return findByIdentity(
+		items,
+		getOperationTargetIdentity(
+			context.operation,
+			context.state.clientIdMap,
+		),
+		context.type,
+	);
+}
+
+function findMoveScopeDuplicate(context, items, source) {
+	return findByIdentity(
+		items,
+		buildDuplicateIdentity(context.type, source),
+		context.type,
+	);
+}
+
+function buildMoveScopePayload(context, source, duplicate) {
+	return mergeNewEntityVersion(
+		context.type,
+		source,
+		duplicate || source,
+		context.options,
+	);
+}
+
+function registerScopeMoveRollback(state, rollback) {
+	state.scopeMoveRollbacks.push(rollback);
+}
+
+function restoreSessionEntityAtIndex(context, entity, index) {
+	registerScopeMoveRollback(context.state, async () => {
+		const list = getSessionEntityList(context.state.sessionData, context.type);
+		if (list.includes(entity)) return;
+		list.splice(Math.min(index, list.length), 0, entity);
+	});
+}
+
+function rollbackCampaignEntityWrite(context, duplicate, saved) {
+	registerScopeMoveRollback(context.state, async () => {
+		if (!duplicate) {
+			await storage.deleteEntity(
+				context.state.campaignSlug,
+				context.type,
+				saved.slug,
+			);
+			return;
+		}
+		await storage.writeEntity(
+			context.state.campaignSlug,
+			context.type,
+			duplicate.slug,
+			{ ...duplicate, slug: duplicate.slug },
+		);
+	});
+}
+
+function addMoveScopeDuplicateWarning(context, scope, saved) {
+	context.state.warnings.push(
+		`Replaced duplicate ${scope} ${context.type} during moveScope with "${getEntityDisplayName(
+			context.type,
+			saved,
+		)}".`,
+	);
+}
+
+async function moveSessionEntityToCampaign(context) {
+	const sessionList = getSessionEntityList(
+		context.state.sessionData,
+		context.type,
+	);
+	const existing = getMoveScopeTarget(context, sessionList);
+	if (!existing) return null;
+	const campaignEntities = await storage.listEntities(
+		context.state.campaignSlug,
+		context.type,
+	);
+	const duplicate = findMoveScopeDuplicate(
+		context,
+		campaignEntities,
+		existing,
+	);
+	const saved = await writeCampaignEntity(
+		context.state.campaignSlug,
+		context.type,
+		buildMoveScopePayload(context, existing, duplicate),
+		duplicate,
+	);
+	rollbackCampaignEntityWrite(context, duplicate, saved);
+	restoreSessionEntityAtIndex(context, existing, sessionList.indexOf(existing));
+	removeSessionEntity(
+		context.state.sessionData,
+		context.type,
+		existing,
+	);
+	if (duplicate) {
+		addMoveScopeDuplicateWarning(context, "campaign", saved);
+	}
+	return {
+		type: context.type,
+		moved: true,
+		from: context.from,
+		to: context.to,
+		saved,
+	};
+}
+
+function applyCampaignToSessionMutation(context, payload, duplicate) {
+	const list = getSessionEntityList(context.state.sessionData, context.type);
+	const saved = buildSessionEntityFromPayload(context.type, payload);
+	if (!duplicate) {
+		list.push(saved);
+		return {
+			saved,
+			rollback: () => {
+				const index = list.indexOf(saved);
+				if (index >= 0) list.splice(index, 1);
+			},
+		};
+	}
+	const index = list.indexOf(duplicate);
+	list[index] = saved;
+	return {
+		saved,
+		rollback: () => {
+			list[index] = duplicate;
+		},
+	};
+}
+
+function restoreDeletedCampaignEntity(context, existing) {
+	registerScopeMoveRollback(context.state, async () => {
+		await storage.writeEntity(
+			context.state.campaignSlug,
+			context.type,
+			existing.slug,
+			{ ...existing, slug: existing.slug },
+		);
+	});
+}
+
+async function moveCampaignEntityToSession(context) {
+	const campaignEntities = await storage.listEntities(
+		context.state.campaignSlug,
+		context.type,
+	);
+	const existing = getMoveScopeTarget(context, campaignEntities);
+	if (!existing) return null;
+	const sessionList = getSessionEntityList(
+		context.state.sessionData,
+		context.type,
+	);
+	const duplicate = findMoveScopeDuplicate(context, sessionList, existing);
+	const mutation = applyCampaignToSessionMutation(
+		context,
+		buildMoveScopePayload(context, existing, duplicate),
+		duplicate,
+	);
+	try {
+		await storage.deleteEntity(
+			context.state.campaignSlug,
+			context.type,
+			existing.slug,
+		);
+	} catch (error) {
+		mutation.rollback();
+		throw error;
+	}
+	restoreDeletedCampaignEntity(context, existing);
+	registerScopeMoveRollback(context.state, async () => mutation.rollback());
+	if (duplicate) {
+		addMoveScopeDuplicateWarning(context, "session", mutation.saved);
+	}
+	return {
+		type: context.type,
+		moved: true,
+		from: context.from,
+		to: context.to,
+		saved: mutation.saved,
+	};
+}
+
+const MOVE_SCOPE_HANDLERS = new Map([
+	["session:campaign", moveSessionEntityToCampaign],
+	["campaign:session", moveCampaignEntityToSession],
+]);
+
+async function applyMoveScopeOperation(state, operation, type, options) {
+	const context = getMoveScopeContext(state, operation, type, options);
+	if (!context) return null;
+	const handler = MOVE_SCOPE_HANDLERS.get(`${context.from}:${context.to}`);
+	return handler ? handler(context) : null;
+}
+
+const SCOPED_ENTITY_OPERATION_HANDLERS = new Map([
+	["campaign", applyCampaignEntityOperation],
+	["session", applySessionEntityOperation],
+]);
+
+function isMoveScopeOperation(operation) {
+	return asText(operation?.op).toLowerCase() === "movescope";
+}
+
+function getDefaultEntityOperationScope(state, type) {
+	return type === "characters" ? "campaign" : state.defaultEntityScope;
+}
+
+function getScopedEntityOperationHandler(type, scope) {
+	const route = scope === "session" && type !== "characters"
+		? "session"
+		: "campaign";
+	return SCOPED_ENTITY_OPERATION_HANDLERS.get(route);
+}
+
+function createEntityOperationRoute(state, operation) {
 	const type = entityTypeFromOperation(operation.entity);
 	if (!type) return null;
-	if (asText(operation.op).toLowerCase() === "movescope") {
-		return applyMoveScopeOperation(state, operation, type, options);
+	if (isMoveScopeOperation(operation)) {
+		return { type, handler: applyMoveScopeOperation };
 	}
-	const defaultScope =
-		type === "characters" ? "campaign" : state.defaultEntityScope;
+	const defaultScope = getDefaultEntityOperationScope(state, type);
 	const scope = operationScope(operation, defaultScope, state.clientIdMap);
-	if (scope === "session" && type !== "characters") {
-		return applySessionEntityOperation(state, operation, type, options);
-	}
-	return applyCampaignEntityOperation(state, operation, type, options);
+	return { type, handler: getScopedEntityOperationHandler(type, scope) };
+}
+
+function applyEntityOperation(state, operation, options) {
+	const route = createEntityOperationRoute(state, operation);
+	return route
+		? route.handler(state, operation, route.type, options)
+		: null;
 }
 
 function findScene(sessionData, operation, clientIdMap = null) {
@@ -1196,200 +1966,256 @@ function findScene(sessionData, operation, clientIdMap = null) {
 	return scenes.find((scene) => asText(scene.id) === id) || null;
 }
 
-function applySceneOperation(state, operation, options) {
-	const { sessionData, clientIdMap, permissions, warnings } = state;
-	if (!sessionData) {
-		warnings.push(`Skipped scene ${operation.op}; no session target.`);
-		return null;
-	}
-	const normalizedOp = asText(operation.op).toLowerCase();
-	const scenes = getSessionScenes(sessionData);
-
-	if (normalizedOp === "delete") {
-		const existing = findScene(sessionData, operation, clientIdMap);
-		if (!existing) return null;
-		sessionData.data.scenes = scenes.filter((scene) => scene !== existing);
-		return { type: "scene", deleted: existing };
-	}
-
-	if (normalizedOp === "create") {
-		const data = operationData(operation);
-		const safeData =
-			permissions.allowEncounters === false
-				? { ...data, encounterId: "", encounterClientId: "" }
-				: data;
-		const saved = normalizeScene(safeData, null, clientIdMap, options);
-		if (!hasSceneContent(saved)) {
-			warnings.push("Skipped empty scene create.");
-			return null;
-		}
-		scenes.push(saved);
-		queuePendingSceneEncounterLink(state, saved, safeData);
-		if (operation.clientId) {
-			clientIdMap.set(asText(operation.clientId), {
-				entity: "scene",
-				scope: "session",
-				id: saved.id,
-			});
-		}
-		return { type: "scene", saved };
-	}
-
-	if (normalizedOp === "update") {
-		const existing = findScene(sessionData, operation, clientIdMap);
-		if (!existing) return null;
-		const patch = operationPatch(operation);
-		const raw = {
-			...existing,
-			...patch,
-			texts: {
-				...(existing.texts || {}),
-				...(patch.texts && typeof patch.texts === "object" ? patch.texts : {}),
-			},
-			id: existing.id,
-			imageUrl: existing.imageUrl ?? patch.imageUrl ?? null,
-		};
-		const safeRaw =
-			permissions.allowEncounters === false
-				? { ...raw, encounterId: existing.encounterId || "" }
-				: raw;
-		const saved = normalizeScene(safeRaw, existing, clientIdMap, options);
-		const index = scenes.indexOf(existing);
-		scenes[index] = saved;
-		queuePendingSceneEncounterLink(state, saved, safeRaw);
-		return { type: "scene", saved };
-	}
-
-	return null;
+function getSceneOperationContext(state, operation, options) {
+	return {
+		state,
+		operation,
+		options,
+		sessionData: state.sessionData,
+		scenes: getSessionScenes(state.sessionData),
+	};
 }
 
-async function applyEncounterOperation(state, operation) {
-	const {
-		sessionData,
-		clientIdMap,
-		permissions,
-		warnings,
-		linkedEncounterClientIds,
-	} = state;
-	if (!sessionData) {
-		warnings.push(`Skipped encounter ${operation.op}; no session target.`);
+function applySceneDelete(context) {
+	const { state, operation, sessionData, scenes } = context;
+	const existing = findScene(sessionData, operation, state.clientIdMap);
+	if (!existing) return null;
+	sessionData.data.scenes = scenes.filter((scene) => scene !== existing);
+	return { type: "scene", deleted: existing };
+}
+
+function sanitizeSceneCreateData(data, permissions) {
+	return permissions.allowEncounters === false
+		? { ...data, encounterId: "", encounterClientId: "" }
+		: data;
+}
+
+function registerSceneClientId(clientIdMap, operation, scene) {
+	if (!operation.clientId) return;
+	clientIdMap.set(asText(operation.clientId), {
+		entity: "scene",
+		scope: "session",
+		id: scene.id,
+	});
+}
+
+function applySceneCreate(context) {
+	const { state, operation, options, scenes } = context;
+	const safeData = sanitizeSceneCreateData(
+		operationData(operation),
+		state.permissions,
+	);
+	const saved = normalizeScene(
+		safeData,
+		null,
+		state.clientIdMap,
+		options,
+	);
+	if (!hasSceneContent(saved)) {
+		state.warnings.push("Skipped empty scene create.");
 		return null;
 	}
-	if (permissions.allowEncounters === false) {
-		warnings.push(
+	scenes.push(saved);
+	queuePendingSceneEncounterLink(state, saved, safeData);
+	registerSceneClientId(state.clientIdMap, operation, saved);
+	return { type: "scene", saved };
+}
+
+function getScenePatchTexts(patch) {
+	return patch.texts && typeof patch.texts === "object" ? patch.texts : {};
+}
+
+function buildSceneUpdateData(existing, patch) {
+	return {
+		...existing,
+		...patch,
+		texts: {
+			...(existing.texts || {}),
+			...getScenePatchTexts(patch),
+		},
+		id: existing.id,
+		imageUrl: existing.imageUrl ?? patch.imageUrl ?? null,
+	};
+}
+
+function sanitizeSceneUpdateData(raw, existing, permissions) {
+	return permissions.allowEncounters === false
+		? { ...raw, encounterId: existing.encounterId || "" }
+		: raw;
+}
+
+function replaceScene(scenes, existing, saved) {
+	const index = scenes.indexOf(existing);
+	scenes[index] = saved;
+}
+
+function applySceneUpdate(context) {
+	const { state, operation, options, sessionData, scenes } = context;
+	const existing = findScene(sessionData, operation, state.clientIdMap);
+	if (!existing) return null;
+	const raw = buildSceneUpdateData(existing, operationPatch(operation));
+	const safeRaw = sanitizeSceneUpdateData(raw, existing, state.permissions);
+	const saved = normalizeScene(
+		safeRaw,
+		existing,
+		state.clientIdMap,
+		options,
+	);
+	replaceScene(scenes, existing, saved);
+	queuePendingSceneEncounterLink(state, saved, safeRaw);
+	return { type: "scene", saved };
+}
+
+const SCENE_OPERATION_HANDLERS = new Map([
+	["create", applySceneCreate],
+	["update", applySceneUpdate],
+	["delete", applySceneDelete],
+]);
+
+function applySceneOperation(state, operation, options) {
+	if (!state.sessionData) {
+		state.warnings.push(`Skipped scene ${operation.op}; no session target.`);
+		return null;
+	}
+	const operationName = asText(operation.op).toLowerCase();
+	const handler = SCENE_OPERATION_HANDLERS.get(operationName);
+	return handler
+		? handler(getSceneOperationContext(state, operation, options))
+		: null;
+}
+
+function canApplyEncounterOperation(state, operation) {
+	if (!state.sessionData) {
+		state.warnings.push(
+			`Skipped encounter ${operation.op}; no session target.`,
+		);
+		return false;
+	}
+	if (state.permissions.allowEncounters === false) {
+		state.warnings.push(
 			`Skipped encounter ${operation.op}; encounter generation disabled.`,
 		);
-		return null;
+		return false;
 	}
-	const encounters = getSessionEncounters(sessionData);
-	const id = asText(operation.id || operation.targetId || state.encounterId);
-	const existing = id
-		? encounters.find((encounter) => asText(encounter.id) === id)
-		: null;
-	const normalizedOp = asText(operation.op).toLowerCase();
-	const bestiaryIndex = await storage.getBestiaryIndex();
-
-	if (normalizedOp === "delete") {
-		if (!existing) return null;
-		sessionData.data.encounters = encounters.filter(
-			(encounter) => encounter !== existing,
-		);
-		return { type: "encounter", deleted: existing };
-	}
-
-	if (normalizedOp === "create") {
-		const clientId = asText(operation.clientId);
-		const rawData = operationData(operation);
-		const fallbackName = `Encounter ${encounters.length + 1}`;
-		const encounterName = asText(rawData.name) || fallbackName;
-		if (!clientId) {
-			warnings.push(
-				`Skipped encounter create "${encounterName}"; new encounters must use clientId and be linked from a scene with encounterClientId.`,
-			);
-			return null;
-		}
-		if (!linkedEncounterClientIds.has(clientId)) {
-			warnings.push(
-				`Skipped encounter create "${encounterName}" without matching scene encounterClientId "${clientId}".`,
-			);
-			return null;
-		}
-		const normalized = normalizeEncounterFromAi(
-			rawData,
-			bestiaryIndex,
-			fallbackName,
-		);
-		const saved = {
-			id: makeId(),
-			name: normalized.name,
-			monsters: normalized.monsters,
-		};
-		encounters.push(saved);
-		state.createdEncounterIds.add(saved.id);
-		clientIdMap.set(clientId, {
-			entity: "encounter",
-			scope: "session",
-			id: saved.id,
-		});
-		return { type: "encounter", saved };
-	}
-
-	if (normalizedOp === "update") {
-		if (!existing) return null;
-		const patch = operationPatch(operation);
-		const normalized = normalizeEncounterFromAi(
-			{
-				name: hasOwn(patch, "name") ? patch.name : existing.name,
-				monsters: Array.isArray(patch.monsters)
-					? patch.monsters
-					: existing.monsters || [],
-			},
-			bestiaryIndex,
-			existing.name || "Encounter",
-		);
-		existing.name = normalized.name;
-		existing.monsters = normalized.monsters;
-		return { type: "encounter", saved: existing };
-	}
-
-	return null;
+	return true;
 }
 
-function getNotesTarget(state, operation) {
-	const entity = asText(operation.entity).toLowerCase();
-	if (entity === "campaign") return state.campaignMeta;
-	if (entity === "session") return state.sessionData?.data || null;
-	if (entity === "scene") {
-		return state.sessionData
-			? findScene(state.sessionData, operation, state.clientIdMap)
-			: null;
-	}
-	const type = entityTypeFromOperation(entity);
-	if (!type) return null;
-	const scope = operationScope(
-		operation,
-		type === "characters" ? "campaign" : state.defaultEntityScope,
-		state.clientIdMap,
-	);
-	if (scope === "session" && type !== "characters") {
-		if (!state.sessionData) return null;
-		const list = getSessionEntityList(state.sessionData, type);
-		return findByIdentity(
-			list,
-			getOperationTargetIdentity(operation, state.clientIdMap),
-			type,
-		);
-	}
+function getEncounterOperationTargetId(state, operation) {
+	return asText(operation.id || operation.targetId || state.encounterId);
+}
+
+function findEncounterById(encounters, id) {
+	if (!id) return null;
 	return (
-		state.campaignEntityCache.get(type)?.find((item) => {
-			const target = findByIdentity(
-				[item],
-				getOperationTargetIdentity(operation, state.clientIdMap),
-				type,
-			);
-			return Boolean(target);
-		}) || null
+		encounters.find((encounter) => asText(encounter.id) === id) || null
 	);
+}
+
+async function prepareEncounterOperationContext(state, operation) {
+	const encounters = getSessionEncounters(state.sessionData);
+	const targetId = getEncounterOperationTargetId(state, operation);
+	return {
+		state,
+		operation,
+		sessionData: state.sessionData,
+		encounters,
+		existing: findEncounterById(encounters, targetId),
+		bestiaryIndex: await storage.getBestiaryIndex(),
+	};
+}
+
+function applyEncounterDelete(context) {
+	if (!context.existing) return null;
+	context.sessionData.data.encounters = context.encounters.filter(
+		(encounter) => encounter !== context.existing,
+	);
+	return { type: "encounter", deleted: context.existing };
+}
+
+function getEncounterCreateRequest(context) {
+	const { state, operation, encounters } = context;
+	const clientId = asText(operation.clientId);
+	const data = operationData(operation);
+	const fallbackName = `Encounter ${encounters.length + 1}`;
+	const name = asText(data.name) || fallbackName;
+	if (!clientId) {
+		state.warnings.push(
+			`Skipped encounter create "${name}"; new encounters must use clientId and be linked from a scene with encounterClientId.`,
+		);
+		return null;
+	}
+	if (!state.linkedEncounterClientIds.has(clientId)) {
+		state.warnings.push(
+			`Skipped encounter create "${name}" without matching scene encounterClientId "${clientId}".`,
+		);
+		return null;
+	}
+	return { clientId, data, fallbackName };
+}
+
+function registerCreatedEncounter(state, clientId, encounter) {
+	state.createdEncounterIds.add(encounter.id);
+	state.clientIdMap.set(clientId, {
+		entity: "encounter",
+		scope: "session",
+		id: encounter.id,
+	});
+}
+
+function applyEncounterCreate(context) {
+	const request = getEncounterCreateRequest(context);
+	if (!request) return null;
+	const normalized = normalizeEncounterFromAi(
+		request.data,
+		context.bestiaryIndex,
+		request.fallbackName,
+	);
+	const saved = {
+		id: makeId(),
+		name: normalized.name,
+		monsters: normalized.monsters,
+	};
+	context.encounters.push(saved);
+	registerCreatedEncounter(context.state, request.clientId, saved);
+	return { type: "encounter", saved };
+}
+
+function getEncounterUpdateData(existing, patch) {
+	return {
+		name: hasOwn(patch, "name") ? patch.name : existing.name,
+		monsters: Array.isArray(patch.monsters)
+			? patch.monsters
+			: existing.monsters || [],
+	};
+}
+
+function applyEncounterUpdate(context) {
+	if (!context.existing) return null;
+	const normalized = normalizeEncounterFromAi(
+		getEncounterUpdateData(
+			context.existing,
+			operationPatch(context.operation),
+		),
+		context.bestiaryIndex,
+		context.existing.name || "Encounter",
+	);
+	context.existing.name = normalized.name;
+	context.existing.monsters = normalized.monsters;
+	return { type: "encounter", saved: context.existing };
+}
+
+const ENCOUNTER_OPERATION_HANDLERS = new Map([
+	["create", applyEncounterCreate],
+	["update", applyEncounterUpdate],
+	["delete", applyEncounterDelete],
+]);
+
+async function applyEncounterOperation(state, operation) {
+	if (!canApplyEncounterOperation(state, operation)) return null;
+	const context = await prepareEncounterOperationContext(state, operation);
+	const operationName = asText(operation.op).toLowerCase();
+	const handler = ENCOUNTER_OPERATION_HANDLERS.get(operationName);
+	return handler ? handler(context) : null;
 }
 
 async function ensureCampaignEntityCache(state, type) {
@@ -1402,48 +2228,116 @@ async function ensureCampaignEntityCache(state, type) {
 	return state.campaignEntityCache.get(type);
 }
 
-async function applyNoteOperation(state, operation, options) {
+function getNoteTargetScope(state, operation, type) {
+	if (!type) return "";
+	return operationScope(
+		operation,
+		type === "characters" ? "campaign" : state.defaultEntityScope,
+		state.clientIdMap,
+	);
+}
+
+async function prepareNoteTargetContext(state, operation) {
 	const entity = asText(operation.entity).toLowerCase();
 	const type = entityTypeFromOperation(entity);
 	if (type) await ensureCampaignEntityCache(state, type);
-	const target = getNotesTarget(state, operation);
+	return {
+		entity,
+		type,
+		scope: getNoteTargetScope(state, operation, type),
+		identity: getOperationTargetIdentity(operation, state.clientIdMap),
+	};
+}
+
+const DIRECT_NOTE_TARGET_READERS = new Map([
+	["campaign", (state) => state.campaignMeta],
+	["session", (state) => state.sessionData?.data || null],
+	[
+		"scene",
+		(state, operation) =>
+			state.sessionData
+				? findScene(state.sessionData, operation, state.clientIdMap)
+				: null,
+	],
+]);
+
+function getSessionEntityNoteTarget(state, context) {
+	if (!state.sessionData) return null;
+	const list = getSessionEntityList(state.sessionData, context.type);
+	return findByIdentity(list, context.identity, context.type);
+}
+
+function getCampaignEntityNoteTarget(state, context) {
+	const cached = state.campaignEntityCache.get(context.type) || [];
+	return findByIdentity(cached, context.identity, context.type);
+}
+
+function resolveNoteTarget(state, operation, context) {
+	const directReader = DIRECT_NOTE_TARGET_READERS.get(context.entity);
+	if (directReader) return directReader(state, operation);
+	if (!context.type) return null;
+	if (context.scope === "session" && context.type !== "characters") {
+		return getSessionEntityNoteTarget(state, context);
+	}
+	return getCampaignEntityNoteTarget(state, context);
+}
+
+const NOTE_MUTATION_HANDLERS = new Map([
+	[
+		"appendnote",
+		(target, operation, options) =>
+			appendNote(
+				target,
+				operation.note || operationData(operation),
+				options,
+			),
+	],
+	[
+		"updatenote",
+		(target, operation, options) =>
+			updateNote(
+				target,
+				operation.noteId || operation.id,
+				operation.patch || operation.note || operationData(operation),
+				options,
+			),
+	],
+	[
+		"deletenote",
+		(target, operation) =>
+			deleteNote(target, operation.noteId || operation.id),
+	],
+]);
+
+function applyNoteMutation(target, operation, options) {
+	const operationName = asText(operation.op).toLowerCase();
+	const handler = NOTE_MUTATION_HANDLERS.get(operationName);
+	return handler ? handler(target, operation, options) : null;
+}
+
+function replaceCachedCampaignEntity(state, context, target, saved) {
+	const cached = state.campaignEntityCache.get(context.type) || [];
+	const index = cached.findIndex((item) => item === target);
+	if (index >= 0) cached[index] = saved;
+}
+
+async function persistCampaignEntityNote(state, context, target, result) {
+	if (!result || !context.type || context.scope === "session") return;
+	const saved = await writeCampaignEntity(
+		state.campaignSlug,
+		context.type,
+		target,
+		target,
+	);
+	replaceCachedCampaignEntity(state, context, target, saved);
+}
+
+async function applyNoteOperation(state, operation, options) {
+	const context = await prepareNoteTargetContext(state, operation);
+	const target = resolveNoteTarget(state, operation, context);
 	if (!target) return null;
-	const normalizedOp = asText(operation.op).toLowerCase();
-	const scope = type
-		? operationScope(
-				operation,
-				type === "characters" ? "campaign" : state.defaultEntityScope,
-				state.clientIdMap,
-			)
-		: "";
-	let result = null;
-	if (normalizedOp === "appendnote") {
-		result = appendNote(
-			target,
-			operation.note || operationData(operation),
-			options,
-		);
-	} else if (normalizedOp === "updatenote") {
-		result = updateNote(
-			target,
-			operation.noteId || operation.id,
-			operation.patch || operation.note || operationData(operation),
-			options,
-		);
-	} else if (normalizedOp === "deletenote") {
-		result = deleteNote(target, operation.noteId || operation.id);
-	}
-	if (result && type && scope !== "session") {
-		const saved = await writeCampaignEntity(
-			state.campaignSlug,
-			type,
-			target,
-			target,
-		);
-		const cached = state.campaignEntityCache.get(type) || [];
-		const index = cached.findIndex((item) => item === target);
-		if (index >= 0) cached[index] = saved;
-	}
+	const result = applyNoteMutation(target, operation, options);
+	await persistCampaignEntityNote(state, context, target, result);
 	return result;
 }
 
@@ -1458,69 +2352,374 @@ function applyCampaignOperation(state, operation) {
 	return null;
 }
 
+function hasMonstersWithoutIds(monsters) {
+	return monsters.some((monster) => !asText(monster?.id));
+}
+
+async function readMaterializedCustomMonsters() {
+	const monsters = await storage.readCustomBestiaryMonsters();
+	return hasMonstersWithoutIds(monsters)
+		? storage.writeCustomBestiaryMonsters(monsters)
+		: monsters;
+}
+
+function getMonsterOperationIdentity(operation) {
+	return {
+		id: asText(operation.id || operation.targetId),
+		name: asText(operation.name || operation.targetName || operation.id),
+	};
+}
+
+function findMonsterIndexById(monsters, id) {
+	if (!id) return -1;
+	return monsters.findIndex((monster) => asText(monster.id) === id);
+}
+
+function findMonsterIndexByName(monsters, name) {
+	if (!name) return -1;
+	const normalizedName = name.toLowerCase();
+	return monsters.findIndex(
+		(monster) => asText(monster.name).toLowerCase() === normalizedName,
+	);
+}
+
+function findMonsterOperationIndex(monsters, operation) {
+	const identity = getMonsterOperationIdentity(operation);
+	const idIndex = findMonsterIndexById(monsters, identity.id);
+	return idIndex >= 0
+		? idIndex
+		: findMonsterIndexByName(monsters, identity.name);
+}
+
+function markChangedMonster(state, monster) {
+	state.changedMonsters.push(monster);
+	state.hasChanges = true;
+}
+
+function applyMonsterDelete(state, operation) {
+	const index = findMonsterOperationIndex(state.monsters, operation);
+	if (index < 0) return;
+	state.monsters.splice(index, 1);
+	state.hasChanges = true;
+}
+
+function getMonsterNameKey(monster) {
+	return asText(monster?.name).toLowerCase();
+}
+
+function applyMonsterCreate(state, operation) {
+	const data = { ...operationData(operation) };
+	delete data.id;
+	const normalized = normalizeCustomMonster(data);
+	if (!normalized) return;
+	const nameKey = getMonsterNameKey(normalized);
+	state.monsters = state.monsters.filter(
+		(monster) => getMonsterNameKey(monster) !== nameKey,
+	);
+	state.monsters.push(normalized);
+	markChangedMonster(state, normalized);
+}
+
+function applyMonsterUpdate(state, operation) {
+	const index = findMonsterOperationIndex(state.monsters, operation);
+	if (index < 0) return;
+	const existing = state.monsters[index];
+	const patch = operationPatch(operation);
+	const normalized = normalizeCustomMonster({
+		...existing,
+		...patch,
+		id: existing.id,
+		name: patch.name || existing.name,
+	});
+	if (!normalized) return;
+	state.monsters[index] = normalized;
+	markChangedMonster(state, normalized);
+}
+
+const MONSTER_OPERATION_HANDLERS = new Map([
+	["create", applyMonsterCreate],
+	["update", applyMonsterUpdate],
+	["delete", applyMonsterDelete],
+]);
+
+function applyMonsterOperation(state, operation) {
+	if (!isMonsterOperation(operation)) return;
+	const operationName = asText(operation.op).toLowerCase();
+	MONSTER_OPERATION_HANDLERS.get(operationName)?.(state, operation);
+}
+
 async function applyMonsterOperations(operations) {
-	let existing = await storage.readCustomBestiaryMonsters();
-	if (existing.some((monster) => !asText(monster?.id))) {
-		existing = await storage.writeCustomBestiaryMonsters(existing);
+	const before = await readMaterializedCustomMonsters();
+	const state = {
+		monsters: [...before],
+		changedMonsters: [],
+		hasChanges: false,
+	};
+	for (const operation of operations) applyMonsterOperation(state, operation);
+	const after = await storage.writeCustomBestiaryMonsters(state.monsters);
+	return {
+		before,
+		after,
+		changedMonsters: state.changedMonsters,
+		hasChanges: state.hasChanges,
+	};
+}
+
+const MONSTER_OPERATION_ENTITIES = new Set([
+	"monster",
+	"custom-monster",
+	"custommonster",
+]);
+const NOTE_OPERATION_NAMES = new Set([
+	"appendnote",
+	"updatenote",
+	"deletenote",
+]);
+
+function getAiOperations(payload) {
+	return Array.isArray(payload?.operations) ? payload.operations : [];
+}
+
+function isMonsterOperation(operation) {
+	return MONSTER_OPERATION_ENTITIES.has(
+		asText(operation?.entity).toLowerCase(),
+	);
+}
+
+function getDefaultEntityScope(sessionFile, entityScope) {
+	return sessionFile && entityScope !== "campaign" ? "session" : "campaign";
+}
+
+async function loadAiOperationTargets(campaignSlug, sessionFile) {
+	const campaignMeta =
+		campaignSlug && campaignSlug !== "bestiary"
+			? await storage.readCampaign(campaignSlug)
+			: null;
+	const sessionData =
+		campaignSlug && sessionFile
+			? await storage.readSession(campaignSlug, sessionFile).catch(() => null)
+			: null;
+	return { campaignMeta, sessionData };
+}
+
+function createAiOperationState({
+	operations,
+	campaignSlug,
+	sessionFile,
+	entityScope,
+	encounterId,
+	permissions,
+	campaignMeta,
+	sessionData,
+}) {
+	return {
+		campaignSlug,
+		sessionData,
+		campaignMeta,
+		clientIdMap: new Map(),
+		defaultEntityScope: getDefaultEntityScope(sessionFile, entityScope),
+		encounterId,
+		permissions,
+		warnings: [],
+		campaignEntityCache: new Map(),
+		linkedEncounterClientIds: collectSceneEncounterClientIds(operations),
+		pendingSceneEncounterLinks: [],
+		createdEncounterIds: new Set(),
+		scopeMoveRollbacks: [],
+	};
+}
+
+function operationOutcome(applied, campaignChanged = false, sessionChanged = false) {
+	const didApply = Boolean(applied);
+	return {
+		applied: didApply,
+		campaignChanged: didApply && campaignChanged,
+		sessionChanged: didApply && sessionChanged,
+	};
+}
+
+function getNoteOperationScope(state, operation, entity) {
+	const type = entityTypeFromOperation(entity);
+	return getNoteTargetScope(state, operation, type);
+}
+
+function isSessionNoteTarget(entity, scope) {
+	return (
+		entity === "session" ||
+		SCENE_OPERATION_ENTITIES.has(entity) ||
+		scope === "session"
+	);
+}
+
+function getNoteOperationOutcome(state, operation, result) {
+	if (!result) return operationOutcome(false);
+	const entity = asText(operation.entity).toLowerCase();
+	const scope = getNoteOperationScope(state, operation, entity);
+	return operationOutcome(
+		true,
+		entity === "campaign",
+		isSessionNoteTarget(entity, scope),
+	);
+}
+
+async function dispatchNoteOperation(state, operation, options) {
+	const result = await applyNoteOperation(state, operation, options);
+	return getNoteOperationOutcome(state, operation, result);
+}
+
+function dispatchCampaignOperation(state, operation) {
+	return operationOutcome(applyCampaignOperation(state, operation), true, false);
+}
+
+function dispatchSceneOperation(state, operation, options) {
+	return operationOutcome(
+		applySceneOperation(state, operation, options),
+		false,
+		true,
+	);
+}
+
+async function dispatchEncounterOperation(state, operation) {
+	const result = await applyEncounterOperation(state, operation);
+	return operationOutcome(result, false, true);
+}
+
+async function dispatchEntityOperation(state, operation, options) {
+	const result = await applyEntityOperation(state, operation, options);
+	const sessionChanged = Boolean(
+		result && (result.scope === "session" || result.moved || result.sessionChanged),
+	);
+	return operationOutcome(result, false, sessionChanged);
+}
+
+const ENTITY_OPERATION_DISPATCHERS = new Map([
+	["campaign", dispatchCampaignOperation],
+	["scene", dispatchSceneOperation],
+	["scenes", dispatchSceneOperation],
+	["encounter", dispatchEncounterOperation],
+	["encounters", dispatchEncounterOperation],
+]);
+
+function isDispatchableAiOperation(operation) {
+	if (!operation || typeof operation !== "object") return false;
+	return !isMonsterOperation(operation);
+}
+
+function getEntityOperationDispatcher(entity) {
+	const dispatcher = ENTITY_OPERATION_DISPATCHERS.get(entity);
+	if (dispatcher) return dispatcher;
+	return entityTypeFromOperation(entity) ? dispatchEntityOperation : null;
+}
+
+function getAiOperationDispatcher(operation) {
+	if (!isDispatchableAiOperation(operation)) return null;
+	const op = asText(operation.op).toLowerCase();
+	if (NOTE_OPERATION_NAMES.has(op)) return dispatchNoteOperation;
+	const entity = asText(operation.entity).toLowerCase();
+	return getEntityOperationDispatcher(entity);
+}
+
+async function dispatchAiOperation(state, operation, options) {
+	const dispatcher = getAiOperationDispatcher(operation);
+	return dispatcher
+		? dispatcher(state, operation, options)
+		: operationOutcome(false);
+}
+
+function mergeOperationOutcome(changes, outcome) {
+	changes.hasAppliedChanges ||= outcome.applied;
+	changes.campaignMetaChanged ||= outcome.campaignChanged;
+	changes.sessionDataChanged ||= outcome.sessionChanged;
+}
+
+function applyPendingEncounterLinks(state) {
+	const linksResolved = resolvePendingSceneEncounterLinks(state);
+	const encountersRemoved = removeCreatedUnlinkedEncounters(state);
+	return operationOutcome(
+		linksResolved || encountersRemoved,
+		false,
+		linksResolved || encountersRemoved,
+	);
+}
+
+async function persistChangedCampaignMeta(state, changes) {
+	if (changes.campaignMetaChanged && state.campaignMeta) {
+		await storage.writeJson(
+			storage.campaignMetaPath(state.campaignSlug),
+			state.campaignMeta,
+		);
 	}
-	let next = [...existing];
-	const changedMonsters = [];
-	let hasChanges = false;
+}
 
-	for (const operation of operations) {
-		const entity = asText(operation.entity).toLowerCase();
-		if (!["monster", "custom-monster", "custommonster"].includes(entity)) {
-			continue;
-		}
-		const op = asText(operation.op).toLowerCase();
-		const targetId = asText(operation.id || operation.targetId);
-		const name = asText(operation.name || operation.targetName || operation.id);
-		const index = next.findIndex((monster) => {
-			if (targetId && asText(monster.id) === targetId) return true;
-			return name && asText(monster.name).toLowerCase() === name.toLowerCase();
-		});
-
-		if (op === "delete") {
-			if (index >= 0) {
-				next.splice(index, 1);
-				hasChanges = true;
-			}
-			continue;
-		}
-
-		if (op === "create") {
-			const data = { ...operationData(operation) };
-			delete data.id;
-			const normalized = normalizeCustomMonster(data);
-			if (!normalized) continue;
-			next = next.filter(
-				(monster) =>
-					asText(monster.name).toLowerCase() !==
-					asText(normalized.name).toLowerCase(),
-			);
-			next.push(normalized);
-			changedMonsters.push(normalized);
-			hasChanges = true;
-			continue;
-		}
-
-		if (op === "update") {
-			if (index < 0) continue;
-			const normalized = normalizeCustomMonster({
-				...next[index],
-				...operationPatch(operation),
-				id: next[index].id,
-				name: operationPatch(operation).name || next[index].name,
-			});
-			if (!normalized) continue;
-			next[index] = normalized;
-			changedMonsters.push(normalized);
-			hasChanges = true;
-		}
+async function persistChangedSession(state, changes, sessionFile) {
+	if (changes.sessionDataChanged && state.sessionData) {
+		await storage.writeJson(
+			storage.sessionPath(state.campaignSlug, sessionFile),
+			state.sessionData,
+		);
+		return { ...state.sessionData, fileName: sessionFile };
 	}
+	return null;
+}
 
-	const after = await storage.writeCustomBestiaryMonsters(next);
-	return { before: existing, after, changedMonsters, hasChanges };
+function getChangedCampaignResource(state, changes) {
+	return changes.hasAppliedChanges && state.campaignMeta
+		? state.campaignMeta
+		: null;
+}
+
+async function persistAiOperationChanges(state, changes, sessionFile) {
+	await persistChangedCampaignMeta(state, changes);
+	const sessionResource = await persistChangedSession(
+		state,
+		changes,
+		sessionFile,
+	);
+	return sessionResource || getChangedCampaignResource(state, changes);
+}
+
+async function rollbackPendingScopeMoves(state) {
+	const rollbacks = state.scopeMoveRollbacks.splice(0).reverse();
+	for (const rollback of rollbacks) {
+		await rollback().catch(() => {});
+	}
+}
+
+function clearPendingScopeMoveRollbacks(state) {
+	state.scopeMoveRollbacks.length = 0;
+}
+
+async function applyAndPersistRegularOperations(
+	state,
+	operations,
+	options,
+	changes,
+	sessionFile,
+) {
+	try {
+		for (const operation of operations) {
+			const outcome = await dispatchAiOperation(state, operation, options);
+			mergeOperationOutcome(changes, outcome);
+		}
+		mergeOperationOutcome(changes, applyPendingEncounterLinks(state));
+		const persisted = await persistAiOperationChanges(
+			state,
+			changes,
+			sessionFile,
+		);
+		clearPendingScopeMoveRollbacks(state);
+		return persisted;
+	} catch (error) {
+		await rollbackPendingScopeMoves(state);
+		throw error;
+	}
+}
+
+function getUpdatedAiResource(updated, customBestiaryChange, campaignMeta) {
+	if (updated) return updated;
+	return customBestiaryChange?.hasChanges && !campaignMeta
+		? { monsters: customBestiaryChange.after }
+		: null;
 }
 
 async function applyAiOperations({
@@ -1532,163 +2731,46 @@ async function applyAiOperations({
 	simplifiedNotes = false,
 	permissions = {},
 }) {
-	const operations = Array.isArray(payload?.operations)
-		? payload.operations
-		: [];
-	const defaultEntityScope =
-		sessionFile && entityScope !== "campaign" ? "session" : "campaign";
-	const campaignMeta =
-		campaignSlug && campaignSlug !== "bestiary"
-			? await storage.readCampaign(campaignSlug)
-			: null;
-	const sessionData =
-		campaignSlug && sessionFile
-			? await storage.readSession(campaignSlug, sessionFile).catch(() => null)
-			: null;
-	const clientIdMap = new Map();
-	const warnings = [];
-	const linkedEncounterClientIds = collectSceneEncounterClientIds(operations);
-	const state = {
+	const operations = getAiOperations(payload);
+	const targets = await loadAiOperationTargets(campaignSlug, sessionFile);
+	const state = createAiOperationState({
+		operations,
 		campaignSlug,
-		sessionData,
-		campaignMeta,
-		clientIdMap,
-		defaultEntityScope,
+		sessionFile,
+		entityScope,
 		encounterId,
 		permissions,
-		warnings,
-		campaignEntityCache: new Map(),
-		linkedEncounterClientIds,
-		pendingSceneEncounterLinks: [],
-		createdEncounterIds: new Set(),
-	};
+		...targets,
+	});
 	const normalizerOptions = { simplifiedNotes };
-	let hasAppliedChanges = false;
-	let campaignMetaChanged = false;
-	let sessionDataChanged = false;
-	const monsterOperations = operations.filter((operation) =>
-		["monster", "custom-monster", "custommonster"].includes(
-			asText(operation.entity).toLowerCase(),
-		),
-	);
+	const changes = {
+		hasAppliedChanges: false,
+		campaignMetaChanged: false,
+		sessionDataChanged: false,
+	};
+	const monsterOperations = operations.filter(isMonsterOperation);
 	let customBestiaryChange = null;
 
 	if (monsterOperations.length > 0) {
 		customBestiaryChange = await applyMonsterOperations(monsterOperations);
 	}
 
-	for (const operation of operations) {
-		if (!operation || typeof operation !== "object") continue;
-		const op = asText(operation.op).toLowerCase();
-		const entity = asText(operation.entity).toLowerCase();
-		if (["monster", "custom-monster", "custommonster"].includes(entity)) {
-			continue;
-		}
-
-		if (["appendnote", "updatenote", "deletenote"].includes(op)) {
-			const result = await applyNoteOperation(
-				state,
-				operation,
-				normalizerOptions,
-			);
-			if (result) {
-				hasAppliedChanges = true;
-				const type = entityTypeFromOperation(entity);
-				const scope = type
-					? operationScope(
-							operation,
-							type === "characters" ? "campaign" : state.defaultEntityScope,
-							state.clientIdMap,
-						)
-					: "";
-				if (entity === "campaign") {
-					campaignMetaChanged = true;
-				} else if (
-					entity === "session" ||
-					entity === "scene" ||
-					entity === "scenes" ||
-					scope === "session"
-				) {
-					sessionDataChanged = true;
-				}
-			}
-			continue;
-		}
-
-		if (entity === "campaign") {
-			const result = applyCampaignOperation(state, operation);
-			if (result) {
-				hasAppliedChanges = true;
-				campaignMetaChanged = true;
-			}
-			continue;
-		}
-		if (["scene", "scenes"].includes(entity)) {
-			const result = applySceneOperation(state, operation, normalizerOptions);
-			if (result) {
-				hasAppliedChanges = true;
-				sessionDataChanged = true;
-			}
-			continue;
-		}
-		if (["encounter", "encounters"].includes(entity)) {
-			const result = await applyEncounterOperation(state, operation);
-			if (result) {
-				hasAppliedChanges = true;
-				sessionDataChanged = true;
-			}
-			continue;
-		}
-		if (entityTypeFromOperation(entity)) {
-			const result = await applyEntityOperation(
-				state,
-				operation,
-				normalizerOptions,
-			);
-			if (result) {
-				hasAppliedChanges = true;
-				if (
-					result.scope === "session" ||
-					result.moved ||
-					result.sessionChanged
-				) {
-					sessionDataChanged = true;
-				}
-			}
-		}
-	}
-
-	if (resolvePendingSceneEncounterLinks(state)) {
-		hasAppliedChanges = true;
-		sessionDataChanged = true;
-	}
-	if (removeCreatedUnlinkedEncounters(state)) {
-		hasAppliedChanges = true;
-		sessionDataChanged = true;
-	}
-
-	let updated = null;
-	if (campaignMetaChanged && campaignMeta) {
-		await storage.writeJson(
-			storage.campaignMetaPath(campaignSlug),
-			campaignMeta,
-		);
-	}
-	if (sessionDataChanged && sessionData) {
-		await storage.writeJson(
-			storage.sessionPath(campaignSlug, sessionFile),
-			sessionData,
-		);
-		updated = { ...sessionData, fileName: sessionFile };
-	} else if (hasAppliedChanges && campaignMeta) {
-		updated = campaignMeta;
-	} else if (customBestiaryChange?.hasChanges && !campaignMeta) {
-		updated = { monsters: customBestiaryChange.after };
-	}
+	const persistedResource = await applyAndPersistRegularOperations(
+		state,
+		operations,
+		normalizerOptions,
+		changes,
+		sessionFile,
+	);
+	const updated = getUpdatedAiResource(
+		persistedResource,
+		customBestiaryChange,
+		state.campaignMeta,
+	);
 
 	return {
 		updated,
-		warnings,
+		warnings: state.warnings,
 		customBestiaryChange,
 		changedMonsters: customBestiaryChange?.changedMonsters || [],
 	};

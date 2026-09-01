@@ -1,9 +1,9 @@
-.GlobalSearch {
+.GlobalSearchModal {
 	display: grid;
 	gap: var(--space-3);
 }
 
-.GlobalSearch__bar input {
+.GlobalSearchModal__bar input {
 	width: 100%;
 	padding: 12px 14px;
 	border: 1px solid var(--border);
@@ -13,34 +13,34 @@
 	font-size: 1rem;
 }
 
-.GlobalSearch__filters {
+.GlobalSearchModal__filters {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--space-2);
 }
 
-.GlobalSearch__filter {
+.GlobalSearchModal__filter {
 	border-color: color-mix(in srgb, var(--search-result-color), transparent 40%);
 	color: color-mix(in srgb, var(--search-result-color), var(--text) 18%);
 	background: color-mix(in srgb, var(--search-result-color), transparent 88%);
 }
 
-.GlobalSearch__filter.Button__primary {
+.GlobalSearchModal__filter.Button__primary {
 	background: color-mix(in srgb, var(--search-result-color), #111 18%);
 	border-color: var(--search-result-color);
 	color: #fff;
 }
 
-.GlobalSearch__filter.Button__ghost {
+.GlobalSearchModal__filter.Button__ghost {
 	background: color-mix(in srgb, var(--search-result-color), transparent 93%);
 }
 
-.GlobalSearch__filter:hover {
+.GlobalSearchModal__filter:hover {
 	border-color: var(--search-result-color);
 	background: color-mix(in srgb, var(--search-result-color), transparent 82%);
 }
 
-.GlobalSearch__results {
+.GlobalSearchModal__results {
 	display: grid;
 	gap: var(--space-2);
 	max-height: min(62vh, 680px);
@@ -48,7 +48,7 @@
 	padding-right: var(--space-1);
 }
 
-.GlobalSearch__result {
+.GlobalSearchModal__result {
 	display: grid;
 	gap: 4px;
 	padding: var(--space-3);
@@ -61,48 +61,48 @@
 	cursor: pointer;
 }
 
-.GlobalSearch__result:hover {
+.GlobalSearchModal__result:hover {
 	border-color: var(--search-result-color, var(--accent));
 	background: color-mix(in srgb,
 			var(--search-result-color, var(--accent)),
 			transparent 92%);
 }
 
-.GlobalSearch__result strong {
+.GlobalSearchModal__result strong {
 	color: var(--text-bright);
 	font-size: 0.98rem;
 }
 
-.GlobalSearch__result strong span {
+.GlobalSearchModal__result strong span {
 	color: inherit;
 	font-size: inherit;
 }
 
-.GlobalSearch__result span {
+.GlobalSearchModal__result span {
 	color: var(--muted);
 	font-size: 0.82rem;
 }
 
-.GlobalSearch__result p {
+.GlobalSearchModal__result p {
 	margin: 2px 0 0;
 	color: var(--text);
 	font-size: 0.88rem;
 	line-height: 1.45;
 }
 
-.GlobalSearch__result p span {
+.GlobalSearchModal__result p span {
 	color: inherit;
 	font-size: inherit;
 }
 
-.GlobalSearch__highlight {
+.GlobalSearchModal__highlight {
 	border-radius: 3px;
 	background: color-mix(in srgb, var(--warning, #f59e0b), transparent 62%);
 	color: var(--text-bright);
 	padding: 0 2px;
 }
 
-.GlobalSearch__resultType {
+.GlobalSearchModal__resultType {
 	justify-self: start;
 	padding: 2px 7px;
 	border-radius: var(--radius-sm);
@@ -113,7 +113,7 @@
 	font-weight: 700;
 }
 
-.GlobalSearch__state {
+.GlobalSearchModal__state {
 	padding: var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
@@ -121,7 +121,7 @@
 	text-align: center;
 }
 
-.GlobalSearch__state.is_error {
+.GlobalSearchModal__state.is_error {
 	border-color: var(--danger);
 	color: var(--danger);
 }

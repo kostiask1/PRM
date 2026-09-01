@@ -17,12 +17,14 @@ const DIST_DIR = path.join(__dirname, "..", "dist");
 app.use(express.json({ limit: "64mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(realtimeMiddleware);
+app.use(require("./modules/history/http/historyTrackingMiddleware").historyTrackingMiddleware);
 
 app.get("/api/health", async (_req, res) => {
 	res.json({ ok: true });
 });
 
 app.use(require("./routes/assets"));
+app.use("/api", require("./routes/history"));
 app.use("/api", require("./routes/backups"));
 app.use("/api/settings", require("./routes/settings"));
 app.use("/api", require("./routes/images"));
@@ -62,11 +64,15 @@ app.use((err, _req, res, _next) => {
 		status = 403;
 		message = "Access denied. Check permissions for the data folder.";
 	}
-	res.status(status).json({
+	const payload = {
 		error: message,
 		status,
 		code: err.code,
-	});
+	};
+	if (Array.isArray(err.details) && err.details.length > 0) {
+		payload.details = err.details;
+	}
+	res.status(status).json(payload);
 });
 
 storage

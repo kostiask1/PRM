@@ -1,0 +1,4 @@
+.SessionResultSection__field,
+.SessionResultSection__field .MarkdownView {
+	min-height: 200px !important;
+}

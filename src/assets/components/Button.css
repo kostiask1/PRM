@@ -36,7 +36,7 @@
 	color: var(--text-on-accent);
 }
 
-.Button__primary .mention_link {
+.Button__primary .EntityLink {
 	color: var(--text-on-accent);
 }
 

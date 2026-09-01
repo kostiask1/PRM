@@ -1,0 +1,78 @@
+.MentionPickerModalContent {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.MentionPickerModalContent__columns {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--space-3);
+	max-height: min(50vh, 420px);
+	overflow-y: auto;
+	padding-right: var(--space-1);
+}
+
+.MentionPickerModalContent__column {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	gap: var(--space-2);
+}
+
+.MentionPickerModalContent__columnTitle {
+	margin: 0;
+	font-size: 0.9rem;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.MentionPickerModalContent__list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.MentionPickerModalContent__item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: var(--space-3);
+	border: 1px solid var(--border);
+	background: var(--panel);
+	color: var(--text);
+	border-radius: var(--radius-lg);
+	cursor: pointer;
+	text-align: left;
+}
+
+.MentionPickerModalContent__item span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.MentionPickerModalContent__item:hover {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), var(--panel) 90%);
+}
+
+.MentionPickerModalContent__empty {
+	margin: 0;
+	padding: var(--space-3);
+	border: 1px dashed var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.MentionPickerModalContent__actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+@media (max-width: 767px) {
+	.MentionPickerModalContent__columns {
+		grid-template-columns: minmax(0, 1fr);
+		max-height: none;
+	}
+}

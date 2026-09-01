@@ -10111,7 +10111,7 @@
       {
         "ac": 18,
         "from": [
-          "{@item plate armor|phb}"
+          "{@item plate armor|PHB|plate}"
         ]
       }
     ],
@@ -10167,12 +10167,6 @@
         "entries": [
           "As a bonus action, Ahmaergo can regain 20 hit points."
         ]
-      },
-      {
-        "name": "Extra Damage",
-        "entries": [
-          "If Ahmaergo has more than half his hit points remaining he deals an extra 7 ({@damage 2d6}) slashing damage on every hit."
-        ]
       }
     ],
     "action": [
@@ -10185,7 +10179,7 @@
       {
         "name": "Greataxe",
         "entries": [
-          "{@atk mw} {@hit 9} to hit, reach 5 ft., one target. {@h}11 ({@damage 1d12 + 5}) slashing damage."
+          "{@atk mw} {@hit 9} to hit, reach 5 ft., one target. {@h}11 ({@damage 1d12 + 5}) slashing damage, plus 7 ({@damage 2d6}) slashing damage if Ahmaergo has more than half his hit points remaining."
         ]
       },
       {
@@ -81104,7 +81098,7 @@
     ],
     "type": "construct",
     "alignment": [
-      "U"
+      "N"
     ],
     "ac": [
       {
@@ -85852,7 +85846,7 @@
     ],
     "type": "construct",
     "alignment": [
-      "U"
+      "N"
     ],
     "ac": [
       {
@@ -135695,7 +135689,7 @@
       {
         "name": "Cosmic Annihilation",
         "entries": [
-          "A creature killed by Skall can be restored to life only by means of a true resurrection or {@spell wish} spell."
+          "A creature killed by Skall can be restored to life only by means of a {@spell true resurrection} or {@spell wish} spell."
         ]
       },
       {
@@ -176823,7 +176817,7 @@
       {
         "name": "Sow Discord",
         "entries": [
-          "Graz'zt casts {@spell crown of madness} or dissonant whispers."
+          "Graz'zt casts {@spell crown of madness} or {@spell dissonant whispers}."
         ]
       },
       {
@@ -181744,6 +181738,75 @@
     ]
   },
   {
+    "name": "Gromin'gorn",
+    "source": "IDROTF",
+    "size": [
+      "H"
+    ],
+    "type": "giant",
+    "alignment": [
+      "N",
+      "E"
+    ],
+    "ac": [
+      {
+        "ac": 15,
+        "from": [
+          "patchwork armor"
+        ]
+      }
+    ],
+    "hp": {
+      "average": 138,
+      "formula": "12d12 + 60"
+    },
+    "speed": {
+      "walk": 40
+    },
+    "str": 23,
+    "dex": 9,
+    "con": 21,
+    "int": 9,
+    "wis": 10,
+    "cha": 12,
+    "save": {
+      "con": "+8",
+      "wis": "+3",
+      "cha": "+4"
+    },
+    "skill": {
+      "athletics": "+9",
+      "perception": "+3"
+    },
+    "immune": [
+      "cold"
+    ],
+    "languages": [
+      "Giant"
+    ],
+    "cr": "8",
+    "action": [
+      {
+        "name": "Multiattack",
+        "entries": [
+          "Gromin'gorn makes two Anvil Chain attacks."
+        ]
+      },
+      {
+        "name": "Anvil Chain",
+        "entries": [
+          "{@atk mw} {@hit 9} to hit, reach 10 ft., one target. {@h}25 ({@damage 3d12 + 6}) bludgeoning damage."
+        ]
+      },
+      {
+        "name": "Rock",
+        "entries": [
+          "{@atk rw} {@hit 9} to hit, range 60/240 ft., one target. {@h}28 ({@damage 4d10 + 6}) bludgeoning damage."
+        ]
+      }
+    ]
+  },
+  {
     "name": "Grotesque Tentacle",
     "source": "COA",
     "size": [
@@ -185328,7 +185391,7 @@
     ],
     "type": "construct",
     "alignment": [
-      "U"
+      "N"
     ],
     "ac": [
       {
@@ -190256,7 +190319,7 @@
     ],
     "type": "construct",
     "alignment": [
-      "U"
+      "N"
     ],
     "ac": [
       {
@@ -190439,7 +190502,7 @@
     ],
     "type": "construct",
     "alignment": [
-      "U"
+      "N"
     ],
     "ac": [
       {
@@ -196798,12 +196861,6 @@
         "entries": [
           "When Hrabbaz is reduced to 0 hit points but not killed outright, he drops to 1 hit point instead."
         ]
-      },
-      {
-        "name": "Extra Damage",
-        "entries": [
-          "As long as Hrabbaz has more than half his hit points left he deals an extra 3 ({@damage 1d6}) damage on all hits."
-        ]
       }
     ],
     "action": [
@@ -196816,7 +196873,7 @@
       {
         "name": "Morningstar",
         "entries": [
-          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}9 ({@damage 1d8 + 5}) piercing damage."
+          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}9 ({@damage 1d8 + 5}) piercing damage, plus 3 ({@damage 1d6}) piercing damage if Hrabbaz has more than half his hit points remaining."
         ]
       }
     ]
@@ -198029,19 +198086,19 @@
     "name": "Hungry Ghast",
     "source": "COS",
     "size": [
-      "S"
+      "M"
     ],
     "type": "undead",
     "alignment": [
-      "L",
-      "G"
+      "C",
+      "E"
     ],
     "ac": [
       13
     ],
     "hp": {
-      "average": 7,
-      "formula": "2d6"
+      "average": 36,
+      "formula": "8d8"
     },
     "speed": {
       "walk": 30
@@ -276715,7 +276772,7 @@
       ]
     },
     "alignment": [
-      "L",
+      "N",
       "E"
     ],
     "ac": [
@@ -309387,7 +309444,7 @@
     ],
     "type": "construct",
     "alignment": [
-      "U"
+      "N"
     ],
     "ac": [
       {
@@ -328932,7 +328989,7 @@
       {
         "name": "Ice Dagger",
         "entries": [
-          "{@atk rw} {@hit 5} to hit, reach 5 ft. or range 20/60 ft., one target. {@h}5 ({@damage 1d4 + 3}) piercing damage plus 5 ({@damage 2d4}) cold damage."
+          "{@atk mw,rw} {@hit 5} to hit, reach 5 ft. or range 20/60 ft., one target. {@h}5 ({@damage 1d4 + 3}) piercing damage plus 5 ({@damage 2d4}) cold damage."
         ]
       }
     ]
@@ -334328,7 +334385,10 @@
     "int": 2,
     "wis": 10,
     "cha": 5,
-    "cr": "0",
+    "cr": {
+      "cr": "0",
+      "xp": 0
+    },
     "trait": [
       {
         "name": "Sure-Footed",
@@ -344672,7 +344732,7 @@
     ],
     "type": "construct",
     "alignment": [
-      "U"
+      "N"
     ],
     "ac": [
       {
@@ -357967,7 +358027,7 @@
     ],
     "type": "construct",
     "alignment": [
-      "U"
+      "N"
     ],
     "ac": [
       {
@@ -417461,7 +417521,15 @@
     "legendaryGroup": {
       "name": "Beholder",
       "source": "MM"
-    }
+    },
+    "resist": [
+      {
+        "resist": [
+          "force"
+        ],
+        "preNote": "While attuned to the ring of force resistance:"
+      }
+    ]
   },
   {
     "name": "Xandala",

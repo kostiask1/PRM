@@ -1,0 +1,61 @@
+.SessionHeaderActions {
+	display: flex;
+	position: relative;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
+.SessionHeaderActions__toggle {
+	display: none !important;
+}
+
+.SessionHeaderActions__menu {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+@media (max-width: 1024px) {
+	.SessionView > .Panel__header .SessionHeaderActions {
+		position: absolute;
+		top: var(--space-2);
+		right: var(--space-3);
+		z-index: 5;
+		width: auto;
+		margin-left: 0;
+		overflow: visible;
+		padding-bottom: 0;
+	}
+
+	.SessionHeaderActions__toggle {
+		display: inline-flex !important;
+	}
+
+	.SessionHeaderActions__menu {
+		position: absolute;
+		top: calc(100% + var(--space-1));
+		right: 0;
+		z-index: 20;
+		display: none;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-2);
+		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		border-radius: var(--radius-md);
+		background: var(--panel);
+		box-shadow: var(--shadow);
+	}
+
+	.SessionHeaderActions.is_open .SessionHeaderActions__menu {
+		display: flex;
+	}
+
+	.SessionHeaderActions .Button,
+	.SessionHeaderActions__menu .Button {
+		flex: 0 0 auto;
+		min-height: var(--control-h-sm);
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
+	}
+}

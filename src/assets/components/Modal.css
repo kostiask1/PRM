@@ -14,10 +14,6 @@
 	padding: 0;
 }
 
-.MessageBox__overlay {
-	z-index: 1200;
-}
-
 .Modal__card {
 	background: var(--panel);
 	border: 1px solid var(--border);
@@ -102,109 +98,6 @@
 	min-width: min(800px, 92vw);
 }
 
-.MentionPickerModal {
-	width: min(96vw, 1040px);
-}
-
-.MentionPicker {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-3);
-}
-
-.MentionPicker__columns {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: var(--space-3);
-	max-height: min(50vh, 420px);
-	overflow-y: auto;
-	padding-right: var(--space-1);
-}
-
-.MentionPicker__column {
-	display: flex;
-	flex-direction: column;
-	min-width: 0;
-	gap: var(--space-2);
-}
-
-.MentionPicker__column_title {
-	margin: 0;
-	font-size: 0.9rem;
-	font-weight: 700;
-	color: var(--text);
-}
-
-.MentionPicker__list {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
-}
-
-.MentionPicker__item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	width: 100%;
-	padding: var(--space-3) var(--space-3);
-	border: 1px solid var(--border);
-	background: var(--panel);
-	color: var(--text);
-	border-radius: var(--radius-lg);
-	cursor: pointer;
-	text-align: left;
-}
-
-.MentionPicker__item span {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.MentionPicker__item:hover {
-	border-color: var(--accent);
-	background: color-mix(in srgb, var(--accent), var(--panel) 90%);
-}
-
-.MentionPicker__empty {
-	margin: 0;
-	padding: var(--space-3);
-	border: 1px dashed var(--border);
-	border-radius: var(--radius-lg);
-}
-
-.MentionPicker__actions {
-	display: flex;
-	justify-content: flex-end;
-}
-
-.CreateCampaignModal {
-	display: grid;
-	gap: var(--space-3);
-}
-
-.CreateCampaignModal__label {
-	font-size: 0.82rem;
-	color: var(--muted);
-}
-
-.CreateCampaignModal__actions {
-	display: flex;
-	gap: var(--space-2);
-	justify-content: flex-end;
-}
-
-.CreateCampaignModal__import {
-	display: grid;
-	gap: var(--space-2);
-}
-
-.CreateCampaignModal__strategyRow {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--space-1);
-}
-
 @media (max-width: 767px) {
 	.Modal__overlay {
 		align-items: stretch;
@@ -214,16 +107,6 @@
 	.Modal__card,
 	.Modal__card__custom,
 	.Modal__card__character,
-	.MentionPickerModal {
-		width: 100vw;
-		min-width: 0;
-		max-width: 100vw;
-		height: 100dvh;
-		max-height: 100dvh;
-		border-radius: 0;
-		border-left: 0;
-		border-right: 0;
-	}
 
 	.Modal__header {
 		padding: 0 var(--space-3);
@@ -256,16 +139,4 @@
 		min-height: 44px;
 	}
 
-	.MentionPicker__columns {
-		grid-template-columns: minmax(0, 1fr);
-		max-height: none;
-	}
-
-	.CreateCampaignModal__actions {
-		flex-wrap: wrap;
-	}
-
-	.CreateCampaignModal__actions .Button {
-		flex: 1 1 140px;
-	}
 }

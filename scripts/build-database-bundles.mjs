@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import { getSpellClassInfo } from "./build-database-bundles-policies.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -111,22 +112,6 @@ function pickFields(value, fields) {
 	return Object.fromEntries(
 		Object.entries(value || {}).filter(([key]) => fields.has(key)),
 	);
-}
-
-function getSpellClassInfo(spellSources, spell) {
-	const spellName = String(spell.name || "").split("|")[0];
-	const sourceKey = Object.keys(spellSources).find(
-		(key) => key.toUpperCase() === String(spell.source || "").toUpperCase(),
-	);
-	const sourceSpells = sourceKey ? spellSources[sourceKey] : null;
-	const info = sourceSpells?.[spellName];
-	if (!info) return [];
-
-	const classes = new Set();
-	for (const entry of [...(info.class || []), ...(info.classVariant || [])]) {
-		if (entry?.name) classes.add(entry.name);
-	}
-	return [...classes].sort((a, b) => a.localeCompare(b));
 }
 
 function enrichSpell(spell, spellSources) {

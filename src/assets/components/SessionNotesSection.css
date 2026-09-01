@@ -1,0 +1,21 @@
+.SessionNotesSection__list {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
+.SessionNotesSection__list .NoteCard {
+	height: 100%;
+}
+
+.SessionNotesSection__list > div {
+	flex: 1 1 550px;
+	max-width: 100%;
+}
+
+@media (max-width: 767px) {
+	.SessionNotesSection__list > div {
+		flex-basis: 100%;
+	}
+}

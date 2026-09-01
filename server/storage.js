@@ -5,6 +5,15 @@ const {
 	calculateDiceFormulaAverage,
 	stripMentionBrackets,
 } = require("../shared/bestiaryUtils.cjs");
+const {
+	createCampaignMentionReferenceUpdater,
+} = require("./modules/campaign/infrastructure/campaignMentionReferences");
+const {
+	createCampaignArchiveImageRestorer,
+} = require("./modules/backups/infrastructure/archiveImageRestoration");
+const {
+	createBestiaryAiHistoryMigration,
+} = require("./modules/ai/infrastructure/bestiaryAiHistoryMigration");
 
 const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
@@ -156,17 +165,19 @@ async function getFileSize(filePath) {
 	}
 }
 
+async function getDirectoryEntrySize(dirPath, entry) {
+	const fullPath = path.join(dirPath, entry.name);
+	if (entry.isDirectory()) return getDirectorySize(fullPath);
+	if (entry.isFile()) return getFileSize(fullPath);
+	return 0;
+}
+
 async function getDirectorySize(dirPath) {
 	if (!(await exists(dirPath))) return 0;
 	let total = 0;
 	const entries = await fs.readdir(dirPath, { withFileTypes: true });
 	for (const entry of entries) {
-		const fullPath = path.join(dirPath, entry.name);
-		if (entry.isDirectory()) {
-			total += await getDirectorySize(fullPath);
-		} else if (entry.isFile()) {
-			total += await getFileSize(fullPath);
-		}
+		total += await getDirectoryEntrySize(dirPath, entry);
 	}
 	return total;
 }
@@ -263,138 +274,257 @@ async function listCampaignSlugs() {
 	return slugs;
 }
 
+async function listExportableCampaignSlugs() {
+	const slugs = await listCampaignSlugs();
+	const exportable = [];
+	for (const slug of slugs) {
+		if (await exists(campaignMetaPath(slug))) exportable.push(slug);
+	}
+	return exportable;
+}
+
 function addMonstersToBestiaryIndex(index, monsters, fallbackSource = "") {
 	for (const monster of monsters) {
-		if (!monster.name) continue;
-		const monsterSource = String(monster.source || fallbackSource).toUpperCase();
-		const key = `${monster.name.trim().toLowerCase()}|${monsterSource}`;
-		index.set(key, { ...monster, source: monsterSource });
+		const entry = getBestiaryIndexEntry(monster, fallbackSource);
+		if (entry) index.set(...entry);
 	}
+}
+
+function getBestiaryIndexEntry(monster, fallbackSource) {
+	if (!monster.name) return null;
+	const monsterSource = String(monster.source || fallbackSource).toUpperCase();
+	const key = `${monster.name.trim().toLowerCase()}|${monsterSource}`;
+	return [key, { ...monster, source: monsterSource }];
+}
+
+function createBestiaryIndex(monsters, fallbackSource = "") {
+	const index = new Map();
+	addMonstersToBestiaryIndex(index, monsters, fallbackSource);
+	return index;
+}
+
+function getBestiaryEnvelopeMonsters(data) {
+	return data.monster || data.monsters || data.results || [];
+}
+
+function getBestiaryMonsters(data) {
+	return Array.isArray(data) ? data : getBestiaryEnvelopeMonsters(data);
+}
+
+function appendCustomBestiaryMonsters(index, customMonsters) {
+	addMonstersToBestiaryIndex(index, customMonsters, CUSTOM_BESTIARY_SOURCE);
+	return index;
+}
+
+async function readAggregateBestiaryIndex(allPath, customMonsters) {
+	const data = await readJson(allPath);
+	const index = createBestiaryIndex(getBestiaryMonsters(data));
+	return appendCustomBestiaryMonsters(index, customMonsters);
+}
+
+function hasBestiaryJsonExtension(entry) {
+	return entry.name.endsWith(".json");
+}
+
+function isBestiaryAggregateFile(entry) {
+	return entry.name === "all.json";
+}
+
+function isBestiaryIndexFile(entry) {
+	return entry.name === "index.json";
+}
+
+function isBestiaryLegendaryGroupsFile(entry) {
+	return entry.name === "legendarygroups.json";
+}
+
+function isBestiaryControlFile(entry) {
+	if (isBestiaryAggregateFile(entry)) return true;
+	if (isBestiaryIndexFile(entry)) return true;
+	return isBestiaryLegendaryGroupsFile(entry);
+}
+
+function isBundledBestiaryFile(entry) {
+	if (!entry.isFile()) return false;
+	if (!hasBestiaryJsonExtension(entry)) return false;
+	return !isBestiaryControlFile(entry);
+}
+
+function getBestiaryFileFallbackSource(fileName) {
+	return path.parse(fileName).name.replace(/^bestiary-/i, "");
+}
+
+function getBestiaryFileSource(data, fileName) {
+	const source =
+		data._meta?.sources?.[0]?.json ||
+		getBestiaryFileFallbackSource(fileName);
+	return source.toUpperCase();
+}
+
+async function addBestiaryFileToIndex(index, file) {
+	const data = await readJson(path.join(BESTIARY_DIR, file.name));
+	const source = getBestiaryFileSource(data, file.name);
+	addMonstersToBestiaryIndex(index, getBestiaryMonsters(data), source);
+}
+
+async function readSplitBestiaryIndex(customMonsters) {
+	const entries = await fs.readdir(BESTIARY_DIR, { withFileTypes: true });
+	const files = entries.filter(isBundledBestiaryFile);
+	const index = new Map();
+	for (const file of files) {
+		await addBestiaryFileToIndex(index, file);
+	}
+	return appendCustomBestiaryMonsters(index, customMonsters);
 }
 
 async function getBestiaryIndex() {
 	const customMonsters = await readCustomBestiaryMonsters();
 	if (!(await exists(BESTIARY_DIR))) {
-		const customIndex = new Map();
-		addMonstersToBestiaryIndex(customIndex, customMonsters, "CUSTOM");
-		return customIndex;
+		return createBestiaryIndex(customMonsters, CUSTOM_BESTIARY_SOURCE);
 	}
-
 	const allPath = path.join(BESTIARY_DIR, "all.json");
 	if (await exists(allPath)) {
-		const data = await readJson(allPath);
-		const monsters = Array.isArray(data)
-			? data
-			: data.monster || data.monsters || data.results || [];
-		const index = new Map();
-		addMonstersToBestiaryIndex(index, monsters);
-		addMonstersToBestiaryIndex(index, customMonsters, "CUSTOM");
-		return index;
+		return readAggregateBestiaryIndex(allPath, customMonsters);
 	}
+	return readSplitBestiaryIndex(customMonsters);
+}
 
-	const entries = await fs.readdir(BESTIARY_DIR, { withFileTypes: true });
-	const files = entries.filter(
-		(e) =>
-			e.isFile() &&
-			e.name.endsWith(".json") &&
-			e.name !== "all.json" &&
-			e.name !== "index.json" &&
-			e.name !== "legendarygroups.json",
-	);
+function getCustomBestiaryEnvelope(data) {
+	return data && !Array.isArray(data) ? data : {};
+}
 
-	const index = new Map();
-	for (const file of files) {
-		const data = await readJson(path.join(BESTIARY_DIR, file.name));
+function forceCustomBestiarySource(monster) {
+	return {
+		...monster,
+		source: CUSTOM_BESTIARY_SOURCE,
+	};
+}
 
-		let fileSource = (
-			data._meta?.sources?.[0]?.json ||
-			path.parse(file.name).name.replace(/^bestiary-/i, "")
-		).toUpperCase();
+function getCustomBestiaryReadMonsters(monsters) {
+	return Array.isArray(monsters)
+		? monsters.map(forceCustomBestiarySource)
+		: [];
+}
 
-		const monsters = Array.isArray(data)
-			? data
-			: data.monster || data.monsters || data.results || [];
-
-		addMonstersToBestiaryIndex(index, monsters, fileSource);
-	}
-	addMonstersToBestiaryIndex(index, customMonsters, "CUSTOM");
-	return index;
+function projectCustomBestiary(data) {
+	const monsters = getBestiaryMonsters(data);
+	return {
+		...getCustomBestiaryEnvelope(data),
+		monster: getCustomBestiaryReadMonsters(monsters),
+	};
 }
 
 async function readCustomBestiary() {
 	if (!(await exists(CUSTOM_BESTIARY_PATH))) return { monster: [] };
 	const data = await readJson(CUSTOM_BESTIARY_PATH);
-	const monsters = Array.isArray(data)
-		? data
-		: data.monster || data.monsters || data.results || [];
-	return {
-		...(data && !Array.isArray(data) ? data : {}),
-		monster: Array.isArray(monsters)
-			? monsters.map((monster) => ({
-					...monster,
-					source: CUSTOM_BESTIARY_SOURCE,
-				}))
-			: [],
-	};
+	return projectCustomBestiary(data);
 }
 
 async function readCustomBestiaryMonsters() {
 	return (await readCustomBestiary()).monster;
 }
 
-function normalizeCustomBestiaryEntryList(value) {
-	return (Array.isArray(value) ? value : [])
-		.map((entry) => {
-			if (typeof entry === "string") {
-				const text = entry.trim();
-				return text ? { name: "", entries: [text] } : null;
-			}
-			if (!entry || typeof entry !== "object") return null;
-			const entries = Array.isArray(entry.entries)
-				? entry.entries
-				: entry.text || entry.description || entry.content
-					? [String(entry.text || entry.description || entry.content)]
-					: [];
-			return {
-				...entry,
-				name: String(entry.name || entry.title || "").trim(),
-				entries,
-			};
-		})
-		.filter((entry) => entry && entry.entries.length > 0);
+function normalizeCustomBestiaryStringEntry(entry) {
+	const text = entry.trim();
+	return text ? { name: "", entries: [text] } : null;
 }
 
-function normalizeCustomBestiaryMonster(monster) {
-	const next = stripMentionBrackets({
+function isCustomBestiaryEntryRecord(entry) {
+	return Boolean(entry) && typeof entry === "object";
+}
+
+function getCustomBestiaryEntryContent(entry) {
+	return entry.text || entry.description || entry.content;
+}
+
+function getCustomBestiaryEntryEntries(entry) {
+	if (Array.isArray(entry.entries)) return entry.entries;
+	if (!getCustomBestiaryEntryContent(entry)) return [];
+	return [String(getCustomBestiaryEntryContent(entry))];
+}
+
+function normalizeCustomBestiaryRecordEntry(entry) {
+	return {
+		...entry,
+		name: String(entry.name || entry.title || "").trim(),
+		entries: getCustomBestiaryEntryEntries(entry),
+	};
+}
+
+function normalizeCustomBestiaryEntry(entry) {
+	if (typeof entry === "string") {
+		return normalizeCustomBestiaryStringEntry(entry);
+	}
+	if (!isCustomBestiaryEntryRecord(entry)) return null;
+	return normalizeCustomBestiaryRecordEntry(entry);
+}
+
+function hasCustomBestiaryEntryContent(entry) {
+	return Boolean(entry) && entry.entries.length > 0;
+}
+
+function normalizeCustomBestiaryEntryList(value) {
+	return (Array.isArray(value) ? value : [])
+		.map(normalizeCustomBestiaryEntry)
+		.filter(hasCustomBestiaryEntryContent);
+}
+
+function createCustomBestiaryMonsterBase(monster) {
+	return stripMentionBrackets({
 		...monster,
 		id: String(monster.id || createId()),
 		name: String(monster.name || monster.title || "").trim(),
 		source: CUSTOM_BESTIARY_SOURCE,
 	});
+}
 
-	if (next.hp && typeof next.hp === "object" && !Array.isArray(next.hp)) {
-		next.hp = { ...next.hp };
-		const average = calculateDiceFormulaAverage(next.hp.formula);
-		if (average !== null) {
-			next.hp.average = average;
-		} else if (hasOwn(next.hp, "average")) {
-			const parsed = Number.parseInt(String(next.hp.average), 10);
-			next.hp.average = Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
-		}
+function isCustomBestiaryHp(value) {
+	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeStoredCustomBestiaryHpAverage(value) {
+	const parsed = Number.parseInt(String(value), 10);
+	return Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
+}
+
+function normalizeCustomBestiaryHp(monster) {
+	if (!isCustomBestiaryHp(monster.hp)) return;
+	monster.hp = { ...monster.hp };
+	const average = calculateDiceFormulaAverage(monster.hp.formula);
+	if (average !== null) {
+		monster.hp.average = average;
+		return;
 	}
-
-	if (next.spellcasting && !Array.isArray(next.spellcasting)) {
-		next.spellcasting = [next.spellcasting];
+	if (hasOwn(monster.hp, "average")) {
+		monster.hp.average = normalizeStoredCustomBestiaryHpAverage(
+			monster.hp.average,
+		);
 	}
+}
 
+function normalizeCustomBestiarySpellcasting(monster) {
+	if (monster.spellcasting && !Array.isArray(monster.spellcasting)) {
+		monster.spellcasting = [monster.spellcasting];
+	}
+}
+
+function normalizeCustomBestiaryActionFamily(monster, key) {
+	if (monster[key] === undefined) return;
+	const entries = normalizeCustomBestiaryEntryList(monster[key]);
+	if (entries.length > 0) {
+		monster[key] = entries;
+		return;
+	}
+	delete monster[key];
+}
+
+function normalizeCustomBestiaryMonster(monster) {
+	const next = createCustomBestiaryMonsterBase(monster);
+	normalizeCustomBestiaryHp(next);
+	normalizeCustomBestiarySpellcasting(next);
 	for (const key of ["trait", "action", "bonus", "reaction", "legendary"]) {
-		if (next[key] !== undefined) {
-			const entries = normalizeCustomBestiaryEntryList(next[key]);
-			if (entries.length > 0) next[key] = entries;
-			else delete next[key];
-		}
+		normalizeCustomBestiaryActionFamily(next, key);
 	}
-
 	return next;
 }
 
@@ -440,50 +570,90 @@ async function writeFavorites(favorites) {
 	await writeJson(FAVORITES_PATH, favorites);
 }
 
-function normalizeAiChangeResource(raw = {}) {
-	if (!raw || typeof raw !== "object") return null;
-	const kind = [
-		"campaign",
-		"session",
-		"entity",
-		"custom-bestiary",
-		"custom-monster",
-	].includes(raw.kind)
-		? raw.kind
-		: null;
-	if (!kind) return null;
+const AI_CHANGE_KINDS = new Set([
+	"campaign",
+	"session",
+	"entity",
+	"custom-bestiary",
+	"custom-monster",
+]);
+const AI_RESOURCE_APPLY_STATES = new Set(["applied", "undone"]);
+const AI_RESPONSE_APPLY_STATES = new Set(["applied", "undone", "draft"]);
 
-	const before = hasOwn(raw, "before") ? raw.before : null;
-	const after = hasOwn(raw, "after") ? raw.after : null;
-	if (before === null && after === null) return null;
+function isObjectLike(value) {
+	return Boolean(value && typeof value === "object");
+}
 
-	const resource = {
-		id: String(raw.id || createId()),
+function normalizeAiChangeKind(value) {
+	return AI_CHANGE_KINDS.has(value) ? value : null;
+}
+
+function normalizeAiChangeSnapshot(raw, key) {
+	return hasOwn(raw, key) ? raw[key] : null;
+}
+
+function hasAiChangeSnapshot(before, after) {
+	return before !== null || after !== null;
+}
+
+function normalizeGeneratedId(value) {
+	return String(value || createId());
+}
+
+function normalizeAiResourceApplyState(value) {
+	return AI_RESOURCE_APPLY_STATES.has(value) ? value : null;
+}
+
+function createAiChangeResource(raw, kind, before, after) {
+	return {
+		id: normalizeGeneratedId(raw.id),
 		kind,
 		campaign: raw.campaign || null,
 		label: String(raw.label || raw.id || kind),
 		before,
 		after,
-		applyState: ["applied", "undone"].includes(raw.applyState)
-			? raw.applyState
-			: null,
+		applyState: normalizeAiResourceApplyState(raw.applyState),
 		appliedAt: raw.appliedAt || null,
 	};
+}
 
-	if (kind === "session") {
-		resource.fileName = raw.fileName || null;
-	} else if (kind === "entity") {
-		resource.type = raw.type || null;
-		resource.slug = raw.slug || null;
-	} else if (kind === "custom-monster") {
-		resource.name = raw.name || raw.after?.name || raw.before?.name || null;
-	}
+function projectSessionChangeIdentity(resource, raw) {
+	resource.fileName = raw.fileName || null;
+}
 
+function projectEntityChangeIdentity(resource, raw) {
+	resource.type = raw.type || null;
+	resource.slug = raw.slug || null;
+}
+
+function projectCustomMonsterChangeIdentity(resource, raw) {
+	resource.name = raw.name || raw.after?.name || raw.before?.name || null;
+}
+
+const AI_CHANGE_IDENTITY_PROJECTORS = new Map([
+	["session", projectSessionChangeIdentity],
+	["entity", projectEntityChangeIdentity],
+	["custom-monster", projectCustomMonsterChangeIdentity],
+]);
+
+function projectAiChangeIdentity(resource, raw) {
+	AI_CHANGE_IDENTITY_PROJECTORS.get(resource.kind)?.(resource, raw);
+}
+
+function normalizeAiChangeResource(raw = {}) {
+	if (!isObjectLike(raw)) return null;
+	const kind = normalizeAiChangeKind(raw.kind);
+	if (!kind) return null;
+	const before = normalizeAiChangeSnapshot(raw, "before");
+	const after = normalizeAiChangeSnapshot(raw, "after");
+	if (!hasAiChangeSnapshot(before, after)) return null;
+	const resource = createAiChangeResource(raw, kind, before, after);
+	projectAiChangeIdentity(resource, raw);
 	return resource;
 }
 
 function normalizeAiChanges(raw = {}) {
-	if (!raw || typeof raw !== "object") {
+	if (!isObjectLike(raw)) {
 		return { resources: [], summary: {} };
 	}
 	const resources = Array.isArray(raw.resources)
@@ -491,79 +661,105 @@ function normalizeAiChanges(raw = {}) {
 		: [];
 	return {
 		resources,
-		summary: raw.summary && typeof raw.summary === "object" ? raw.summary : {},
+		summary: isObjectLike(raw.summary) ? raw.summary : {},
 	};
 }
 
-function normalizeAiResponse(raw = {}) {
-	const text = typeof raw.text === "string" ? raw.text : "";
-	if (!text.trim()) return null;
-	const rawRequest =
-		raw.request && typeof raw.request === "object" ? raw.request : {};
-	const userInstructions =
-		typeof rawRequest.userInstructions === "string"
-			? rawRequest.userInstructions
-			: typeof raw.userInstructions === "string"
-				? raw.userInstructions
-				: "";
-	const request = {
+function normalizeAiResponseText(raw) {
+	return typeof raw.text === "string" ? raw.text : "";
+}
+
+function normalizeAiRequestSource(raw) {
+	return isObjectLike(raw.request) ? raw.request : {};
+}
+
+function normalizeAiUserInstructions(rawRequest, raw) {
+	if (typeof rawRequest.userInstructions === "string") {
+		return rawRequest.userInstructions;
+	}
+	return typeof raw.userInstructions === "string" ? raw.userInstructions : "";
+}
+
+function normalizeAiRequest(rawRequest, userInstructions) {
+	return {
 		userInstructions,
-		options:
-			rawRequest.options && typeof rawRequest.options === "object"
-				? rawRequest.options
-				: {},
+		options: isObjectLike(rawRequest.options) ? rawRequest.options : {},
 		optionsSummary:
 			typeof rawRequest.optionsSummary === "string"
 				? rawRequest.optionsSummary
 				: "",
-		context:
-			rawRequest.context && typeof rawRequest.context === "object"
-				? rawRequest.context
-				: {},
+		context: isObjectLike(rawRequest.context) ? rawRequest.context : {},
 		contextSummary:
 			typeof rawRequest.contextSummary === "string"
 				? rawRequest.contextSummary
 				: "",
 	};
-	const changes = normalizeAiChanges(raw.changes);
-	const applyState = ["applied", "undone", "draft"].includes(raw.applyState)
-		? raw.applyState
-		: null;
-	const status = raw.status === "failed" ? "failed" : "completed";
+}
 
+function normalizeAiResponseApplyState(value) {
+	return AI_RESPONSE_APPLY_STATES.has(value) ? value : null;
+}
+
+function normalizeAiResponseStatus(value) {
+	return value === "failed" ? "failed" : "completed";
+}
+
+function normalizeAiResponsePath(value) {
+	if (!isObjectLike(value)) return null;
 	return {
-		id: String(raw.id || createId()),
-		text,
-		status,
-		path:
-			raw.path && typeof raw.path === "object"
-				? {
-						campaign: raw.path.campaign || null,
-						session: raw.path.session || null,
-						encounter: raw.path.encounter || null,
-					}
-				: null,
-		type: raw.type || null,
-		modelName: raw.modelName || null,
-		language: raw.language || null,
-		userInstructions,
-		request,
-		changes,
-		applyState,
-		appliedAt: raw.appliedAt || null,
-		error:
-			raw.error && typeof raw.error === "object"
-				? {
-						message: String(raw.error.message || ""),
-						status: raw.error.status || null,
-					}
-				: null,
-		retryPayload:
-			raw.retryPayload && typeof raw.retryPayload === "object"
-				? raw.retryPayload
-				: null,
-		createdAt: raw.createdAt || new Date().toISOString(),
+		campaign: value.campaign || null,
+		session: value.session || null,
+		encounter: value.encounter || null,
 	};
+}
+
+function normalizeAiResponseError(value) {
+	if (!isObjectLike(value)) return null;
+	return {
+		message: String(value.message || ""),
+		status: value.status || null,
+	};
+}
+
+function normalizeAiRetryPayload(value) {
+	return isObjectLike(value) ? value : null;
+}
+
+function normalizeNullableAiMetadata(value) {
+	return value || null;
+}
+
+function normalizeAiResponseCreatedAt(value) {
+	return value || new Date().toISOString();
+}
+
+function createNormalizedAiResponse(raw, text, rawRequest, userInstructions) {
+	return {
+		id: normalizeGeneratedId(raw.id),
+		text,
+		status: normalizeAiResponseStatus(raw.status),
+		path: normalizeAiResponsePath(raw.path),
+		type: normalizeNullableAiMetadata(raw.type),
+		modelName: normalizeNullableAiMetadata(raw.modelName),
+		language: normalizeNullableAiMetadata(raw.language),
+		userInstructions,
+		request: normalizeAiRequest(rawRequest, userInstructions),
+		changes: normalizeAiChanges(raw.changes),
+		applyState: normalizeAiResponseApplyState(raw.applyState),
+		appliedAt: normalizeNullableAiMetadata(raw.appliedAt),
+		error: normalizeAiResponseError(raw.error),
+		retryPayload: normalizeAiRetryPayload(raw.retryPayload),
+		createdAt: normalizeAiResponseCreatedAt(raw.createdAt),
+	};
+}
+
+function normalizeAiResponse(raw = {}) {
+	if (!isObjectLike(raw)) return null;
+	const text = normalizeAiResponseText(raw);
+	if (!text.trim()) return null;
+	const rawRequest = normalizeAiRequestSource(raw);
+	const userInstructions = normalizeAiUserInstructions(rawRequest, raw);
+	return createNormalizedAiResponse(raw, text, rawRequest, userInstructions);
 }
 
 function normalizeCampaignSlug(slug) {
@@ -581,44 +777,83 @@ function normalizeSourceList(value) {
 	return [...seen].sort((a, b) => a.localeCompare(b));
 }
 
-async function readAiResponses(campaignSlugValue) {
-	const slug = normalizeCampaignSlug(campaignSlugValue);
-	if (!slug) return [];
+function getLegacyAiResponsesPath(slug) {
+	return slug === "bestiary" ? campaignAiResponsesPath(slug) : null;
+}
+
+async function shouldUsePrimaryAiResponsesPath(
+	responsesPath,
+	legacyResponsesPath,
+) {
+	if (await exists(responsesPath)) return true;
+	if (!legacyResponsesPath) return true;
+	return !(await exists(legacyResponsesPath));
+}
+
+async function resolveAiResponsesReadPath(slug) {
 	const responsesPath = aiResponsesPath(slug);
-	const legacyResponsesPath =
-		slug === "bestiary" ? campaignAiResponsesPath(slug) : null;
-	const readablePath =
-		(await exists(responsesPath)) ||
-		!legacyResponsesPath ||
-		!(await exists(legacyResponsesPath))
-			? responsesPath
-			: legacyResponsesPath;
-	if (!(await exists(readablePath))) return [];
+	const legacyResponsesPath = getLegacyAiResponsesPath(slug);
+	return (await shouldUsePrimaryAiResponsesPath(
+		responsesPath,
+		legacyResponsesPath,
+	))
+		? responsesPath
+		: legacyResponsesPath;
+}
+
+function getSavedAiResponseList(saved) {
+	return Array.isArray(saved) ? saved : saved?.responses || [];
+}
+
+function compareAiResponsesByCreatedAt(a, b) {
+	return String(b.createdAt).localeCompare(String(a.createdAt));
+}
+
+function normalizeSavedAiResponses(saved) {
+	return getSavedAiResponseList(saved)
+		.map(normalizeAiResponse)
+		.filter(Boolean)
+		.sort(compareAiResponsesByCreatedAt);
+}
+
+const bestiaryAiHistoryMigration = createBestiaryAiHistoryMigration({
+	aiResponsesPath,
+	campaignAiResponsesPath,
+	exists,
+	normalizeResponses: normalizeSavedAiResponses,
+	readJson,
+	writeJson,
+});
+
+async function resolveAiResponsesReadState(slug) {
+	if (slug === "bestiary") {
+		return bestiaryAiHistoryMigration.ensureCanonicalAiResponses(slug);
+	}
+	return { responsesPath: await resolveAiResponsesReadPath(slug) };
+}
+
+async function readNormalizedAiResponses(readablePath) {
 	try {
-		const saved = await readJson(readablePath);
-		const list = Array.isArray(saved) ? saved : saved?.responses || [];
-		return list
-			.map(normalizeAiResponse)
-			.filter(Boolean)
-			.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+		return normalizeSavedAiResponses(await readJson(readablePath));
 	} catch {
 		return [];
 	}
 }
 
+async function readAiResponses(campaignSlugValue) {
+	const slug = normalizeCampaignSlug(campaignSlugValue);
+	if (!slug) return [];
+	const readState = await resolveAiResponsesReadState(slug);
+	if (readState.responses) return readState.responses;
+	if (!(await exists(readState.responsesPath))) return [];
+	return readNormalizedAiResponses(readState.responsesPath);
+}
+
 async function getAiResponsesStorageStats(campaignSlugValue) {
 	const slug = normalizeCampaignSlug(campaignSlugValue);
 	if (!slug) return { bytes: 0 };
-	const responsesPath = aiResponsesPath(slug);
-	const legacyResponsesPath =
-		slug === "bestiary" ? campaignAiResponsesPath(slug) : null;
-	const readablePath =
-		(await exists(responsesPath)) ||
-		!legacyResponsesPath ||
-		!(await exists(legacyResponsesPath))
-			? responsesPath
-			: legacyResponsesPath;
-	return { bytes: await getFileSize(readablePath) };
+	const readState = await resolveAiResponsesReadState(slug);
+	return { bytes: await getFileSize(readState.responsesPath) };
 }
 
 async function writeAiResponses(campaignSlugValue, responses) {
@@ -628,7 +863,14 @@ async function writeAiResponses(campaignSlugValue, responses) {
 		.map(normalizeAiResponse)
 		.filter(Boolean)
 		.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-	await writeJson(aiResponsesPath(slug), normalized);
+	if (slug === "bestiary") {
+		await bestiaryAiHistoryMigration.writeCanonicalAiResponses(
+			slug,
+			normalized,
+		);
+	} else {
+		await writeJson(aiResponsesPath(slug), normalized);
+	}
 	return normalized;
 }
 
@@ -682,56 +924,74 @@ async function clearAiResponses(campaignSlugValue) {
 	return [];
 }
 
-function normalizeSettings(settings = {}) {
-	const encounterGridColumns = Number.parseInt(
-		settings.encounterGridColumns,
-		10,
-	);
-	const campaignAiBasePrompts =
-		settings.campaignAiBasePrompts &&
-		typeof settings.campaignAiBasePrompts === "object" &&
-		!Array.isArray(settings.campaignAiBasePrompts)
-			? Object.fromEntries(
-					Object.entries(settings.campaignAiBasePrompts)
-						.map(([slug, prompt]) => [
-							String(slug || "").trim(),
-							String(prompt || ""),
-						])
-						.filter(([slug]) => slug),
-				)
-			: {};
-	const campaignImagePromptBasePrompts =
-		settings.campaignImagePromptBasePrompts &&
-		typeof settings.campaignImagePromptBasePrompts === "object" &&
-		!Array.isArray(settings.campaignImagePromptBasePrompts)
-			? Object.fromEntries(
-					Object.entries(settings.campaignImagePromptBasePrompts)
-						.map(([slug, prompt]) => [
-							String(slug || "").trim(),
-							String(prompt || ""),
-						])
-						.filter(([slug]) => slug),
-				)
-			: {};
+function getNormalizedSettingsGridColumns(settings) {
+	const parsed = Number.parseInt(settings.encounterGridColumns, 10);
+	const finiteValue = Number.isFinite(parsed) ? parsed : 2;
+	return Math.min(4, Math.max(1, finiteValue));
+}
 
+function isSettingsPromptMap(settings, key) {
+	return (
+		settings[key] &&
+		typeof settings[key] === "object" &&
+		!Array.isArray(settings[key])
+	);
+}
+
+function normalizeSettingsPromptEntry([slug, prompt]) {
+	return [String(slug || "").trim(), String(prompt || "")];
+}
+
+function hasSettingsPromptSlug([slug]) {
+	return slug;
+}
+
+function normalizeSettingsPromptMap(settings, key) {
+	if (!isSettingsPromptMap(settings, key)) return {};
+	return Object.fromEntries(
+		Object.entries(settings[key])
+			.map(normalizeSettingsPromptEntry)
+			.filter(hasSettingsPromptSlug),
+	);
+}
+
+function getNormalizedSettingsLanguage(settings) {
+	return settings.language === "uk" ? "uk" : "en";
+}
+
+function getNormalizedSettingsTheme(settings) {
+	return settings.theme === "dark" ? "dark" : "light";
+}
+
+function getNormalizedEncounterViewMode(settings) {
+	return settings.encounterViewMode === "grid" ? "grid" : "single";
+}
+
+function getNormalizedImagePrompt(settings) {
+	if (settings.imagePromptBasePrompt === undefined) {
+		return DEFAULT_IMAGE_PROMPT_BASE_PROMPT;
+	}
+	return String(settings.imagePromptBasePrompt || "");
+}
+
+function normalizeSettings(settings = {}) {
+	const encounterGridColumns = getNormalizedSettingsGridColumns(settings);
+	const campaignAiBasePrompts = normalizeSettingsPromptMap(
+		settings,
+		"campaignAiBasePrompts",
+	);
+	const campaignImagePromptBasePrompts = normalizeSettingsPromptMap(
+		settings,
+		"campaignImagePromptBasePrompts",
+	);
 	return {
-		language: settings.language === "uk" ? "uk" : "en",
-		theme: settings.theme === "dark" ? "dark" : "light",
-		encounterViewMode:
-			settings.encounterViewMode === "grid" ? "grid" : "single",
-		encounterGridColumns: Math.min(
-			4,
-			Math.max(
-				1,
-				Number.isFinite(encounterGridColumns) ? encounterGridColumns : 2,
-			),
-		),
+		language: getNormalizedSettingsLanguage(settings),
+		theme: getNormalizedSettingsTheme(settings),
+		encounterViewMode: getNormalizedEncounterViewMode(settings),
+		encounterGridColumns,
 		simplifiedNotes: Boolean(settings.simplifiedNotes),
 		aiBasePrompt: String(settings.aiBasePrompt || ""),
-		imagePromptBasePrompt:
-			settings.imagePromptBasePrompt === undefined
-				? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
-				: String(settings.imagePromptBasePrompt || ""),
+		imagePromptBasePrompt: getNormalizedImagePrompt(settings),
 		campaignAiBasePrompts,
 		campaignImagePromptBasePrompts,
 		ignoreSourcesList: normalizeSourceList(settings.ignoreSourcesList),
@@ -740,23 +1000,37 @@ function normalizeSettings(settings = {}) {
 	};
 }
 
-async function readSettings() {
-	if (!(await exists(SETTINGS_PATH))) {
-		await writeJson(SETTINGS_PATH, DEFAULT_APP_SETTINGS);
-		return { ...DEFAULT_APP_SETTINGS };
-	}
+function cloneDefaultAppSettings() {
+	return { ...DEFAULT_APP_SETTINGS };
+}
 
+async function writeDefaultAppSettings() {
+	await writeJson(SETTINGS_PATH, DEFAULT_APP_SETTINGS);
+	return cloneDefaultAppSettings();
+}
+
+function settingsNeedRewrite(saved, normalized) {
+	return JSON.stringify(saved) !== JSON.stringify(normalized);
+}
+
+async function readExistingSettings() {
 	try {
 		const saved = await readJson(SETTINGS_PATH);
 		const normalized = normalizeSettings(saved);
-		if (JSON.stringify(saved) !== JSON.stringify(normalized)) {
+		if (settingsNeedRewrite(saved, normalized)) {
 			await writeJson(SETTINGS_PATH, normalized);
 		}
 		return normalized;
 	} catch {
-		await writeJson(SETTINGS_PATH, DEFAULT_APP_SETTINGS);
-		return { ...DEFAULT_APP_SETTINGS };
+		return writeDefaultAppSettings();
 	}
+}
+
+async function readSettings() {
+	if (!(await exists(SETTINGS_PATH))) {
+		return writeDefaultAppSettings();
+	}
+	return readExistingSettings();
 }
 
 async function updateSettings(patch = {}) {
@@ -769,40 +1043,45 @@ async function updateSettings(patch = {}) {
 	return next;
 }
 
+function getEntityListOrder(entity) {
+	return Number.isFinite(Number(entity.order)) ? Number(entity.order) : 0;
+}
+
+function getEntityListPersonName(entity) {
+	return `${entity.firstName || ""} ${entity.lastName || ""}`.trim();
+}
+
+function getEntityListName(entity) {
+	return String(
+		entity.name || getEntityListPersonName(entity) || entity.slug || "",
+	);
+}
+
+function compareEntityListItems(a, b) {
+	const aOrder = getEntityListOrder(a);
+	const bOrder = getEntityListOrder(b);
+	if (aOrder !== bOrder) return aOrder - bOrder;
+	return getEntityListName(a).localeCompare(getEntityListName(b));
+}
+
+async function readEntityListEntry(entitiesDir, entry) {
+	if (!entry.isDirectory()) return null;
+	const infoPath = path.join(entitiesDir, entry.name, "info.json");
+	if (!(await exists(infoPath))) return null;
+	const data = await readJson(infoPath);
+	return { ...data, slug: entry.name };
+}
+
 async function listEntities(campaignSlug, type) {
 	const entitiesDir = path.join(campaignDir(campaignSlug), type);
 	await ensureDir(entitiesDir);
 	const entries = await fs.readdir(entitiesDir, { withFileTypes: true });
 	const result = [];
-
 	for (const entry of entries) {
-		if (entry.isDirectory()) {
-			const infoPath = path.join(entitiesDir, entry.name, "info.json");
-			if (await exists(infoPath)) {
-				const data = await readJson(infoPath);
-				result.push({ ...data, slug: entry.name });
-			}
-		}
+		const entity = await readEntityListEntry(entitiesDir, entry);
+		if (entity) result.push(entity);
 	}
-	return result.sort((a, b) => {
-		const aOrder = Number.isFinite(Number(a.order)) ? Number(a.order) : 0;
-		const bOrder = Number.isFinite(Number(b.order)) ? Number(b.order) : 0;
-		if (aOrder !== bOrder) return aOrder - bOrder;
-
-		const aName = String(
-			a.name ||
-				`${a.firstName || ""} ${a.lastName || ""}`.trim() ||
-				a.slug ||
-				"",
-		);
-		const bName = String(
-			b.name ||
-				`${b.firstName || ""} ${b.lastName || ""}`.trim() ||
-				b.slug ||
-				"",
-		);
-		return aName.localeCompare(bName);
-	});
+	return result.sort(compareEntityListItems);
 }
 
 async function readEntity(campaignSlug, type, entitySlug) {
@@ -832,87 +1111,17 @@ async function deleteEntity(campaignSlug, type, entitySlug) {
 	await fs.rm(entityPath, { recursive: true, force: true });
 }
 
-function normalizeMentionName(value) {
-	return String(value || "")
-		.trim()
-		.replace(/\s+/g, " ")
-		.toLowerCase();
-}
-
-function replaceBracketedMentionNames(value, oldName, newName) {
-	if (typeof value !== "string") return value;
-	const normalizedOldName = normalizeMentionName(oldName);
-	const nextName = String(newName || "")
-		.trim()
-		.replace(/\s+/g, " ");
-	if (!normalizedOldName || !nextName) return value;
-
-	return value.replace(/\[([^[\]]+)\]/g, (fullMatch, rawName) => {
-		if (normalizeMentionName(rawName) !== normalizedOldName) return fullMatch;
-		return `[${nextName}]`;
-	});
-}
-
-function replaceMentionsInValue(value, oldName, newName) {
-	if (typeof value === "string") {
-		return replaceBracketedMentionNames(value, oldName, newName);
-	}
-	if (Array.isArray(value)) {
-		return value.map((item) => replaceMentionsInValue(item, oldName, newName));
-	}
-	if (value && typeof value === "object") {
-		return Object.fromEntries(
-			Object.entries(value).map(([key, item]) => [
-				key,
-				replaceMentionsInValue(item, oldName, newName),
-			]),
-		);
-	}
-	return value;
-}
-
-async function updateCampaignMentionReferences(campaignSlug, oldName, newName) {
-	if (
-		!normalizeMentionName(oldName) ||
-		!String(newName || "").trim() ||
-		normalizeMentionName(oldName) === normalizeMentionName(newName)
-	) {
-		return;
-	}
-
-	const metaPath = campaignMetaPath(campaignSlug);
-	if (await exists(metaPath)) {
-		const meta = await readJson(metaPath);
-		const nextMeta = replaceMentionsInValue(meta, oldName, newName);
-		if (JSON.stringify(nextMeta) !== JSON.stringify(meta)) {
-			await writeJson(metaPath, nextMeta);
-		}
-	}
-
-	for (const type of ENTITY_TYPES) {
-		const entities = await listEntities(campaignSlug, type);
-		for (const entity of entities) {
-			const nextEntity = replaceMentionsInValue(entity, oldName, newName);
-			if (JSON.stringify(nextEntity) !== JSON.stringify(entity)) {
-				await writeEntity(campaignSlug, type, entity.slug, nextEntity);
-			}
-		}
-	}
-
-	const sessions = await listSessions(campaignSlug);
-	for (const session of sessions) {
-		const filePath = sessionPath(campaignSlug, session.fileName);
-		const sessionData = await readJson(filePath);
-		const nextSessionData = replaceMentionsInValue(
-			sessionData,
-			oldName,
-			newName,
-		);
-		if (JSON.stringify(nextSessionData) !== JSON.stringify(sessionData)) {
-			await writeJson(filePath, nextSessionData);
-		}
-	}
-}
+const updateCampaignMentionReferences = createCampaignMentionReferenceUpdater({
+	entityTypes: ENTITY_TYPES,
+	campaignMetaPath,
+	exists,
+	readJson,
+	writeJson,
+	listEntities,
+	writeEntity,
+	listSessions,
+	sessionPath,
+});
 
 async function moveEntity(campaignSlug, sourceType, entitySlug, targetType) {
 	if (sourceType === targetType) {
@@ -1096,13 +1305,36 @@ async function resolvePartialImportSessionFileName(targetSlug, session) {
 	return importedSessionFileName(session);
 }
 
+const IMPORTED_ENTITY_DOT_SEGMENTS = new Set([".", ".."]);
+
+function getImportedEntityProperty(entity, property) {
+	if (entity == null) return undefined;
+	return entity[property];
+}
+
+function getImportedEntityRawSlug(entity) {
+	return String(getImportedEntityProperty(entity, "slug") || "").trim();
+}
+
+function getImportedEntityPathSlug(rawSlug) {
+	if (!rawSlug) return null;
+	const slug = path.basename(rawSlug);
+	return slug && !IMPORTED_ENTITY_DOT_SEGMENTS.has(slug) ? slug : null;
+}
+
+function getImportedEntityFallbackName(type, entity) {
+	const firstName = getImportedEntityProperty(entity, "firstName");
+	if (firstName) return firstName;
+	const name = getImportedEntityProperty(entity, "name");
+	if (name) return name;
+	return type;
+}
+
 function importedEntitySlug(type, entity) {
-	const rawSlug = String(entity?.slug || "").trim();
-	if (rawSlug) {
-		const slug = path.basename(rawSlug);
-		if (slug && slug !== "." && slug !== "..") return slug;
-	}
-	return campaignSlug(entity?.firstName || entity?.name || type);
+	const pathSlug = getImportedEntityPathSlug(
+		getImportedEntityRawSlug(entity),
+	);
+	return pathSlug || campaignSlug(getImportedEntityFallbackName(type, entity));
 }
 
 async function findCampaignSlugById(campaignId) {
@@ -1200,24 +1432,31 @@ async function moveCampaignImagesToGeneral(slug) {
 	return results;
 }
 
-async function campaignHasImages(slug) {
-	const safeSlug = path.basename(String(slug || ""));
-	if (!safeSlug) return false;
+function getSafeCampaignImageSlug(slug) {
+	return path.basename(String(slug || ""));
+}
 
+async function campaignImageEntryHasFiles(directory, entry) {
+	const fullPath = path.join(directory, entry.name);
+	if (entry.isFile()) return true;
+	if (!entry.isDirectory()) return false;
+	return campaignImageDirectoryHasFiles(fullPath);
+}
+
+async function campaignImageDirectoryHasFiles(directory) {
+	const entries = await fs.readdir(directory, { withFileTypes: true });
+	for (const entry of entries) {
+		if (await campaignImageEntryHasFiles(directory, entry)) return true;
+	}
+	return false;
+}
+
+async function campaignHasImages(slug) {
+	const safeSlug = getSafeCampaignImageSlug(slug);
+	if (!safeSlug) return false;
 	const root = path.join(IMAGES_DIR, safeSlug);
 	if (!(await exists(root))) return false;
-
-	async function walk(dir) {
-		const entries = await fs.readdir(dir, { withFileTypes: true });
-		for (const entry of entries) {
-			const fullPath = path.join(dir, entry.name);
-			if (entry.isFile()) return true;
-			if (entry.isDirectory() && (await walk(fullPath))) return true;
-		}
-		return false;
-	}
-
-	return walk(root);
+	return campaignImageDirectoryHasFiles(root);
 }
 
 async function deleteCampaignData(slug, options = {}) {
@@ -1241,211 +1480,456 @@ async function clearAllCampaignData() {
 	await ensureDir(IMAGES_DIR);
 }
 
+function canReplaceImageSlugReferences(value, oldSlug, newSlug) {
+	return Boolean(value && oldSlug && newSlug && oldSlug !== newSlug);
+}
+
+function getCampaignImageUrlSegment(slug) {
+	return `/api/images/${encodeURIComponent(slug)}/`;
+}
+
+function replaceSerializedImageSlugReferences(
+	serialized,
+	oldSegment,
+	newSegment,
+) {
+	return serialized.split(oldSegment).join(newSegment);
+}
+
 function replaceImageSlugReferences(value, oldSlug, newSlug) {
-	if (!value || !oldSlug || !newSlug || oldSlug === newSlug) return value;
-	const oldSegment = `/api/images/${encodeURIComponent(oldSlug)}/`;
-	const newSegment = `/api/images/${encodeURIComponent(newSlug)}/`;
+	if (!canReplaceImageSlugReferences(value, oldSlug, newSlug)) return value;
+	const oldSegment = getCampaignImageUrlSegment(oldSlug);
+	const newSegment = getCampaignImageUrlSegment(newSlug);
 	const serialized = JSON.stringify(value);
 	if (!serialized.includes(oldSegment)) return value;
-	return JSON.parse(serialized.split(oldSegment).join(newSegment));
+	return JSON.parse(
+		replaceSerializedImageSlugReferences(
+			serialized,
+			oldSegment,
+			newSegment,
+		),
+	);
+}
+
+async function updateExistingJsonImageSlugReferences(
+	filePath,
+	oldSlug,
+	newSlug,
+) {
+	if (!(await exists(filePath))) return;
+	const value = await readJson(filePath);
+	const normalized = replaceImageSlugReferences(value, oldSlug, newSlug);
+	if (normalized !== value) await writeJson(filePath, normalized);
+}
+
+async function updateCampaignEntityImageSlugReference(
+	campaignSlug,
+	type,
+	entity,
+	oldSlug,
+	newSlug,
+) {
+	const normalized = replaceImageSlugReferences(entity, oldSlug, newSlug);
+	if (normalized === entity) return;
+	await writeEntity(
+		campaignSlug,
+		type,
+		normalized.slug,
+		normalized,
+	);
+}
+
+async function updateCampaignEntityTypeImageSlugReferences(
+	campaignSlug,
+	type,
+	oldSlug,
+	newSlug,
+) {
+	const entities = await listEntities(campaignSlug, type);
+	for (const entity of entities) {
+		await updateCampaignEntityImageSlugReference(
+			campaignSlug,
+			type,
+			entity,
+			oldSlug,
+			newSlug,
+		);
+	}
+}
+
+async function updateCampaignEntityImageSlugReferences(
+	campaignSlug,
+	oldSlug,
+	newSlug,
+) {
+	for (const type of ENTITY_TYPES) {
+		await updateCampaignEntityTypeImageSlugReferences(
+			campaignSlug,
+			type,
+			oldSlug,
+			newSlug,
+		);
+	}
+}
+
+async function updateCampaignSessionImageSlugReference(
+	campaignSlug,
+	session,
+	oldSlug,
+	newSlug,
+) {
+	const filePath = sessionPath(campaignSlug, session.fileName);
+	const sessionData = await readJson(filePath);
+	const normalized = replaceImageSlugReferences(
+		sessionData,
+		oldSlug,
+		newSlug,
+	);
+	if (normalized !== sessionData) await writeJson(filePath, normalized);
+}
+
+async function updateCampaignSessionImageSlugReferences(
+	campaignSlug,
+	oldSlug,
+	newSlug,
+) {
+	const sessions = await listSessions(campaignSlug);
+	for (const session of sessions) {
+		await updateCampaignSessionImageSlugReference(
+			campaignSlug,
+			session,
+			oldSlug,
+			newSlug,
+		);
+	}
+}
+
+async function updateSingleCampaignImageSlugReferences(
+	campaignSlug,
+	oldSlug,
+	newSlug,
+) {
+	await updateExistingJsonImageSlugReferences(
+		campaignMetaPath(campaignSlug),
+		oldSlug,
+		newSlug,
+	);
+	await updateCampaignEntityImageSlugReferences(
+		campaignSlug,
+		oldSlug,
+		newSlug,
+	);
+	await updateCampaignSessionImageSlugReferences(
+		campaignSlug,
+		oldSlug,
+		newSlug,
+	);
+	await updateExistingJsonImageSlugReferences(
+		campaignAiResponsesPath(campaignSlug),
+		oldSlug,
+		newSlug,
+	);
+}
+
+function canUpdateCampaignImageSlugReferences(oldSlug, newSlug) {
+	return Boolean(oldSlug && newSlug && oldSlug !== newSlug);
 }
 
 async function updateCampaignImageSlugReferences(oldSlug, newSlug) {
-	if (!oldSlug || !newSlug || oldSlug === newSlug) return;
-
+	if (!canUpdateCampaignImageSlugReferences(oldSlug, newSlug)) return;
 	const campaigns = await listCampaignSlugs();
-	for (const slug of campaigns) {
-		const metaPath = campaignMetaPath(slug);
-		if (await exists(metaPath)) {
-			const meta = await readJson(metaPath);
-			const normalized = replaceImageSlugReferences(meta, oldSlug, newSlug);
-			if (normalized !== meta) await writeJson(metaPath, normalized);
-		}
-
-		for (const type of ENTITY_TYPES) {
-			const entities = await listEntities(slug, type);
-			for (const entity of entities) {
-				const normalized = replaceImageSlugReferences(entity, oldSlug, newSlug);
-				if (normalized !== entity) {
-					await writeEntity(slug, type, normalized.slug, normalized);
-				}
-			}
-		}
-
-		const sessions = await listSessions(slug);
-		for (const session of sessions) {
-			const sPath = sessionPath(slug, session.fileName);
-			const sessionData = await readJson(sPath);
-			const normalized = replaceImageSlugReferences(
-				sessionData,
-				oldSlug,
-				newSlug,
-			);
-			if (normalized !== sessionData) await writeJson(sPath, normalized);
-		}
-
-		const aiPath = campaignAiResponsesPath(slug);
-		if (await exists(aiPath)) {
-			const aiResponses = await readJson(aiPath);
-			const normalized = replaceImageSlugReferences(
-				aiResponses,
-				oldSlug,
-				newSlug,
-			);
-			if (normalized !== aiResponses) await writeJson(aiPath, normalized);
-		}
+	for (const campaignSlug of campaigns) {
+		await updateSingleCampaignImageSlugReferences(
+			campaignSlug,
+			oldSlug,
+			newSlug,
+		);
 	}
+}
+
+function getCampaignImageRenamePaths(oldSlug, newSlug) {
+	const oldImagesDir = path.join(IMAGES_DIR, path.basename(oldSlug));
+	const newImagesDir = path.join(IMAGES_DIR, path.basename(newSlug));
+	return { oldImagesDir, newImagesDir };
+}
+
+async function renameCampaignImageDirectory(oldSlug, newSlug) {
+	const { oldImagesDir, newImagesDir } = getCampaignImageRenamePaths(
+		oldSlug,
+		newSlug,
+	);
+	if (!(await exists(oldImagesDir))) return;
+	if (await exists(newImagesDir)) {
+		throw new Error("Campaign images folder already exists.");
+	}
+	await renameWithRetry(oldImagesDir, newImagesDir);
 }
 
 async function renameCampaignData(oldSlug, newSlug) {
 	if (!oldSlug || !newSlug || oldSlug === newSlug) return;
-
 	await renameWithRetry(campaignDir(oldSlug), campaignDir(newSlug));
-
-	const oldImagesDir = path.join(IMAGES_DIR, path.basename(oldSlug));
-	const newImagesDir = path.join(IMAGES_DIR, path.basename(newSlug));
-	if (await exists(oldImagesDir)) {
-		if (await exists(newImagesDir)) {
-			throw new Error("Campaign images folder already exists.");
-		}
-		await renameWithRetry(oldImagesDir, newImagesDir);
-	}
-
+	await renameCampaignImageDirectory(oldSlug, newSlug);
 	await updateCampaignImageSlugReferences(oldSlug, newSlug);
 }
 
+const CAMPAIGN_SLUG_FIELDS = new Set(["slug", "campaign"]);
+
+function canReplaceCampaignSlug(value, oldSlug, newSlug) {
+	if (!value || !oldSlug || !newSlug) return false;
+	return oldSlug !== newSlug;
+}
+
+function replaceCampaignSlugEntry(entry, oldSlug, newSlug) {
+	const [key, value] = entry;
+	if (CAMPAIGN_SLUG_FIELDS.has(key) && value === oldSlug) {
+		return [key, newSlug];
+	}
+	return [key, replaceCampaignSlugFields(value, oldSlug, newSlug)];
+}
+
 function replaceCampaignSlugFields(value, oldSlug, newSlug) {
-	if (!value || !oldSlug || !newSlug || oldSlug === newSlug) return value;
+	if (!canReplaceCampaignSlug(value, oldSlug, newSlug)) return value;
 	if (Array.isArray(value)) {
 		return value.map((item) =>
 			replaceCampaignSlugFields(item, oldSlug, newSlug),
 		);
 	}
 	if (typeof value !== "object") return value;
-
 	return Object.fromEntries(
-		Object.entries(value).map(([key, item]) => {
-			const shouldReplace =
-				["slug", "campaign"].includes(key) && item === oldSlug;
-			return [
-				key,
-				shouldReplace
-					? newSlug
-					: replaceCampaignSlugFields(item, oldSlug, newSlug),
-			];
-		}),
+		Object.entries(value).map((entry) =>
+			replaceCampaignSlugEntry(entry, oldSlug, newSlug),
+		),
 	);
+}
+
+function importedAiResponsePath(response, slug) {
+	const responsePath = response?.path;
+	if (responsePath && typeof responsePath === "object") {
+		return { ...responsePath, campaign: slug };
+	}
+	return { campaign: slug, session: null, encounter: null };
+}
+
+function normalizeImportedAiResource(resource, sourceSlug, slug) {
+	return {
+		...resource,
+		campaign: slug,
+		label:
+			typeof resource.label === "string"
+				? resource.label.replace(sourceSlug, slug)
+				: resource.label,
+	};
+}
+
+function importedAiResponseResources(response, sourceSlug, slug) {
+	const resources = response?.changes?.resources;
+	if (!Array.isArray(resources)) return [];
+	return resources.map((resource) =>
+		normalizeImportedAiResource(resource, sourceSlug, slug),
+	);
+}
+
+function importedAiResponseChanges(response, sourceSlug, slug) {
+	return {
+		...(response?.changes || {}),
+		resources: importedAiResponseResources(response, sourceSlug, slug),
+	};
 }
 
 function normalizeImportedAiResponse(entry, sourceSlug, slug) {
 	const withImageRefs = replaceImageSlugReferences(entry, sourceSlug, slug);
-	const withCampaignRefs = replaceCampaignSlugFields(
-		withImageRefs,
-		sourceSlug,
-		slug,
+	const response = replaceCampaignSlugFields(withImageRefs, sourceSlug, slug);
+	return {
+		...response,
+		path: importedAiResponsePath(response, slug),
+		changes: importedAiResponseChanges(response, sourceSlug, slug),
+	};
+}
+
+function importedCampaignMeta(bundle) {
+	const meta = bundle && bundle.meta;
+	if (!meta || !meta.name) throw new Error("Invalid bundle format.");
+	return meta;
+}
+
+function importedCampaignCollection(value) {
+	return Array.isArray(value) ? value : [];
+}
+
+function importedCampaignEntityMap(value) {
+	if (!value || typeof value !== "object") return {};
+	return value;
+}
+
+function normalizeCampaignImportBundle(bundle) {
+	const meta = importedCampaignMeta(bundle);
+	return {
+		meta,
+		sessions: importedCampaignCollection(bundle.sessions),
+		entities: importedCampaignEntityMap(bundle.entities),
+		aiResponses: importedCampaignCollection(bundle.aiResponses),
+	};
+}
+
+function normalizeCampaignImportOptions(options) {
+	if (options === null || options === undefined) return {};
+	return Object(options);
+}
+
+function importedCampaignSourceSlug(meta) {
+	return meta.slug || campaignSlug(meta.name);
+}
+
+function importedCampaignForcedSlug(options) {
+	if (!options.forcedSlug) return null;
+	return path.basename(options.forcedSlug);
+}
+
+async function importedCampaignTargetSlug(meta, forcedSlug) {
+	if (forcedSlug) return forcedSlug;
+	return ensureUniqueCampaignSlug(campaignSlug(meta.name));
+}
+
+async function createCampaignImportContext(bundle, rawOptions) {
+	const normalizedBundle = normalizeCampaignImportBundle(bundle);
+	const options = normalizeCampaignImportOptions(rawOptions);
+	const sourceSlug = importedCampaignSourceSlug(normalizedBundle.meta);
+	const forcedSlug = importedCampaignForcedSlug(options);
+	const slug = await importedCampaignTargetSlug(
+		normalizedBundle.meta,
+		forcedSlug,
 	);
 	return {
-		...withCampaignRefs,
-		path:
-			withCampaignRefs?.path && typeof withCampaignRefs.path === "object"
-				? { ...withCampaignRefs.path, campaign: slug }
-				: { campaign: slug, session: null, encounter: null },
-		changes: {
-			...(withCampaignRefs?.changes || {}),
-			resources: Array.isArray(withCampaignRefs?.changes?.resources)
-				? withCampaignRefs.changes.resources.map((resource) => ({
-						...resource,
-						campaign: slug,
-						label:
-							typeof resource.label === "string"
-								? resource.label.replace(sourceSlug, slug)
-								: resource.label,
-					}))
-				: [],
-		},
+		...normalizedBundle,
+		options,
+		sourceSlug,
+		forcedSlug,
+		slug,
+		newMeta: null,
 	};
+}
+
+function shouldReplaceImportedCampaign(context) {
+	if (!context.forcedSlug) return false;
+	return Boolean(context.options.replaceExisting);
+}
+
+async function prepareCampaignImportTarget(context) {
+	if (!shouldReplaceImportedCampaign(context)) return;
+	if (!(await exists(campaignDir(context.slug)))) return;
+	await deleteCampaignData(context.slug);
+}
+
+function projectImportedCampaignMeta(context) {
+	return {
+		...replaceImageSlugReferences(
+			context.meta,
+			context.sourceSlug,
+			context.slug,
+		),
+		slug: context.slug,
+		createdAt: context.meta.createdAt || new Date().toISOString(),
+	};
+}
+
+async function restoreImportedCampaignMeta(context) {
+	context.newMeta = projectImportedCampaignMeta(context);
+	await ensureDir(path.join(campaignDir(context.slug), "sessions"));
+	await writeJson(campaignMetaPath(context.slug), context.newMeta);
+}
+
+function importedSessionDesiredName(session) {
+	if (session.fileName) return session.fileName;
+	return `${sanitizeName(session.content?.name) || todayString()}.json`;
+}
+
+async function restoreImportedSession(context, session) {
+	const desiredName = importedSessionDesiredName(session);
+	const fileName = await ensureUniqueSessionFile(context.slug, desiredName);
+	const content = replaceImageSlugReferences(
+		session.content || {},
+		context.sourceSlug,
+		context.slug,
+	);
+	await writeJson(sessionPath(context.slug, fileName), content);
+}
+
+async function restoreImportedSessions(context) {
+	for (const session of context.sessions) {
+		await restoreImportedSession(context, session);
+	}
+}
+
+function importedEntityDesiredSlug(type, entity) {
+	if (entity.slug) return entity.slug;
+	return campaignSlug(entity.firstName || entity.name || type);
+}
+
+function importedEntitiesOfType(context, type) {
+	const entities = context.entities[type];
+	return Array.isArray(entities) ? entities : [];
+}
+
+async function restoreImportedEntity(context, type, entity) {
+	const desiredSlug = importedEntityDesiredSlug(type, entity);
+	const entitySlug = await ensureUniqueEntitySlug(
+		context.slug,
+		type,
+		desiredSlug,
+	);
+	const normalized = replaceImageSlugReferences(
+		entity,
+		context.sourceSlug,
+		context.slug,
+	);
+	await writeEntity(context.slug, type, entitySlug, {
+		...normalized,
+		slug: entitySlug,
+	});
+}
+
+async function restoreImportedEntitiesOfType(context, type) {
+	for (const entity of importedEntitiesOfType(context, type)) {
+		await restoreImportedEntity(context, type, entity);
+	}
+}
+
+async function restoreImportedEntities(context) {
+	for (const type of ENTITY_TYPES) {
+		await restoreImportedEntitiesOfType(context, type);
+	}
+}
+
+async function restoreImportedAiResponses(context) {
+	if (context.aiResponses.length === 0) return;
+	const responses = context.aiResponses.map((entry) =>
+		normalizeImportedAiResponse(entry, context.sourceSlug, context.slug),
+	);
+	await writeAiResponses(context.slug, responses);
 }
 
 async function importCampaignBundle(bundle, options = {}) {
-	const { meta, sessions = [], entities = {}, aiResponses = [] } = bundle;
-	if (!meta || !meta.name) throw new Error("Invalid bundle format.");
-	const sourceSlug = meta.slug || campaignSlug(meta.name);
-	const forcedSlug = options.forcedSlug
-		? path.basename(options.forcedSlug)
-		: null;
-	const slug = forcedSlug
-		? forcedSlug
-		: await ensureUniqueCampaignSlug(campaignSlug(meta.name));
-
-	if (
-		forcedSlug &&
-		options.replaceExisting &&
-		(await exists(campaignDir(slug)))
-	) {
-		await deleteCampaignData(slug);
-	}
-	const now = new Date().toISOString();
-	const newMeta = {
-		...replaceImageSlugReferences(meta, sourceSlug, slug),
-		slug,
-		createdAt: meta.createdAt || now,
-	};
-	await ensureDir(path.join(campaignDir(slug), "sessions"));
-	await writeJson(campaignMetaPath(slug), newMeta);
-
-	for (const session of sessions) {
-		const desiredName =
-			session.fileName ||
-			`${sanitizeName(session.content?.name) || todayString()}.json`;
-		const fileName = await ensureUniqueSessionFile(slug, desiredName);
-		const normalizedContent = replaceImageSlugReferences(
-			session.content || {},
-			sourceSlug,
-			slug,
-		);
-		await writeJson(sessionPath(slug, fileName), normalizedContent);
-	}
-
-	for (const type of ENTITY_TYPES) {
-		const list = Array.isArray(entities[type]) ? entities[type] : [];
-		for (const entity of list) {
-			const desiredSlug =
-				entity.slug || campaignSlug(entity.firstName || entity.name || type);
-			const entitySlug = await ensureUniqueEntitySlug(slug, type, desiredSlug);
-			const normalizedEntity = replaceImageSlugReferences(
-				entity,
-				sourceSlug,
-				slug,
-			);
-			await writeEntity(slug, type, entitySlug, {
-				...normalizedEntity,
-				slug: entitySlug,
-			});
-		}
-	}
-
-	if (Array.isArray(aiResponses) && aiResponses.length > 0) {
-		await writeAiResponses(
-			slug,
-			aiResponses.map((entry) =>
-				normalizeImportedAiResponse(entry, sourceSlug, slug),
-			),
-		);
-	}
-
-	return newMeta;
+	const context = await createCampaignImportContext(bundle, options);
+	await prepareCampaignImportTarget(context);
+	await restoreImportedCampaignMeta(context);
+	await restoreImportedSessions(context);
+	await restoreImportedEntities(context);
+	await restoreImportedAiResponses(context);
+	return context.newMeta;
 }
 
-async function listCampaignImagesForArchive(slug) {
+async function listCampaignImagesForArchive(slug, excludedRootDirectories = []) {
 	const root = path.join(IMAGES_DIR, path.basename(String(slug || "")));
 	if (!(await exists(root))) return [];
 
 	const files = [];
-	async function walk(dir) {
+	const excluded = new Set(excludedRootDirectories.map(String));
+	async function walk(dir, isRoot = false) {
 		const entries = await fs.readdir(dir, { withFileTypes: true });
 		for (const entry of entries) {
 			const fullPath = path.join(dir, entry.name);
 			if (entry.isDirectory()) {
+				if (isRoot && excluded.has(entry.name)) continue;
 				await walk(fullPath);
 				continue;
 			}
@@ -1459,40 +1943,52 @@ async function listCampaignImagesForArchive(slug) {
 		}
 	}
 
-	await walk(root);
+	await walk(root, true);
 	return files;
 }
 
-async function restoreCampaignImagesFromArchive(slug, files = []) {
-	if (!Array.isArray(files) || files.length === 0) return;
-
-	const root = path.join(IMAGES_DIR, path.basename(String(slug || "")));
-	const resolvedRoot = path.resolve(root);
-
-	for (const file of files) {
-		const rel = String(file?.relativePath || "")
-			.replace(/\\/g, "/")
-			.replace(/^\/+/, "");
-		if (!rel || !file?.base64) continue;
-
-		const targetPath = path.resolve(root, rel);
-		if (
-			targetPath !== resolvedRoot &&
-			!targetPath.startsWith(`${resolvedRoot}${path.sep}`)
-		) {
-			continue;
-		}
-
-		await ensureDir(path.dirname(targetPath));
-		await fs.writeFile(targetPath, Buffer.from(file.base64, "base64"));
-	}
-}
+const restoreCampaignImagesFromArchive = createCampaignArchiveImageRestorer({
+	imagesDir: IMAGES_DIR,
+	ensureDir,
+	writeFile: (targetPath, buffer) => fs.writeFile(targetPath, buffer),
+});
 
 async function exportCampaignArchiveBundle(slug) {
 	return {
 		bundle: await exportCampaignBundle(slug),
 		images: await listCampaignImagesForArchive(slug),
 	};
+}
+
+async function exportApplicationDataArchiveBundle(campaignSlugs = []) {
+	const [settings, customBestiary, favorites, bestiaryAiResponses, images] =
+		await Promise.all([
+			readSettings(),
+			readCustomBestiary(),
+			readFavorites(),
+			readAiResponses("bestiary"),
+			listCampaignImagesForArchive("", campaignSlugs),
+		]);
+	return { settings, customBestiary, favorites, bestiaryAiResponses, images };
+}
+
+async function importApplicationDataArchiveBundle(applicationData) {
+	if (!applicationData || typeof applicationData !== "object") return;
+	if (applicationData.settings !== undefined) {
+		await writeJson(SETTINGS_PATH, normalizeSettings(applicationData.settings));
+	}
+	if (applicationData.customBestiary !== undefined) {
+		await writeJson(CUSTOM_BESTIARY_PATH, applicationData.customBestiary);
+	}
+	if (applicationData.favorites !== undefined) {
+		await writeFavorites(applicationData.favorites);
+	}
+	if (applicationData.bestiaryAiResponses !== undefined) {
+		await writeAiResponses("bestiary", applicationData.bestiaryAiResponses);
+	}
+	if (applicationData.images !== undefined) {
+		await restoreCampaignImagesFromArchive("", applicationData.images);
+	}
 }
 
 function normalizePartialArchiveSections(sections = []) {
@@ -1549,88 +2045,180 @@ async function exportCampaignPartialArchiveBundle(slug, sections = []) {
 	};
 }
 
-async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
-	const target = path.basename(String(targetSlug || ""));
-	if (!target || !(await exists(campaignMetaPath(target)))) {
-		throw new Error("Campaign for import was not found.");
-	}
+const PARTIAL_IMPORT_SECTION_ORDER = Object.freeze([
+	"sessions",
+	"npc",
+	"locations",
+	"aiHistory",
+	"images",
+]);
 
-	const sections = normalizePartialArchiveSections(
-		archiveBundle?.sections || [],
-	);
-	const bundle = archiveBundle?.bundle || {};
-	const sourceMeta = bundle.meta || {};
-	const sourceSlug = sourceMeta.slug || archiveBundle?.sourceSlug || target;
-	const imported = {
+function normalizePartialImportTarget(targetSlug) {
+	return path.basename(String(targetSlug || ""));
+}
+
+async function assertPartialImportTargetExists(target) {
+	if (target && (await exists(campaignMetaPath(target)))) return;
+	throw new Error("Campaign for import was not found.");
+}
+
+function getPartialImportBundle(archiveBundle) {
+	return archiveBundle?.bundle || {};
+}
+
+function getPartialImportSourceSlug(bundle, archiveBundle, target) {
+	return bundle.meta?.slug || archiveBundle?.sourceSlug || target;
+}
+
+function createPartialImportCounters() {
+	return {
 		sessions: 0,
 		npc: 0,
 		locations: 0,
 		images: 0,
 		aiHistory: 0,
 	};
+}
 
-	if (sections.includes("sessions")) {
-		await ensureDir(path.join(campaignDir(target), "sessions"));
-		for (const session of Array.isArray(bundle.sessions)
-			? bundle.sessions
-			: []) {
-			const fileName = await resolvePartialImportSessionFileName(
-				target,
-				session,
-			);
-			const normalizedContent = replaceImageSlugReferences(
-				session.content || {},
-				sourceSlug,
-				target,
-			);
-			await writeJson(sessionPath(target, fileName), normalizedContent);
-			imported.sessions += 1;
-		}
+function createPartialImportContext(target, archiveBundle) {
+	const sections = normalizePartialArchiveSections(
+		archiveBundle?.sections || [],
+	);
+	const bundle = getPartialImportBundle(archiveBundle);
+	return {
+		target,
+		archiveBundle,
+		sections,
+		bundle,
+		sourceSlug: getPartialImportSourceSlug(bundle, archiveBundle, target),
+		imported: createPartialImportCounters(),
+	};
+}
+
+function getPartialImportSessions(bundle) {
+	return Array.isArray(bundle.sessions) ? bundle.sessions : [];
+}
+
+async function restorePartialImportSession(context, session) {
+	const fileName = await resolvePartialImportSessionFileName(
+		context.target,
+		session,
+	);
+	const normalizedContent = replaceImageSlugReferences(
+		session.content || {},
+		context.sourceSlug,
+		context.target,
+	);
+	await writeJson(
+		sessionPath(context.target, fileName),
+		normalizedContent,
+	);
+	context.imported.sessions += 1;
+}
+
+async function restorePartialImportSessions(context) {
+	await ensureDir(path.join(campaignDir(context.target), "sessions"));
+	for (const session of getPartialImportSessions(context.bundle)) {
+		await restorePartialImportSession(context, session);
 	}
+}
 
-	for (const type of ["npc", "locations"]) {
-		if (!sections.includes(type)) continue;
-		const list = Array.isArray(bundle.entities?.[type])
-			? bundle.entities[type]
-			: [];
-		for (const entity of list) {
-			const entitySlug = importedEntitySlug(type, entity);
-			const normalizedEntity = replaceImageSlugReferences(
-				entity,
-				sourceSlug,
-				target,
-			);
-			await writeEntity(target, type, entitySlug, {
-				...normalizedEntity,
-				slug: entitySlug,
-			});
-			imported[type] += 1;
-		}
+function getPartialImportEntities(bundle, type) {
+	return Array.isArray(bundle.entities?.[type]) ? bundle.entities[type] : [];
+}
+
+async function restorePartialImportEntity(context, type, entity) {
+	const entitySlug = importedEntitySlug(type, entity);
+	const normalizedEntity = replaceImageSlugReferences(
+		entity,
+		context.sourceSlug,
+		context.target,
+	);
+	await writeEntity(context.target, type, entitySlug, {
+		...normalizedEntity,
+		slug: entitySlug,
+	});
+	context.imported[type] += 1;
+}
+
+async function restorePartialImportEntities(context, type) {
+	for (const entity of getPartialImportEntities(context.bundle, type)) {
+		await restorePartialImportEntity(context, type, entity);
 	}
+}
 
-	if (sections.includes("aiHistory")) {
-		const existing = await readAiResponses(target);
-		const incoming = (
-			Array.isArray(bundle.aiResponses) ? bundle.aiResponses : []
-		).map((entry) => ({
-			...normalizeImportedAiResponse(entry, sourceSlug, target),
-			id: createId(),
-		}));
-		if (incoming.length > 0) {
-			await writeAiResponses(target, [...existing, ...incoming]);
-			imported.aiHistory = incoming.length;
-		}
+async function restorePartialImportNpcs(context) {
+	await restorePartialImportEntities(context, "npc");
+}
+
+async function restorePartialImportLocations(context) {
+	await restorePartialImportEntities(context, "locations");
+}
+
+function getPartialImportAiResponses(bundle) {
+	return Array.isArray(bundle.aiResponses) ? bundle.aiResponses : [];
+}
+
+function normalizePartialImportAiResponse(context, entry) {
+	return {
+		...normalizeImportedAiResponse(
+			entry,
+			context.sourceSlug,
+			context.target,
+		),
+		id: createId(),
+	};
+}
+
+async function restorePartialImportAiHistory(context) {
+	const existing = await readAiResponses(context.target);
+	const incoming = getPartialImportAiResponses(context.bundle).map((entry) =>
+		normalizePartialImportAiResponse(context, entry),
+	);
+	if (incoming.length === 0) return;
+	await writeAiResponses(context.target, [...existing, ...incoming]);
+	context.imported.aiHistory = incoming.length;
+}
+
+function getPartialImportImages(archiveBundle) {
+	return Array.isArray(archiveBundle?.images) ? archiveBundle.images : [];
+}
+
+async function restorePartialImportImages(context) {
+	const images = getPartialImportImages(context.archiveBundle);
+	await restoreCampaignImagesFromArchive(context.target, images);
+	context.imported.images = images.length;
+}
+
+const PARTIAL_IMPORT_SECTION_COMMANDS = new Map([
+	["sessions", restorePartialImportSessions],
+	["npc", restorePartialImportNpcs],
+	["locations", restorePartialImportLocations],
+	["aiHistory", restorePartialImportAiHistory],
+	["images", restorePartialImportImages],
+]);
+
+async function executePartialImportSections(context) {
+	for (const section of PARTIAL_IMPORT_SECTION_ORDER) {
+		if (!context.sections.includes(section)) continue;
+		await PARTIAL_IMPORT_SECTION_COMMANDS.get(section)(context);
 	}
+}
 
-	if (sections.includes("images")) {
-		const images = Array.isArray(archiveBundle?.images)
-			? archiveBundle.images
-			: [];
-		await restoreCampaignImagesFromArchive(target, images);
-		imported.images = images.length;
-	}
+function partialImportResult(context) {
+	return {
+		ok: true,
+		imported: context.imported,
+		sections: context.sections,
+	};
+}
 
-	return { ok: true, imported, sections };
+async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
+	const target = normalizePartialImportTarget(targetSlug);
+	await assertPartialImportTargetExists(target);
+	const context = createPartialImportContext(target, archiveBundle);
+	await executePartialImportSections(context);
+	return partialImportResult(context);
 }
 
 async function importCampaignArchiveBundle(archiveBundle) {
@@ -1693,83 +2281,433 @@ async function listImages(slug, category, subcategory = "") {
 	return Promise.all(files);
 }
 
+function createBestiaryTokenListContext({
+	subcategory,
+	search,
+	recursive,
+	ignoreSourcesList,
+}) {
+	const subParts = normalizePathSegments(subcategory);
+	return {
+		subParts,
+		query: String(search || "").trim().toLowerCase(),
+		recursive,
+		ignoredSources: new Set(normalizeSourceList(ignoreSourcesList)),
+		baseDir: path.join(BESTIARY_TOKENS_DIR, ...subParts),
+	};
+}
+
+function getBestiaryTokenRootSource(relativeParts) {
+	return String(relativeParts[0] || "").trim().toUpperCase();
+}
+
+function isIgnoredBestiaryTokenPath(context, relativeParts) {
+	const rootSource = getBestiaryTokenRootSource(relativeParts);
+	return Boolean(rootSource && context.ignoredSources.has(rootSource));
+}
+
+function emptyBestiaryTokenAssets() {
+	return { subcategories: [], images: [] };
+}
+
+async function hasReadableBestiaryTokenRoot(context) {
+	if (
+		context.subParts.length > 0 &&
+		isIgnoredBestiaryTokenPath(context, context.subParts)
+	) {
+		return false;
+	}
+	return exists(context.baseDir);
+}
+
+function getBestiaryTokenDisplayName(context, fileName, folderParts) {
+	if (context.query && folderParts.length > 0) {
+		return `${path.parse(fileName).name} (${folderParts.join("/")})`;
+	}
+	return fileName;
+}
+
+async function projectBestiaryTokenImage(
+	context,
+	filePath,
+	relativeParts,
+) {
+	const fileName = relativeParts[relativeParts.length - 1];
+	const folderParts = relativeParts.slice(0, -1);
+	return {
+		name: fileName,
+		displayName: getBestiaryTokenDisplayName(
+			context,
+			fileName,
+			folderParts,
+		),
+		url: `/api/bestiary/tokens/${encodeUrlPathSegments(...relativeParts)}`,
+		path: path.join("bestiary", "tokens", ...relativeParts),
+		sizeBytes: await getFileSize(filePath),
+		readonly: true,
+		source: "bestiary",
+	};
+}
+
+function isBestiaryTokenImageEntry(entry) {
+	return entry.isFile() && IMAGE_FILE_RE.test(entry.name);
+}
+
+function matchesBestiaryTokenQuery(context, relativeParts) {
+	if (!context.query) return true;
+	return relativeParts.join("/").toLowerCase().includes(context.query);
+}
+
+function shouldCollectRecursiveBestiaryToken(context, entry, relativeParts) {
+	return (
+		isBestiaryTokenImageEntry(entry) &&
+		matchesBestiaryTokenQuery(context, relativeParts)
+	);
+}
+
+async function visitRecursiveBestiaryTokenEntry(
+	context,
+	directory,
+	relativeParts,
+	images,
+	entry,
+) {
+	const nextRelativeParts = [...relativeParts, entry.name];
+	if (isIgnoredBestiaryTokenPath(context, nextRelativeParts)) return;
+	const nextPath = path.join(directory, entry.name);
+	if (entry.isDirectory()) {
+		await walkBestiaryTokenDirectory(
+			context,
+			nextPath,
+			nextRelativeParts,
+			images,
+		);
+		return;
+	}
+	if (!shouldCollectRecursiveBestiaryToken(context, entry, nextRelativeParts)) {
+		return;
+	}
+	images.push(
+		await projectBestiaryTokenImage(context, nextPath, nextRelativeParts),
+	);
+}
+
+async function walkBestiaryTokenDirectory(
+	context,
+	directory,
+	relativeParts,
+	images,
+) {
+	const entries = await fs.readdir(directory, { withFileTypes: true });
+	for (const entry of entries) {
+		await visitRecursiveBestiaryTokenEntry(
+			context,
+			directory,
+			relativeParts,
+			images,
+			entry,
+		);
+	}
+}
+
+async function collectRecursiveBestiaryTokenAssets(context) {
+	const images = [];
+	await walkBestiaryTokenDirectory(
+		context,
+		context.baseDir,
+		context.subParts,
+		images,
+	);
+	images.sort((left, right) =>
+		left.displayName.localeCompare(right.displayName),
+	);
+	return { subcategories: [], images };
+}
+
+function collectDirectBestiaryTokenSubcategories(context, entries) {
+	const subcategories = [];
+	for (const entry of entries) {
+		if (!entry.isDirectory()) continue;
+		if (
+			isIgnoredBestiaryTokenPath(context, [
+				...context.subParts,
+				entry.name,
+			])
+		) {
+			continue;
+		}
+		subcategories.push(entry.name);
+	}
+	return subcategories.sort((left, right) => left.localeCompare(right));
+}
+
+async function collectDirectBestiaryTokenImages(context, entries) {
+	const images = await Promise.all(
+		entries.filter(isBestiaryTokenImageEntry).map((entry) =>
+			projectBestiaryTokenImage(
+				context,
+				path.join(context.baseDir, entry.name),
+				[...context.subParts, entry.name],
+			),
+		),
+	);
+	return images.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+async function collectDirectBestiaryTokenAssets(context) {
+	const entries = await fs.readdir(context.baseDir, { withFileTypes: true });
+	return {
+		subcategories: collectDirectBestiaryTokenSubcategories(context, entries),
+		images: await collectDirectBestiaryTokenImages(context, entries),
+	};
+}
+
+function shouldRecursivelyListBestiaryTokens(context) {
+	return Boolean(context.query || context.recursive);
+}
+
 async function listBestiaryTokenAssets({
 	subcategory = "",
 	search = "",
 	recursive = false,
 	ignoreSourcesList = [],
 } = {}) {
-	const subParts = normalizePathSegments(subcategory);
-	const query = String(search || "").trim().toLowerCase();
-	const ignoredSources = new Set(normalizeSourceList(ignoreSourcesList));
-	const isIgnoredSourcePath = (relativeParts = []) => {
-		const rootSource = String(relativeParts[0] || "").trim().toUpperCase();
-		return Boolean(rootSource && ignoredSources.has(rootSource));
-	};
-	if (subParts.length > 0 && isIgnoredSourcePath(subParts)) {
-		return { subcategories: [], images: [] };
+	const context = createBestiaryTokenListContext({
+		subcategory,
+		search,
+		recursive,
+		ignoreSourcesList,
+	});
+	if (!(await hasReadableBestiaryTokenRoot(context))) {
+		return emptyBestiaryTokenAssets();
 	}
-	const baseDir = path.join(BESTIARY_TOKENS_DIR, ...subParts);
-	if (!(await exists(baseDir))) return { subcategories: [], images: [] };
-
-	const makeImage = async (filePath, relativeParts) => {
-		const fileName = relativeParts[relativeParts.length - 1];
-		const folderParts = relativeParts.slice(0, -1);
-		const cleanName = path.parse(fileName).name;
-		const displayName =
-			query && folderParts.length > 0
-				? `${cleanName} (${folderParts.join("/")})`
-				: fileName;
-		return {
-			name: fileName,
-			displayName,
-			url: `/api/bestiary/tokens/${encodeUrlPathSegments(...relativeParts)}`,
-			path: path.join("bestiary", "tokens", ...relativeParts),
-			sizeBytes: await getFileSize(filePath),
-			readonly: true,
-			source: "bestiary",
-		};
-	};
-
-	if (query || recursive) {
-		const images = [];
-		const walk = async (dir, relativeParts = []) => {
-			const entries = await fs.readdir(dir, { withFileTypes: true });
-			for (const entry of entries) {
-				const nextRelativeParts = [...relativeParts, entry.name];
-				const nextPath = path.join(dir, entry.name);
-				if (isIgnoredSourcePath(nextRelativeParts)) continue;
-				if (entry.isDirectory()) {
-					await walk(nextPath, nextRelativeParts);
-				} else if (
-					entry.isFile() &&
-					IMAGE_FILE_RE.test(entry.name) &&
-					(!query || nextRelativeParts.join("/").toLowerCase().includes(query))
-				) {
-					images.push(await makeImage(nextPath, nextRelativeParts));
-				}
-			}
-		};
-		await walk(baseDir, subParts);
-		images.sort((a, b) => a.displayName.localeCompare(b.displayName));
-		return { subcategories: [], images };
+	if (shouldRecursivelyListBestiaryTokens(context)) {
+		return collectRecursiveBestiaryTokenAssets(context);
 	}
+	return collectDirectBestiaryTokenAssets(context);
+}
 
-	const entries = await fs.readdir(baseDir, { withFileTypes: true });
-	const subcategories = entries
-		.filter((entry) => entry.isDirectory())
-		.map((entry) => entry.name)
-		.filter((name) => !isIgnoredSourcePath([...subParts, name]))
-		.sort((a, b) => a.localeCompare(b));
-	const images = await Promise.all(
-		entries
-			.filter((entry) => entry.isFile() && IMAGE_FILE_RE.test(entry.name))
-			.map((entry) =>
-				makeImage(path.join(baseDir, entry.name), [...subParts, entry.name]),
-			),
+function normalizeImageSearchCategoryFilter(categories) {
+	return new Set(
+		(Array.isArray(categories) ? categories : [])
+			.map((category) => String(category || "").trim())
+			.filter(Boolean),
 	);
-	images.sort((a, b) => a.name.localeCompare(b.name));
-	return { subcategories, images };
+}
+
+function createImageSearchContext({
+	search,
+	source,
+	category,
+	subcategory,
+	categories,
+	ignoreSourcesList,
+}) {
+	const selectedSubParts = normalizePathSegments(subcategory);
+	return {
+		query: String(search || "").trim().toLowerCase(),
+		sourceFilter: String(source || "").trim(),
+		selectedCategory: String(category || "").trim(),
+		selectedSubcategory: selectedSubParts.join("/"),
+		selectedSubParts,
+		categoryFilter: normalizeImageSearchCategoryFilter(categories),
+		ignoreSourcesList,
+		images: [],
+	};
+}
+
+function isImageSearchCategoryIncluded(context, category) {
+	if (context.selectedCategory && category !== context.selectedCategory) {
+		return false;
+	}
+	return context.categoryFilter.size === 0 || context.categoryFilter.has(category);
+}
+
+function matchesUserImageSearch(
+	context,
+	entryName,
+	source,
+	category,
+	subcategory,
+) {
+	const searchText = [entryName, source, category, subcategory]
+		.filter(Boolean)
+		.join("/")
+		.toLowerCase();
+	return !context.query || searchText.includes(context.query);
+}
+
+async function projectUserSearchImage(
+	context,
+	source,
+	category,
+	subcategory,
+	entryName,
+	filePath,
+) {
+	if (
+		!matchesUserImageSearch(
+			context,
+			entryName,
+			source,
+			category,
+			subcategory,
+		)
+	) {
+		return null;
+	}
+	const urlSub = subcategory
+		? `/${encodeUrlPathSegments(subcategory)}`
+		: "";
+	return {
+		name: entryName,
+		displayName: path.parse(entryName).name,
+		url: `/api/images/${encodeURIComponent(source)}/${encodeURIComponent(category)}${urlSub}/${encodeURIComponent(entryName)}`,
+		path: path.join(category, subcategory, entryName),
+		sizeBytes: await getFileSize(filePath),
+		source,
+		category,
+		subcategory,
+		locationLabel: [source, category, subcategory].filter(Boolean).join(" / "),
+		readonly: false,
+		globalSearch: true,
+	};
+}
+
+function isUserSearchImageEntry(entry) {
+	return entry.isFile() && IMAGE_FILE_RE.test(entry.name);
+}
+
+async function visitUserImageSearchEntry(context, traversal, entry) {
+	const nextPath = path.join(traversal.directory, entry.name);
+	if (entry.isDirectory()) {
+		await walkUserImageSearchDirectory(context, {
+			...traversal,
+			directory: nextPath,
+			nestedSubParts: [...traversal.nestedSubParts, entry.name],
+		});
+		return;
+	}
+	if (!isUserSearchImageEntry(entry)) return;
+	const fullSubParts = [
+		...context.selectedSubParts,
+		...traversal.nestedSubParts,
+	];
+	const image = await projectUserSearchImage(
+		context,
+		traversal.source,
+		traversal.category,
+		fullSubParts.join("/"),
+		entry.name,
+		nextPath,
+	);
+	if (image) context.images.push(image);
+}
+
+async function walkUserImageSearchDirectory(context, traversal) {
+	const entries = await fs.readdir(traversal.directory, {
+		withFileTypes: true,
+	});
+	for (const entry of entries) {
+		await visitUserImageSearchEntry(context, traversal, entry);
+	}
+}
+
+async function visitImageSearchCategory(context, sourceTraversal, entry) {
+	if (!entry.isDirectory()) return;
+	const category = entry.name;
+	if (!isImageSearchCategoryIncluded(context, category)) return;
+	const directory = path.join(
+		sourceTraversal.directory,
+		category,
+		...context.selectedSubParts,
+	);
+	if (!(await exists(directory))) return;
+	await walkUserImageSearchDirectory(context, {
+		directory,
+		source: sourceTraversal.source,
+		category,
+		nestedSubParts: [],
+	});
+}
+
+function isIncludedImageSearchSource(context, entry) {
+	if (!entry.isDirectory()) return false;
+	return !context.sourceFilter || entry.name === context.sourceFilter;
+}
+
+async function visitImageSearchSource(context, entry) {
+	if (!isIncludedImageSearchSource(context, entry)) return;
+	const source = entry.name;
+	const directory = path.join(IMAGES_DIR, source);
+	const categoryEntries = await fs.readdir(directory, { withFileTypes: true });
+	for (const categoryEntry of categoryEntries) {
+		await visitImageSearchCategory(
+			context,
+			{ directory, source },
+			categoryEntry,
+		);
+	}
+}
+
+async function collectUserImageSearchResults(context) {
+	if (!(await exists(IMAGES_DIR))) return;
+	const sourceEntries = await fs.readdir(IMAGES_DIR, { withFileTypes: true });
+	for (const sourceEntry of sourceEntries) {
+		await visitImageSearchSource(context, sourceEntry);
+	}
+}
+
+function shouldIncludeOfficialImageSearch(context) {
+	if (context.sourceFilter && context.sourceFilter !== "general") return false;
+	return isImageSearchCategoryIncluded(context, "tokens");
+}
+
+function getOfficialImageSearchSubcategory(context) {
+	return context.selectedCategory === "tokens"
+		? context.selectedSubcategory
+		: "";
+}
+
+function projectOfficialSearchImage(image) {
+	const relativeParts = String(image.path || "")
+		.split(/[\\/]+/)
+		.filter(Boolean)
+		.slice(2);
+	const subcategory = relativeParts.slice(0, -1).join("/");
+	return {
+		...image,
+		assetSource: image.source,
+		source: "general",
+		category: "tokens",
+		subcategory,
+		locationLabel: ["general", "tokens", subcategory]
+			.filter(Boolean)
+			.join(" / "),
+		globalSearch: true,
+	};
+}
+
+async function collectOfficialImageSearchResults(context) {
+	if (!shouldIncludeOfficialImageSearch(context)) return;
+	const officialAssets = await listBestiaryTokenAssets({
+		subcategory: getOfficialImageSearchSubcategory(context),
+		search: context.query,
+		ignoreSourcesList: context.ignoreSourcesList,
+	});
+	for (const image of officialAssets.images) {
+		context.images.push(projectOfficialSearchImage(image));
+	}
+}
+
+function imageSearchSortName(image) {
+	return String(image.displayName || image.name);
+}
+
+function sortImageSearchResults(images) {
+	images.sort((left, right) =>
+		imageSearchSortName(left).localeCompare(imageSearchSortName(right)),
+	);
 }
 
 async function searchImageGalleryAssets({
@@ -1780,123 +2718,92 @@ async function searchImageGalleryAssets({
 	categories = [],
 	ignoreSourcesList = [],
 } = {}) {
-	const query = String(search || "").trim().toLowerCase();
+	const context = createImageSearchContext({
+		search,
+		source,
+		category,
+		subcategory,
+		categories,
+		ignoreSourcesList,
+	});
+	await collectUserImageSearchResults(context);
+	await collectOfficialImageSearchResults(context);
+	sortImageSearchResults(context.images);
+	return { images: context.images };
+}
 
-	const sourceFilter = String(source || "").trim();
-	const selectedCategory = String(category || "").trim();
-	const selectedSubcategory = normalizePathSegments(subcategory).join("/");
-	const categoryFilter = new Set(
-		(Array.isArray(categories) ? categories : [])
-			.map((category) => String(category || "").trim())
-			.filter(Boolean),
-	);
-	const shouldIncludeCategory = (category) =>
-		(selectedCategory ? category === selectedCategory : true) &&
-		(categoryFilter.size === 0 || categoryFilter.has(category));
-	const images = [];
+function normalizeImageGalleryStatsCategoryIds(categories) {
+	if (!Array.isArray(categories)) return [];
+	return categories.map((item) => String(item || "")).filter(Boolean);
+}
 
-	const addUserImage = async (source, category, subcategory, entryName, filePath) => {
-		const searchText = [entryName, source, category, subcategory]
-			.filter(Boolean)
-			.join("/")
-			.toLowerCase();
-		if (query && !searchText.includes(query)) return;
-
-		const urlSub = subcategory
-			? `/${encodeUrlPathSegments(subcategory)}`
-			: "";
-		images.push({
-			name: entryName,
-			displayName: path.parse(entryName).name,
-			url: `/api/images/${encodeURIComponent(source)}/${encodeURIComponent(category)}${urlSub}/${encodeURIComponent(entryName)}`,
-			path: path.join(category, subcategory, entryName),
-			sizeBytes: await getFileSize(filePath),
-			source,
-			category,
-			subcategory,
-			locationLabel: [source, category, subcategory].filter(Boolean).join(" / "),
-			readonly: false,
-			globalSearch: true,
-		});
+function createImageGalleryStatsContext({
+	source,
+	category,
+	subcategory,
+	categories,
+}) {
+	const sourceSlug = path.basename(String(source || "general"));
+	return {
+		rootDir: IMAGES_DIR,
+		sourceSlug,
+		sourceDir: path.join(IMAGES_DIR, sourceSlug),
+		selectedCategory: String(category || ""),
+		selectedSubcategory: String(subcategory || ""),
+		categoryIds: normalizeImageGalleryStatsCategoryIds(categories),
 	};
+}
 
-	if (await exists(IMAGES_DIR)) {
-		const sourceEntries = await fs.readdir(IMAGES_DIR, { withFileTypes: true });
-		for (const sourceEntry of sourceEntries) {
-			if (!sourceEntry.isDirectory()) continue;
-			const source = sourceEntry.name;
-			if (sourceFilter && source !== sourceFilter) continue;
-			const sourceDir = path.join(IMAGES_DIR, source);
-			const categoryEntries = await fs.readdir(sourceDir, { withFileTypes: true });
-			for (const categoryEntry of categoryEntries) {
-				if (!categoryEntry.isDirectory()) continue;
-				const category = categoryEntry.name;
-				if (!shouldIncludeCategory(category)) continue;
-				const categoryDir = path.join(
-					sourceDir,
-					category,
-					...normalizePathSegments(selectedSubcategory),
-				);
-				if (!(await exists(categoryDir))) continue;
-				const walk = async (dir, subParts = []) => {
-					const entries = await fs.readdir(dir, { withFileTypes: true });
-					for (const entry of entries) {
-						const nextPath = path.join(dir, entry.name);
-						if (entry.isDirectory()) {
-							await walk(nextPath, [...subParts, entry.name]);
-						} else if (entry.isFile() && IMAGE_FILE_RE.test(entry.name)) {
-							const fullSubParts = [
-								...normalizePathSegments(selectedSubcategory),
-								...subParts,
-							];
-							await addUserImage(
-								source,
-								category,
-								fullSubParts.join("/"),
-								entry.name,
-								nextPath,
-							);
-						}
-					}
-				};
-				await walk(categoryDir);
-			}
-		}
+async function listDirectoryNames(directory) {
+	if (!(await exists(directory))) return [];
+	const entries = await fs.readdir(directory, { withFileTypes: true });
+	return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+}
+
+async function measureNamedDirectories(directory, names) {
+	const sizes = {};
+	for (const name of names) {
+		sizes[name] = await getDirectorySize(path.join(directory, name));
 	}
+	return sizes;
+}
 
-	if (
-		(!sourceFilter || sourceFilter === "general") &&
-		shouldIncludeCategory("tokens")
-	) {
-		const officialAssets = await listBestiaryTokenAssets({
-			subcategory: selectedCategory === "tokens" ? selectedSubcategory : "",
-			search: query,
-			ignoreSourcesList,
-		});
-		for (const image of officialAssets.images) {
-			const relativeParts = String(image.path || "")
-				.split(/[\\/]+/)
-				.filter(Boolean)
-				.slice(2);
-			const subcategory = relativeParts.slice(0, -1).join("/");
-			images.push({
-				...image,
-				assetSource: image.source,
-				source: "general",
-				category: "tokens",
-				subcategory,
-				locationLabel: ["general", "tokens", subcategory]
-					.filter(Boolean)
-					.join(" / "),
-				globalSearch: true,
-			});
-		}
-	}
+async function getImageGalleryStatsCategoryNames(context) {
+	if (context.categoryIds.length > 0) return context.categoryIds;
+	return listDirectoryNames(context.sourceDir);
+}
 
-	images.sort((a, b) =>
-		String(a.displayName || a.name).localeCompare(String(b.displayName || b.name)),
+async function getSelectedImageGalleryCategorySize(context) {
+	if (!context.selectedCategory) return 0;
+	return getDirectorySize(
+		path.join(context.sourceDir, context.selectedCategory),
 	);
-	return { images };
+}
+
+async function getSelectedImageGallerySubcategorySize(context) {
+	if (!context.selectedCategory) return 0;
+	return getDirectorySize(
+		path.join(
+			context.sourceDir,
+			context.selectedCategory,
+			context.selectedSubcategory,
+		),
+	);
+}
+
+async function projectImageGalleryStorageStats(
+	context,
+	sourceSizes,
+	categorySizes,
+) {
+	return {
+		totalBytes: await getDirectorySize(context.rootDir),
+		sourceBytes: await getDirectorySize(context.sourceDir),
+		categoryBytes: await getSelectedImageGalleryCategorySize(context),
+		subcategoryBytes: await getSelectedImageGallerySubcategorySize(context),
+		sourceSizes,
+		categorySizes,
+	};
 }
 
 async function getImageGalleryStorageStats({
@@ -1905,55 +2812,23 @@ async function getImageGalleryStorageStats({
 	subcategory = "",
 	categories = [],
 } = {}) {
-	const sourceSlug = path.basename(String(source || "general"));
-	const rootDir = IMAGES_DIR;
-	const sourceDir = path.join(rootDir, sourceSlug);
-	const selectedCategory = String(category || "");
-	const selectedSubcategory = String(subcategory || "");
-	const categoryIds = Array.isArray(categories)
-		? categories.map((item) => String(item || "")).filter(Boolean)
-		: [];
-
-	const sourceEntries = (await exists(rootDir))
-		? await fs.readdir(rootDir, { withFileTypes: true })
-		: [];
-	const sourceSizes = {};
-	for (const entry of sourceEntries) {
-		if (!entry.isDirectory()) continue;
-		sourceSizes[entry.name] = await getDirectorySize(
-			path.join(rootDir, entry.name),
-		);
-	}
-
-	const categoryNames =
-		categoryIds.length > 0
-			? categoryIds
-			: (await exists(sourceDir))
-				? (await fs.readdir(sourceDir, { withFileTypes: true }))
-						.filter((entry) => entry.isDirectory())
-						.map((entry) => entry.name)
-				: [];
-	const categorySizes = {};
-	for (const categoryName of categoryNames) {
-		categorySizes[categoryName] = await getDirectorySize(
-			path.join(sourceDir, categoryName),
-		);
-	}
-
-	return {
-		totalBytes: await getDirectorySize(rootDir),
-		sourceBytes: await getDirectorySize(sourceDir),
-		categoryBytes: selectedCategory
-			? await getDirectorySize(path.join(sourceDir, selectedCategory))
-			: 0,
-		subcategoryBytes: selectedCategory
-			? await getDirectorySize(
-					path.join(sourceDir, selectedCategory, selectedSubcategory),
-				)
-			: 0,
-		sourceSizes,
-		categorySizes,
-	};
+	const context = createImageGalleryStatsContext({
+		source,
+		category,
+		subcategory,
+		categories,
+	});
+	const sourceNames = await listDirectoryNames(context.rootDir);
+	const sourceSizes = await measureNamedDirectories(
+		context.rootDir,
+		sourceNames,
+	);
+	const categoryNames = await getImageGalleryStatsCategoryNames(context);
+	const categorySizes = await measureNamedDirectories(
+		context.sourceDir,
+		categoryNames,
+	);
+	return projectImageGalleryStorageStats(context, sourceSizes, categorySizes);
 }
 
 async function listSubcategories(slug, category, subcategory = "", options = {}) {
@@ -1980,183 +2855,263 @@ async function listSubcategories(slug, category, subcategory = "", options = {})
 	);
 }
 
-async function updateAllImageReferences(moveResults) {
-	if (!moveResults.length) return;
+function replaceExactImageUrl(target, moveResults) {
+	let changed = false;
+	for (const result of moveResults) {
+		if (target.imageUrl !== result.oldUrl) continue;
+		target.imageUrl = result.newUrl;
+		changed = true;
+	}
+	return changed;
+}
 
-	const campaigns = await listCampaignSlugs();
-	for (const slug of campaigns) {
-		// 1. Update campaign metadata.
-		const metaPath = campaignMetaPath(slug);
-		if (await exists(metaPath)) {
-			let meta = await readJson(metaPath);
-			let changed = false;
-			for (const res of moveResults) {
-				if (meta.imageUrl === res.oldUrl) {
-					meta.imageUrl = res.newUrl;
-					changed = true;
-				}
-			}
-			if (changed) await writeJson(metaPath, meta);
-		}
+function replaceSerializedImageUrls(value, moveResults) {
+	let json = JSON.stringify(value);
+	let changed = false;
+	for (const result of moveResults) {
+		if (!json.includes(result.oldUrl)) continue;
+		json = json.split(result.oldUrl).join(result.newUrl);
+		changed = true;
+	}
+	return changed ? JSON.parse(json) : null;
+}
 
-		// 2. Update characters, NPCs, and locations.
-		for (const type of ENTITY_TYPES) {
-			const entities = await listEntities(slug, type);
-			for (const entity of entities) {
-				let changed = false;
-				for (const res of moveResults) {
-					if (entity.imageUrl === res.oldUrl) {
-						entity.imageUrl = res.newUrl;
-						changed = true;
-					}
-				}
-				if (changed) {
-					await writeEntity(slug, type, entity.slug, entity);
-				}
-			}
-		}
+async function updateCampaignMetadataImageReferences(slug, moveResults) {
+	const metaPath = campaignMetaPath(slug);
+	if (!(await exists(metaPath))) return;
+	const metadata = await readJson(metaPath);
+	if (replaceExactImageUrl(metadata, moveResults)) {
+		await writeJson(metaPath, metadata);
+	}
+}
 
-		// 3. Update sessions (scene texts and description).
-		const sessions = await listSessions(slug);
-		for (const s of sessions) {
-			const sPath = sessionPath(slug, s.fileName);
-			let sessionData = await readJson(sPath);
-			let json = JSON.stringify(sessionData);
-			let changed = false;
-			for (const res of moveResults) {
-				if (json.includes(res.oldUrl)) {
-					json = json.split(res.oldUrl).join(res.newUrl);
-					changed = true;
-				}
-			}
-			if (changed) await writeJson(sPath, JSON.parse(json));
+async function updateCampaignEntityImageReferences(slug, type, moveResults) {
+	const entities = await listEntities(slug, type);
+	for (const entity of entities) {
+		if (replaceExactImageUrl(entity, moveResults)) {
+			await writeEntity(slug, type, entity.slug, entity);
 		}
 	}
 }
 
-async function moveImages(items, src, dest) {
-	const sSlug = decodeURIComponent(src.slug);
-	const dSlug = decodeURIComponent(dest.slug);
-	const sSub = src.subcategory || "";
-	const dSub = dest.subcategory || "";
+async function updateCampaignEntitiesImageReferences(slug, moveResults) {
+	for (const type of ENTITY_TYPES) {
+		await updateCampaignEntityImageReferences(slug, type, moveResults);
+	}
+}
 
-	const srcDir = campaignImagesDir(sSlug, src.category, sSub);
-	const destDir = campaignImagesDir(dSlug, dest.category, dSub);
+async function updateCampaignSessionImageReferences(slug, moveResults) {
+	const sessions = await listSessions(slug);
+	for (const session of sessions) {
+		const targetPath = sessionPath(slug, session.fileName);
+		const sessionData = await readJson(targetPath);
+		const updatedSession = replaceSerializedImageUrls(sessionData, moveResults);
+		if (updatedSession) await writeJson(targetPath, updatedSession);
+	}
+}
 
-	if (srcDir === destDir) return [];
-	await ensureDir(destDir);
+async function updateCampaignImageReferences(slug, moveResults) {
+	await updateCampaignMetadataImageReferences(slug, moveResults);
+	await updateCampaignEntitiesImageReferences(slug, moveResults);
+	await updateCampaignSessionImageReferences(slug, moveResults);
+}
 
-	const results = [];
-	for (const name of items) {
-		const oldPath = path.join(srcDir, name);
-		const newPath = path.join(destDir, name);
+async function updateAllImageReferences(moveResults) {
+	if (!moveResults.length) return;
+	const campaigns = await listCampaignSlugs();
+	for (const slug of campaigns) {
+		await updateCampaignImageReferences(slug, moveResults);
+	}
+}
 
-		if (await exists(oldPath)) {
-			const isDir = (await fs.stat(oldPath)).isDirectory();
+function createImageMoveContext(src, dest) {
+	const sourceSlug = decodeURIComponent(src.slug);
+	const destinationSlug = decodeURIComponent(dest.slug);
+	const sourceSubcategory = src.subcategory || "";
+	const destinationSubcategory = dest.subcategory || "";
+	return {
+		src,
+		dest,
+		sourceSlug,
+		destinationSlug,
+		sourceSubcategory,
+		destinationSubcategory,
+		sourceDir: campaignImagesDir(
+			sourceSlug,
+			src.category,
+			sourceSubcategory,
+		),
+		destinationDir: campaignImagesDir(
+			destinationSlug,
+			dest.category,
+			destinationSubcategory,
+		),
+	};
+}
 
-			// Collect files for reference updates.
-			const filesToTrack = [];
-			if (isDir) {
-				const walk = async (dir, sub = "") => {
-					const entries = await fs.readdir(dir, { withFileTypes: true });
-					for (const e of entries) {
-						if (e.isFile()) filesToTrack.push(path.join(sub, e.name));
-						else if (e.isDirectory())
-							await walk(path.join(dir, e.name), path.join(sub, e.name));
-					}
-				};
-				await walk(oldPath);
-			} else {
-				filesToTrack.push("");
-			}
-
-			await renameWithRetry(oldPath, newPath);
-
-			for (const relPath of filesToTrack) {
-				const fileName = isDir ? relPath : name;
-				const oldSub = sSub
-					? isDir
-						? path.join(sSub, name, relPath)
-						: sSub
-					: isDir
-						? path.join(name, relPath)
-						: "";
-				const newSub = dSub
-					? isDir
-						? path.join(dSub, name, relPath)
-						: dSub
-					: isDir
-						? path.join(name, relPath)
-						: "";
-
-				results.push({
-					oldUrl: `/api/images/${encodeURIComponent(sSlug)}/${encodeURIComponent(src.category)}${oldSub ? "/" + oldSub.split(path.sep).join("/") : ""}${isDir ? "" : "/" + encodeURIComponent(fileName)}`,
-					newUrl: `/api/images/${encodeURIComponent(dSlug)}/${encodeURIComponent(dest.category)}${newSub ? "/" + newSub.split(path.sep).join("/") : ""}${isDir ? "" : "/" + encodeURIComponent(fileName)}`,
-				});
-			}
+async function collectNestedDirectoryFiles(dir, subcategory = "", files = []) {
+	const entries = await fs.readdir(dir, { withFileTypes: true });
+	for (const entry of entries) {
+		const relativePath = path.join(subcategory, entry.name);
+		if (entry.isFile()) files.push(relativePath);
+		else if (entry.isDirectory()) {
+			await collectNestedDirectoryFiles(path.join(dir, entry.name), relativePath, files);
 		}
 	}
+	return files;
+}
 
+function getMovedImageSubcategory(base, name, relativePath, isDirectory) {
+	if (!isDirectory) return base;
+	return base
+		? path.join(base, name, relativePath)
+		: path.join(name, relativePath);
+}
+
+function createMovedImageUrl(slug, category, subcategory, fileName, isDirectory) {
+	const urlSubcategory = subcategory
+		? `/${subcategory.split(path.sep).join("/")}`
+		: "";
+	const urlFileName = isDirectory ? "" : `/${encodeURIComponent(fileName)}`;
+	return `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${urlSubcategory}${urlFileName}`;
+}
+
+function projectMovedImageResult(context, name, relativePath, isDirectory) {
+	const fileName = isDirectory ? relativePath : name;
+	const sourceSubcategory = getMovedImageSubcategory(
+		context.sourceSubcategory,
+		name,
+		relativePath,
+		isDirectory,
+	);
+	const destinationSubcategory = getMovedImageSubcategory(
+		context.destinationSubcategory,
+		name,
+		relativePath,
+		isDirectory,
+	);
+	return {
+		oldUrl: createMovedImageUrl(
+			context.sourceSlug,
+			context.src.category,
+			sourceSubcategory,
+			fileName,
+			isDirectory,
+		),
+		newUrl: createMovedImageUrl(
+			context.destinationSlug,
+			context.dest.category,
+			destinationSubcategory,
+			fileName,
+			isDirectory,
+		),
+	};
+}
+
+async function getMovedItemFiles(oldPath, isDirectory) {
+	return isDirectory ? collectNestedDirectoryFiles(oldPath) : [""];
+}
+
+async function moveImageItem(name, context) {
+	const oldPath = path.join(context.sourceDir, name);
+	if (!(await exists(oldPath))) return [];
+	const newPath = path.join(context.destinationDir, name);
+	const isDirectory = (await fs.stat(oldPath)).isDirectory();
+	const filesToTrack = await getMovedItemFiles(oldPath, isDirectory);
+	await renameWithRetry(oldPath, newPath);
+	return filesToTrack.map((relativePath) =>
+		projectMovedImageResult(context, name, relativePath, isDirectory),
+	);
+}
+
+async function moveImages(items, src, dest) {
+	const context = createImageMoveContext(src, dest);
+	if (context.sourceDir === context.destinationDir) return [];
+	await ensureDir(context.destinationDir);
+	const results = [];
+	for (const name of items) {
+		results.push(...(await moveImageItem(name, context)));
+	}
 	await updateAllImageReferences(results);
 	return results;
+}
+
+function createImageFileUrl(slug, category, subcategory, fileName) {
+	const urlSubcategory = subcategory
+		? `/${subcategory.split(path.sep).join("/")}`
+		: "";
+	return `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${urlSubcategory}/${encodeURIComponent(fileName)}`;
+}
+
+async function validateImageRename(oldPath, newPath) {
+	if (!(await exists(oldPath))) throw new Error("File was not found.");
+	if (oldPath !== newPath && (await exists(newPath))) {
+		throw new Error("File already exists.");
+	}
 }
 
 async function renameImage(slug, category, subcategory, oldName, newName) {
 	const dir = campaignImagesDir(slug, category, subcategory);
 	const oldPath = path.join(dir, oldName);
 	const newPath = path.join(dir, newName);
-
-	if (!(await exists(oldPath))) throw new Error("File was not found.");
-	if (oldPath !== newPath && (await exists(newPath)))
-		throw new Error("File already exists.");
-
+	await validateImageRename(oldPath, newPath);
 	await renameWithRetry(oldPath, newPath);
+	const normalizedSubcategory = subcategory || "";
+	const result = {
+		oldUrl: createImageFileUrl(slug, category, normalizedSubcategory, oldName),
+		newUrl: createImageFileUrl(slug, category, normalizedSubcategory, newName),
+	};
+	await updateAllImageReferences([result]);
+	return result;
+}
 
-	const sSub = subcategory || "";
-	const oldUrl = `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${sSub ? "/" + sSub.split(path.sep).join("/") : ""}/${encodeURIComponent(oldName)}`;
-	const newUrl = `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${sSub ? "/" + sSub.split(path.sep).join("/") : ""}/${encodeURIComponent(newName)}`;
+function createImageDeleteContext(src, options) {
+	const slug = decodeURIComponent(src.slug);
+	const subcategory = src.subcategory || "";
+	return {
+		slug,
+		category: src.category,
+		subcategory,
+		dir: campaignImagesDir(slug, src.category, subcategory),
+		extractFolderContents: Boolean(options.extractFolderContents),
+	};
+}
 
-	await updateAllImageReferences([{ oldUrl, newUrl }]);
-	return { oldUrl, newUrl };
+async function extractImageFolderContents(name, target, context) {
+	const nestedItems = await fs.readdir(target);
+	if (nestedItems.length === 0) return;
+	const nestedSubcategory = context.subcategory
+		? path.join(context.subcategory, name)
+		: name;
+	await moveImages(
+		nestedItems,
+		{
+			slug: context.slug,
+			category: context.category,
+			subcategory: nestedSubcategory,
+		},
+		{
+			slug: context.slug,
+			category: context.category,
+			subcategory: context.subcategory,
+		},
+	);
+}
+
+async function deleteImageItem(name, context) {
+	const target = path.join(context.dir, name);
+	if (!(await exists(target))) return;
+	const stats = await fs.stat(target);
+	if (context.extractFolderContents && stats.isDirectory()) {
+		await extractImageFolderContents(name, target, context);
+	}
+	await fs.rm(target, { recursive: true, force: true });
 }
 
 async function deleteImages(items, src, options = {}) {
-	const extractFolderContents = Boolean(options.extractFolderContents);
-	const slug = decodeURIComponent(src.slug);
-	const category = src.category;
-	const subcategory = src.subcategory || "";
-	const dir = campaignImagesDir(slug, category, subcategory);
-
+	const context = createImageDeleteContext(src, options);
 	for (const name of items) {
-		const target = path.join(dir, name);
-		if (!(await exists(target))) continue;
-
-		const stats = await fs.stat(target);
-		if (!extractFolderContents || !stats.isDirectory()) {
-			await fs.rm(target, { recursive: true, force: true });
-			continue;
-		}
-
-		const nestedItems = await fs.readdir(target);
-		if (nestedItems.length > 0) {
-			const nestedSubcategory = subcategory
-				? path.join(subcategory, name)
-				: name;
-			await moveImages(
-				nestedItems,
-				{
-					slug,
-					category,
-					subcategory: nestedSubcategory,
-				},
-				{
-					slug,
-					category,
-					subcategory,
-				},
-			);
-		}
-		await fs.rm(target, { recursive: true, force: true });
+		await deleteImageItem(name, context);
 	}
 }
 
@@ -2215,15 +3170,18 @@ module.exports = {
 	readSettings,
 	updateSettings,
 	listCampaignSlugs,
+	listExportableCampaignSlugs,
 	readCampaign,
 	readSession,
 	listSessions,
 	listCampaignsDetailed,
 	exportCampaignBundle,
 	exportCampaignArchiveBundle,
+	exportApplicationDataArchiveBundle,
 	exportCampaignPartialArchiveBundle,
 	importCampaignBundle,
 	importCampaignArchiveBundleWithStrategy,
+	importApplicationDataArchiveBundle,
 	importCampaignPartialArchiveBundle,
 	findCampaignSlugById,
 	campaignHasImages,
