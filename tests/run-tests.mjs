@@ -9602,6 +9602,21 @@ await run(
 			richRendererSource,
 			/return content\.map\(\(item, index\) => \(\s*<Fragment key=\{index\}>\s*\{renderRecursiveContent\(runtime, item, highlightQuery, options\)\}/,
 		);
+		assertSourceTokensInOrder(
+			richRendererSource,
+			[
+				'if (content.type === "image") return null;',
+				"if (content.entry)",
+				"JSON.stringify(content)",
+			],
+			"rich-content image omission",
+		);
+		assert.ok(
+			richRendererSource.includes(
+				'.replace(/^(\\s*)(\\d+)\\.(\\s)/gm, "$1$2\\\\.$3")',
+			),
+			"rich-content ordered-list escaping must escape the dot, not the number",
+		);
 		})();
 
 		(() => {
