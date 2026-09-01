@@ -63,6 +63,7 @@ function RichObjectContent({
 	options,
 	runtime,
 }: RecursiveRenderProps & { content: Record<string, unknown> }) {
+	if (content.type === "image") return null;
 	if (content.entry) {
 		return renderRecursiveContent(runtime, content.entry, highlightQuery, options);
 	}
@@ -215,7 +216,8 @@ function pushSafeMarkdownText(
 		? processedText.replace(/([*_])/g, "\\$1")
 		: processedText;
 	const safeText = markdownText
-		.replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3")
+		.replace(/^(\s*)([+\-*])(\s)/gm, "$1\\$2$3")
+		.replace(/^(\s*)(\d+)\.(\s)/gm, "$1$2\\.$3")
 		.replace(/\n/gi, "&nbsp; \n")
 		.replace(/^ /g, "\u00A0")
 		.replace(/ $/g, "\u00A0");

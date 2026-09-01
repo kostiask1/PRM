@@ -41736,7 +41736,7 @@
         "type": "timed",
         "duration": {
           "type": "minute",
-          "amount": 10
+          "amount": 1
         }
       }
     ],
