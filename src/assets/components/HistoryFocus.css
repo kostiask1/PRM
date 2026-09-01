@@ -1,0 +1,18 @@
+.is_history_focus_target {
+	animation: history-focus-pulse 2.2s ease-out;
+	outline: 2px solid var(--accent, #8b5cf6);
+	outline-offset: 4px;
+}
+
+.is_history_focus_field {
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #8b5cf6) 38%, transparent);
+}
+
+@keyframes history-focus-pulse {
+	0%, 45% {
+		background-color: color-mix(in srgb, var(--accent, #8b5cf6) 20%, transparent);
+	}
+	100% {
+		background-color: transparent;
+	}
+}

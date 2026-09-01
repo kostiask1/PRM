@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import "../../../../assets/components/CampaignSessionsSection.css";
 
 import { lang } from "../../../../shared/lib/index.js";
+import { makeHistoryTargetId } from "../../../../entities/history/index.js";
 import { Button, DraggableList } from "../../../../shared/ui/index.js";
 import type { CampaignSessionItem } from "../../model/campaignPagePresentation.ts";
 
@@ -27,7 +28,11 @@ export default function CampaignSessionsSection({
 	sessionSearch,
 }: CampaignSessionsSectionProps) {
 	return (
-		<aside className="CampaignSessionsSection" id="campaign-sessions">
+		<aside
+			className="CampaignSessionsSection"
+			id="campaign-sessions"
+			data-history-focus-id={makeHistoryTargetId("campaign", "sessions")}
+		>
 			<div className="CampaignSessionsSection__header">
 				<h3>{lang.t("Sessions")}</h3>
 				<Button

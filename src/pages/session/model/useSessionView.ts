@@ -108,6 +108,22 @@ export default function useSessionView() {
 	const reportSessionSaveError = useCallback((error: unknown) => {
 		console.error("Save failed", error);
 	}, []);
+	const reportSessionHistoryError = useCallback((error: unknown) => {
+		console.error("Failed to restore session history", error);
+		showMessage({
+			title: lang.t("Error"),
+			message: error instanceof Error ? error.message : String(error),
+		});
+	}, [showMessage]);
+	const reportSessionHistoryConflict = useCallback(() => {
+		requestCampaignReload();
+		showMessage({
+			title: lang.t("History conflict"),
+			message: lang.t(
+				"The change could not be restored because the data was edited elsewhere. Current data and history were reloaded; review the latest changes and try again.",
+			),
+		});
+	}, [requestCampaignReload, showMessage]);
 	const {
 		discardPendingSave: discardPendingSessionSave,
 		flushPendingSave,
@@ -120,16 +136,31 @@ export default function useSessionView() {
 		onSessionRenamed: handleSessionRenamed,
 		onSaveError: reportSessionSaveError,
 	});
+	const normalizeLoadedSession = useCallback(normalizeSessionPageSession, []);
 	const {
+		canRedo,
+		canUndo,
 		handleRedo,
 		handleUndo,
-		recordDataChange,
-		redoStack,
+		isRestoring: isHistoryRestoring,
+		redoLabel,
 		replaceFromExternalUpdate,
-		resetHistory,
-		undoStack,
-	} = useSessionHistory({ session, setSession, scheduleSave: triggerSave });
-	const normalizeLoadedSession = useCallback(normalizeSessionPageSession, []);
+		undoLabel,
+	} = useSessionHistory({
+		campaignSlug,
+		sessionId,
+		session,
+		setSession,
+		flushPendingSave,
+		normalizeSession: normalizeLoadedSession,
+		onSessionFileChanged: (restored) => {
+			if (restored.fileName) handleSessionRenamed(restored as SessionRecord & { fileName: string });
+		},
+		onHistoryConflict: reportSessionHistoryConflict,
+		onHistoryError: reportSessionHistoryError,
+		onHistoryRestored: () => requestCampaignReload(),
+		syncVersion: syncEvent?.version,
+	});
 	const setScopeSession = useCallback<
 		Dispatch<
 			SetStateAction<CampaignEntitySession | SessionRecord | null>
@@ -166,13 +197,12 @@ export default function useSessionView() {
 				);
 
 				setSession(data);
-				resetHistory();
 				lastLoadedSessionIdRef.current = routeKey;
 			} catch (err) {
 				console.error("Failed to load session", err);
 			}
 		},
-		[campaignSlug, sessionId, normalizeLoadedSession, resetHistory],
+		[campaignSlug, sessionId, normalizeLoadedSession],
 	);
 
 	useEffect(() => {
@@ -220,13 +250,6 @@ export default function useSessionView() {
 
 	const updateSession = (updates: SessionUpdate, instant = false): void => {
 		setSession((prev) => {
-			if (prev && updates.data) {
-				recordDataChange(prev.data, updates.data, {
-					hasPendingSave: hasPendingSave(),
-					instant,
-				});
-			}
-
 			const next = { ...prev, ...updates };
 			triggerSave(next, instant);
 			return next;
@@ -557,8 +580,11 @@ export default function useSessionView() {
 		isSaving,
 		isChecklistOpen,
 		setIsChecklistOpen,
-		undoStack,
-		redoStack,
+		canUndo,
+		canRedo,
+		isHistoryRestoring,
+		undoLabel,
+		redoLabel,
 		campaignSlug,
 		triggerSave,
 		flushPendingSave,

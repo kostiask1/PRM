@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { scrollToHashTarget } from "../../../shared/lib/index.js";
 import {
 	executeCampaignHashNavigationPlan,
@@ -20,6 +20,7 @@ interface UseCampaignHashNavigationOptions {
 	setIsNotesCollapsed: CampaignSectionSetter;
 	setIsNpcsCollapsed: CampaignSectionSetter;
 	setNotesViewMode: (mode: CampaignNotesViewMode) => void;
+	onRevealHistoryTarget?: (hash: string) => void;
 }
 
 export function useCampaignHashNavigation({
@@ -34,7 +35,14 @@ export function useCampaignHashNavigation({
 	setIsNotesCollapsed,
 	setIsNpcsCollapsed,
 	setNotesViewMode,
+	onRevealHistoryTarget,
 }: UseCampaignHashNavigationOptions): void {
+	const [hashVersion, setHashVersion] = useState(0);
+	useEffect(() => {
+		const handleHashChange = () => setHashVersion((value) => value + 1);
+		window.addEventListener("hashchange", handleHashChange);
+		return () => window.removeEventListener("hashchange", handleHashChange);
+	}, []);
 	useEffect(() => {
 		const hash = decodeURIComponent(window.location.hash || "");
 		const plan = getCampaignHashNavigationPlan({
@@ -56,10 +64,12 @@ export function useCampaignHashNavigation({
 			useListView: () => setNotesViewMode("list"),
 			expandSection: (target) => sectionSetters[target](false),
 		});
+		onRevealHistoryTarget?.(hash);
 		const timer = window.setTimeout(() => scrollToHashTarget(), 120);
 		return () => window.clearTimeout(timer);
 	}, [
 		campaignSlug,
+		hashVersion,
 		isCharactersCollapsed,
 		isLocationsCollapsed,
 		isNotesCollapsed,
@@ -69,5 +79,6 @@ export function useCampaignHashNavigation({
 		setIsLocationsCollapsed,
 		setIsNotesCollapsed,
 		setIsNpcsCollapsed,
+		onRevealHistoryTarget,
 	]);
 }

@@ -132,6 +132,14 @@ function describeAiChange(event, _segments, requestUrl) {
 	event.campaignSlug = parsedUrl.searchParams.get("campaign");
 }
 
+function describeHistoryChange(event) {
+	event.resource = "history";
+}
+
+function describeImportChange(event) {
+	event.resource = "import";
+}
+
 function describeCampaignSessionChange(event, segments) {
 	event.resource = "sessions";
 	event.sessionFileName = segments[4] || null;
@@ -144,6 +152,10 @@ function describeCampaignEntityChange(event, segments) {
 }
 
 function describeCampaignNestedChange(event, segments) {
+	if (segments[3] === "history") {
+		describeHistoryChange(event);
+		return;
+	}
 	if (segments[3] === "sessions") {
 		describeCampaignSessionChange(event, segments);
 		return;
@@ -170,6 +182,9 @@ const CHANGE_DESCRIBERS = new Map([
 	["bestiary", describeBestiaryChange],
 	["images", describeImagesChange],
 	["ai", describeAiChange],
+	["history", describeHistoryChange],
+	["import-all", describeImportChange],
+	["import-archive", describeImportChange],
 	["campaigns", describeCampaignChange],
 ]);
 

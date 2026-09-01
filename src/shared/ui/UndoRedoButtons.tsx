@@ -7,6 +7,8 @@ interface UndoRedoButtonsProps {
 	disabled?: boolean;
 	onRedo: () => void;
 	onUndo: () => void;
+	redoTitle?: string;
+	undoTitle?: string;
 }
 
 export function UndoRedoButtons({
@@ -15,6 +17,8 @@ export function UndoRedoButtons({
 	disabled = false,
 	onRedo,
 	onUndo,
+	redoTitle,
+	undoTitle,
 }: UndoRedoButtonsProps) {
 	return (
 		<>
@@ -24,7 +28,7 @@ export function UndoRedoButtons({
 				icon="undo"
 				onClick={onUndo}
 				disabled={!canUndo || disabled}
-				title={lang.t("Undo (Ctrl+Z)")}
+				title={undoTitle || lang.t("Undo (Ctrl+Z)")}
 			/>
 			<Button
 				variant="ghost"
@@ -32,7 +36,7 @@ export function UndoRedoButtons({
 				icon="redo"
 				onClick={onRedo}
 				disabled={!canRedo || disabled}
-				title={lang.t("Redo (Ctrl+Y)")}
+				title={redoTitle || lang.t("Redo (Ctrl+Y)")}
 			/>
 		</>
 	);

@@ -15,8 +15,6 @@ export {
 export {
 	addUndoSnapshot,
 	clearRedoStack,
-	createDistinctRedoTransition,
-	createDistinctUndoTransition,
 	createRedoTransition,
 	createUndoTransition,
 	isHistoryShortcutEvent,

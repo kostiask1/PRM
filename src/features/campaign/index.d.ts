@@ -1,7 +1,4 @@
 export {
-	areHistoryStatesEqual,
-	campaignHistoryPayload,
-	cloneHistoryList,
 	getLocationDisplayName,
 	normalizeMentionName,
 	replaceMentionsInValue,

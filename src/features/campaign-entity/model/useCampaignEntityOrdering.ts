@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import type { CampaignEntityRecord } from "../../../entities/campaign/index.js";
 import { updateCampaignEntity } from "./createEntity.ts";
@@ -38,7 +38,6 @@ interface CampaignEntityOrderingOptions<T extends CampaignFeatureEntity> {
 	reloadCharacters: () => void | Promise<void>;
 	reloadNpcs: () => void | Promise<void>;
 	reloadLocations: () => void | Promise<void>;
-	pushUndo: () => void;
 	onReorderError?: (error: unknown, type: OrderedEntityType) => void;
 	onMoveError?: (error: unknown) => void;
 }
@@ -67,30 +66,19 @@ export function useCampaignEntityOrdering<T extends CampaignFeatureEntity>({
 	reloadCharacters,
 	reloadNpcs,
 	reloadLocations,
-	pushUndo,
 	onReorderError,
 	onMoveError,
 }: CampaignEntityOrderingOptions<T>): CampaignEntityOrdering<T> {
-	const reorderUndoPushedRef = useRef(false);
-
 	const reorder = useCallback(
-		(setEntities: CampaignEntitySetter<T>) => (nextEntities: T[]) => {
-			if (!reorderUndoPushedRef.current) {
-				pushUndo();
-				reorderUndoPushedRef.current = true;
-			}
-			setEntities(nextEntities);
-		},
-		[pushUndo],
+		(setEntities: CampaignEntitySetter<T>) => (nextEntities: T[]) =>
+			setEntities(nextEntities),
+		[],
 	);
-	const finishTrackedReorder = useCallback(() => {
-		reorderUndoPushedRef.current = false;
-	}, []);
+	const finishTrackedReorder = useCallback(() => {}, []);
 
 	const persistReorder = useCallback(
 		async (type: OrderedEntityType, nextEntities: T[] = []) => {
 			const orderedEntities = withEntityOrder(nextEntities).map(sanitizeForSave);
-			reorderUndoPushedRef.current = false;
 			const setters: Record<OrderedEntityType, CampaignEntitySetter<T>> = {
 				characters: setCharacters,
 				npc: setNpcs,

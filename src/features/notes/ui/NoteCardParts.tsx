@@ -53,6 +53,7 @@ export function NoteCardHeader({
 				/>
 			)}
 			<EditableField
+				data-history-field="title"
 				value={note.title || ""}
 				enableHistory={enableHistory}
 				onChange={(event) => onTitleChange(note.id, event.target.value)}
@@ -164,6 +165,7 @@ export function NoteCardBody({
 	return (
 		<div className="NoteCard__content">
 			<EditableField
+				data-history-field="text"
 				type="textarea"
 				value={note.text}
 				enableHistory={enableHistory}

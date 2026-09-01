@@ -15,6 +15,7 @@ interface CampaignEntitySectionProps {
 	hasData: boolean;
 	isCollapsed: boolean;
 	listVariant: "person" | "location";
+	historyFocusId: string;
 	dropType?: "characters" | "npc";
 	actions: ReactNode;
 	dragData?: (entity: CampaignPageEntity) => unknown;
@@ -36,6 +37,7 @@ export default function CampaignEntitySection({
 	hasData,
 	isCollapsed,
 	listVariant,
+	historyFocusId,
 	dropType,
 	actions,
 	dragData,
@@ -51,6 +53,7 @@ export default function CampaignEntitySection({
 		<div
 			className="CampaignEntitySection"
 			data-character-drop-type={dropType}
+			data-history-focus-id={historyFocusId}
 		>
 			<div className="CampaignEntitySection__row">
 				<div className="CampaignEntitySection__titleGroup" onClick={onToggle}>

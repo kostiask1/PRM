@@ -9,6 +9,7 @@ export interface TodoSectionProps {
 	action?: ReactNode;
 	collapsed?: boolean;
 	onToggle?: () => void;
+	historyFocusId?: string;
 }
 
 export default function TodoSection({
@@ -17,11 +18,15 @@ export default function TodoSection({
 	action,
 	collapsed = false,
 	onToggle,
+	historyFocusId,
 }: TodoSectionProps) {
 	const isCollapsible = typeof onToggle === "function";
 
 	return (
-		<section className="TodoSection">
+		<section
+			className="TodoSection"
+			data-history-focus-id={historyFocusId}
+		>
 			<div
 				className={classNames("TodoSection__header", {
 					is_collapsible: isCollapsible,

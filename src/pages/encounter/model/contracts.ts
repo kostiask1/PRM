@@ -32,7 +32,6 @@ export interface EncounterSyncEvent extends Record<string, unknown> {
 
 export interface EncounterUpdateOptions {
 	saveDebounceMs?: number;
-	pushUndo?: boolean;
 	persist?: boolean;
 	preferredId?: string | null;
 }
@@ -50,8 +49,11 @@ export interface InitiativeStats {
 
 export interface EncounterViewModel {
 	encounter: EncounterViewState | null;
-	undoStack: EncounterViewState[];
-	redoStack: EncounterViewState[];
+	canUndo: boolean;
+	canRedo: boolean;
+	isHistoryRestoring: boolean;
+	undoLabel: string;
+	redoLabel: string;
 	isSaving: boolean;
 	selectedInstance: EncounterViewParticipant | null;
 	setSelectedInstance: Dispatch<SetStateAction<EncounterViewParticipant | null>>;

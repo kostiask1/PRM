@@ -19,7 +19,6 @@ export interface EncounterEditorSyncEvent extends Record<string, unknown> {
 }
 
 export interface ApplyEncounterUpdateOptions {
-	pushUndo?: boolean;
 	persist?: boolean;
 	preferredId?: string | null;
 }

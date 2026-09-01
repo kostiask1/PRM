@@ -8,6 +8,7 @@ import zlib from "node:zlib";
 import {
 	$applyNodeReplacement,
 	$createParagraphNode,
+	$createTextNode,
 	$getRoot,
 	$getSelection,
 	$isRangeSelection,
@@ -16,11 +17,30 @@ import {
 	TextNode,
 	createEditor,
 } from "lexical";
+import { ListItemNode, ListNode } from "@lexical/list";
+import {
+	$convertFromMarkdownString,
+	$convertToMarkdownString,
+	BOLD_STAR,
+	BOLD_UNDERSCORE,
+	HEADING,
+	ITALIC_STAR,
+	ITALIC_UNDERSCORE,
+	ORDERED_LIST,
+	QUOTE,
+	UNORDERED_LIST,
+} from "@lexical/markdown";
+import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 
 import { idsEqual } from "../src/shared/lib/index.js";
 import { isJsonObject, isJsonString } from "../src/shared/lib/index.js";
 import { mapWithConcurrency } from "../src/shared/lib/index.js";
 import { isAbortError } from "../src/shared/api/index.ts";
+import {
+	ACTIVE_HISTORY_FLUSH_EVENT,
+	requestActiveHistoryFlush,
+	waitForActiveHistoryFlush,
+} from "../src/entities/history/model/historyFlush.ts";
 import {
 	SHOW_MESSAGE_BOX,
 	SET_UI_SETTINGS,
@@ -331,8 +351,6 @@ import {
 } from "../src/widgets/campaign-entity-modal/model.js";
 import {
 	addUndoSnapshot,
-	createDistinctRedoTransition,
-	createDistinctUndoTransition,
 	createRedoTransition,
 	createUndoTransition,
 	isHistoryShortcutEvent,
@@ -601,9 +619,6 @@ import {
 	setCampaignNoteAiIgnored,
 } from "../src/widgets/campaign-entity-card/model.js";
 import {
-	areHistoryStatesEqual,
-	campaignHistoryPayload,
-	cloneHistoryList,
 	getLocationDisplayName as getCampaignLocationDisplayName,
 	normalizeMentionName,
 	replaceBracketedMentionNames,
@@ -836,6 +851,15 @@ import {
 	executeCampaignCreation,
 } from "../src/features/campaign-create/model/campaignCreation.ts";
 import {
+	HISTORY_CARET_REQUEST_EVENT,
+	focusHistoryTargetField,
+	getHistoryCaretValueRevision,
+	getHistoryFocusNavigation,
+	makeHistoryTargetId,
+	matchesHistoryTargetId,
+} from "../src/entities/history/model/historyFocus.ts";
+import { applyHistoryCaretSourceOffset } from "../src/features/editor/model/historyCaret.ts";
+import {
 	actionEntriesToText,
 	actionFromText,
 	addMonsterAction,
@@ -875,6 +899,27 @@ const require = createRequire(import.meta.url);
 const crypto = require("crypto");
 const { Linter } = require("eslint");
 const storage = require("../server/storage.js");
+const historyRuntime = require("../server/modules/history/runtime.js");
+const { historyService: runtimeHistoryService } = historyRuntime;
+const {
+	createHistoryService,
+} = require("../server/modules/history/application/historyService.js");
+const {
+	HISTORY_LIMIT,
+	commitHistoryTransaction,
+	createHistoryTransition,
+	getHistoryStatus,
+	normalizeHistory,
+} = require("../server/modules/history/application/historyStack.js");
+const {
+	applyJsonPatches,
+	createJsonPatches,
+	validateJsonPatches,
+} = require("../server/modules/history/application/resourcePatches.js");
+const {
+	validateHistoryRestoreRequest,
+} = require("../server/modules/history/http/historyRequestSchemas.js");
+const historyTracking = require("../server/modules/history/http/historyTrackingMiddleware.js");
 const bestiaryUtils = require("../shared/bestiaryUtils.cjs");
 const searchResults = require("../server/modules/search/application/searchResults.js");
 const campaignMentionReferences = require("../server/modules/campaign/infrastructure/campaignMentionReferences.js");
@@ -1110,6 +1155,159 @@ async function withTestSlug(name, callback) {
 	} finally {
 		await cleanupTestData(slug);
 	}
+}
+
+function createIsolatedHistoryStorage(root) {
+	const campaignsDirectory = path.join(root, "campaigns");
+	const imagesDirectory = path.join(root, "images");
+	const entityTypes = Object.freeze(["characters", "npc", "locations"]);
+	const campaignDirectory = (slug) =>
+		path.join(campaignsDirectory, path.basename(String(slug || "")));
+	const campaignMetadataPath = (slug) =>
+		path.join(campaignDirectory(slug), "_campaign.json");
+	const campaignAiPath = (slug) =>
+		path.join(campaignDirectory(slug), "_aiResponses.json");
+	const campaignSessionPath = (slug, fileName) =>
+		path.join(
+			campaignDirectory(slug),
+			"sessions",
+			path.basename(String(fileName || "")),
+		);
+	const entityInfoPath = (slug, type, entitySlug) =>
+		path.join(
+			campaignDirectory(slug),
+			type,
+			path.basename(String(entitySlug || "")),
+			"info.json",
+		);
+	const pathExists = async (filePath) => {
+		try {
+			await fs.access(filePath);
+			return true;
+		} catch {
+			return false;
+		}
+	};
+	const readJson = async (filePath) =>
+		JSON.parse(await fs.readFile(filePath, "utf8"));
+	const writeJson = async (filePath, value) => {
+		await fs.mkdir(path.dirname(filePath), { recursive: true });
+		await fs.writeFile(filePath, JSON.stringify(value, null, 2), "utf8");
+	};
+	const listDirectoryNames = async (directory) => {
+		if (!(await pathExists(directory))) return [];
+		return (await fs.readdir(directory, { withFileTypes: true }))
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name);
+	};
+	const listSessions = async (slug) => {
+		const directory = path.join(campaignDirectory(slug), "sessions");
+		if (!(await pathExists(directory))) return [];
+		return (await fs.readdir(directory, { withFileTypes: true }))
+			.filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+			.map((entry) => ({ fileName: entry.name }));
+	};
+	const listEntities = async (slug, type) => {
+		const result = [];
+		for (const entitySlug of await listDirectoryNames(
+			path.join(campaignDirectory(slug), type),
+		)) {
+			const infoPath = entityInfoPath(slug, type, entitySlug);
+			if (await pathExists(infoPath)) result.push(await readJson(infoPath));
+		}
+		return result;
+	};
+	const readAiResponses = async (slug) =>
+		(await pathExists(campaignAiPath(slug)))
+			? readJson(campaignAiPath(slug))
+			: [];
+	const exportCampaignBundle = async (slug) => ({
+		meta: await readJson(campaignMetadataPath(slug)),
+		sessions: await Promise.all(
+			(await listSessions(slug)).map(async ({ fileName }) => ({
+				fileName,
+				content: await readJson(campaignSessionPath(slug, fileName)),
+			})),
+		),
+		entities: Object.fromEntries(
+			await Promise.all(
+				entityTypes.map(async (type) => [type, await listEntities(slug, type)]),
+			),
+		),
+		aiResponses: await readAiResponses(slug),
+	});
+	const isolatedStorage = {
+		DATA_DIR: root,
+		IMAGES_DIR: imagesDirectory,
+		ENTITY_TYPES: entityTypes,
+		campaignDir: campaignDirectory,
+		campaignMetaPath: campaignMetadataPath,
+		campaignAiResponsesPath: campaignAiPath,
+		sessionPath: campaignSessionPath,
+		ensureDir: (directory) => fs.mkdir(directory, { recursive: true }),
+		exists: pathExists,
+		readJson,
+		writeJson,
+		renameWithRetry: async (source, target) => {
+			await fs.mkdir(path.dirname(target), { recursive: true });
+			await fs.rename(source, target);
+		},
+		listExportableCampaignSlugs: async () => {
+			const result = [];
+			for (const slug of await listDirectoryNames(campaignsDirectory)) {
+				if (await pathExists(campaignMetadataPath(slug))) result.push(slug);
+			}
+			return result;
+		},
+		exportCampaignBundle,
+		exportCampaignArchiveBundle: async (slug) => ({
+			bundle: await exportCampaignBundle(slug),
+			images: [],
+		}),
+		writeEntity: async (slug, type, entitySlug, value) => {
+			const saved = { ...value, slug: entitySlug };
+			await writeJson(entityInfoPath(slug, type, entitySlug), saved);
+			return saved;
+		},
+		deleteEntity: (slug, type, entitySlug) =>
+			fs.rm(path.dirname(entityInfoPath(slug, type, entitySlug)), {
+				recursive: true,
+				force: true,
+			}),
+		writeAiResponses: async (slug, responses) => {
+			await writeJson(campaignAiPath(slug), responses);
+			return responses;
+		},
+		deleteCampaignData: async (slug) => {
+			await fs.rm(campaignDirectory(slug), { recursive: true, force: true });
+			await fs.rm(path.join(imagesDirectory, path.basename(slug)), {
+				recursive: true,
+				force: true,
+			});
+		},
+	};
+	isolatedStorage.restoreCampaignArchiveSnapshot = async (slug, archive) => {
+		await isolatedStorage.deleteCampaignData(slug);
+		if (!archive) return null;
+		const bundle = archive.bundle || archive;
+		await writeJson(campaignMetadataPath(slug), { ...bundle.meta, slug });
+		for (const session of bundle.sessions || []) {
+			await writeJson(
+				campaignSessionPath(slug, session.fileName),
+				session.content,
+			);
+		}
+		for (const type of entityTypes) {
+			for (const entity of bundle.entities?.[type] || []) {
+				await isolatedStorage.writeEntity(slug, type, entity.slug, entity);
+			}
+		}
+		if (bundle.aiResponses?.length) {
+			await isolatedStorage.writeAiResponses(slug, bundle.aiResponses);
+		}
+		return bundle.meta;
+	};
+	return isolatedStorage;
 }
 
 async function run(name, fn) {
@@ -4469,6 +4667,7 @@ await run(
 				"canRedo: boolean;",
 				"canUndo: boolean;",
 				"isOpen: boolean;",
+				"isHistoryRestoring: boolean;",
 				"isSaving: boolean;",
 				"onDelete: () => void;",
 				"onOpenSearch: () => void;",
@@ -4491,7 +4690,7 @@ await run(
 				"<UndoRedoButtons",
 				"canRedo={canRedo}",
 				"canUndo={canUndo}",
-				"disabled={isSaving}",
+				"disabled={isSaving || isHistoryRestoring}",
 				"onRedo={onRedo}",
 				"onUndo={onUndo}",
 				'variant="danger"',
@@ -4547,8 +4746,11 @@ await run(
 				"isActionsOpen={isHeaderActionsOpen}",
 				"actionsRef={headerActionsRef}",
 				"isSaving={view.isSaving}",
-				"canUndo={view.undoStack.length > 0}",
-				"canRedo={view.redoStack.length > 0}",
+				"canUndo={view.canUndo}",
+				"canRedo={view.canRedo}",
+				"isHistoryRestoring={view.isHistoryRestoring}",
+				"undoTitle={view.undoLabel}",
+				"redoTitle={view.redoLabel}",
 				"onBack={view.handleBack}",
 				"onRename={view.handleRename}",
 				"onOpenEncounter={openEncounterFromQuickAccess}",
@@ -4901,8 +5103,8 @@ await run(
 				"<CharacterCard",
 				"onToggleCollapse={(id) => {",
 				"view.handleToggleCharacterCollapse(id);",
-				"onChange={(id, updated, options) => {",
-				"view.handleCharacterChange(id, updated, options);",
+				"onChange={(id, updated) => {",
+				"view.handleCharacterChange(id, updated);",
 				"onNameBlur={(id, updated, oldName, newName) =>",
 				"view.handleCharacterNameBlur(id, updated, oldName, newName)",
 				"view.handleDeleteCharacter(id);",
@@ -4926,7 +5128,7 @@ await run(
 				"renderItem={(npc) => (",
 				'"campaign", "npc", npc.id',
 				"view.handleToggleNpcCollapse(id);",
-				"view.handleNpcChange(id, updated, options);",
+				"view.handleNpcChange(id, updated);",
 				"view.handleNpcNameBlur(id, updated, oldName, newName)",
 				"view.handleNpcDelete(id);",
 				"<CampaignEntitySection",
@@ -4949,7 +5151,7 @@ await run(
 				'"campaign", "location", location.id',
 				"<LocationCard",
 				"view.handleToggleLocationCollapse(id);",
-				"view.handleLocationChange(id, updated, options);",
+				"view.handleLocationChange(id, updated);",
 				"view.handleLocationNameBlur(id, updated, oldName, newName)",
 				"view.handleLocationDelete(id);",
 				"<CampaignPartialArchiveOverlay",
@@ -5104,7 +5306,8 @@ await run(
 				"onNoteChange(scene.id, noteId, text);",
 				"const onSceneNoteDelete = (noteId: SessionResourceId) =>",
 				"onNoteDelete(scene.id, noteId);",
-				'<div id={makeDomId("session", "scene", scene.id)}>',
+				'id={makeDomId("session", "scene", scene.id)}',
+				'data-history-focus-id={makeHistoryTargetId(',
 				"<SessionSceneCard",
 				"number={number}",
 				"fields={SessionViewModel.sceneSchema}",
@@ -5757,7 +5960,8 @@ await run(
 				"onNoteChange(scene.id, noteId, text);",
 				"const onSceneNoteDelete = (noteId: SessionResourceId) =>",
 				"onNoteDelete(scene.id, noteId);",
-				'<div id={makeDomId("session", "scene", scene.id)}>',
+				'id={makeDomId("session", "scene", scene.id)}',
+				'data-history-focus-id={makeHistoryTargetId(',
 				"<SessionSceneCard",
 				"number={number}",
 				"scene={scene}",
@@ -6202,7 +6406,7 @@ await run(
 		assertSourceTokensInOrder(
 			monsterRowSource,
 			[
-				'import { classNames, lang } from "../../../../shared/lib/index.js";',
+				'import { classNames, lang, makeDomId } from "../../../../shared/lib/index.js";',
 				'import { Button, Tooltip } from "../../../../shared/ui/index.js";',
 				'import { renderMentionText } from "../../../../features/entity-link/index.js";',
 				"getEncounterCharacterDisplayName,",
@@ -6330,8 +6534,11 @@ await run(
 				'| "initiativeStats"',
 				'| "handleBack"',
 				'| "handleRename"',
-				'| "undoStack"',
-				'| "redoStack"',
+				'| "canUndo"',
+				'| "canRedo"',
+				'| "isHistoryRestoring"',
+				'| "undoLabel"',
+				'| "redoLabel"',
 				'| "isSaving"',
 				'| "fileInputRef"',
 				'| "handleFileChange"',
@@ -6551,8 +6758,13 @@ await run(
 				'import { lang } from "../../../../shared/lib/index.js";',
 				'import CampaignHeaderActions from "./CampaignHeaderActions.tsx";',
 				"interface CampaignHeaderView {",
+				"canRedo: boolean;",
+				"canUndo: boolean;",
 				"handleRename: () => void;",
-				"redoStack: readonly unknown[];",
+				"isHistoryRestoring: boolean;",
+				"isSaving: boolean;",
+				"redoLabel: string;",
+				"undoLabel: string;",
 				"handleDeleteCampaign: () => void;",
 				"interface CampaignHeaderProps {",
 				"view: CampaignHeaderView;",
@@ -6567,8 +6779,9 @@ await run(
 				"{viewModel.name}",
 				'{lang.t("Created")}: {viewModel.createdAtLabel}',
 				"<CampaignHeaderActions",
-				"canRedo={view.redoStack.length > 0}",
-				"canUndo={view.undoStack.length > 0}",
+				"canRedo={view.canRedo}",
+				"canUndo={view.canUndo}",
+				"disabled={view.isSaving || view.isHistoryRestoring}",
 				"onDelete={() => view.handleDeleteCampaign()}",
 				"onExport={() => view.handleExport()}",
 				"onOpenPartialArchive={onOpenPartialArchive}",
@@ -6881,7 +7094,7 @@ await run(
 			"setNotesViewMode,",
 		], "Campaign raw hash-navigation command ownership");
 		assertSourceTokensInOrder(navigationSource, [
-			'import { useEffect } from "react";',
+			'import { useEffect, useState } from "react";',
 			"export function useCampaignHashNavigation({",
 			'const hash = decodeURIComponent(window.location.hash || "");',
 			"const plan = getCampaignHashNavigationPlan({",
@@ -6920,9 +7133,10 @@ await run(
 			"onToggleSectionCollapse: handleToggleSectionCollapse,",
 		], "Session raw hash-navigation command ownership");
 		assertSourceTokensInOrder(navigationSource, [
-			'import { useEffect } from "react";',
+			'import { useEffect, useState } from "react";',
 			"export function useSessionHashNavigation({",
-			"if (shouldExpandSessionNotesFromHash(",
+			'!hash.includes("history-session-")',
+			"shouldExpandSessionNotesFromHash(",
 			"onToggleSectionCollapse(\"Notes\");",
 			"const timer = window.setTimeout(() => scrollToHashTarget(), 140);",
 			"return () => window.clearTimeout(timer);",
@@ -7687,8 +7901,11 @@ await run(
 				'type EncounterDisplayMode = "grid" | "single";',
 				"type EncounterHeaderActionsView = Pick<",
 				'| "encounter"',
-				'| "undoStack"',
-				'| "redoStack"',
+				'| "canUndo"',
+				'| "canRedo"',
+				'| "isHistoryRestoring"',
+				'| "undoLabel"',
+				'| "redoLabel"',
 				'| "isSaving"',
 				'| "fileInputRef"',
 				'| "handleFileChange"',
@@ -7735,8 +7952,10 @@ await run(
 				'"EncounterView__gridColumnsSwitch"',
 				"[1, 2, 3, 4].map((columns) => (",
 				"function EncounterHistoryControls({",
-				"disabled={view.undoStack.length === 0 || view.isSaving}",
-				"disabled={view.redoStack.length === 0 || view.isSaving}",
+				"disabled={!view.canUndo || view.isSaving || view.isHistoryRestoring}",
+				"title={view.undoLabel}",
+				"disabled={!view.canRedo || view.isSaving || view.isHistoryRestoring}",
+				"title={view.redoLabel}",
 			],
 			"Encounter private header-action presentation",
 		);
@@ -8017,8 +8236,9 @@ await run(
 				"view.handleRename",
 				"viewModel.createdAtLabel",
 				"<CampaignHeaderActions",
-				"canRedo={view.redoStack.length > 0}",
-				"canUndo={view.undoStack.length > 0}",
+				"canRedo={view.canRedo}",
+				"canUndo={view.canUndo}",
+				"disabled={view.isSaving || view.isHistoryRestoring}",
 				"onDelete={() => view.handleDeleteCampaign()}",
 				"onExport={() => view.handleExport()}",
 				"onOpenPartialArchive={onOpenPartialArchive}",
@@ -8105,16 +8325,18 @@ await run(
 				"disabled?: boolean;",
 				"onRedo: () => void;",
 				"onUndo: () => void;",
+				"redoTitle?: string;",
+				"undoTitle?: string;",
 				"export function UndoRedoButtons({",
 				"disabled = false,",
 				'icon="undo"',
 				"onClick={onUndo}",
 				"disabled={!canUndo || disabled}",
-				'{lang.t("Undo (Ctrl+Z)")}',
+				'title={undoTitle || lang.t("Undo (Ctrl+Z)")}',
 				'icon="redo"',
 				"onClick={onRedo}",
 				"disabled={!canRedo || disabled}",
-				'{lang.t("Redo (Ctrl+Y)")}',
+				'title={redoTitle || lang.t("Redo (Ctrl+Y)")}',
 			],
 			"shared undo-redo presentation",
 		);
@@ -8126,7 +8348,7 @@ await run(
 				"<UndoRedoButtons",
 				"canRedo={canRedo}",
 				"canUndo={canUndo}",
-				"disabled={isSaving}",
+				"disabled={isSaving || isHistoryRestoring}",
 				"onRedo={onRedo}",
 				"onUndo={onUndo}",
 			],
@@ -10290,7 +10512,9 @@ await run(
 				"function EncounterView() {",
 				"const controller = useEncounterPageController();",
 				"if (!controller.renderContext) return <EncounterLoading />;",
-				'<Panel className="EncounterView">',
+				"<Panel",
+				'data-history-focus-id={makeHistoryTargetId("encounter", "summary")}',
+				'className="EncounterView"',
 				"<EncounterPageContent controller={controller} />",
 			],
 			"Encounter thin route composition",
@@ -20865,6 +21089,130 @@ await run("mention editor inserts Space after a link in the active command", asy
 	);
 });
 
+await run("editor history caret maps Markdown source offsets to Lexical points", () => {
+	const transformers = [
+		HEADING,
+		QUOTE,
+		UNORDERED_LIST,
+		ORDERED_LIST,
+		BOLD_STAR,
+		BOLD_UNDERSCORE,
+		ITALIC_STAR,
+		ITALIC_UNDERSCORE,
+	];
+	const cases = [
+		{
+			label: "formatted replacement before closing markers",
+			source: "Вступ **новий** кінець",
+			offset: "Вступ **новий".length,
+			text: "новий",
+			selectionOffset: "новий".length,
+		},
+		{
+			label: "second Markdown block",
+			source: "# Заголовок\nАбзац",
+			offset: "# Заголовок\nАб".length,
+			text: "Абзац",
+			selectionOffset: 2,
+		},
+		{
+			label: "second list item",
+			source: "- один\n- два",
+			offset: "- один\n- два".length,
+			text: "два",
+			selectionOffset: 3,
+		},
+	];
+
+	for (const testCase of cases) {
+		const editor = createEditor({
+			namespace: `history-caret-${testCase.label}`,
+			nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode],
+			onError: (error) => {
+				throw error;
+			},
+		});
+		let applied = false;
+		let restored = "";
+		let selection = null;
+		editor.update(
+			() => {
+				const loadValue = (value) => {
+					$getRoot().clear();
+					$convertFromMarkdownString(
+						normalizeEditableMarkdown(value, "textarea"),
+						transformers,
+						undefined,
+						true,
+						false,
+					);
+				};
+				const readValue = () =>
+					normalizeEditableMarkdown(
+						$convertToMarkdownString(transformers, undefined, true),
+						"textarea",
+					);
+				applied = applyHistoryCaretSourceOffset({
+					isMentionNode: () => false,
+					loadValue,
+					normalizedValue: testCase.source,
+					offset: testCase.offset,
+					readValue,
+					sourceValue: testCase.source,
+				});
+				restored = readValue();
+				const current = $getSelection();
+				selection = $isRangeSelection(current)
+					? {
+						text: current.anchor.getNode().getTextContent(),
+						offset: current.anchor.offset,
+					}
+					: null;
+			},
+			{ discrete: true },
+		);
+		assert.equal(applied, true, testCase.label);
+		assert.equal(restored, testCase.source, testCase.label);
+		assert.deepEqual(
+			selection,
+			{ text: testCase.text, offset: testCase.selectionOffset },
+			testCase.label,
+		);
+	}
+
+	const invalidEditor = createEditor({
+		namespace: "history-caret-invalid-marker",
+		onError: (error) => {
+			throw error;
+		},
+	});
+	let invalidApplied = true;
+	let invalidRestored = "";
+	invalidEditor.update(
+		() => {
+			const source = "**текст**";
+			const loadValue = (value) => {
+				$getRoot().clear();
+				$convertFromMarkdownString(value, transformers, undefined, true, false);
+			};
+			const readValue = () =>
+				$convertToMarkdownString(transformers, undefined, true);
+			invalidApplied = applyHistoryCaretSourceOffset({
+				isMentionNode: () => false,
+				loadValue,
+				normalizedValue: source,
+				offset: 1,
+				readValue,
+				sourceValue: source,
+			});
+			invalidRestored = readValue();
+		},
+		{ discrete: true },
+	);
+	assert.equal(invalidApplied, false);
+	assert.equal(invalidRestored, "**текст**");
+});
+
 await run("editor presentation preserves mention grouping and cursor mapping", () => {
 	const entities = [
 		{ id: 1, type: "characters", firstName: "Ірина", lastName: "Коваль" },
@@ -28656,34 +29004,6 @@ await run(
 			"Фракція",
 		);
 
-		const history = cloneHistoryList([{ name: "A", _virtual: true }]);
-		assert.deepEqual(history, [{ name: "A" }]);
-		history[0].name = "Changed";
-		assert.deepEqual(cloneHistoryList([{ name: "A" }]), [{ name: "A" }]);
-		assert.equal(areHistoryStatesEqual([{ a: 1 }], [{ a: 1 }]), true);
-		assert.deepEqual(
-			campaignHistoryPayload({
-				description: "Story",
-				notes: [
-					{ id: 1, title: "", text: "", collapsed: false },
-					{
-						id: 2,
-						title: "Plan",
-						text: "",
-						collapsed: false,
-						_isVirtual: true,
-					},
-				],
-				completed: 1,
-				completedAt: "2026-05-08",
-			}),
-			{
-				description: "Story",
-				notes: [{ id: 2, title: "Plan", text: "", collapsed: false }],
-				completed: true,
-				completedAt: "2026-05-08",
-			},
-		);
 	},
 );
 
@@ -43873,15 +44193,14 @@ await run("encounter model orchestration preserves load, import, dice, and drop 
 	const session = { data: { encounters: [zeroEncounter] } };
 	assert.equal(getEncounterSessionEncounters(session)[0], zeroEncounter);
 	assert.deepEqual(getEncounterSessionEncounters(null), []);
-	assert.deepEqual(getEncounterLoadPlan({}, "missing", 2, false), {
+	assert.deepEqual(getEncounterLoadPlan({}, "missing", 2), {
 		kind: "retry",
 		retries: 1,
-		resetHistory: false,
 	});
-	assert.deepEqual(getEncounterLoadPlan({}, "missing", 0, true), {
+	assert.deepEqual(getEncounterLoadPlan({}, "missing", 0), {
 		kind: "not-found",
 	});
-	const loadedPlan = getEncounterLoadPlan(session, "0", 3, true);
+	const loadedPlan = getEncounterLoadPlan(session, "0", 3);
 	assert.equal(loadedPlan.kind, "loaded");
 	assert.equal(loadedPlan.encounter, zeroEncounter);
 	assert.equal(loadedPlan.selectedInstance, zeroEncounter.monsters[0]);
@@ -43895,10 +44214,9 @@ await run("encounter model orchestration preserves load, import, dice, and drop 
 		"loaded",
 		zeroEncounter,
 		zeroEncounter.monsters[0],
-		true,
 	]]);
 	executeEncounterLoadPlan(
-		{ kind: "retry", retries: 0, resetHistory: false },
+		{ kind: "retry", retries: 0 },
 		{
 			onRetry: (...args) => loadCalls.push(["retry", ...args]),
 			onNotFound: () => loadCalls.push(["not-found"]),
@@ -43913,7 +44231,7 @@ await run("encounter model orchestration preserves load, import, dice, and drop 
 			onLoaded: (...args) => loadCalls.push(["loaded", ...args]),
 		},
 	);
-	assert.deepEqual(loadCalls.slice(1), [["retry", 0, false], ["not-found"]]);
+	assert.deepEqual(loadCalls.slice(1), [["retry", 0], ["not-found"]]);
 
 	const sourceEncounter = {
 		id: "encounter-1",
@@ -44014,7 +44332,6 @@ await run("encounter model orchestration preserves load, import, dice, and drop 
 			nextMonsters: null,
 			currentEncounter: null,
 			reorderStart: sourceEncounter,
-			isUpdatingHistory: false,
 		}),
 		{ kind: "none" },
 	);
@@ -44022,37 +44339,30 @@ await run("encounter model orchestration preserves load, import, dice, and drop 
 		nextMonsters: reordered.monsters,
 		currentEncounter: sourceEncounter,
 		reorderStart: { ...sourceEncounter, monsters: [] },
-		isUpdatingHistory: false,
 	});
 	assert.equal(dropPlan.kind, "persist");
-	assert.deepEqual(dropPlan.undoSnapshot.monsters, []);
 	const dropCalls = [];
 	executeEncounterMonsterDropPlan(dropPlan, {
 		clearReorderStart: () => dropCalls.push(["clear"]),
-		recordUndo: (snapshot) => dropCalls.push(["undo", snapshot]),
 		persist: (value) => dropCalls.push(["persist", value]),
 	});
-	assert.deepEqual(dropCalls.map(([kind]) => kind), ["clear", "undo", "persist"]);
+	assert.deepEqual(dropCalls.map(([kind]) => kind), ["clear", "persist"]);
 	const noHistoryPlan = getEncounterMonsterDropPlan({
 		nextMonsters: sourceEncounter.monsters,
 		currentEncounter: sourceEncounter,
 		reorderStart: sourceEncounter,
-		isUpdatingHistory: false,
 	});
-	assert.equal(noHistoryPlan.kind, "persist");
-	assert.equal(noHistoryPlan.undoSnapshot, null);
+	assert.equal(noHistoryPlan.kind, "none");
 
 	assert.deepEqual(getEncounterUpdatePlan(null, sourceEncounter), { kind: "none" });
 	const updatePlan = getEncounterUpdatePlan(
 		{ id: "encounter-1", name: "", monsters: null },
 		sourceEncounter,
 		{},
-		false,
 	);
 	assert.equal(updatePlan.kind, "update");
 	assert.equal(updatePlan.encounter.name, "Стара назва");
 	assert.deepEqual(updatePlan.encounter.monsters, []);
-	assert.equal(updatePlan.undoSnapshot, sourceEncounter);
 	assert.equal(updatePlan.persist, true);
 	assert.equal(updatePlan.saveDebounceMs, 0);
 	assert.equal(updatePlan.preferredId, null);
@@ -44060,34 +44370,28 @@ await run("encounter model orchestration preserves load, import, dice, and drop 
 		{ ...sourceEncounter, name: "Нова" },
 		sourceEncounter,
 		{
-			pushUndo: false,
 			persist: false,
 			saveDebounceMs: 500,
 			preferredId: "old",
 		},
-		false,
 	);
 	assert.equal(silentUpdatePlan.kind, "update");
-	assert.equal(silentUpdatePlan.undoSnapshot, null);
 	assert.equal(silentUpdatePlan.persist, false);
 	assert.equal(silentUpdatePlan.saveDebounceMs, 500);
 	assert.equal(silentUpdatePlan.preferredId, "old");
 	const updateCalls = [];
 	executeEncounterUpdatePlan(updatePlan, {
-		recordUndo: (snapshot) => updateCalls.push(["undo", snapshot]),
 		setEncounter: (value) => updateCalls.push(["set", value]),
 		syncSelected: (...args) => updateCalls.push(["sync", ...args]),
 		persist: (...args) => updateCalls.push(["persist", ...args]),
 	});
 	assert.deepEqual(updateCalls.map(([kind]) => kind), [
-		"undo",
 		"set",
 		"sync",
 		"persist",
 	]);
 	const silentUpdateCalls = [];
 	executeEncounterUpdatePlan(silentUpdatePlan, {
-		recordUndo: (snapshot) => silentUpdateCalls.push(["undo", snapshot]),
 		setEncounter: (value) => silentUpdateCalls.push(["set", value]),
 		syncSelected: (...args) => silentUpdateCalls.push(["sync", ...args]),
 		persist: (...args) => silentUpdateCalls.push(["persist", ...args]),
@@ -51362,29 +51666,6 @@ await run("undo redo helpers move snapshots between stacks", () => {
 	assert.equal(redo.redoStack.length, 0);
 });
 
-await run("undo redo helpers skip duplicate current snapshots", () => {
-	const isEqual = (left, right) => left?.value === right?.value;
-	const undo = createDistinctUndoTransition({
-		undoStack: [{ value: 1 }, { value: 2 }, { value: 2 }],
-		redoStack: [],
-		current: { value: 2 },
-		isEqual,
-	});
-	assert.deepEqual(undo.target, { value: 1 });
-	assert.deepEqual(undo.undoStack, []);
-	assert.deepEqual(undo.redoStack, [{ value: 2 }]);
-
-	const redo = createDistinctRedoTransition({
-		undoStack: [],
-		redoStack: [{ value: 1 }, { value: 1 }, { value: 3 }],
-		current: { value: 1 },
-		isEqual,
-	});
-	assert.deepEqual(redo.target, { value: 3 });
-	assert.deepEqual(redo.undoStack, [{ value: 1 }]);
-	assert.deepEqual(redo.redoStack, []);
-});
-
 await run("undo redo helpers detect app-level editor shortcuts", () => {
 	assert.equal(isHistoryShortcutEvent({ ctrlKey: true, code: "KeyZ" }), true);
 	assert.equal(isHistoryShortcutEvent({ metaKey: true, code: "KeyY" }), true);
@@ -51564,6 +51845,17 @@ await run(
 				{ resource: "import", campaignSlug: "world" },
 			],
 			["/api/campaigns", { resource: "campaigns" }],
+			["/api/history/undo", { resource: "history" }],
+			[
+				"/api/campaigns/world/history/redo",
+				{ resource: "history", campaignSlug: "world" },
+			],
+			["/api/import-all", { resource: "import" }],
+			["/api/import-archive", { resource: "import" }],
+			[
+				"/api/campaigns/world/import/partial-archive",
+				{ resource: "import", campaignSlug: "world" },
+			],
 			["/api/unknown", { resource: "unknown" }],
 		];
 
@@ -51685,6 +51977,47 @@ await run("backup campaign discovery skips orphan directories", async () => {
 		await fs.rm(orphanPath, { recursive: true, force: true });
 		await fs.rm(campaignPath, { recursive: true, force: true });
 	}
+});
+
+await run("campaign backup exports exclude persistent history artifacts", async () => {
+	await withTestSlug("backup-history-exclusion", async (slug) => {
+		const historyMarker = `НЕ ЕКСПОРТУВАТИ ІСТОРІЮ ${slug}`;
+		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: `${slug}-id`,
+			name: "Кампанія без історії в архіві",
+			slug,
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			id: "session-id",
+			name: "Сесія",
+			data: {},
+		});
+		await storage.writeJson(
+			path.join(storage.campaignDir(slug), "_changeHistory.json"),
+			{ version: 1, marker: historyMarker },
+		);
+
+		const archive = await storage.exportCampaignArchiveBundle(slug);
+		assert.deepEqual(Object.keys(archive.bundle).sort(), [
+			"aiResponses",
+			"entities",
+			"meta",
+			"sessions",
+		]);
+		assert.equal(JSON.stringify(archive).includes(historyMarker), false);
+		assert.equal(
+			archive.images.some((image) =>
+				String(image.relativePath).includes("_changeHistory"),
+			),
+			false,
+		);
+
+		const partial = await storage.exportCampaignPartialArchiveBundle(slug, [
+			"sessions",
+		]);
+		assert.equal(JSON.stringify(partial).includes(historyMarker), false);
+	});
 });
 
 async function withMockedStorageSettingsFile(testBody) {
@@ -63765,6 +64098,128 @@ await run("backups archive route sends gzip payload with dated filename", async 
 	}
 });
 
+await run(
+	"administrative imports reset affected history before uncompensated writes",
+	async () => {
+		const originalFindCampaignSlugById = storage.findCampaignSlugById;
+		const originalImportCampaignBundle = storage.importCampaignBundle;
+		const originalImportCampaignPartialArchiveBundle =
+			storage.importCampaignPartialArchiveBundle;
+		const backupsModulePath = require.resolve("../server/routes/backups.js");
+		const cachedBackupsModule = require.cache[backupsModulePath];
+		let activeEvents = [];
+		historyRuntime.historyService = {
+			clearApplicationHistory: async () => {
+				activeEvents.push("clear-application");
+			},
+			clearCampaignHistory: async (slug) => {
+				activeEvents.push(`clear-campaign:${slug}`);
+			},
+		};
+		delete require.cache[backupsModulePath];
+		const isolatedBackupsRouter = require(backupsModulePath);
+		const bundle = {
+			meta: {
+				id: "replace-id",
+				name: "Імпортована кампанія",
+			},
+			sessions: [],
+			entities: { characters: [], npc: [], locations: [] },
+			aiResponses: [],
+		};
+		const partialArchive = {
+			version: 2,
+			scope: "campaign-partial",
+			sections: ["sessions"],
+			bundle,
+			images: [],
+		};
+
+		try {
+			const partialEvents = [];
+			activeEvents = partialEvents;
+			const partialFailure = new Error("partial import write failed");
+			storage.importCampaignPartialArchiveBundle = async () => {
+				partialEvents.push("import-partial");
+				throw partialFailure;
+			};
+
+			const partialRoute = isolatedBackupsRouter.stack.find(
+				(item) =>
+					item.route?.path ===
+					"/campaigns/:slug/import/partial-archive",
+			);
+			assert.ok(partialRoute);
+			let partialError = null;
+			await partialRoute.route.stack.at(-1).handle(
+				{
+					params: { slug: "target-campaign" },
+					body: {},
+					file: {
+						buffer: Buffer.from(JSON.stringify(partialArchive), "utf8"),
+					},
+				},
+				{},
+				(error) => {
+					partialError = error;
+				},
+			);
+			assert.equal(partialError, partialFailure);
+			assert.deepEqual(partialEvents, [
+				"clear-application",
+				"clear-campaign:target-campaign",
+				"import-partial",
+			]);
+
+			const fullEvents = [];
+			activeEvents = fullEvents;
+			const fullFailure = new Error("full import write failed");
+			storage.findCampaignSlugById = async (id) => {
+				fullEvents.push(`find:${id}`);
+				return "existing-campaign";
+			};
+			storage.importCampaignBundle = async () => {
+				fullEvents.push("import-full");
+				throw fullFailure;
+			};
+
+			const importAllRoute = isolatedBackupsRouter.stack.find(
+				(item) => item.route?.path === "/import-all",
+			);
+			assert.ok(importAllRoute);
+			let fullError = null;
+			await importAllRoute.route.stack.at(-1).handle(
+				{
+					validatedBody: [bundle],
+					query: { strategy: "replace_by_id" },
+				},
+				{},
+				(error) => {
+					fullError = error;
+				},
+			);
+			assert.equal(fullError, fullFailure);
+			assert.deepEqual(fullEvents, [
+				"find:replace-id",
+				"clear-application",
+				"clear-campaign:existing-campaign",
+				"find:replace-id",
+				"import-full",
+			]);
+		} finally {
+			historyRuntime.historyService = runtimeHistoryService;
+			delete require.cache[backupsModulePath];
+			if (cachedBackupsModule) {
+				require.cache[backupsModulePath] = cachedBackupsModule;
+			}
+			storage.findCampaignSlugById = originalFindCampaignSlugById;
+			storage.importCampaignBundle = originalImportCampaignBundle;
+			storage.importCampaignPartialArchiveBundle =
+				originalImportCampaignPartialArchiveBundle;
+		}
+	},
+);
+
 await run("request validation rejects unsafe import payloads", () => {
 	const campaignBundle = {
 		meta: { id: "campaign-id", name: "Українська кампанія" },
@@ -64117,6 +64572,20 @@ await run(
 		assert.ok(invalidMoveBodyError instanceof RequestValidationError);
 	},
 );
+
+await run("history restore requests require an exact non-negative revision", () => {
+	assert.deepEqual(validateHistoryRestoreRequest({ expectedRevision: 0 }), []);
+	assert.equal(
+		validateHistoryRestoreRequest({})[0]?.path,
+		"body.expectedRevision",
+	);
+	for (const expectedRevision of [-1, 1.5, "2", Number.MAX_SAFE_INTEGER + 1]) {
+		assert.equal(
+			validateHistoryRestoreRequest({ expectedRevision })[0]?.code,
+			"invalid_revision",
+		);
+	}
+});
 
 await run("Reference commands own spell search sources and named precedence", async () => {
 	const aggregateSpells = [
@@ -67396,6 +67865,1722 @@ await run(
 		}
 	},
 );
+
+await run("history tracking excludes gallery mutations and distinguishes AI undo", () => {
+	const { getOperation, getTrackingTarget } = historyTracking.__test;
+	assert.equal(
+		getTrackingTarget({
+			method: "PATCH",
+			path: "/api/campaigns/demo/images/tokens/rename",
+			body: { oldName: "old.png", newName: "new.png" },
+			query: {},
+		}),
+		null,
+	);
+	assert.deepEqual(
+		getTrackingTarget({
+			method: "PATCH",
+			path: "/api/campaigns/demo",
+			body: { name: "Нова назва" },
+			query: {},
+		}),
+		{ kind: "application" },
+	);
+	const aiUndoRequest = {
+		method: "POST",
+		path: "/api/ai/responses/response-1/undo",
+		body: {},
+		query: { campaign: "demo" },
+	};
+	assert.deepEqual(getTrackingTarget(aiUndoRequest), {
+		kind: "campaign",
+		slug: "demo",
+	});
+	assert.equal(getOperation(aiUndoRequest, aiUndoRequest.path), "ai.undo");
+	assert.equal(
+		getOperation(
+			{ ...aiUndoRequest, path: "/api/ai/responses/response-1/apply" },
+			"/api/ai/responses/response-1/apply",
+		),
+		"ai.apply",
+	);
+});
+
+await run("application history waits for active resource saves and propagates errors", async () => {
+	const originalWindow = globalThis.window;
+	const fakeWindow = new EventTarget();
+	globalThis.window = fakeWindow;
+	try {
+		const events = [];
+		const successfulFlush = (event) => {
+			waitForActiveHistoryFlush(event, async () => {
+				events.push("flush-start");
+				await Promise.resolve();
+				events.push("flush-end");
+			});
+		};
+		fakeWindow.addEventListener(ACTIVE_HISTORY_FLUSH_EVENT, successfulFlush);
+		await requestActiveHistoryFlush();
+		assert.deepEqual(events, ["flush-start", "flush-end"]);
+		fakeWindow.removeEventListener(ACTIVE_HISTORY_FLUSH_EVENT, successfulFlush);
+
+		const failedFlush = (event) => {
+			waitForActiveHistoryFlush(event, async () => {
+				throw new Error("pending save failed");
+			});
+		};
+		fakeWindow.addEventListener(ACTIVE_HISTORY_FLUSH_EVENT, failedFlush);
+		await assert.rejects(
+			requestActiveHistoryFlush(),
+			/pending save failed/,
+		);
+		fakeWindow.removeEventListener(ACTIVE_HISTORY_FLUSH_EVENT, failedFlush);
+	} finally {
+		if (originalWindow === undefined) delete globalThis.window;
+		else globalThis.window = originalWindow;
+	}
+});
+
+await run("persistent history stack keeps newest transactions and durable redo", () => {
+	let history = normalizeHistory(null);
+	for (let index = 0; index < HISTORY_LIMIT + 5; index += 1) {
+		history = commitHistoryTransaction(history, {
+			id: `change-${index}`,
+			createdAt: String(index),
+			operation: "test.change",
+			changes: [],
+		});
+	}
+	assert.equal(history.past.length, HISTORY_LIMIT);
+	assert.equal(history.past[0].id, `change-${HISTORY_LIMIT + 4}`);
+	assert.equal(history.past.at(-1).id, "change-5");
+	const undo = createHistoryTransition(history, "undo", history.revision);
+	assert.equal(undo.history.future[0].id, `change-${HISTORY_LIMIT + 4}`);
+	assert.equal(getHistoryStatus(undo.history).canRedo, true);
+	const redo = createHistoryTransition(
+		undo.history,
+		"redo",
+		undo.history.revision,
+	);
+	assert.equal(redo.history.past[0].id, `change-${HISTORY_LIMIT + 4}`);
+	const branched = commitHistoryTransaction(undo.history, {
+		id: "branch-change",
+		createdAt: "branch",
+		operation: "test.branch",
+		changes: [],
+	});
+	assert.equal(branched.future.length, 0);
+	assert.equal(branched.past[0].id, "branch-change");
+	assert.deepEqual(normalizeHistory({ malformed: true }).past, []);
+	assert.throws(
+		() => normalizeHistory({ version: 2 }),
+		/Unsupported change history version/,
+	);
+});
+
+await run("persistent history patches target stable nested resources", () => {
+	const before = {
+		data: {
+			encounters: [{
+				id: 7,
+				name: "Засідка",
+				monsters: [
+					{ id: "goblin", instanceId: "monster-1", currentHp: 9 },
+					{ id: "goblin", instanceId: "monster-2", currentHp: 9 },
+				],
+			}],
+		},
+	};
+	const after = structuredClone(before);
+	after.data.encounters[0].monsters[1].currentHp = 3;
+	const patches = createJsonPatches(before, after);
+	assert.equal(patches.length, 1);
+	assert.deepEqual(patches[0].path, [
+		"data",
+		"encounters",
+		{ by: "id", value: 7 },
+		"monsters",
+		{ by: "instanceId", value: "monster-2" },
+		"currentHp",
+	]);
+	assert.equal(validateJsonPatches(before, patches, "before"), true);
+	assert.deepEqual(applyJsonPatches(before, patches, "after"), after);
+	assert.deepEqual(applyJsonPatches(after, patches, "before"), before);
+});
+
+await run("persistent history stores keyed reorder maps instead of array snapshots", () => {
+	const before = {
+		notes: [
+			{ id: "note-1", text: "Перша" },
+			{ id: "note-2", text: "Друга" },
+		],
+	};
+	const after = { notes: [before.notes[1], before.notes[0]] };
+	const patches = createJsonPatches(before, after);
+	assert.deepEqual(patches, [{
+		kind: "array-order",
+		path: ["notes"],
+		identityKey: "id",
+		before: ["note-1", "note-2"],
+		after: ["note-2", "note-1"],
+	}]);
+	assert.deepEqual(applyJsonPatches(before, patches, "after"), after);
+});
+
+await run("campaign note history journal contains only its pinpoint patch", async () => {
+	await withTestSlug("compact-note-history", async (slug) => {
+		const marker = `НЕЗМІННИЙ-ВЕЛИКИЙ-БЛОК-${"я".repeat(2000)}`;
+		const pendingDirectory = path.join(
+			storage.DATA_DIR,
+			"_history-pending",
+			`campaign-${slug}`,
+		);
+		try {
+			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: `${slug}-id`,
+				name: "Кампанія з великою передісторією",
+				slug,
+				unchangedPayload: marker,
+				notes: [{ id: "campaign-note-compact", text: "Стара нотатка" }],
+			});
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				id: "session-compact",
+				name: "Сесія",
+				collapsed: false,
+				unchangedPayload: marker,
+				data: {
+					notes: [{ id: "note-compact", text: "Старий текст" }],
+				},
+			});
+
+			const service = createHistoryService(storage);
+			const context = await service.beginCampaign(
+				slug,
+				"session.patch",
+				{ path: "note-compact" },
+			);
+			const pendingJournal = await storage.readJson(
+				path.join(storage.campaignDir(slug), "_changeHistory.json"),
+			);
+			assert.equal(Object.hasOwn(pendingJournal.pending, "before"), false);
+			assert.equal(Boolean(pendingJournal.pending.snapshot?.fingerprint), true);
+			assert.equal(JSON.stringify(pendingJournal).includes(marker), false);
+
+			const current = await storage.readSession(slug, "session.json");
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				...current,
+				data: {
+					...current.data,
+					notes: [{ ...current.data.notes[0], text: "Новий текст" }],
+				},
+			});
+			await service.finishCampaign(context, false);
+
+			const journal = await storage.readJson(
+				path.join(storage.campaignDir(slug), "_changeHistory.json"),
+			);
+			assert.equal(journal.pending, null);
+			assert.equal(journal.past[0].changes.length, 1);
+			const change = journal.past[0].changes[0];
+			assert.equal(change.kind, "json-resource");
+			assert.equal(change.resource, "session");
+			assert.deepEqual(change.patches[0].path, [
+				"data",
+				"notes",
+				{ by: "id", value: "note-compact" },
+				"text",
+			]);
+			assert.equal(JSON.stringify(journal).includes(marker), false);
+			assert.equal(await storage.exists(pendingDirectory), false);
+
+			const saved = await storage.readSession(slug, "session.json");
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				...saved,
+				collapsed: true,
+			});
+			const undone = await service.applyCampaignHistory(
+				slug,
+				"undo",
+				journal.revision,
+			);
+			assert.equal(undone.focus.resource, "note");
+			assert.equal(undone.focus.sessionFileName, "session.json");
+			assert.equal(undone.focus.noteId, "note-compact");
+			assert.equal(undone.focus.field, "text");
+			assert.equal(undone.focus.caretOffset, 4);
+			assert.equal(undone.focus.exists, true);
+			const restored = await storage.readSession(slug, "session.json");
+			assert.equal(restored.data.notes[0].text, "Старий текст");
+			assert.equal(restored.collapsed, true);
+			assert.equal(restored.unchangedPayload, marker);
+			const redone = await service.applyCampaignHistory(
+				slug,
+				"redo",
+				undone.history.revision,
+			);
+			assert.equal(redone.focus.resource, "note");
+			assert.equal(redone.focus.caretOffset, 3);
+			assert.equal(
+				(await storage.readSession(slug, "session.json")).data.notes[0].text,
+				"Новий текст",
+			);
+
+			const campaignContext = await service.beginCampaign(
+				slug,
+				"campaign.patch",
+				{ path: "campaign-note-compact" },
+			);
+			const campaign = await storage.readCampaign(slug);
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				...campaign,
+				notes: [{ ...campaign.notes[0], text: "Нова нотатка" }],
+			});
+			await service.finishCampaign(campaignContext, false);
+			const campaignJournal = await storage.readJson(
+				path.join(storage.campaignDir(slug), "_changeHistory.json"),
+			);
+			assert.equal(campaignJournal.past[0].changes.length, 1);
+			assert.equal(
+				campaignJournal.past[0].changes[0].resource,
+				"campaign-meta",
+			);
+			assert.deepEqual(campaignJournal.past[0].changes[0].patches[0].path, [
+				"notes",
+				{ by: "id", value: "campaign-note-compact" },
+				"text",
+			]);
+			assert.equal(JSON.stringify(campaignJournal).includes(marker), false);
+		} finally {
+			await fs.rm(pendingDirectory, { recursive: true, force: true });
+		}
+	});
+});
+
+await run("persistent history focuses embedded session characters and restored text carets", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-history-character-focus"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "character-focus-campaign";
+	try {
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-character-focus",
+			name: "Кампанія",
+			slug,
+		});
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				id: "session-character-focus",
+				name: "Сесія",
+				data: {
+					characters: [{
+						id: 0,
+						firstName: "Лада",
+						description: "Воїн",
+					}],
+				},
+			},
+		);
+
+		const service = createHistoryService(isolatedStorage);
+		const mutation = await service.beginCampaign(slug, "entity.patch", {});
+		const session = await isolatedStorage.readJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+		);
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				...session,
+				data: {
+					...session.data,
+					characters: [{
+						...session.data.characters[0],
+						description: "Дуже Воїн",
+					}],
+				},
+			},
+		);
+		await service.finishCampaign(mutation, false);
+		const status = await service.getCampaignStatus(slug);
+		const undone = await service.applyCampaignHistory(
+			slug,
+			"undo",
+			status.revision,
+		);
+		assert.equal(undone.focus.resource, "session-entity");
+		assert.equal(undone.focus.sessionId, "session-character-focus");
+		assert.equal(undone.focus.entityType, "characters");
+		assert.equal(undone.focus.entityId, 0);
+		assert.equal(undone.focus.entityExists, true);
+		assert.equal(undone.focus.field, "description");
+		assert.equal(undone.focus.caretOffset, 0);
+
+		const redone = await service.applyCampaignHistory(
+			slug,
+			"redo",
+			undone.history.revision,
+		);
+		assert.equal(redone.focus.resource, "session-entity");
+		assert.equal(redone.focus.entityId, 0);
+		assert.equal(redone.focus.caretOffset, 5);
+
+		const insertBefore = "Дуже Воїн";
+		const insertAfter = "Дуже хоробрий Воїн";
+		const insertion = await service.beginCampaign(slug, "entity.patch", {});
+		const insertionSession = await isolatedStorage.readJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+		);
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				...insertionSession,
+				data: {
+					...insertionSession.data,
+					characters: [{
+						...insertionSession.data.characters[0],
+						description: insertAfter,
+					}],
+				},
+			},
+		);
+		await service.finishCampaign(insertion, false);
+		const insertionStatus = await service.getCampaignStatus(slug);
+		const insertionUndone = await service.applyCampaignHistory(
+			slug,
+			"undo",
+			insertionStatus.revision,
+		);
+		assert.equal(insertionUndone.focus.caretOffset, "Дуже ".length);
+		assert.equal(
+			insertionUndone.focus.caretValueRevision,
+			getHistoryCaretValueRevision(insertBefore),
+		);
+		const insertionRedone = await service.applyCampaignHistory(
+			slug,
+			"redo",
+			insertionUndone.history.revision,
+		);
+		assert.equal(
+			insertionRedone.focus.caretOffset,
+			"Дуже хоробрий ".length,
+		);
+		assert.equal(
+			insertionRedone.focus.caretValueRevision,
+			getHistoryCaretValueRevision(insertAfter),
+		);
+
+		const deletion = await service.beginCampaign(slug, "entity.patch", {});
+		const deletionSession = await isolatedStorage.readJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+		);
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				...deletionSession,
+				data: {
+					...deletionSession.data,
+					characters: [{
+						...deletionSession.data.characters[0],
+						description: insertBefore,
+					}],
+				},
+			},
+		);
+		await service.finishCampaign(deletion, false);
+		const deletionStatus = await service.getCampaignStatus(slug);
+		const deletionUndone = await service.applyCampaignHistory(
+			slug,
+			"undo",
+			deletionStatus.revision,
+		);
+		assert.equal(
+			deletionUndone.focus.caretOffset,
+			"Дуже хоробрий ".length,
+		);
+		const deletionRedone = await service.applyCampaignHistory(
+			slug,
+			"redo",
+			deletionUndone.history.revision,
+		);
+		assert.equal(deletionRedone.focus.caretOffset, "Дуже ".length);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("persistent history navigation targets exact Unicode resources and fallbacks", () => {
+	const noteId = "нотатка/№1";
+	const noteTarget = makeHistoryTargetId(
+		"campaign",
+		"npc-note",
+		0,
+		noteId,
+	);
+	assert.equal(
+		matchesHistoryTargetId(
+			`#${encodeURIComponent(noteTarget)}`,
+			"campaign",
+			"npc-note",
+			0,
+			noteId,
+		),
+		true,
+	);
+	assert.equal(
+		matchesHistoryTargetId(
+			`#${noteTarget}`,
+			"campaign",
+			"npc-note",
+			0,
+			noteId,
+		),
+		true,
+	);
+
+	const campaignNote = getHistoryFocusNavigation({
+		resource: "entity",
+		campaignSlug: "кампанія",
+		entityType: "npc",
+		entityId: 0,
+		noteId,
+		noteExists: true,
+		exists: true,
+	});
+	assert.equal(campaignNote.campaignSlug, "кампанія");
+	assert.equal(campaignNote.hash, noteTarget);
+	assert.deepEqual(campaignNote.fallbackHashes, [
+		makeHistoryTargetId("campaign", "npc", 0),
+		makeHistoryTargetId("campaign", "npc-section"),
+	]);
+
+	const sceneNote = getHistoryFocusNavigation({
+		resource: "note",
+		campaignSlug: "alpha",
+		sessionFileName: "сесія.json",
+		sceneId: "scene-1",
+		noteId: "note-1",
+		sceneExists: true,
+		noteExists: true,
+		exists: true,
+	});
+	assert.equal(sceneNote.sessionFileName, "сесія.json");
+	assert.equal(
+		sceneNote.hash,
+		makeHistoryTargetId("session", "scene-note", "scene-1", "note-1"),
+	);
+
+	const missingParticipant = getHistoryFocusNavigation({
+		resource: "encounter",
+		campaignSlug: "alpha",
+		sessionFileName: "session.json",
+		encounterId: 0,
+		encounterExists: true,
+		participantInstanceId: "monster-1",
+		participantExists: false,
+		exists: false,
+	});
+	assert.equal(missingParticipant.encounterId, 0);
+	assert.equal(
+		missingParticipant.hash,
+		makeHistoryTargetId("encounter", "summary"),
+	);
+
+	const reorder = getHistoryFocusNavigation({
+		resource: "campaign-list",
+		campaignSlug: null,
+		preserveRoute: true,
+		exists: true,
+	});
+	assert.equal(reorder.preserveCurrentRoute, true);
+	assert.equal(reorder.hash, makeHistoryTargetId("sidebar", "campaigns"));
+
+	const previousDocument = globalThis.document;
+	const previousWindow = globalThis.window;
+	const selectionCalls = [];
+	const classCalls = [];
+	const editable = {
+		value: "Відновлено",
+		isContentEditable: false,
+		focus: (options) => selectionCalls.push(["focus", options]),
+		setSelectionRange: (start, end) => selectionCalls.push(["selection", start, end]),
+		classList: {
+			add: (name) => classCalls.push(["add", name]),
+			remove: (name) => classCalls.push(["remove", name]),
+		},
+	};
+	const fieldContainer = {
+		dataset: { historyField: "text" },
+		matches: () => false,
+		querySelector: () => editable,
+	};
+	const focusContainer = {
+		dataset: { historyFocusId: noteTarget },
+		querySelectorAll: () => [fieldContainer],
+	};
+	try {
+		globalThis.document = {
+			getElementById: (id) => id === noteTarget ? focusContainer : null,
+			querySelectorAll: () => [],
+		};
+		globalThis.window = {
+			setTimeout: (callback) => {
+				callback();
+				return 1;
+			},
+		};
+		assert.equal(
+			focusHistoryTargetField(
+				`#${encodeURIComponent(noteTarget)}`,
+				"text",
+				4,
+			),
+			true,
+		);
+		assert.deepEqual(selectionCalls, [
+			["focus", { preventScroll: true }],
+			["selection", 4, 4],
+		]);
+		assert.deepEqual(classCalls, [
+			["add", "is_history_focus_field"],
+			["remove", "is_history_focus_field"],
+		]);
+	} finally {
+		if (previousDocument === undefined) delete globalThis.document;
+		else globalThis.document = previousDocument;
+		if (previousWindow === undefined) delete globalThis.window;
+		else globalThis.window = previousWindow;
+	}
+});
+
+await run("persistent history delegates source carets and preserves generic visible offsets", () => {
+	const previousDocument = globalThis.document;
+	const previousWindow = globalThis.window;
+	const targetId = makeHistoryTargetId("campaign", "note", "caret-note");
+	const valueRevision = getHistoryCaretValueRevision("**Відновлено**");
+	const requestCalls = [];
+	const classCalls = [];
+	let activeEditable;
+	const fieldContainer = {
+		dataset: { historyField: "text" },
+		matches: () => false,
+		querySelector: () => activeEditable,
+	};
+	const focusContainer = {
+		dataset: { historyFocusId: targetId },
+		querySelectorAll: () => [fieldContainer],
+	};
+	const selectionCalls = [];
+	const textNode = { textContent: `A\u200BB` };
+	try {
+		globalThis.document = {
+			getElementById: (id) => id === targetId ? focusContainer : null,
+			querySelectorAll: () => [],
+			createTreeWalker: () => {
+				let returned = false;
+				return {
+					nextNode: () => {
+						if (returned) return null;
+						returned = true;
+						return textNode;
+					},
+				};
+			},
+			createRange: () => ({
+				setStart: (node, offset) => selectionCalls.push(["start", node, offset]),
+				collapse: (collapsed) => selectionCalls.push(["collapse", collapsed]),
+				selectNodeContents: () => selectionCalls.push(["contents"]),
+			}),
+		};
+		globalThis.window = {
+			setTimeout: (callback) => {
+				callback();
+				return 1;
+			},
+			getSelection: () => ({
+				removeAllRanges: () => selectionCalls.push(["remove"]),
+				addRange: () => selectionCalls.push(["add"]),
+			}),
+		};
+
+		activeEditable = {
+			dataset: {
+				historyCaretOwner: "lexical",
+				historyCaretRevision: valueRevision,
+			},
+			isContentEditable: true,
+			focus: () => requestCalls.push(["focus"]),
+			dispatchEvent: (event) => {
+				requestCalls.push([
+					"request",
+					event.type,
+					event.detail.offset,
+					event.detail.valueRevision,
+				]);
+				event.preventDefault();
+				return false;
+			},
+			classList: {
+				add: (name) => classCalls.push(["add", name]),
+				remove: (name) => classCalls.push(["remove", name]),
+			},
+		};
+		assert.equal(
+			focusHistoryTargetField(`#${targetId}`, "text", 7, valueRevision),
+			true,
+		);
+		assert.deepEqual(requestCalls, [
+			["focus"],
+			["request", HISTORY_CARET_REQUEST_EVENT, 7, valueRevision],
+		]);
+		assert.equal(selectionCalls.length, 0);
+		assert.equal(
+			focusHistoryTargetField(
+				`#${targetId}`,
+				"text",
+				7,
+				getHistoryCaretValueRevision("Старе значення"),
+			),
+			false,
+			"a stale Lexical value must remain retryable",
+		);
+		assert.equal(requestCalls.length, 3, "stale values focus but do not dispatch");
+
+		activeEditable = {
+			dataset: {},
+			isContentEditable: true,
+			focus: () => undefined,
+			dispatchEvent: () => true,
+			classList: { add: () => undefined, remove: () => undefined },
+		};
+		assert.equal(
+			focusHistoryTargetField(`#${targetId}`, "text", 2),
+			true,
+		);
+		assert.deepEqual(selectionCalls[0], ["start", textNode, 3]);
+	} finally {
+		if (previousDocument === undefined) delete globalThis.document;
+		else globalThis.document = previousDocument;
+		if (previousWindow === undefined) delete globalThis.window;
+		else globalThis.window = previousWindow;
+	}
+});
+
+await run("application reorder and lifecycle journals stay compact", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-application-history"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const firstSlug = "first-campaign";
+	const secondSlug = "second-campaign";
+	const marker = `АРХІВ-НЕ-ПОВИНЕН-БУТИ-В-ЖУРНАЛІ-${"ї".repeat(2000)}`;
+	try {
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(firstSlug), {
+			id: "campaign-first",
+			name: "Перша кампанія",
+			slug: firstSlug,
+			order: 0,
+			unchangedPayload: marker,
+		});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(secondSlug), {
+			id: "campaign-second",
+			name: "Друга кампанія",
+			slug: secondSlug,
+			order: 1,
+			unchangedPayload: marker,
+		});
+		const service = createHistoryService(isolatedStorage);
+		const reorder = await service.beginApplication("campaign.reorder", {});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(firstSlug), {
+			...(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(firstSlug),
+			)),
+			order: 1,
+		});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(secondSlug), {
+			...(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(secondSlug),
+			)),
+			order: 0,
+		});
+		await service.finishApplication(reorder, false);
+
+		let journal = await isolatedStorage.readJson(
+			path.join(root, "_applicationChangeHistory.json"),
+		);
+		assert.equal(journal.past[0].changes.length, 2);
+		assert.equal(
+			journal.past[0].changes.every(
+				(change) =>
+					change.kind === "json-resource" &&
+					change.resource === "campaign-meta" &&
+					change.patches.length === 1 &&
+					change.patches[0].path[0] === "order",
+			),
+			true,
+		);
+		assert.equal(JSON.stringify(journal).includes(marker), false);
+		assert.equal(JSON.stringify(journal).includes("archive"), false);
+
+		const undoneReorder = await service.applyApplicationHistory(
+			"undo",
+			journal.revision,
+		);
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(firstSlug),
+			)).order,
+			0,
+		);
+		await service.applyApplicationHistory(
+			"redo",
+			undoneReorder.history.revision,
+		);
+
+		const renamedSlug = "renamed-campaign";
+		await fs.writeFile(
+			path.join(isolatedStorage.campaignDir(firstSlug), "unknown-campaign-file.bin"),
+			Buffer.from([0, 1, 2, 255]),
+		);
+		const oldImageDirectory = path.join(
+			isolatedStorage.IMAGES_DIR,
+			firstSlug,
+			"tokens",
+		);
+		await fs.mkdir(oldImageDirectory, { recursive: true });
+		await fs.writeFile(path.join(oldImageDirectory, "npc.bin"), Buffer.from([9, 8, 7]));
+		const rename = await service.beginApplication("campaign.rename", {
+			oldSlug: firstSlug,
+			newSlug: renamedSlug,
+		});
+		await isolatedStorage.renameWithRetry(
+			isolatedStorage.campaignDir(firstSlug),
+			isolatedStorage.campaignDir(renamedSlug),
+		);
+		await isolatedStorage.renameWithRetry(
+			path.join(isolatedStorage.IMAGES_DIR, firstSlug),
+			path.join(isolatedStorage.IMAGES_DIR, renamedSlug),
+		);
+		await isolatedStorage.writeJson(
+			isolatedStorage.campaignMetaPath(renamedSlug),
+			{
+				...(await isolatedStorage.readJson(
+					isolatedStorage.campaignMetaPath(renamedSlug),
+				)),
+				slug: renamedSlug,
+				name: "Перейменована кампанія",
+			},
+		);
+		await isolatedStorage.writeJson(
+			isolatedStorage.campaignMetaPath(secondSlug),
+			{
+				...(await isolatedStorage.readJson(
+					isolatedStorage.campaignMetaPath(secondSlug),
+				)),
+				linkedImage: `/api/images/${renamedSlug}/portrait.png`,
+			},
+		);
+		await service.finishApplication(rename, false);
+		journal = await isolatedStorage.readJson(
+			path.join(root, "_applicationChangeHistory.json"),
+		);
+		assert.equal(
+			journal.past[0].changes.some(
+				(change) => change.kind === "campaign-lifecycle",
+			),
+			true,
+		);
+		assert.equal(
+			journal.past[0].changes.some(
+				(change) =>
+					change.kind === "json-resource" &&
+					change.beforeLocation?.campaignSlug === secondSlug,
+			),
+			true,
+		);
+		assert.equal(JSON.stringify(journal).includes(marker), false);
+		const undoneRename = await service.applyApplicationHistory(
+			"undo",
+			journal.revision,
+		);
+		assert.equal(
+			await isolatedStorage.exists(isolatedStorage.campaignMetaPath(firstSlug)),
+			true,
+		);
+		assert.equal(
+			await isolatedStorage.exists(isolatedStorage.campaignMetaPath(renamedSlug)),
+			false,
+		);
+		assert.deepEqual(
+			await fs.readFile(
+				path.join(
+					isolatedStorage.campaignDir(firstSlug),
+					"unknown-campaign-file.bin",
+				),
+			),
+			Buffer.from([0, 1, 2, 255]),
+		);
+		assert.deepEqual(
+			await fs.readFile(
+				path.join(isolatedStorage.IMAGES_DIR, firstSlug, "tokens", "npc.bin"),
+			),
+			Buffer.from([9, 8, 7]),
+		);
+		assert.equal(
+			Object.hasOwn(
+				await isolatedStorage.readJson(
+					isolatedStorage.campaignMetaPath(secondSlug),
+				),
+				"linkedImage",
+			),
+			false,
+		);
+		await service.applyApplicationHistory(
+			"redo",
+			undoneRename.history.revision,
+		);
+		assert.equal(
+			await isolatedStorage.exists(isolatedStorage.campaignMetaPath(renamedSlug)),
+			true,
+		);
+		assert.deepEqual(
+			await fs.readFile(
+				path.join(
+					isolatedStorage.campaignDir(renamedSlug),
+					"unknown-campaign-file.bin",
+				),
+			),
+			Buffer.from([0, 1, 2, 255]),
+		);
+
+		const createdSlug = "created-campaign";
+		const create = await service.beginApplication("campaign.create", {});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(createdSlug), {
+			id: "campaign-created",
+			name: "Створена кампанія",
+			slug: createdSlug,
+			order: 2,
+			unchangedPayload: marker,
+		});
+		await fs.writeFile(
+			path.join(isolatedStorage.campaignDir(createdSlug), "plugin-state.dat"),
+			"exact plugin state",
+			"utf8",
+		);
+		await service.finishApplication(create, false);
+		journal = await isolatedStorage.readJson(
+			path.join(root, "_applicationChangeHistory.json"),
+		);
+		assert.equal(journal.past[0].changes[0].kind, "campaign-lifecycle");
+		assert.equal(journal.past[0].changes[0].before, null);
+		assert.equal(Boolean(journal.past[0].changes[0].after.tombstone), true);
+		assert.equal(JSON.stringify(journal).includes(marker), false);
+		assert.equal(JSON.stringify(journal).includes("bundle"), false);
+
+		const undoneCreate = await service.applyApplicationHistory(
+			"undo",
+			journal.revision,
+		);
+		assert.equal(
+			await isolatedStorage.exists(isolatedStorage.campaignMetaPath(createdSlug)),
+			false,
+		);
+		await service.applyApplicationHistory(
+			"redo",
+			undoneCreate.history.revision,
+		);
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(createdSlug),
+			)).name,
+			"Створена кампанія",
+		);
+		assert.equal(
+			await fs.readFile(
+				path.join(isolatedStorage.campaignDir(createdSlug), "plugin-state.dat"),
+				"utf8",
+			),
+			"exact plugin state",
+		);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("campaign deletion history restores exact image moves to General", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-delete-images-history"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "deleted-campaign";
+	const campaignImage = path.join(
+		isolatedStorage.IMAGES_DIR,
+		slug,
+		"tokens",
+		"npc.bin",
+	);
+	const retainedGeneralImage = path.join(
+		isolatedStorage.IMAGES_DIR,
+		"general",
+		"tokens",
+		"npc.bin",
+	);
+	const movedGeneralImage = path.join(
+		isolatedStorage.IMAGES_DIR,
+		"general",
+		"tokens",
+		"npc-2.bin",
+	);
+	try {
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-delete-images",
+			name: "Кампанія для видалення",
+			slug,
+		});
+		await fs.writeFile(
+			path.join(isolatedStorage.campaignDir(slug), "module-cache.bin"),
+			Buffer.from([4, 3, 2, 1]),
+		);
+		await fs.mkdir(path.dirname(campaignImage), { recursive: true });
+		await fs.mkdir(path.dirname(retainedGeneralImage), { recursive: true });
+		await fs.writeFile(campaignImage, Buffer.from([1, 3, 5, 7]));
+		await fs.writeFile(retainedGeneralImage, Buffer.from([2, 4, 6, 8]));
+
+		const service = createHistoryService(isolatedStorage);
+		const deletion = await service.beginApplication("campaign.delete", {
+			campaignSlug: slug,
+			moveImagesToGeneral: true,
+		});
+		await isolatedStorage.renameWithRetry(campaignImage, movedGeneralImage);
+		await fs.rm(path.join(isolatedStorage.IMAGES_DIR, slug), {
+			recursive: true,
+			force: true,
+		});
+		await fs.rm(isolatedStorage.campaignDir(slug), {
+			recursive: true,
+			force: true,
+		});
+		await service.finishApplication(deletion, false);
+
+		const journal = await isolatedStorage.readJson(
+			path.join(root, "_applicationChangeHistory.json"),
+		);
+		assert.equal(
+			journal.past[0].changes.some(
+				(change) =>
+					change.kind === "filesystem-tree" &&
+					change.resource === "general-images",
+			),
+			true,
+		);
+		const undone = await service.applyApplicationHistory(
+			"undo",
+			journal.revision,
+		);
+		assert.deepEqual(await fs.readFile(campaignImage), Buffer.from([1, 3, 5, 7]));
+		assert.deepEqual(
+			await fs.readFile(retainedGeneralImage),
+			Buffer.from([2, 4, 6, 8]),
+		);
+		assert.equal(await isolatedStorage.exists(movedGeneralImage), false);
+		assert.deepEqual(
+			await fs.readFile(
+				path.join(isolatedStorage.campaignDir(slug), "module-cache.bin"),
+			),
+			Buffer.from([4, 3, 2, 1]),
+		);
+
+		await service.applyApplicationHistory(
+			"redo",
+			undone.history.revision,
+		);
+		assert.equal(
+			await isolatedStorage.exists(isolatedStorage.campaignDir(slug)),
+			false,
+		);
+		assert.equal(await isolatedStorage.exists(campaignImage), false);
+		assert.deepEqual(await fs.readFile(movedGeneralImage), Buffer.from([1, 3, 5, 7]));
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("lifecycle undo preloads tombstones before deleting live files", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-lifecycle-preflight"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "preflight-created-campaign";
+	try {
+		const service = createHistoryService(isolatedStorage);
+		const creation = await service.beginApplication("campaign.create", {});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-preflight-create",
+			name: "Не видаляти без tombstone",
+			slug,
+		});
+		await fs.writeFile(
+			path.join(isolatedStorage.campaignDir(slug), "critical.bin"),
+			Buffer.from([42, 43, 44]),
+		);
+		await service.finishApplication(creation, false);
+		const journal = await isolatedStorage.readJson(
+			path.join(root, "_applicationChangeHistory.json"),
+		);
+		const lifecycle = journal.past[0].changes.find(
+			(change) => change.kind === "campaign-lifecycle",
+		);
+		await fs.rm(
+			path.join(
+				root,
+				"_history-tombstones",
+				lifecycle.after.tombstone.transactionId,
+				`${lifecycle.after.tombstone.key}.json.gz`,
+			),
+			{ force: true },
+		);
+		await assert.rejects(
+			service.applyApplicationHistory("undo", journal.revision),
+			(error) => error?.status === 409,
+		);
+		assert.deepEqual(
+			await fs.readFile(
+				path.join(isolatedStorage.campaignDir(slug), "critical.bin"),
+			),
+			Buffer.from([42, 43, 44]),
+		);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("persistent history retries lifecycle restoration after staged journal failure", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-history-lifecycle-journal-retry"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "lifecycle-journal-retry";
+	try {
+		const service = createHistoryService(isolatedStorage);
+		const creation = await service.beginApplication("campaign.create", {});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-lifecycle-journal-retry",
+			name: "Відновлювана кампанія",
+			slug,
+		});
+		await service.finishApplication(creation, false);
+		const createdStatus = await service.getApplicationStatus();
+		const undone = await service.applyApplicationHistory(
+			"undo",
+			createdStatus.revision,
+		);
+		assert.equal(
+			await isolatedStorage.exists(isolatedStorage.campaignMetaPath(slug)),
+			false,
+		);
+
+		const originalWriteJson = isolatedStorage.writeJson;
+		let failStagedHistoryWrite = true;
+		isolatedStorage.writeJson = async (filePath, value) => {
+			if (
+				failStagedHistoryWrite &&
+				String(filePath).includes(".history-restore-") &&
+				String(filePath).endsWith("_changeHistory.json")
+			) {
+				failStagedHistoryWrite = false;
+				throw new Error("Simulated staged campaign-history write failure");
+			}
+			return originalWriteJson(filePath, value);
+		};
+		await assert.rejects(
+			service.applyApplicationHistory("redo", undone.history.revision),
+			/Simulated staged campaign-history write failure/,
+		);
+		assert.equal(
+			await isolatedStorage.exists(isolatedStorage.campaignMetaPath(slug)),
+			false,
+		);
+		const interrupted = await isolatedStorage.readJson(
+			path.join(root, "_applicationChangeHistory.json"),
+		);
+		assert.equal(interrupted.restoring.active, 0);
+		assert.deepEqual(interrupted.restoring.completed, []);
+		assert.equal(
+			(await fs.readdir(path.join(root, "campaigns"))).some(
+				(name) => name.includes(".history-restore-") && name.endsWith(".stage"),
+			),
+			true,
+		);
+
+		isolatedStorage.writeJson = originalWriteJson;
+		const reopened = createHistoryService(isolatedStorage);
+		const redone = await reopened.applyApplicationHistory(
+			"redo",
+			interrupted.revision,
+		);
+		assert.equal(redone.history.restoring, null);
+		assert.equal(redone.history.canUndo, true);
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(slug),
+			)).name,
+			"Відновлювана кампанія",
+		);
+		assert.equal(
+			await isolatedStorage.exists(
+				path.join(isolatedStorage.campaignDir(slug), "_changeHistory.json"),
+			),
+			true,
+		);
+		assert.equal(
+			(await fs.readdir(path.join(root, "campaigns"))).some(
+				(name) => name.includes(".history-restore-"),
+			),
+			false,
+		);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("persistent history retries a partially completed restoration", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-history-retry"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "retry-campaign";
+	try {
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-retry",
+			name: "До зміни",
+			slug,
+		});
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				id: "session-retry",
+				name: "Сесія",
+				data: { notes: [{ id: "note-retry", text: "До зміни" }] },
+			},
+		);
+		const service = createHistoryService(isolatedStorage);
+		const mutation = await service.beginCampaign(slug, "test.multi-resource", {});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			...(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(slug),
+			)),
+			name: "Після зміни",
+		});
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				...(await isolatedStorage.readJson(
+					isolatedStorage.sessionPath(slug, "session.json"),
+				)),
+				data: { notes: [{ id: "note-retry", text: "Після зміни" }] },
+			},
+		);
+		await service.finishCampaign(mutation, false);
+		const historyPath = path.join(
+			isolatedStorage.campaignDir(slug),
+			"_changeHistory.json",
+		);
+		const initial = await isolatedStorage.readJson(historyPath);
+		const originalWriteJson = isolatedStorage.writeJson;
+		let failSessionWrite = true;
+		isolatedStorage.writeJson = async (filePath, value) => {
+			if (
+				failSessionWrite &&
+				filePath === isolatedStorage.sessionPath(slug, "session.json")
+			) {
+				failSessionWrite = false;
+				throw new Error("Simulated session restore failure");
+			}
+			return originalWriteJson(filePath, value);
+		};
+		await assert.rejects(
+			service.applyCampaignHistory(slug, "undo", initial.revision),
+			/Simulated session restore failure/,
+		);
+		const interrupted = await isolatedStorage.readJson(historyPath);
+		assert.deepEqual(interrupted.restoring.completed, [0]);
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(slug),
+			)).name,
+			"До зміни",
+		);
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.sessionPath(slug, "session.json"),
+			)).data.notes[0].text,
+			"Після зміни",
+		);
+
+		isolatedStorage.writeJson = originalWriteJson;
+		const reopened = createHistoryService(isolatedStorage);
+		const completed = await reopened.applyCampaignHistory(
+			slug,
+			"undo",
+			interrupted.revision,
+		);
+		assert.equal(completed.history.restoring, null);
+		assert.equal(completed.history.canRedo, true);
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.sessionPath(slug, "session.json"),
+			)).data.notes[0].text,
+			"До зміни",
+		);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("persistent history recovers an abandoned compact pending snapshot", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-history-pending"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "pending-campaign";
+	let abandonedContext;
+	try {
+		const marker = `ВЕЛИКИЙ-ВМІСТ-${"є".repeat(2000)}`;
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-pending",
+			name: "Кампанія",
+			slug,
+			unchangedPayload: marker,
+		});
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				id: "session-pending",
+				data: { notes: [{ id: "note-pending", text: "До перезапуску" }] },
+				unchangedPayload: marker,
+			},
+		);
+		const service = createHistoryService(isolatedStorage);
+		abandonedContext = await service.beginCampaign(slug, "session.patch", {});
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				...(await isolatedStorage.readJson(
+					isolatedStorage.sessionPath(slug, "session.json"),
+				)),
+				data: { notes: [{ id: "note-pending", text: "Після перезапуску" }] },
+			},
+		);
+
+		const reopened = createHistoryService(isolatedStorage);
+		const status = await reopened.getCampaignStatus(slug);
+		assert.equal(status.canUndo, true);
+		assert.equal(status.undo.status, "interrupted");
+		const journal = await isolatedStorage.readJson(
+			path.join(isolatedStorage.campaignDir(slug), "_changeHistory.json"),
+		);
+		assert.equal(journal.pending, null);
+		assert.equal(journal.past[0].changes[0].kind, "json-resource");
+		assert.equal(JSON.stringify(journal).includes(marker), false);
+		assert.equal(
+			await isolatedStorage.exists(path.join(root, "_history-pending")),
+			false,
+		);
+	} finally {
+		abandonedContext?.release();
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("persistent history records failed mutations as retryable partial transactions", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-history-partial"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "partial-campaign";
+	try {
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-partial",
+			name: "До часткової зміни",
+			slug,
+		});
+		const service = createHistoryService(isolatedStorage);
+		const mutation = await service.beginCampaign(slug, "campaign.patch", {});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			...(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(slug),
+			)),
+			name: "Після часткової зміни",
+		});
+		await service.finishCampaign(mutation, true);
+
+		const status = await service.getCampaignStatus(slug);
+		assert.equal(status.canUndo, true);
+		assert.equal(status.undo.status, "partial");
+		const journal = await isolatedStorage.readJson(
+			path.join(isolatedStorage.campaignDir(slug), "_changeHistory.json"),
+		);
+		assert.equal(journal.pending, null);
+		assert.equal(journal.past[0].status, "partial");
+		assert.equal(journal.past[0].changes.length, 1);
+
+		const reopened = createHistoryService(isolatedStorage);
+		const undone = await reopened.applyCampaignHistory(
+			slug,
+			"undo",
+			status.revision,
+		);
+		assert.equal(undone.transaction.status, "partial");
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(slug),
+			)).name,
+			"До часткової зміни",
+		);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("persistent history recovers an abandoned application rename exactly", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-history-application-pending"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const oldSlug = "pending-rename-old";
+	const newSlug = "pending-rename-new";
+	const oldImageRoot = path.join(isolatedStorage.IMAGES_DIR, oldSlug);
+	const newImageRoot = path.join(isolatedStorage.IMAGES_DIR, newSlug);
+	let abandonedContext;
+	try {
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(oldSlug), {
+			id: "campaign-pending-rename",
+			name: "До перезапуску",
+			slug: oldSlug,
+		});
+		await fs.writeFile(
+			path.join(isolatedStorage.campaignDir(oldSlug), "exact.bin"),
+			Buffer.from([0, 17, 255, 42]),
+		);
+		await fs.mkdir(path.join(oldImageRoot, "tokens"), { recursive: true });
+		await fs.writeFile(
+			path.join(oldImageRoot, "tokens", "npc.bin"),
+			Buffer.from([5, 4, 3, 2, 1]),
+		);
+
+		const service = createHistoryService(isolatedStorage);
+		abandonedContext = await service.beginApplication("campaign.rename", {
+			oldSlug,
+			newSlug,
+		});
+		await isolatedStorage.renameWithRetry(
+			isolatedStorage.campaignDir(oldSlug),
+			isolatedStorage.campaignDir(newSlug),
+		);
+		await isolatedStorage.renameWithRetry(oldImageRoot, newImageRoot);
+		await isolatedStorage.writeJson(
+			isolatedStorage.campaignMetaPath(newSlug),
+			{
+				...(await isolatedStorage.readJson(
+					isolatedStorage.campaignMetaPath(newSlug),
+				)),
+				name: "Після перезапуску",
+				slug: newSlug,
+			},
+		);
+
+		const reopened = createHistoryService(isolatedStorage);
+		const status = await reopened.getApplicationStatus();
+		assert.equal(status.canUndo, true);
+		assert.equal(status.undo.status, "interrupted");
+		const journal = await isolatedStorage.readJson(
+			path.join(root, "_applicationChangeHistory.json"),
+		);
+		assert.equal(journal.pending, null);
+		assert.equal(journal.past[0].status, "interrupted");
+		assert.equal(await isolatedStorage.exists(path.join(root, "_history-pending")), false);
+
+		const undone = await reopened.applyApplicationHistory(
+			"undo",
+			status.revision,
+		);
+		assert.equal(undone.currentSlug, oldSlug);
+		assert.equal(undone.focus.resource, "campaign");
+		assert.equal(undone.focus.campaignSlug, oldSlug);
+		assert.equal(
+			await isolatedStorage.exists(isolatedStorage.campaignMetaPath(newSlug)),
+			false,
+		);
+		assert.deepEqual(
+			await fs.readFile(
+				path.join(isolatedStorage.campaignDir(oldSlug), "exact.bin"),
+			),
+			Buffer.from([0, 17, 255, 42]),
+		);
+		assert.deepEqual(
+			await fs.readFile(path.join(oldImageRoot, "tokens", "npc.bin")),
+			Buffer.from([5, 4, 3, 2, 1]),
+		);
+
+		await reopened.applyApplicationHistory(
+			"redo",
+			undone.history.revision,
+		);
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(newSlug),
+			)).name,
+			"Після перезапуску",
+		);
+	} finally {
+		abandonedContext?.release();
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("persistent history conflicts are preflighted before any restore write", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-history-conflict"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "conflict-campaign";
+	try {
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-conflict",
+			name: "Початкова назва",
+			slug,
+		});
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				id: "session-conflict",
+				data: { notes: [{ id: "note-conflict", text: "Початковий текст" }] },
+			},
+		);
+		const service = createHistoryService(isolatedStorage);
+		const mutation = await service.beginCampaign(slug, "test.conflict", {});
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			...(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(slug),
+			)),
+			name: "Змінена назва",
+		});
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				...(await isolatedStorage.readJson(
+					isolatedStorage.sessionPath(slug, "session.json"),
+				)),
+				data: { notes: [{ id: "note-conflict", text: "Змінений текст" }] },
+			},
+		);
+		await service.finishCampaign(mutation, false);
+		const status = await service.getCampaignStatus(slug);
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, "session.json"),
+			{
+				...(await isolatedStorage.readJson(
+					isolatedStorage.sessionPath(slug, "session.json"),
+				)),
+				externalEdit: "конфлікт",
+			},
+		);
+		await assert.rejects(
+			service.applyCampaignHistory(slug, "undo", status.revision),
+			(error) => error?.status === 409,
+		);
+		assert.equal(
+			(await isolatedStorage.readJson(
+				isolatedStorage.campaignMetaPath(slug),
+			)).name,
+			"Змінена назва",
+		);
+		const journal = await isolatedStorage.readJson(
+			path.join(isolatedStorage.campaignDir(slug), "_changeHistory.json"),
+		);
+		assert.equal(journal.restoring, null);
+		assert.equal(journal.past.length, 1);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("persistent history restores session renames and entity moves by stable id", async () => {
+	const root = path.join(storage.DATA_DIR, makeTestSlug("isolated-history-moves"));
+	const isolatedStorage = createIsolatedHistoryStorage(root);
+	const slug = "moves-campaign";
+	const oldSessionFile = "old-session.json";
+	const newSessionFile = "new-session.json";
+	const entitySlug = "hero";
+	const characterDirectory = path.join(
+		isolatedStorage.campaignDir(slug),
+		"characters",
+		entitySlug,
+	);
+	const npcDirectory = path.join(
+		isolatedStorage.campaignDir(slug),
+		"npc",
+		entitySlug,
+	);
+	try {
+		await isolatedStorage.writeJson(isolatedStorage.campaignMetaPath(slug), {
+			id: "campaign-moves",
+			name: "Переміщення",
+			slug,
+		});
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, oldSessionFile),
+			{ id: 0, name: "Стара назва" },
+		);
+		await isolatedStorage.writeEntity(
+			slug,
+			"characters",
+			entitySlug,
+			{ id: 0, firstName: "Герой" },
+		);
+		await fs.writeFile(path.join(characterDirectory, "portrait.bin"), "asset", "utf8");
+		const service = createHistoryService(isolatedStorage);
+		const mutation = await service.beginCampaign(slug, "test.moves", {});
+		await isolatedStorage.renameWithRetry(
+			isolatedStorage.sessionPath(slug, oldSessionFile),
+			isolatedStorage.sessionPath(slug, newSessionFile),
+		);
+		await isolatedStorage.writeJson(
+			isolatedStorage.sessionPath(slug, newSessionFile),
+			{ id: "0", name: "Нова назва" },
+		);
+		await isolatedStorage.renameWithRetry(characterDirectory, npcDirectory);
+		await service.finishCampaign(mutation, false);
+
+		const journal = await isolatedStorage.readJson(
+			path.join(isolatedStorage.campaignDir(slug), "_changeHistory.json"),
+		);
+		const sessionChange = journal.past[0].changes.find(
+			(change) => change.resource === "session",
+		);
+		const entityChange = journal.past[0].changes.find(
+			(change) => change.resource === "entity",
+		);
+		assert.equal(sessionChange.beforeLocation.fileName, oldSessionFile);
+		assert.equal(sessionChange.afterLocation.fileName, newSessionFile);
+		assert.equal(entityChange.beforeLocation.entityType, "characters");
+		assert.equal(entityChange.afterLocation.entityType, "npc");
+
+		const undone = await service.applyCampaignHistory(
+			slug,
+			"undo",
+			journal.revision,
+		);
+		assert.equal(
+			await isolatedStorage.exists(
+				isolatedStorage.sessionPath(slug, oldSessionFile),
+			),
+			true,
+		);
+		assert.equal(await isolatedStorage.exists(characterDirectory), true);
+		assert.equal(
+			await fs.readFile(path.join(characterDirectory, "portrait.bin"), "utf8"),
+			"asset",
+		);
+		await service.applyCampaignHistory(
+			slug,
+			"redo",
+			undone.history.revision,
+		);
+		assert.equal(
+			await isolatedStorage.exists(
+				isolatedStorage.sessionPath(slug, newSessionFile),
+			),
+			true,
+		);
+		assert.equal(await isolatedStorage.exists(npcDirectory), true);
+	} finally {
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("campaign history survives service recreation and restores global mentions", async () => {
+	await withTestSlug("persistent-campaign-history", async (slug) => {
+		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: `${slug}-id`,
+			name: "Історія кампанії",
+			slug,
+			description: "Зустріч із [Старий NPC]",
+		});
+		await storage.writeEntity(slug, "npc", "old-npc", {
+			id: "npc-1",
+			firstName: "Старий NPC",
+			description: "Союзник [Старий NPC]",
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			id: "session-1",
+			name: "Сесія",
+			data: { notes: [{ id: 1, text: "Поговорити з [Старий NPC]" }] },
+		});
+
+		const service = createHistoryService(storage);
+		const context = await service.beginCampaign(
+			slug,
+			"entity.rename-global",
+			{ oldName: "Старий NPC", newName: "Новий NPC" },
+		);
+		const current = await storage.readEntity(slug, "npc", "old-npc");
+		await storage.writeEntity(slug, "npc", "old-npc", {
+			...current,
+			firstName: "Новий NPC",
+		});
+		await storage.updateCampaignMentionReferences(
+			slug,
+			"Старий NPC",
+			"Новий NPC",
+		);
+		await service.finishCampaign(context, false);
+		const compactJournal = await storage.readJson(
+			path.join(storage.campaignDir(slug), "_changeHistory.json"),
+		);
+		assert.equal(
+			compactJournal.past[0].changes.every(
+				(change) => change.kind === "json-resource",
+			),
+			true,
+		);
+		assert.equal(
+			compactJournal.past[0].changes.some(
+				(change) => change.resource === "campaign-meta",
+			),
+			true,
+		);
+		assert.equal(
+			compactJournal.past[0].changes.some(
+				(change) => change.resource === "session",
+			),
+			true,
+		);
+		assert.equal(
+			compactJournal.past[0].changes.some(
+				(change) => change.resource === "entity",
+			),
+			true,
+		);
+
+		const reopened = createHistoryService(storage);
+		const persisted = await reopened.getCampaignStatus(slug);
+		assert.equal(persisted.canUndo, true);
+		assert.equal(persisted.revision, 1);
+		const undone = await reopened.applyCampaignHistory(
+			slug,
+			"undo",
+			persisted.revision,
+		);
+		assert.equal(undone.focus.resource, "entity");
+		assert.equal(undone.focus.entityId, "npc-1");
+		assert.equal(undone.focus.entityType, "npc");
+		assert.equal(undone.history.canRedo, true);
+		assert.equal(
+			(await storage.readCampaign(slug)).description,
+			"Зустріч із [Старий NPC]",
+		);
+		assert.equal(
+			(await storage.readSession(slug, "session.json")).data.notes[0].text,
+			"Поговорити з [Старий NPC]",
+		);
+		assert.equal(
+			(await storage.readEntity(slug, "npc", "old-npc")).firstName,
+			"Старий NPC",
+		);
+		await reopened.applyCampaignHistory(
+			slug,
+			"redo",
+			undone.history.revision,
+		);
+		assert.equal(
+			(await storage.readCampaign(slug)).description,
+			"Зустріч із [Новий NPC]",
+		);
+	});
+});
 
 const failed = results.filter((r) => !r.ok);
 console.log(

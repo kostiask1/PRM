@@ -1,6 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from "react";
 
-import { lang } from "../../../shared/lib/index.js";
+import { lang, makeDomId } from "../../../shared/lib/index.js";
 import {
 	Button,
 	CollapseToggleButton,
@@ -9,6 +9,7 @@ import {
 	ListCard,
 } from "../../../shared/ui/index.js";
 import { StatusBadge } from "../../../features/status-badge/index.js";
+import { makeHistoryTargetId } from "../../../entities/history/index.js";
 import {
 	isSidebarToggleKey,
 	type SidebarCampaign,
@@ -81,6 +82,12 @@ export default function SidebarCampaignSection({
 }: SidebarCampaignSectionProps) {
 	const renderCampaignCard = (campaign: SidebarCampaign) => (
 		<ListCard
+			id={makeDomId("sidebar", "campaign", campaign.slug)}
+			data-history-focus-id={makeHistoryTargetId(
+				"sidebar",
+				"campaign",
+				campaign.slug,
+			)}
 			className={campaign.completed ? "Sidebar__campaignCompleted" : ""}
 			active={activeCampaignId === campaign.slug}
 			href={`/campaign/${encodeURIComponent(campaign.slug)}`}
@@ -115,7 +122,11 @@ export default function SidebarCampaignSection({
 	);
 
 	return (
-		<div className="Sidebar__section Sidebar__section__campaigns">
+		<div
+			id={makeDomId("sidebar", "campaigns")}
+			className="Sidebar__section Sidebar__section__campaigns"
+			data-history-focus-id={makeHistoryTargetId("sidebar", "campaigns")}
+		>
 			<div className="Sidebar__headerSection">
 				<h2 className="Sidebar__sectionTitle">
 					<span>{lang.t("Campaigns")}</span>

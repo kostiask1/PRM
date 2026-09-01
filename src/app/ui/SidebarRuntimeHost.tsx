@@ -46,6 +46,9 @@ export default function SidebarRuntimeHost({
 		useSearchDebounce,
 	} = useAppSelector((state) => state.ui);
 	const rolledResult = useAppSelector((state) => state.dice.rolledResult);
+	const syncEvent = useAppSelector(
+		(state) => state.sync.event,
+	) as SidebarRuntime["syncEvent"];
 	const closeModal = useCallback<SidebarRuntime["closeModal"]>((value) => {
 		closeActiveModal(value);
 	}, []);
@@ -110,6 +113,7 @@ export default function SidebarRuntimeHost({
 			storedCampaigns: campaigns,
 			storedIgnoreSourcesList,
 			storedImagePromptBasePrompt,
+			syncEvent,
 			useSearchDebounce,
 			closeModal,
 			openModal,
@@ -141,6 +145,7 @@ export default function SidebarRuntimeHost({
 			storedCampaignImagePromptBasePrompts,
 			storedIgnoreSourcesList,
 			storedImagePromptBasePrompt,
+			syncEvent,
 			useSearchDebounce,
 		],
 	);

@@ -17,12 +17,14 @@ const DIST_DIR = path.join(__dirname, "..", "dist");
 app.use(express.json({ limit: "64mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(realtimeMiddleware);
+app.use(require("./modules/history/http/historyTrackingMiddleware").historyTrackingMiddleware);
 
 app.get("/api/health", async (_req, res) => {
 	res.json({ ok: true });
 });
 
 app.use(require("./routes/assets"));
+app.use("/api", require("./routes/history"));
 app.use("/api", require("./routes/backups"));
 app.use("/api/settings", require("./routes/settings"));
 app.use("/api", require("./routes/images"));

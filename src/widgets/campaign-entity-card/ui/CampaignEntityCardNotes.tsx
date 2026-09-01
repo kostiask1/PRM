@@ -10,7 +10,7 @@ import {
 	getAiIgnoredNoteListProps,
 } from "../../../features/notes/ui/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
-import { sanitizeNotesForSave } from "../../../shared/lib/index.js";
+import { makeDomId, sanitizeNotesForSave } from "../../../shared/lib/index.js";
 import { Button, CollapseToggleButton, DraggableList } from "../../../shared/ui/index.js";
 import {
 	getCampaignNoteHighlightFields,
@@ -18,6 +18,7 @@ import {
 	type CampaignCardEntityId,
 	type CampaignEntityHighlightFields,
 } from "../model/campaignEntityCard.ts";
+import { makeHistoryTargetId } from "../../../entities/history/index.js";
 
 const CampaignEntityNoteCard = createNoteCardComponent({
 	EditableField,
@@ -26,6 +27,8 @@ const CampaignEntityNoteCard = createNoteCardComponent({
 
 export interface CampaignEntityCardNotesProps<Entity extends CardEntity> {
 	classPrefix: "CharacterCard" | "LocationCard";
+	historyScope: "campaign" | "session";
+	historyKind: "character" | "npc" | "location";
 	entityId: CampaignCardEntityId;
 	model: CardNoteModel<Entity>;
 	notesForRender: CardNote[];
@@ -36,12 +39,14 @@ export interface CampaignEntityCardNotesProps<Entity extends CardEntity> {
 	enableHistory: boolean;
 	label: ReactNode;
 	highlightFields?: CampaignEntityHighlightFields | null;
-	onChange: (id: CampaignCardEntityId, entity: Entity, options?: { trackUndo?: boolean }) => void;
+	onChange: (id: CampaignCardEntityId, entity: Entity) => void;
 	onReorderDrop?: (notes: CardNote[]) => void;
 }
 
 export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 	classPrefix,
+	historyScope,
+	historyKind,
 	entityId,
 	model,
 	notesForRender,
@@ -69,10 +74,24 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 				<DraggableList<CardNote>
 					items={notesForRender}
 					className={`${classPrefix}__notesList`}
-					onReorder={(notes) => onChange(entityId, model.withField("notes", sanitizeNotesForSave(notes)), { trackUndo: true })}
+					onReorder={(notes) =>
+						onChange(
+							entityId,
+							model.withField("notes", sanitizeNotesForSave(notes)),
+						)
+					}
 					onDrop={onReorderDrop}
 					{...getAiIgnoredNoteListProps((noteId, ignored) => updateNotes(setCampaignNoteAiIgnored(model.notes, noteId, ignored)))}
 					renderItem={(note, _isDragging, index) => (
+						<div
+							id={makeDomId("campaign", "entity", entityId, "note", note.id)}
+							data-history-focus-id={makeHistoryTargetId(
+								historyScope,
+								`${historyKind}-note`,
+								entityId,
+								note.id,
+							)}
+						>
 						<CampaignEntityNoteCard
 							note={{ ...note, text: note.text ?? "" }}
 							isLast={index === notesForRender.length - 1}
@@ -84,6 +103,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 							onDelete={(noteId) => updateNotes(model.withDeletedNote(noteId))}
 							highlightFields={getCampaignNoteHighlightFields(highlightFields, note)}
 						/>
+						</div>
 					)}
 				/>
 			)}

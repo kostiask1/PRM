@@ -9,12 +9,15 @@ interface SessionHeaderActionsProps {
 	canRedo: boolean;
 	canUndo: boolean;
 	isOpen: boolean;
+	isHistoryRestoring: boolean;
 	isSaving: boolean;
 	onDelete: () => void;
 	onOpenSearch: () => void;
 	onRedo: () => void;
 	onToggle: () => void;
 	onUndo: () => void;
+	redoTitle?: string;
+	undoTitle?: string;
 }
 
 export default function SessionHeaderActions({
@@ -22,12 +25,15 @@ export default function SessionHeaderActions({
 	canRedo,
 	canUndo,
 	isOpen,
+	isHistoryRestoring,
 	isSaving,
 	onDelete,
 	onOpenSearch,
 	onRedo,
 	onToggle,
 	onUndo,
+	redoTitle,
+	undoTitle,
 }: SessionHeaderActionsProps) {
 	return (
 		<div
@@ -57,9 +63,11 @@ export default function SessionHeaderActions({
 				<UndoRedoButtons
 					canRedo={canRedo}
 					canUndo={canUndo}
-					disabled={isSaving}
+					disabled={isSaving || isHistoryRestoring}
 					onRedo={onRedo}
 					onUndo={onUndo}
+					redoTitle={redoTitle}
+					undoTitle={undoTitle}
 				/>
 				<Button
 					variant="danger"

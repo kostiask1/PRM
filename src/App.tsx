@@ -8,6 +8,7 @@ import MainContent from "./app/routing/MainContent.tsx";
 import CampaignEntityCreationRuntimeHost from "./app/ui/CampaignEntityCreationRuntimeHost.tsx";
 import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
 import ImageGalleryRuntimeHost from "./app/ui/ImageGalleryRuntimeHost.tsx";
+import HistoryFocusRuntimeHost from "./app/ui/HistoryFocusRuntimeHost.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
 import MentionPickerModalHost from "./app/ui/MentionPickerModalHost.tsx";
 import SidebarRuntimeHost from "./app/ui/SidebarRuntimeHost.tsx";
@@ -155,6 +156,7 @@ export default function App() {
 						runtime={campaignEntityModalRuntime}
 						campaignSlug={activeCampaignSlug}
 					>
+						<HistoryFocusRuntimeHost />
 						<button
 							type="button"
 							className="App__mobileNavButton"

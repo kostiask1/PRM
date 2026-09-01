@@ -48,17 +48,6 @@ export interface CampaignSyncEvent extends Record<string, unknown> {
 	resource?: string;
 }
 
-export interface CampaignHistoryState {
-	[key: string]: unknown;
-	description: string;
-	notes: SharedNote[];
-	characters: CampaignPageEntity[];
-	npcs: CampaignPageEntity[];
-	locations: CampaignPageEntity[];
-	completed?: unknown;
-	completedAt?: unknown;
-}
-
 export interface CampaignGraphNoteSave {
 	nodeType: "campaign-note" | "session-note" | "scene-note";
 	fileName?: string;

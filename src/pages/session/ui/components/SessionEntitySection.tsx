@@ -19,6 +19,7 @@ interface SessionEntitySectionProps<Item extends SessionEntityListItem> {
 	emptyText: ReactNode;
 	items: Item[];
 	listVariant: "person" | "location";
+	historyFocusId: string;
 	onBulkCollapse: (items: Item[], collapsed: boolean) => void;
 	onReorder: (items: Item[]) => void;
 	onToggleAiIgnored: (entityId: Item["id"], ignored: boolean) => void;
@@ -31,6 +32,7 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 	emptyText,
 	items,
 	listVariant,
+	historyFocusId,
 	onBulkCollapse,
 	onReorder,
 	onToggleAiIgnored,
@@ -39,6 +41,7 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 	return (
 		<TodoSection
 			title={title}
+			historyFocusId={historyFocusId}
 			action={
 				<div className="SessionEntitySection__actions">
 					<BulkCollapseButton

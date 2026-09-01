@@ -721,3 +721,8 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+.Sidebar__historyActions {
+	display: flex;
+	gap: 0.35rem;
+	margin-top: 0.5rem;
+}

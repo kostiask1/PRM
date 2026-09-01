@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import "../../../../assets/components/CampaignDescriptionSection.css";
 import { Button, CollapseToggleButton } from "../../../../shared/ui/index.js";
 import { lang, makeDomId } from "../../../../shared/lib/index.js";
+import { makeHistoryTargetId } from "../../../../entities/history/index.js";
 
 interface CampaignDescriptionSectionProps {
 	hasData: boolean;
@@ -20,6 +21,7 @@ export default function CampaignDescriptionSection({
 		<div
 			className="CampaignDescriptionSection"
 			id={makeDomId("campaign", "description")}
+			data-history-focus-id={makeHistoryTargetId("campaign", "description")}
 		>
 			<div className="CampaignDescriptionSection__row">
 				<div className="CampaignDescriptionSection__titleGroup" onClick={onToggle}>

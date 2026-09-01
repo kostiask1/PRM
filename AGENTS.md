@@ -12,7 +12,6 @@
   - Backend: `express`, `multer`, `dotenv`, `@google/generative-ai`.
   - Tooling: `vite`, `eslint`, `sass`, `concurrently`.
 - AI потребує `GEMINI_API_KEY` у `.env`.
-- auto commit changes while working
 
 ## Architecture Map
 
@@ -25,12 +24,14 @@
 - `src/shared/api/httpClient.ts` - спільний HTTP transport для `/api/...`; consumers import it through `src/shared/api/index.ts`.
 - `src/entities/*/api` та `src/features/*/api` - API-клієнти, що належать відповідному домену/use case.
 - `src/entities/reference/api/referenceApi.ts` - reads for conditions, diseases, variant rules, skills, and senses; `entities/spell/api` owns spell endpoints only.
+- `src/entities/history` - public persistent campaign/application history API, status contracts, and React synchronization hooks used by campaign, session, encounter, and sidebar owners.
 - `src/features/campaign/index.js` plus `index.d.ts` - minimal runtime/type public entry for campaign feature policies; external slices must not import `campaignStateUtils.ts` directly.
 - `src/features/rules-reference/model.js` plus `model.d.ts` - Node-safe public entry for rules-reference parsing, preview loading, and input resolution; browser consumers use the slice root entry.
 - Compatibility facade `src/api.js` видалено; кожен consumer імпортує API client з domain owner.
 - `server/server.js` - Express entry point, монтує routes, віддає `dist/`.
 - `server/http/requestValidation.js` plus `server/modules/*/http/*RequestSchemas.js` - shared validation mechanics and domain-owned HTTP mutation schemas.
 - `server/storage.js` - основний файловий storage layer, нормалізація шляхів, JSON read/write, кампанії, сесії, entities, image refs, imports/exports, AI history.
+- `server/modules/history` - durable campaign/application transaction journals, pending-operation recovery, conflict-aware undo/redo, and lifecycle tombstones. HTTP mutation tracking composes existing commands without moving domain persistence policy into routes.
 - `server/modules/ai/infrastructure/bestiaryAiHistoryMigration.js` - canonical, retryable, non-destructive migration of legacy Bestiary AI history.
 - `server/routes/*.js` - REST API:
   - `campaigns.js` - campaigns/entities/reorder/move/export.

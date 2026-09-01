@@ -24,10 +24,6 @@ export const removeEntityById = <T extends CampaignFeatureEntity>(
 	id: CampaignFeatureEntityId,
 ): T[] => entities.filter((entity) => entity.id !== id);
 
-interface EntityChangeOptions {
-	trackUndo?: boolean;
-}
-
 interface CampaignEntityCollectionOptions<T extends CampaignFeatureEntity> {
 	campaignSlug: string;
 	type: CampaignFeatureEntityType;
@@ -44,7 +40,6 @@ interface CampaignEntityCollectionOptions<T extends CampaignFeatureEntity> {
 	confirmMentionUpdate: (oldName: string, newName: string) => Promise<boolean>;
 	applyMentionRename: (oldName: string, newName: string) => void;
 	reload?: () => void | Promise<void>;
-	pushUndo?: () => void;
 	onError?: CampaignEntityErrorHandler;
 }
 
@@ -52,7 +47,6 @@ export interface CampaignEntityCollection<T extends CampaignFeatureEntity> {
 	change: (
 		id: CampaignFeatureEntityId,
 		updated: T,
-		options?: EntityChangeOptions,
 	) => void;
 	remove: (id: CampaignFeatureEntityId) => Promise<boolean>;
 	rename: (
@@ -77,7 +71,6 @@ export function useCampaignEntityCollection<T extends CampaignFeatureEntity>({
 	confirmMentionUpdate,
 	applyMentionRename,
 	reload,
-	pushUndo,
 	onError = console.error,
 }: CampaignEntityCollectionOptions<T>): CampaignEntityCollection<T> {
 	const recover = useCallback(
@@ -103,12 +96,11 @@ export function useCampaignEntityCollection<T extends CampaignFeatureEntity>({
 	);
 
 	const change = useCallback(
-		(id: CampaignFeatureEntityId, updated: T, options: EntityChangeOptions = {}) => {
-			if (options.trackUndo) pushUndo?.();
+		(id: CampaignFeatureEntityId, updated: T) => {
 			setEntities((current) => replaceEntityById(current, id, updated));
 			if (!updated._isPending) scheduleSave(type, updated);
 		},
-		[pushUndo, scheduleSave, setEntities, type],
+		[scheduleSave, setEntities, type],
 	);
 
 	const rename = useCallback(

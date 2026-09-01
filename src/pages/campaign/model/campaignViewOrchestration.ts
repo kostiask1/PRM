@@ -71,6 +71,7 @@ const CAMPAIGN_SYNC_PLANS: Record<string, CampaignSyncPlan> = {
 	sessions: { reloadEntities: false, reloadSessions: true },
 	ai: { reloadEntities: true, reloadSessions: true },
 	import: { reloadEntities: true, reloadSessions: true },
+	history: { reloadEntities: true, reloadSessions: true },
 };
 
 export function getCampaignSyncPlan(

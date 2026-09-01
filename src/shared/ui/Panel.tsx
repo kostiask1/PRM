@@ -1,14 +1,14 @@
 import "../../assets/components/Panel.css";
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { classNames } from "../lib/index.js";
 
-export interface PanelProps {
+export interface PanelProps extends HTMLAttributes<HTMLElement> {
 	children?: ReactNode;
 	className?: string;
 }
 
-export default function Panel({ children, className = "" }: PanelProps) {
+export default function Panel({ children, className = "", ...props }: PanelProps) {
 	return (
-		<section className={classNames("Panel", className)}>{children}</section>
+		<section {...props} className={classNames("Panel", className)}>{children}</section>
 	);
 }

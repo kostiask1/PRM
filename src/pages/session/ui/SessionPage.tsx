@@ -1,4 +1,5 @@
 import {
+	useCallback,
 	useContext,
 	useMemo,
 	useRef,
@@ -55,6 +56,10 @@ import {
 	findEntityByName,
 } from "../../../entities/campaign/index.js";
 import type { SessionResourceId } from "../../../features/session-editor/index.js";
+import {
+	makeHistoryTargetId,
+	matchesHistoryTargetId,
+} from "../../../entities/history/index.js";
 import {
 	getSessionEncounterLinks,
 	getSessionPageData,
@@ -203,6 +208,142 @@ function SessionView() {
 		lang.t("Untitled"),
 	);
 	const { handleToggleSectionCollapse } = view;
+	const revealSessionHistoryTarget = useCallback((hash: string) => {
+		const sessionNote = sessionNotes.find((note) =>
+			matchesHistoryTargetId(hash, "session", "note", note.id),
+		);
+		if (sessionNote && (isSessionNotesCollapsed || sessionNote.collapsed)) {
+			view.updateSession({
+				data: {
+					...sessionData,
+					isNotesCollapsed: false,
+					notes: sessionNotes.map((note) =>
+						note.id === sessionNote.id
+							? { ...note, collapsed: false }
+							: note,
+					),
+				},
+			}, true);
+			return;
+		}
+
+		const entityGroups = [
+			{
+				kind: "npc" as const,
+				items: view.sessionNpcs,
+				onChange: view.handleSessionNpcChange,
+			},
+			{
+				kind: "location" as const,
+				items: view.sessionLocations,
+				onChange: view.handleSessionLocationChange,
+			},
+		];
+		for (const group of entityGroups) {
+			for (const entity of group.items) {
+				const targetNote = entity.notes.find((note) =>
+					matchesHistoryTargetId(
+						hash,
+						"session",
+						`${group.kind}-note`,
+						entity.id,
+						note.id,
+					),
+				);
+				const targetsEntity = matchesHistoryTargetId(
+					hash,
+					"session",
+					group.kind,
+					entity.id,
+				);
+				if (!targetNote && !targetsEntity) continue;
+				if (
+					!entity.collapsed &&
+					(!targetNote || (!entity.isNotesCollapsed && !targetNote.collapsed))
+				) {
+					return;
+				}
+				group.onChange(entity.id, {
+					...entity,
+					collapsed: false,
+					...(targetNote
+						? {
+							isNotesCollapsed: false,
+							notes: entity.notes.map((note) =>
+								note.id === targetNote.id
+									? { ...note, collapsed: false }
+									: note,
+							),
+						}
+						: {}),
+				});
+				return;
+			}
+		}
+
+		const scene = scenes.find((item) =>
+			matchesHistoryTargetId(hash, "session", "scene", item.id),
+		);
+		const sceneWithNote = scenes.find((item) =>
+			(item.notes || []).some((note) =>
+				matchesHistoryTargetId(
+					hash,
+					"session",
+					"scene-note",
+					item.id,
+					note.id,
+				),
+			),
+		);
+		const targetScene = sceneWithNote || scene;
+		if (!targetScene) return;
+		const targetNote = (sceneWithNote?.notes || []).find((note) =>
+			matchesHistoryTargetId(
+				hash,
+				"session",
+				"scene-note",
+				targetScene.id,
+				note.id,
+			),
+		);
+		if (
+			!targetScene.collapsed &&
+			(!targetNote || (!targetScene.isNotesCollapsed && !targetNote.collapsed))
+		) return;
+		view.updateData(
+			"scenes",
+			scenes.map((item) =>
+				item.id === targetScene.id
+					? {
+						...item,
+						collapsed: false,
+						...(targetNote
+							? {
+								isNotesCollapsed: false,
+								notes: (item.notes || []).map((note) =>
+									note.id === targetNote.id
+										? { ...note, collapsed: false }
+										: note,
+								),
+							}
+							: {}),
+					}
+					: item,
+			),
+			true,
+		);
+	}, [
+		isSessionNotesCollapsed,
+		scenes,
+		sessionData,
+		sessionNotes,
+		view.handleSessionLocationChange,
+		view.handleSessionNpcChange,
+		view.sessionLocations,
+		view.sessionNpcs,
+		view.updateData,
+		view.updateSession,
+	]);
 	useSessionHashNavigation({
 		sessionId,
 		isSessionNotesCollapsed,
@@ -211,6 +352,9 @@ function SessionView() {
 		sessionNpcs: view.sessionNpcs,
 		scenes,
 		onToggleSectionCollapse: handleToggleSectionCollapse,
+		onToggleSceneCollapse: view.toggleSceneCollapse,
+		onToggleSceneNotesCollapse: view.handleToggleSceneNotesCollapse,
+		onRevealHistoryTarget: revealSessionHistoryTarget,
 	});
 	usePointerDownOutsideDismissal({
 		containerRef: headerActionsRef,
@@ -312,15 +456,21 @@ function SessionView() {
 
 	return (
 		<EntityLinkResolverContext.Provider value={sessionScopedEntityLinks}>
-			<Panel className="SessionView">
+			<Panel
+				className="SessionView"
+				data-history-focus-id={makeHistoryTargetId("session", "summary")}
+			>
 				<SessionHeader
 					sessionName={session.name}
 					encounters={sessionEncounters}
 					isActionsOpen={isHeaderActionsOpen}
 					actionsRef={headerActionsRef}
 					isSaving={view.isSaving}
-					canUndo={view.undoStack.length > 0}
-					canRedo={view.redoStack.length > 0}
+					canUndo={view.canUndo}
+					canRedo={view.canRedo}
+					isHistoryRestoring={view.isHistoryRestoring}
+					undoTitle={view.undoLabel}
+					redoTitle={view.redoLabel}
 					onBack={view.handleBack}
 					onRename={view.handleRename}
 					onOpenEncounter={openEncounterFromQuickAccess}
@@ -345,6 +495,10 @@ function SessionView() {
 
 				<div className="Panel__body">
 					<div className="SessionView__todoList">
+						<div
+							id={makeDomId("session", "notes")}
+							data-history-focus-id={makeHistoryTargetId("session", "notes")}
+						>
 						<SessionNotesSection
 							notes={viewModel.notes}
 							renderableNotes={sessionNotesForRender}
@@ -357,7 +511,14 @@ function SessionView() {
 								view.updateData("notes", sanitizeNotesForSave(nextNotes))
 							}
 							renderItem={(note, _isDragging, index) => (
-								<div id={makeDomId("session", "note", note.id)}>
+								<div
+									id={makeDomId("session", "note", note.id)}
+									data-history-focus-id={makeHistoryTargetId(
+										"session",
+										"note",
+										note.id,
+									)}
+								>
 									<SessionNoteCard
 										note={note}
 										isLast={index === sessionNotesForRender.length - 1}
@@ -371,7 +532,12 @@ function SessionView() {
 								</div>
 							)}
 						/>
+						</div>
 						<SessionEntitySection
+							historyFocusId={makeHistoryTargetId(
+								"session",
+								"npc-section",
+							)}
 							title={lang.t("Session NPCs")}
 							actions={
 								<>
@@ -405,7 +571,14 @@ function SessionView() {
 								toggleSessionEntityAiIgnored("npc", entityId, ignored)
 							}
 							renderItem={(npc) => (
-								<div id={makeDomId("session", "npc", npc.id)}>
+								<div
+									id={makeDomId("session", "npc", npc.id)}
+									data-history-focus-id={makeHistoryTargetId(
+										"session",
+										"npc",
+										npc.id,
+									)}
+								>
 									<CharacterCard
 										character={npc}
 										onToggleCollapse={view.handleSessionNpcToggleCollapse}
@@ -414,6 +587,7 @@ function SessionView() {
 										campaignSlug={view.campaignSlug}
 										enableHistory={false}
 										type="npc"
+										historyScope="session"
 										headerActions={
 											<Button
 												variant="ghost"
@@ -432,6 +606,10 @@ function SessionView() {
 						/>
 
 						<SessionEntitySection
+							historyFocusId={makeHistoryTargetId(
+								"session",
+								"location-section",
+							)}
 							title={lang.t("Session locations/factions")}
 							actions={
 								<>
@@ -464,7 +642,14 @@ function SessionView() {
 								toggleSessionEntityAiIgnored("locations", entityId, ignored)
 							}
 							renderItem={(location) => (
-								<div id={makeDomId("session", "location", location.id)}>
+								<div
+									id={makeDomId("session", "location", location.id)}
+									data-history-focus-id={makeHistoryTargetId(
+										"session",
+										"location",
+										location.id,
+									)}
+								>
 									<LocationCard
 										location={location}
 										onToggleCollapse={view.handleSessionLocationToggleCollapse}
@@ -472,6 +657,7 @@ function SessionView() {
 										onDelete={view.handleSessionLocationDelete}
 										campaignSlug={view.campaignSlug}
 										enableHistory={false}
+										historyScope="session"
 										headerActions={
 											<Button
 												variant="ghost"

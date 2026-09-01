@@ -26,13 +26,13 @@ import {
 	isEncounterCharacterParticipant,
 } from "../../../entities/encounter/index.js";
 import {
-	addUndoSnapshot,
-	clearRedoStack,
-	createRedoTransition,
-	createUndoTransition,
 	isHistoryShortcutEvent,
 	shouldUseAppHistoryForEvent,
 } from "../../../shared/lib/index.js";
+import {
+	usePersistentCampaignHistory,
+	type HistoryMutationResult,
+} from "../../../entities/history/index.js";
 
 import type {
 	EncounterUpdateOptions,
@@ -119,14 +119,11 @@ export default function useEncounterView(): EncounterViewModel {
 	const [showBestiary, setShowBestiary] = useState(false);
 	const [showCharacterPicker, setShowCharacterPicker] = useState(false);
 	const [notification, setNotification] = useState<string | null>(null);
-	const [undoStack, setUndoStack] = useState<EncounterViewState[]>([]);
-	const [redoStack, setRedoStack] = useState<EncounterViewState[]>([]);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const processedDiceResultIdRef = useRef<string | number | null>(null);
 	const encounterRef = useRef<EncounterViewState | null>(null);
 	const encounterLoadRequestRef = useRef(0);
 	const encounterLoadRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const isUpdatingHistoryRef = useRef(false);
 	const reorderStartRef = useRef<EncounterViewState | null>(null);
 	const handleEncounterSaved = useCallback(
 		(result: EncounterUpdateResult) => {
@@ -139,6 +136,7 @@ export default function useEncounterView(): EncounterViewModel {
 		console.error("Failed to save encounter updates", error);
 	}, []);
 	const {
+		flush: flushEncounterSave,
 		hasPendingSave,
 		isSaving,
 		scheduleSave: saveEncounterState,
@@ -175,7 +173,7 @@ export default function useEncounterView(): EncounterViewModel {
 	}, [showBestiary, handleBack]);
 
 	const loadEncounter = useCallback(
-		async ({ retries = 3, resetHistory = true } = {}) => {
+		async ({ retries = 3 } = {}) => {
 			if (!sessionId || encounterId === "") return;
 
 			const requestId = ++encounterLoadRequestRef.current;
@@ -191,15 +189,12 @@ export default function useEncounterView(): EncounterViewModel {
 				if (!isCurrentRequest()) return;
 				setActiveSession(session);
 				executeEncounterLoadPlan(
-					getEncounterLoadPlan(session, encounterId, retries, resetHistory),
+					getEncounterLoadPlan(session, encounterId, retries),
 					{
-						onRetry: (nextRetries, shouldResetHistory) => {
+						onRetry: (nextRetries) => {
 							encounterLoadRetryRef.current = setTimeout(() => {
 								if (!isCurrentRequest()) return;
-								loadEncounter({
-									retries: nextRetries,
-									resetHistory: shouldResetHistory,
-								});
+								loadEncounter({ retries: nextRetries });
 							}, 300);
 						},
 						onNotFound: () => {
@@ -209,13 +204,9 @@ export default function useEncounterView(): EncounterViewModel {
 							});
 							handleBack();
 						},
-						onLoaded: (found, selected, shouldResetHistory) => {
+						onLoaded: (found, selected) => {
 							setEncounter(found);
 							setSelectedInstance(selected);
-							if (shouldResetHistory) {
-								setUndoStack([]);
-								setRedoStack([]);
-							}
 						},
 					},
 				);
@@ -254,9 +245,61 @@ export default function useEncounterView(): EncounterViewModel {
 				hasPendingSave(),
 			)
 		) {
-			loadEncounter({ resetHistory: false });
+			loadEncounter();
 		}
 	}, [campaign.slug, hasPendingSave, loadEncounter, sessionId, syncEvent]);
+
+	const beforeHistoryRestore = useCallback(async () => {
+		await flushEncounterSave({ throwOnError: true });
+	}, [flushEncounterSave]);
+	const afterHistoryRestore = useCallback(async (
+		result?: HistoryMutationResult,
+	) => {
+		const affected = result?.transaction?.affected;
+		const affectsCurrentEncounter = !affected || affected.encounters.some(
+			(id) => String(id) === String(encounterId),
+		);
+		const restoredEncounterExists = !result?.focus ||
+			result.focus.encounterId == null ||
+			String(result.focus.encounterId) !== String(encounterId) ||
+			result.focus.encounterExists !== false;
+		if (affectsCurrentEncounter && restoredEncounterExists) {
+			await loadEncounter();
+		}
+		requestCampaignReload();
+	}, [encounterId, loadEncounter, requestCampaignReload]);
+	const reportHistoryError = useCallback((error: unknown) => {
+		console.error("Failed to restore encounter history", error);
+		showMessage({ title: lang.t("Error"), message: getErrorMessage(error) });
+	}, [showMessage]);
+	const reportHistoryConflict = useCallback(async () => {
+		try {
+			await afterHistoryRestore();
+		} finally {
+			showMessage({
+				title: lang.t("History conflict"),
+				message: lang.t(
+					"The change could not be restored because the data was edited elsewhere. Current data and history were reloaded; review the latest changes and try again.",
+				),
+			});
+		}
+	}, [afterHistoryRestore, showMessage]);
+	const {
+		canUndo,
+		canRedo,
+		handleUndo,
+		handleRedo,
+		isRestoring: isHistoryRestoring,
+		undoLabel,
+		redoLabel,
+	} = usePersistentCampaignHistory({
+		campaignSlug: campaign.slug,
+		beforeRestore: beforeHistoryRestore,
+		onConflict: reportHistoryConflict,
+		onRestored: afterHistoryRestore,
+		onError: reportHistoryError,
+		syncVersion: syncEvent?.version,
+	});
 
 	const syncSelectedInstance = useCallback(
 		(nextEncounter: EncounterViewState | null, preferredId: string | null = null) => {
@@ -281,15 +324,8 @@ export default function useEncounterView(): EncounterViewModel {
 					nextEncounter,
 					encounterRef.current,
 					options,
-					isUpdatingHistoryRef.current,
 				),
 				{
-					recordUndo: (snapshot) => {
-						setUndoStack((prev) =>
-							addUndoSnapshot(prev, snapshot, cloneEncounterSnapshot),
-						);
-						setRedoStack(clearRedoStack());
-					},
 					setEncounter,
 					syncSelected: syncSelectedInstance,
 					persist: saveEncounterState,
@@ -312,52 +348,6 @@ export default function useEncounterView(): EncounterViewModel {
 			syncEvent,
 			onError: reportParticipantSyncError,
 		});
-
-	const handleUndo = useCallback(() => {
-		if (undoStack.length === 0) return;
-
-		const current = encounterRef.current;
-		const transition = createUndoTransition({
-			undoStack,
-			redoStack,
-			current,
-			clone: cloneEncounterSnapshot,
-		});
-		if (!transition.target) return;
-
-		isUpdatingHistoryRef.current = true;
-		setUndoStack(transition.undoStack);
-		setRedoStack(transition.redoStack);
-		setEncounter(transition.target);
-		syncSelectedInstance(transition.target);
-		saveEncounterState(transition.target);
-		setTimeout(() => {
-			isUpdatingHistoryRef.current = false;
-		}, 0);
-	}, [undoStack, redoStack, saveEncounterState, syncSelectedInstance]);
-
-	const handleRedo = useCallback(() => {
-		if (redoStack.length === 0) return;
-
-		const current = encounterRef.current;
-		const transition = createRedoTransition({
-			undoStack,
-			redoStack,
-			current,
-			clone: cloneEncounterSnapshot,
-		});
-		if (!transition.target) return;
-
-		isUpdatingHistoryRef.current = true;
-		setRedoStack(transition.redoStack);
-		setUndoStack(transition.undoStack);
-		setEncounter(transition.target);
-		syncSelectedInstance(transition.target);
-		saveEncounterState(transition.target);
-		setTimeout(() => {
-			isUpdatingHistoryRef.current = false;
-		}, 0);
-	}, [undoStack, redoStack, saveEncounterState, syncSelectedInstance]);
 
 	useEffect(() => {
 		const handleHistoryShortcuts = (e: KeyboardEvent) => {
@@ -712,15 +702,10 @@ export default function useEncounterView(): EncounterViewModel {
 					nextMonsters,
 					currentEncounter: encounterRef.current,
 					reorderStart: reorderStartRef.current,
-					isUpdatingHistory: isUpdatingHistoryRef.current,
 				}),
 				{
 					clearReorderStart: () => {
 						reorderStartRef.current = null;
-					},
-					recordUndo: (snapshot) => {
-						setUndoStack((prev) => [...prev, snapshot]);
-						setRedoStack([]);
 					},
 					persist: saveEncounterState,
 				},
@@ -731,8 +716,11 @@ export default function useEncounterView(): EncounterViewModel {
 
 	return {
 		encounter,
-		undoStack,
-		redoStack,
+		canUndo,
+		canRedo,
+		isHistoryRestoring,
+		undoLabel,
+		redoLabel,
 		isSaving,
 		selectedInstance,
 		setSelectedInstance,

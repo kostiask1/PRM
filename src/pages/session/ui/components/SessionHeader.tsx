@@ -13,8 +13,11 @@ interface SessionHeaderProps {
 	isActionsOpen: boolean;
 	actionsRef: RefObject<HTMLDivElement>;
 	isSaving: boolean;
+	isHistoryRestoring: boolean;
 	canUndo: boolean;
 	canRedo: boolean;
+	redoTitle?: string;
+	undoTitle?: string;
 	onBack: () => void;
 	onRename: () => void;
 	onOpenEncounter: (
@@ -34,8 +37,11 @@ export default function SessionHeader({
 	isActionsOpen,
 	actionsRef,
 	isSaving,
+	isHistoryRestoring,
 	canUndo,
 	canRedo,
+	redoTitle,
+	undoTitle,
 	onBack,
 	onRename,
 	onOpenEncounter,
@@ -96,11 +102,14 @@ export default function SessionHeader({
 				canUndo={canUndo}
 				isOpen={isActionsOpen}
 				isSaving={isSaving}
+				isHistoryRestoring={isHistoryRestoring}
 				onDelete={onDelete}
 				onOpenSearch={onOpenSearch}
 				onRedo={onRedo}
 				onToggle={onToggleActions}
 				onUndo={onUndo}
+				redoTitle={redoTitle}
+				undoTitle={undoTitle}
 			/>
 		</div>
 	);

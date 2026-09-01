@@ -9,8 +9,11 @@ type EncounterDisplayMode = "grid" | "single";
 type EncounterHeaderActionsView = Pick<
 	EncounterViewModel,
 	| "encounter"
-	| "undoStack"
-	| "redoStack"
+	| "canUndo"
+	| "canRedo"
+	| "isHistoryRestoring"
+	| "undoLabel"
+	| "redoLabel"
 	| "isSaving"
 	| "fileInputRef"
 	| "handleFileChange"
@@ -186,16 +189,16 @@ function EncounterHistoryControls({
 				size={Button.SIZES.SMALL}
 				icon="undo"
 				onClick={view.handleUndo}
-				disabled={view.undoStack.length === 0 || view.isSaving}
-				title={lang.t("Undo (Ctrl+Z)")}
+				disabled={!view.canUndo || view.isSaving || view.isHistoryRestoring}
+				title={view.undoLabel}
 			/>
 			<Button
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="redo"
 				onClick={view.handleRedo}
-				disabled={view.redoStack.length === 0 || view.isSaving}
-				title={lang.t("Redo (Ctrl+Y)")}
+				disabled={!view.canRedo || view.isSaving || view.isHistoryRestoring}
+				title={view.redoLabel}
 			/>
 		</>
 	);

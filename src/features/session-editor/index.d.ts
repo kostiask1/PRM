@@ -12,5 +12,4 @@ export {
 export {
 	useSessionHistory,
 	type SessionHistory,
-	type SessionHistorySnapshot,
 } from "./model/useSessionHistory.ts";

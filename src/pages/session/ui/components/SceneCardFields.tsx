@@ -31,6 +31,7 @@ export default function SceneCardFields({
 				<div key={field.key} className="SceneCardFields__item">
 					<div className="SceneCardFields__title">{lang.t(field.title)}</div>
 					<EditableField
+						data-history-field={field.key}
 						type={field.type}
 						value={String(scene.texts?.[field.key] || "")}
 						enableHistory={enableHistory}

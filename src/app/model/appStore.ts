@@ -215,7 +215,10 @@ export function navigateTo(
 		setNavigationAction({
 			activeCampaignSlug: slug || null,
 			activeSessionFileName: fileName || null,
-			activeEncounterId: encounterId || null,
+			activeEncounterId:
+				encounterId === null || encounterId === undefined
+					? null
+					: encounterId,
 		}),
 	);
 	if (routerNavigate) {

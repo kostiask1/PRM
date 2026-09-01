@@ -117,6 +117,7 @@ const SESSION_SYNC_RESOURCE_POLICIES: Record<string, SessionSyncResourcePolicy> 
 	import: "reload",
 	entities: "reload",
 	images: "reload",
+	history: "reload",
 };
 
 export function getSessionSyncAction(

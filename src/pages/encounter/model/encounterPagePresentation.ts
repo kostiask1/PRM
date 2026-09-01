@@ -47,13 +47,12 @@ export interface EncounterEditableTarget {
 }
 
 export type EncounterLoadPlan =
-	| { kind: "retry"; retries: number; resetHistory: boolean }
+	| { kind: "retry"; retries: number }
 	| { kind: "not-found" }
 	| {
 			kind: "loaded";
 			encounter: EncounterViewState;
 			selectedInstance: EncounterViewParticipant | null;
-			resetHistory: boolean;
 	  };
 
 export type EncounterMonsterDropPlan =
@@ -61,7 +60,6 @@ export type EncounterMonsterDropPlan =
 	| {
 			kind: "persist";
 			encounter: EncounterViewState;
-			undoSnapshot: EncounterViewState | null;
 	  };
 
 export type EncounterUpdatePlan =
@@ -69,7 +67,6 @@ export type EncounterUpdatePlan =
 	| {
 			kind: "update";
 			encounter: EncounterViewState;
-			undoSnapshot: EncounterViewState | null;
 			persist: boolean;
 			saveDebounceMs: number;
 			preferredId: string | null;
@@ -633,7 +630,9 @@ function canProcessEncounterSync(
 }
 
 function isEncounterSyncResource(resource: unknown): boolean {
-	return ["sessions", "ai", "import"].includes(String(resource || ""));
+	return ["sessions", "ai", "import", "history"].includes(
+		String(resource || ""),
+	);
 }
 
 function matchesEncounterSyncScope(
@@ -666,35 +665,31 @@ export function getEncounterLoadPlan(
 	session: unknown,
 	encounterId: string | number,
 	retries: number,
-	resetHistory: boolean,
 ): EncounterLoadPlan {
 	const encounter = findEncounterById(
 		getEncounterSessionEncounters(session),
 		encounterId,
 	);
 	return encounter
-		? getLoadedEncounterPlan(encounter, resetHistory)
-		: getMissingEncounterPlan(retries, resetHistory);
+		? getLoadedEncounterPlan(encounter)
+		: getMissingEncounterPlan(retries);
 }
 
 function getLoadedEncounterPlan(
 	encounter: EncounterViewState,
-	resetHistory: boolean,
 ): EncounterLoadPlan {
 	return {
 		kind: "loaded",
 		encounter,
 		selectedInstance: encounter.monsters[0] || null,
-		resetHistory,
 	};
 }
 
 function getMissingEncounterPlan(
 	retries: number,
-	resetHistory: boolean,
 ): EncounterLoadPlan {
 	return retries > 0
-		? { kind: "retry", retries: retries - 1, resetHistory }
+		? { kind: "retry", retries: retries - 1 }
 		: { kind: "not-found" };
 }
 
@@ -708,12 +703,11 @@ function findEncounterById(
 }
 
 export interface EncounterLoadPlanEffects {
-	onRetry: (retries: number, resetHistory: boolean) => void;
+	onRetry: (retries: number) => void;
 	onNotFound: () => void;
 	onLoaded: (
 		encounter: EncounterViewState,
 		selectedInstance: EncounterViewParticipant | null,
-		resetHistory: boolean,
 	) => void;
 }
 
@@ -722,14 +716,14 @@ export function executeEncounterLoadPlan(
 	effects: EncounterLoadPlanEffects,
 ): void {
 	if (plan.kind === "retry") {
-		effects.onRetry(plan.retries, plan.resetHistory);
+		effects.onRetry(plan.retries);
 		return;
 	}
 	if (plan.kind === "not-found") {
 		effects.onNotFound();
 		return;
 	}
-	effects.onLoaded(plan.encounter, plan.selectedInstance, plan.resetHistory);
+	effects.onLoaded(plan.encounter, plan.selectedInstance);
 }
 
 interface EncounterImportOptions {
@@ -790,40 +784,27 @@ export function getEncounterMonsterDropPlan({
 	nextMonsters,
 	currentEncounter,
 	reorderStart,
-	isUpdatingHistory,
 }: {
 	nextMonsters?: EncounterViewParticipant[] | null;
 	currentEncounter: EncounterViewState | null;
 	reorderStart: EncounterViewState | null;
-	isUpdatingHistory: boolean;
 }): EncounterMonsterDropPlan {
 	const encounter = nextMonsters
 		? ({ ...currentEncounter, monsters: nextMonsters } as EncounterViewState)
 		: currentEncounter;
 	if (!encounter) return { kind: "none" };
+	if (
+		reorderStart &&
+		JSON.stringify(reorderStart.monsters) === JSON.stringify(encounter.monsters)
+	) return { kind: "none" };
 	return {
 		kind: "persist",
 		encounter,
-		undoSnapshot: shouldRecordEncounterDropHistory(
-			reorderStart,
-			encounter,
-			isUpdatingHistory,
-		) ? reorderStart : null,
 	};
-}
-
-function shouldRecordEncounterDropHistory(
-	reorderStart: EncounterViewState | null,
-	encounter: EncounterViewState,
-	isUpdatingHistory: boolean,
-): boolean {
-	if (!reorderStart || isUpdatingHistory) return false;
-	return JSON.stringify(reorderStart.monsters) !== JSON.stringify(encounter.monsters);
 }
 
 export interface EncounterMonsterDropEffects {
 	clearReorderStart: () => void;
-	recordUndo: (snapshot: EncounterViewState) => void;
 	persist: (encounter: EncounterViewState) => void;
 }
 
@@ -833,7 +814,6 @@ export function executeEncounterMonsterDropPlan(
 ): void {
 	if (plan.kind === "none") return;
 	effects.clearReorderStart();
-	if (plan.undoSnapshot) effects.recordUndo(plan.undoSnapshot);
 	effects.persist(plan.encounter);
 }
 
@@ -894,18 +874,12 @@ export function getEncounterUpdatePlan(
 	nextEncounter: EncounterEditorState | null,
 	currentEncounter: EncounterViewState | null,
 	options: EncounterUpdateOptions = {},
-	isUpdatingHistory = false,
 ): EncounterUpdatePlan {
 	if (!nextEncounter) return { kind: "none" };
 	const normalizedOptions = normalizeEncounterUpdateOptions(options);
 	return {
 		kind: "update",
 		encounter: normalizeEncounterViewState(nextEncounter, currentEncounter),
-		undoSnapshot: getEncounterUpdateUndoSnapshot(
-			currentEncounter,
-			normalizedOptions.pushUndo,
-			isUpdatingHistory,
-		),
 		persist: normalizedOptions.persist,
 		saveDebounceMs: normalizedOptions.saveDebounceMs,
 		preferredId: normalizedOptions.preferredId,
@@ -914,7 +888,6 @@ export function getEncounterUpdatePlan(
 
 interface NormalizedEncounterUpdateOptions {
 	saveDebounceMs: number;
-	pushUndo: boolean;
 	persist: boolean;
 	preferredId: string | null;
 }
@@ -924,7 +897,6 @@ function normalizeEncounterUpdateOptions(
 ): NormalizedEncounterUpdateOptions {
 	return {
 		saveDebounceMs: withEncounterDefault(options.saveDebounceMs, 0),
-		pushUndo: withEncounterDefault(options.pushUndo, true),
 		persist: withEncounterDefault(options.persist, true),
 		preferredId: withEncounterDefault(options.preferredId, null),
 	};
@@ -934,18 +906,7 @@ function withEncounterDefault<T>(value: T | undefined, fallback: T): T {
 	return value === undefined ? fallback : value;
 }
 
-function getEncounterUpdateUndoSnapshot(
-	currentEncounter: EncounterViewState | null,
-	pushUndo: boolean,
-	isUpdatingHistory: boolean,
-): EncounterViewState | null {
-	return pushUndo && currentEncounter && !isUpdatingHistory
-		? currentEncounter
-		: null;
-}
-
 export interface EncounterUpdateEffects {
-	recordUndo: (snapshot: EncounterViewState) => void;
 	setEncounter: (encounter: EncounterViewState) => void;
 	syncSelected: (encounter: EncounterViewState, preferredId: string | null) => void;
 	persist: (encounter: EncounterViewState, debounceMs: number) => void;
@@ -956,7 +917,6 @@ export function executeEncounterUpdatePlan(
 	effects: EncounterUpdateEffects,
 ): void {
 	if (plan.kind === "none") return;
-	if (plan.undoSnapshot) effects.recordUndo(plan.undoSnapshot);
 	effects.setEncounter(plan.encounter);
 	effects.syncSelected(plan.encounter, plan.preferredId);
 	if (plan.persist) effects.persist(plan.encounter, plan.saveDebounceMs);

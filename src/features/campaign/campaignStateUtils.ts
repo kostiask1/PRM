@@ -7,13 +7,6 @@ export interface CampaignStateEntity extends Record<string, unknown> {
 	title?: string;
 }
 
-export interface CampaignHistoryState extends Record<string, unknown> {
-	description?: unknown;
-	notes?: SharedNote[];
-	completed?: unknown;
-	completedAt?: unknown;
-}
-
 export const sanitizeEntityForSave = <T extends CampaignStateEntity>(
 	entity: T,
 ): T => {
@@ -82,20 +75,3 @@ export const getLocationDisplayName = (
 	entity: CampaignStateEntity | null | undefined,
 ): string =>
 	String(entity?.name || entity?.title || "").trim();
-
-export const cloneHistoryList = <T extends CampaignStateEntity>(
-	items: T[] = [],
-): T[] =>
-	JSON.parse(
-		JSON.stringify(items.map((item) => sanitizeLoadedEntity(item))),
-	) as T[];
-
-export const areHistoryStatesEqual = (left: unknown, right: unknown): boolean =>
-	JSON.stringify(left) === JSON.stringify(right);
-
-export const campaignHistoryPayload = (state: CampaignHistoryState) => ({
-	description: state.description || "",
-	notes: sanitizeNotesForSave(state.notes || []),
-	completed: Boolean(state.completed),
-	completedAt: state.completedAt || null,
-});

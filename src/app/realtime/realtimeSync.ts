@@ -56,6 +56,7 @@ function isCampaignScopedEvent(event: RealtimeSyncEvent) {
 		"images",
 		"import",
 		"ai",
+		"history",
 	].includes(event.resource || "");
 }
 

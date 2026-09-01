@@ -11,23 +11,29 @@ import {
 interface CampaignHeaderActionsProps {
 	canRedo: boolean;
 	canUndo: boolean;
+	disabled?: boolean;
 	onDelete: () => void;
 	onExport: () => void;
 	onOpenPartialArchive: () => void;
 	onOpenSearch: () => void;
 	onRedo: () => void;
 	onUndo: () => void;
+	redoTitle?: string;
+	undoTitle?: string;
 }
 
 export default function CampaignHeaderActions({
 	canRedo,
 	canUndo,
+	disabled = false,
 	onDelete,
 	onExport,
 	onOpenPartialArchive,
 	onOpenSearch,
 	onRedo,
 	onUndo,
+	redoTitle,
+	undoTitle,
 }: CampaignHeaderActionsProps) {
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const headerActionsRef = useRef<HTMLDivElement>(null);
@@ -59,8 +65,11 @@ export default function CampaignHeaderActions({
 			<UndoRedoButtons
 				canRedo={canRedo}
 				canUndo={canUndo}
+				disabled={disabled}
 				onRedo={onRedo}
 				onUndo={onUndo}
+				redoTitle={redoTitle}
+				undoTitle={undoTitle}
 			/>
 			<Button
 				variant="ghost"

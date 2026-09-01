@@ -5,9 +5,13 @@ import { lang } from "../../../../shared/lib/index.js";
 import CampaignHeaderActions from "./CampaignHeaderActions.tsx";
 
 interface CampaignHeaderView {
+	canRedo: boolean;
+	canUndo: boolean;
 	handleRename: () => void;
-	redoStack: readonly unknown[];
-	undoStack: readonly unknown[];
+	isHistoryRestoring: boolean;
+	isSaving: boolean;
+	redoLabel: string;
+	undoLabel: string;
 	handleDeleteCampaign: () => void;
 	handleExport: () => void;
 	handleRedo: () => void;
@@ -40,14 +44,17 @@ export default function CampaignHeader({
 				</p>
 			</div>
 			<CampaignHeaderActions
-				canRedo={view.redoStack.length > 0}
-				canUndo={view.undoStack.length > 0}
+				canRedo={view.canRedo}
+				canUndo={view.canUndo}
+				disabled={view.isSaving || view.isHistoryRestoring}
 				onDelete={() => view.handleDeleteCampaign()}
 				onExport={() => view.handleExport()}
 				onOpenPartialArchive={onOpenPartialArchive}
 				onOpenSearch={onOpenSearch}
 				onRedo={view.handleRedo}
 				onUndo={view.handleUndo}
+				redoTitle={view.redoLabel}
+				undoTitle={view.undoLabel}
 			/>
 		</div>
 	);

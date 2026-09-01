@@ -1,4 +1,5 @@
 import {
+	useCallback,
 	useMemo,
 	useState,
 } from "react";
@@ -37,6 +38,10 @@ import { lang } from "../../../shared/lib/index.js";
 import { getNotesForRender } from "../../../shared/lib/index.js";
 import { makeDomId } from "../../../shared/lib/index.js";
 import type { DomainId } from "../../../entities/campaign/index.js";
+import {
+	makeHistoryTargetId,
+	matchesHistoryTargetId,
+} from "../../../entities/history/index.js";
 import type { CampaignPageCampaign } from "../model/contracts.ts";
 import {
 	filterCampaignSessions,
@@ -140,6 +145,88 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		onReorder: view.handleLocationsReorder,
 		onPersistReorder: view.persistEntitiesReorder,
 	});
+	const revealCampaignHistoryTarget = useCallback((hash: string) => {
+		if (
+			isDescriptionCollapsed &&
+			matchesHistoryTargetId(hash, "campaign", "description")
+		) {
+			view.setIsDescriptionCollapsed(false);
+		}
+
+		const campaignNote = view.notes.find((note) =>
+			matchesHistoryTargetId(hash, "campaign", "note", note.id),
+		);
+		if (campaignNote?.collapsed) view.handleToggleNoteCollapse(campaignNote.id);
+
+		const entityGroups = [
+			{
+				kind: "character" as const,
+				items: view.characters,
+				onChange: view.handleCharacterChange,
+			},
+			{
+				kind: "npc" as const,
+				items: view.npcs,
+				onChange: view.handleNpcChange,
+			},
+			{
+				kind: "location" as const,
+				items: view.locations,
+				onChange: view.handleLocationChange,
+			},
+		];
+		for (const group of entityGroups) {
+			for (const entity of group.items) {
+				if (entity.id === undefined) continue;
+				const targetNote = (entity.notes || []).find((note) =>
+					matchesHistoryTargetId(
+						hash,
+						"campaign",
+						`${group.kind}-note`,
+						entity.id,
+						note.id,
+					),
+				);
+				const targetsEntity = matchesHistoryTargetId(
+					hash,
+					"campaign",
+					group.kind,
+					entity.id,
+				);
+				if (!targetNote && !targetsEntity) continue;
+				const notes = targetNote
+					? (entity.notes || []).map((note) =>
+						note.id === targetNote.id && note.collapsed
+							? { ...note, collapsed: false }
+							: note,
+					)
+					: entity.notes;
+				if (
+					!entity.collapsed &&
+					(!targetNote || (!entity.isNotesCollapsed && !targetNote.collapsed))
+				) {
+					return;
+				}
+				group.onChange(entity.id, {
+					...entity,
+					collapsed: false,
+					...(targetNote ? { isNotesCollapsed: false, notes } : {}),
+				});
+				return;
+			}
+		}
+	}, [
+		isDescriptionCollapsed,
+		view.characters,
+		view.handleCharacterChange,
+		view.handleLocationChange,
+		view.handleNpcChange,
+		view.handleToggleNoteCollapse,
+		view.locations,
+		view.notes,
+		view.npcs,
+		view.setIsDescriptionCollapsed,
+	]);
 
 	useCampaignHashNavigation({
 		campaignSlug: campaign.slug,
@@ -153,6 +240,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		setIsNotesCollapsed,
 		setIsNpcsCollapsed,
 		setNotesViewMode,
+		onRevealHistoryTarget: revealCampaignHistoryTarget,
 	});
 
 	useCampaignCharacterTypeDrop({
@@ -168,6 +256,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	};
 	const renderCampaignDescriptionEditor = () => (
 		<EditableField
+			data-history-field="description"
 			type="textarea"
 			className="CampaignView__script"
 			enableHistory={false}
@@ -204,7 +293,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const onCloseGlobalSearch = () => setIsGlobalSearchOpen(false);
 
 	return (
-		<Panel className="CampaignView">
+		<Panel
+			className="CampaignView"
+			data-history-focus-id={makeHistoryTargetId("campaign", "summary")}
+		>
 			<CampaignHeader
 				view={view}
 				viewModel={viewModel}
@@ -245,6 +337,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 						/>
 
 						<CampaignEntitySection
+							historyFocusId={makeHistoryTargetId(
+								"campaign",
+								"character-section",
+							)}
 							title={lang.t("Characters")}
 							items={view.characters}
 							hasData={hasCharactersData}
@@ -267,14 +363,25 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 								id: character.id,
 							})}
 							renderItem={(character) => (
-								<div id={makeDomId("campaign", "character", character.id)}>
+								<div
+									id={makeDomId("campaign", "character", character.id)}
+									data-history-focus-id={makeHistoryTargetId(
+										"campaign",
+										"character",
+										character.id,
+									)}
+								>
 									<CharacterCard
 										character={character}
 										onToggleCollapse={(id) => {
-											if (id !== undefined) view.handleToggleCharacterCollapse(id);
+											if (id !== undefined) {
+												view.handleToggleCharacterCollapse(id);
+											}
 										}}
-										onChange={(id, updated, options) => {
-											if (id !== undefined) view.handleCharacterChange(id, updated, options);
+										onChange={(id, updated) => {
+											if (id !== undefined) {
+												view.handleCharacterChange(id, updated);
+											}
 										}}
 										onNameBlur={(id, updated, oldName, newName) =>
 											id === undefined
@@ -294,6 +401,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 						/>
 
 						<CampaignEntitySection
+							historyFocusId={makeHistoryTargetId(
+								"campaign",
+								"npc-section",
+							)}
 							title={lang.t("NPC")}
 							items={view.npcs}
 							hasData={hasNpcsData}
@@ -325,14 +436,25 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 								/>
 							)}
 							renderItem={(npc) => (
-								<div id={makeDomId("campaign", "npc", npc.id)}>
+								<div
+									id={makeDomId("campaign", "npc", npc.id)}
+									data-history-focus-id={makeHistoryTargetId(
+										"campaign",
+										"npc",
+										npc.id,
+									)}
+								>
 									<CharacterCard
 										character={npc}
 										onToggleCollapse={(id) => {
-											if (id !== undefined) view.handleToggleNpcCollapse(id);
+											if (id !== undefined) {
+												view.handleToggleNpcCollapse(id);
+											}
 										}}
-										onChange={(id, updated, options) => {
-											if (id !== undefined) view.handleNpcChange(id, updated, options);
+										onChange={(id, updated) => {
+											if (id !== undefined) {
+												view.handleNpcChange(id, updated);
+											}
 										}}
 										onNameBlur={(id, updated, oldName, newName) =>
 											id === undefined
@@ -352,6 +474,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 						/>
 
 						<CampaignEntitySection
+							historyFocusId={makeHistoryTargetId(
+								"campaign",
+								"location-section",
+							)}
 							title={lang.t("Locations/Factions")}
 							items={view.locations}
 							hasData={hasLocationsData}
@@ -378,14 +504,25 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 								/>
 							)}
 							renderItem={(location) => (
-								<div id={makeDomId("campaign", "location", location.id)}>
+								<div
+									id={makeDomId("campaign", "location", location.id)}
+									data-history-focus-id={makeHistoryTargetId(
+										"campaign",
+										"location",
+										location.id,
+									)}
+								>
 									<LocationCard
 										location={location}
 										onToggleCollapse={(id) => {
-											if (id !== undefined) view.handleToggleLocationCollapse(id);
+											if (id !== undefined) {
+												view.handleToggleLocationCollapse(id);
+											}
 										}}
-										onChange={(id, updated, options) => {
-											if (id !== undefined) view.handleLocationChange(id, updated, options);
+										onChange={(id, updated) => {
+											if (id !== undefined) {
+												view.handleLocationChange(id, updated);
+											}
 										}}
 										onNameBlur={(id, updated, oldName, newName) =>
 											id === undefined

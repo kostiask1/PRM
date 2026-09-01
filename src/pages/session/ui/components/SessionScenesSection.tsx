@@ -5,6 +5,7 @@ import { BulkCollapseButton } from "../../../../features/notes/ui/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import { Button, DraggableList } from "../../../../shared/ui/index.js";
 import TodoSection from "./TodoSection.tsx";
+import { makeHistoryTargetId } from "../../../../entities/history/index.js";
 
 interface SessionScenesSectionProps {
 	scenes: SessionScene[];
@@ -24,6 +25,7 @@ export default function SessionScenesSection({
 	return (
 		<TodoSection
 			title={lang.t("Scenes")}
+			historyFocusId={makeHistoryTargetId("session", "scenes")}
 			action={
 				<div className="SessionScenesSection__actions">
 					<BulkCollapseButton items={scenes} onChange={onBulkCollapse} />

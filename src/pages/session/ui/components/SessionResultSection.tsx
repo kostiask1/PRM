@@ -15,6 +15,7 @@ export default function SessionResultSection({
 	return (
 		<TodoSection title={lang.t("Session result")}>
 			<EditableField
+				data-history-field="result_text"
 				type="textarea"
 				className="SessionResultSection__field"
 				enableHistory={false}

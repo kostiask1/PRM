@@ -74,26 +74,12 @@ export function shouldUseAppHistoryForEvent(
 	event: Pick<Event, "target">,
 ): boolean;
 
-export interface DistinctHistoryTransitionOptions<T> {
-	undoStack: T[];
-	redoStack: T[];
-	current: T;
-	isEqual: (left: T, right: T) => boolean;
-	clone?: (value: T) => T;
-}
-
 export function addUndoSnapshot<T>(
 	undoStack: T[],
 	snapshot: T,
 	clone?: (value: T) => T,
 ): T[];
 export function clearRedoStack<T>(): T[];
-export function createDistinctUndoTransition<T>(
-	options: DistinctHistoryTransitionOptions<T>,
-): HistoryTransition<T>;
-export function createDistinctRedoTransition<T>(
-	options: DistinctHistoryTransitionOptions<T>,
-): HistoryTransition<T>;
 export function useDebounce<T>(value: T, delay: number): T;
 export interface DiceProbabilityOptions {
 	maxRollCombinations?: number;

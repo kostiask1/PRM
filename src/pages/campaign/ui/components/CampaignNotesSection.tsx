@@ -8,6 +8,7 @@ import {
 import { EditableField } from "../../../../features/editor/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
 import type { DomainId } from "../../../../entities/campaign/index.js";
+import { makeHistoryTargetId } from "../../../../entities/history/index.js";
 import {
 	getNotesForRender,
 	lang,
@@ -56,7 +57,14 @@ function CampaignNotesList({
 				isolateDragEvents: false,
 			})}
 			renderItem={(note, _isDragging, index) => (
-				<div id={makeDomId("campaign", "note", note.id)}>
+				<div
+					id={makeDomId("campaign", "note", note.id)}
+					data-history-focus-id={makeHistoryTargetId(
+						"campaign",
+						"note",
+						note.id,
+					)}
+				>
 					<CampaignNoteCard
 						note={normalizeCampaignCardNote(note)}
 						isLast={index === notes.length - 1}
@@ -199,7 +207,11 @@ export default function CampaignNotesSection({
 		view.triggerSave(patch);
 	};
 	return (
-		<div className="CampaignNotesSection">
+		<div
+			id={makeDomId("campaign", "notes")}
+			className="CampaignNotesSection"
+			data-history-focus-id={makeHistoryTargetId("campaign", "notes")}
+		>
 			<div className="CampaignNotesSection__row">
 				<div className="CampaignNotesSection__titleGroup" onClick={toggle}>
 					{presentation.canToggleCollapse && (

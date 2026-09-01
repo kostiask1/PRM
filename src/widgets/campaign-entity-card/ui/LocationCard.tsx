@@ -20,18 +20,20 @@ import {
 	type CampaignEntityHighlightFields,
 } from "../model/campaignEntityCard.ts";
 import CampaignEntityCardNotes from "./CampaignEntityCardNotes.tsx";
+import { makeHistoryTargetId } from "../../../entities/history/index.js";
 
 export interface LocationCardProps {
 	location: LocationData;
 	isDragging?: boolean;
 	onToggleCollapse?: ((id: CampaignCardEntityId) => void) | null;
-	onChange: (id: CampaignCardEntityId, location: LocationData, options?: { trackUndo?: boolean }) => void;
+	onChange: (id: CampaignCardEntityId, location: LocationData) => void;
 	onNameBlur?: (id: CampaignCardEntityId, location: LocationData, oldName: string, newName: string) => boolean | void | Promise<boolean | void>;
 	onDelete?: (id: CampaignCardEntityId) => void;
 	onReorderDrop?: (notes: CardNote[]) => void;
 	campaignSlug?: string | null;
 	enableHistory?: boolean;
 	viewMode?: CampaignCardViewMode;
+	historyScope?: "campaign" | "session";
 	showDeleteButton?: boolean;
 	showHeader?: boolean;
 	headerActions?: ReactNode;
@@ -75,6 +77,7 @@ export default function LocationCard({
 	campaignSlug,
 	enableHistory = true,
 	viewMode = "card",
+	historyScope = "campaign",
 	showDeleteButton = true,
 	showHeader = true,
 	headerActions = null,
@@ -95,14 +98,14 @@ export default function LocationCard({
 		if (shouldAdvance) editingStartNameRef.current = newName;
 	};
 	return (
-		<div className={classNames("LocationCard", { is_collapsed: presentation.isCollapsed, is_dragging: isDragging, LocationCard__modal: viewMode === "modal" })} onClick={() => presentation.isCollapsed && onToggleCollapse?.(location.id)}>
+		<div data-history-focus-id={makeHistoryTargetId(historyScope, "location", location.id)} className={classNames("LocationCard", { is_collapsed: presentation.isCollapsed, is_dragging: isDragging, LocationCard__modal: viewMode === "modal" })} onClick={() => presentation.isCollapsed && onToggleCollapse?.(location.id)}>
 			{showHeader && <LocationCardHeader location={location} model={model} displayName={displayName} viewMode={viewMode} canCollapseCard={presentation.canCollapseCard} isCollapsed={presentation.isCollapsed} showDeleteButton={showDeleteButton} headerActions={headerActions} onToggleCollapse={onToggleCollapse} onDelete={onDelete} />}
 			{!presentation.isCollapsed && (
 				<div className="LocationCard__body">
 					<div className="LocationCard__imageSide"><ImageAssetField imageUrl={location.imageUrl} campaignSlug={campaignSlug} target="location" showClearButton onImageChange={(url) => updateField("imageUrl", url)} imageAlt={lang.t("Image")} containerClassName="LocationCard__imageContainer" wrapperClassName={classNames("LocationCard__imageWrapper", "is_editable")} deleteButtonClassName="LocationCard__imageDelete" previewTitle={displayName || lang.t("Image")} previewModalClassName="LocationCard__imageModal" previewContentClassName="LocationCard__imageModalContent" /></div>
-					<div><div className="LocationCard__grid"><EditableField type="text" value={location.name ?? ""} enableHistory={enableHistory} onChange={(event) => updateField("name", event.target.value)} onBlur={() => { void handleNameBlur(); }} placeholder={lang.t("Name")} className={getCampaignEntityFieldClass(highlightFields, "name")} /></div></div>
-					<div className="LocationCard__details"><div className="LocationCard__field"><EditableField type="textarea" value={location.description ?? ""} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Briefly describe the location or faction...")} className={getCampaignEntityFieldClass(highlightFields, "description")} /></div></div>
-					<CampaignEntityCardNotes classPrefix="LocationCard" entityId={location.id} model={model} notesForRender={notesForRender} hasNotesData={presentation.hasNotesData} isNotesCollapsed={presentation.isNotesCollapsed} currentNotesCollapsed={Boolean(location.isNotesCollapsed)} campaignSlug={campaignSlug} enableHistory={enableHistory} label={lang.t("Notes")} highlightFields={highlightFields} onChange={onChange} onReorderDrop={onReorderDrop} />
+					<div><div className="LocationCard__grid"><EditableField data-history-field="name" type="text" value={location.name ?? ""} enableHistory={enableHistory} onChange={(event) => updateField("name", event.target.value)} onBlur={() => { void handleNameBlur(); }} placeholder={lang.t("Name")} className={getCampaignEntityFieldClass(highlightFields, "name")} /></div></div>
+					<div className="LocationCard__details"><div className="LocationCard__field"><EditableField data-history-field="description" type="textarea" value={location.description ?? ""} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Briefly describe the location or faction...")} className={getCampaignEntityFieldClass(highlightFields, "description")} /></div></div>
+					<CampaignEntityCardNotes classPrefix="LocationCard" historyScope={historyScope} historyKind="location" entityId={location.id} model={model} notesForRender={notesForRender} hasNotesData={presentation.hasNotesData} isNotesCollapsed={presentation.isNotesCollapsed} currentNotesCollapsed={Boolean(location.isNotesCollapsed)} campaignSlug={campaignSlug} enableHistory={enableHistory} label={lang.t("Notes")} highlightFields={highlightFields} onChange={onChange} onReorderDrop={onReorderDrop} />
 				</div>
 			)}
 		</div>

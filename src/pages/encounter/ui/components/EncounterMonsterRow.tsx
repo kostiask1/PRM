@@ -1,4 +1,4 @@
-import { classNames, lang } from "../../../../shared/lib/index.js";
+import { classNames, lang, makeDomId } from "../../../../shared/lib/index.js";
 import "../../../../assets/components/EncounterMonsterRow.css";
 import { Button, Tooltip } from "../../../../shared/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
@@ -12,6 +12,7 @@ import type {
 	EncounterViewModel,
 	EncounterViewParticipant,
 } from "../../model/contracts.ts";
+import { makeHistoryTargetId } from "../../../../entities/history/index.js";
 
 type EncounterMonsterRowView = Pick<
 	EncounterViewModel,
@@ -65,6 +66,7 @@ function EncounterMonsterCombatStats({
 function EncounterCurrentHpInput({ monster, instanceId, hpDrafts, view, onHpChange, onHpBlur, maxHp }: EncounterMonsterCombatStatsProps & { maxHp: string | number }) {
 	return (
 		<input
+			data-history-field="currentHp"
 			type="text"
 			value={getEncounterHpInputDisplay(hpDrafts[instanceId], monster.currentHp)}
 			onChange={(event) => onHpChange(instanceId, event.target.value)}
@@ -81,7 +83,7 @@ function EncounterCurrentHpInput({ monster, instanceId, hpDrafts, view, onHpChan
 function EncounterMaxHpInput({ instanceId, view, maxHp }: { instanceId: string; view: EncounterMonsterRowView; maxHp: string | number }) {
 	return (
 		<Tooltip content={lang.t("Max HP")}>
-			<input type="number" value={maxHp} onChange={(event) => view.updateMonsterMaxHp(instanceId, event.target.value)} onClick={(event) => event.stopPropagation()} className="EncounterMonsterRow__maxHpInput" />
+			<input data-history-field="hit_points" type="number" value={maxHp} onChange={(event) => view.updateMonsterMaxHp(instanceId, event.target.value)} onClick={(event) => event.stopPropagation()} className="EncounterMonsterRow__maxHpInput" />
 		</Tooltip>
 	);
 }
@@ -167,6 +169,12 @@ export default function EncounterMonsterRow({
 
 	return (
 		<div
+			id={makeDomId("encounter", "participant", instanceId)}
+			data-history-focus-id={makeHistoryTargetId(
+				"encounter",
+				"participant",
+				instanceId,
+			)}
 			className={classNames("EncounterMonsterRow", {
 				EncounterMonsterRow__character: isCharacter,
 				is_active: selectedInstanceId === instanceId,

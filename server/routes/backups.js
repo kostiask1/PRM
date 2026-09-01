@@ -1,8 +1,10 @@
 const express = require("express");
 const multer = require("multer");
 const storage = require("../storage");
+const { historyService } = require("../modules/history/runtime");
 const {
 	createBackupCommands,
+	normalizeImportStrategy,
 	parseArchivePayload,
 	parseList,
 } = require("../modules/backups/application/backupCommands");
@@ -86,6 +88,37 @@ function readUploadedArchivePayload(req) {
 	}
 }
 
+function campaignBundlesFromImportPayload(payload) {
+	if (Array.isArray(payload)) return payload;
+	if (Array.isArray(payload?.campaigns)) return payload.campaigns;
+	return payload?.meta || payload?.bundle?.meta ? [payload] : [];
+}
+
+async function findReplacedCampaignSlugs(payload, strategy) {
+	if (strategy === "wipe_and_replace") {
+		return storage.listExportableCampaignSlugs();
+	}
+	if (strategy !== "replace_by_id") return [];
+
+	const slugs = [];
+	for (const entry of campaignBundlesFromImportPayload(payload)) {
+		const bundle = entry?.bundle || entry;
+		const campaignId = bundle?.meta?.id;
+		if (campaignId == null) continue;
+		const slug = await storage.findCampaignSlugById(campaignId);
+		if (slug) slugs.push(slug);
+	}
+	return [...new Set(slugs)];
+}
+
+async function resetImportedChangeHistory(payload, strategy) {
+	const affectedCampaigns = await findReplacedCampaignSlugs(payload, strategy);
+	await historyService.clearApplicationHistory();
+	for (const slug of affectedCampaigns) {
+		await historyService.clearCampaignHistory(slug);
+	}
+}
+
 router.get("/export-all", async (_req, res, next) => {
 	try {
 		res.json(await backupCommands.exportAll());
@@ -147,12 +180,13 @@ router.post(
 				validatePartialArchiveBundle,
 				"archive",
 			);
-			res.status(201).json(
-				await backupCommands.importPartialArchive({
-					slug: req.params.slug,
-					payload: validatedArchive,
-				}),
-			);
+			await historyService.clearApplicationHistory();
+			await historyService.clearCampaignHistory(req.params.slug);
+			const result = await backupCommands.importPartialArchive({
+				slug: req.params.slug,
+				payload: validatedArchive,
+			});
+			res.status(201).json(result);
 		} catch (error) {
 			next(error);
 		}
@@ -164,12 +198,13 @@ router.post(
 	validateBody(validateCampaignBundleCollection),
 	async (req, res, next) => {
 		try {
-			res.status(201).json(
-				await backupCommands.importAll({
-					payload: req.validatedBody,
-					strategy: req.query.strategy,
-				}),
-			);
+			const strategy = normalizeImportStrategy(req.query.strategy);
+			await resetImportedChangeHistory(req.validatedBody, strategy);
+			const result = await backupCommands.importAll({
+				payload: req.validatedBody,
+				strategy,
+			});
+			res.status(201).json(result);
 		} catch (error) {
 			next(error);
 		}
@@ -186,13 +221,18 @@ router.post(
 				validateCampaignArchiveEnvelope,
 				"archive",
 			);
-			res.status(201).json(
-				await backupCommands.importArchive({
-					payload,
-					mode: req.query.mode,
-					strategy: req.query.strategy,
-				}),
-			);
+			const mode = req.query.mode === "campaign" ? "campaign" : "all";
+			const strategy =
+				mode === "all"
+					? normalizeImportStrategy(req.query.strategy)
+					: "append";
+			await resetImportedChangeHistory(payload, strategy);
+			const result = await backupCommands.importArchive({
+				payload,
+				mode,
+				strategy,
+			});
+			res.status(201).json(result);
 		} catch (error) {
 			next(error);
 		}

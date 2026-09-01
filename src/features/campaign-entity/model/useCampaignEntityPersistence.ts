@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { updateCampaignEntity } from "./createEntity.ts";
 import type {
 	CampaignEntityErrorHandler,
@@ -14,6 +14,10 @@ interface PendingCampaignEntitySave {
 	entity: CampaignFeatureEntity;
 }
 
+interface FlushCampaignEntitySavesOptions {
+	throwOnError?: boolean;
+}
+
 interface CampaignEntityPersistenceOptions {
 	campaignSlug: string;
 	sanitizeEntity: CampaignEntitySanitizer;
@@ -27,7 +31,8 @@ export interface CampaignEntityPersistence {
 		id: CampaignFeatureEntityId,
 	) => void;
 	discardSaves: () => void;
-	flushSaves: () => Promise<void>;
+	isSaving: boolean;
+	flushSaves: (options?: FlushCampaignEntitySavesOptions) => Promise<void>;
 	scheduleSave: (
 		type: CampaignFeatureEntityType,
 		entity: CampaignFeatureEntity,
@@ -42,6 +47,8 @@ export function useCampaignEntityPersistence({
 }: CampaignEntityPersistenceOptions): CampaignEntityPersistence {
 	const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 	const pendingRef = useRef<Record<string, PendingCampaignEntitySave>>({});
+	const savingCountRef = useRef(0);
+	const [isSaving, setIsSaving] = useState(false);
 
 	const clearSave = useCallback(
 		(type: CampaignFeatureEntityType, id: CampaignFeatureEntityId) => {
@@ -54,8 +61,13 @@ export function useCampaignEntityPersistence({
 	);
 
 	const persist = useCallback(
-		async (pending: PendingCampaignEntitySave | undefined) => {
+		async (
+			pending: PendingCampaignEntitySave | undefined,
+			{ throwOnError = false }: FlushCampaignEntitySavesOptions = {},
+		) => {
 			if (!pending?.entity?.slug) return;
+			savingCountRef.current += 1;
+			setIsSaving(true);
 			try {
 				await updateCampaignEntity(
 					pending.campaignSlug,
@@ -65,6 +77,10 @@ export function useCampaignEntityPersistence({
 				);
 			} catch (error) {
 				onError(`Failed to update ${pending.type} entity`, error);
+				if (throwOnError) throw error;
+			} finally {
+				savingCountRef.current = Math.max(0, savingCountRef.current - 1);
+				if (savingCountRef.current === 0) setIsSaving(false);
 			}
 		},
 		[onError, sanitizeEntity],
@@ -96,13 +112,15 @@ export function useCampaignEntityPersistence({
 		pendingRef.current = {};
 	}, []);
 
-	const flushSaves = useCallback(async () => {
+	const flushSaves = useCallback(async (
+		options: FlushCampaignEntitySavesOptions = {},
+	) => {
 		Object.values(timersRef.current).forEach((timer) => clearTimeout(timer));
 		timersRef.current = {};
 		const entries = Object.values(pendingRef.current);
 		pendingRef.current = {};
-		await Promise.all(entries.map(persist));
+		await Promise.all(entries.map((entry) => persist(entry, options)));
 	}, [persist]);
 
-	return { clearSave, discardSaves, flushSaves, scheduleSave };
+	return { clearSave, discardSaves, flushSaves, isSaving, scheduleSave };
 }

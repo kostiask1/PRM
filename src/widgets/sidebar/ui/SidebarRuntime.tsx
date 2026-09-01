@@ -51,6 +51,7 @@ export interface SidebarRuntime extends Pick<
 		options: SidebarRulesReferenceNavigationOptions,
 	): void;
 	rolledResult: unknown;
+	syncEvent: { version?: string | number | null } | null;
 }
 
 export interface SidebarRuntimeProviderProps {

@@ -7,6 +7,7 @@ import type {
 import type { EncounterEditorState } from "./contracts.ts";
 
 export interface EncounterFlushOptions {
+	throwOnError?: boolean;
 	updateUi?: boolean;
 }
 
@@ -46,6 +47,7 @@ export function useEncounterPersistence({
 
 	const flush = useCallback(
 		async ({
+			throwOnError = false,
 			updateUi = true,
 		}: EncounterFlushOptions = {}): Promise<EncounterUpdateResult | null> => {
 			clearTimer();
@@ -64,6 +66,7 @@ export function useEncounterPersistence({
 				return result;
 			} catch (error) {
 				onError?.(error);
+				if (throwOnError) throw error;
 				return null;
 			} finally {
 				if (updateUi) setIsSaving(false);

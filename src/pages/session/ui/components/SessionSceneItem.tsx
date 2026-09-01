@@ -5,6 +5,7 @@ import {
 } from "../../../../entities/session/index.js";
 import type { SessionResourceId } from "../../../../features/session-editor/index.js";
 import { makeDomId } from "../../../../shared/lib/index.js";
+import { makeHistoryTargetId } from "../../../../entities/history/index.js";
 import SessionNoteCard from "./SessionNoteCard.tsx";
 import SessionSceneCard from "./SessionSceneCard.tsx";
 
@@ -85,7 +86,14 @@ function SessionSceneItem({
 		onNoteDelete(scene.id, noteId);
 
 	return (
-		<div id={makeDomId("session", "scene", scene.id)}>
+		<div
+			id={makeDomId("session", "scene", scene.id)}
+			data-history-focus-id={makeHistoryTargetId(
+				"session",
+				"scene",
+				scene.id,
+			)}
+		>
 			<SessionSceneCard
 				number={number}
 				scene={scene}
@@ -115,16 +123,32 @@ function SessionSceneItem({
 				}
 				simplifiedNotesEnabled={simplifiedNotesEnabled}
 				renderNoteCard={(note, isLast) => (
-					<SessionNoteCard
-						note={note}
-						isLast={isLast}
-						campaignSlug={campaignSlug}
-						enableHistory={false}
-						onToggleCollapse={onSceneNoteToggleCollapse}
-						onTitleChange={onSceneNoteTitleChange}
-						onTextChange={onSceneNoteChange}
-						onDelete={onSceneNoteDelete}
-					/>
+					<div
+						id={makeDomId(
+							"session",
+							"scene",
+							scene.id,
+							"note",
+							note.id,
+						)}
+						data-history-focus-id={makeHistoryTargetId(
+							"session",
+							"scene-note",
+							scene.id,
+							note.id,
+						)}
+					>
+						<SessionNoteCard
+							note={note}
+							isLast={isLast}
+							campaignSlug={campaignSlug}
+							enableHistory={false}
+							onToggleCollapse={onSceneNoteToggleCollapse}
+							onTitleChange={onSceneNoteTitleChange}
+							onTextChange={onSceneNoteChange}
+							onDelete={onSceneNoteDelete}
+						/>
+					</div>
 				)}
 			/>
 		</div>

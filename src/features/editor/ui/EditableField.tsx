@@ -79,12 +79,18 @@ import {
 } from "@lexical/list";
 import { $setBlocksType } from "@lexical/selection";
 import { Button, Tooltip } from "../../../shared/ui/index.js";
+import {
+	getHistoryCaretValueRevision,
+	HISTORY_CARET_REQUEST_EVENT,
+	type HistoryCaretRequest,
+} from "../../../entities/history/index.js";
 import "../../../assets/components/EditableField.css";
 import "../../../assets/components/EntityLink.css";
 import { classNames } from "../../../shared/lib/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { parseUrl } from "../../../shared/lib/index.js";
 import { requestMentionSelection } from "../model/mentionPicker.ts";
+import { applyHistoryCaretSourceOffset } from "../model/historyCaret.ts";
 import {
 	createMentionBoundaryNode,
 	handleSpaceAfterMention,
@@ -690,6 +696,7 @@ interface MentionTooltipState {
 interface LexicalEditableFieldProps {
 	openMentionPicker: Parameters<typeof requestMentionSelection>[0];
 	enableHistory: boolean;
+	historySourceValue: string;
 	isActive: boolean;
 	isDisabled: boolean;
 	lastEventRef: MutableRefObject<unknown>;
@@ -712,6 +719,60 @@ function getEventTargetElement(event: { target: EventTarget | null }) {
 	return event.target instanceof Element ? event.target : null;
 }
 
+function useHistoryCaretRequests({
+	editor,
+	historySourceValue,
+	markdownValue,
+	type,
+}: {
+	editor: LexicalEditor;
+	historySourceValue: string;
+	markdownValue: string;
+	type: EditableFieldType;
+}) {
+	useLayoutEffect(() => {
+		const valueRevision = getHistoryCaretValueRevision(historySourceValue);
+		const handleRequest = (event: Event) => {
+			const request = (event as CustomEvent<HistoryCaretRequest>).detail;
+			if (!Number.isSafeInteger(request?.offset)) return;
+			if (request.valueRevision && request.valueRevision !== valueRevision) return;
+
+			let applied = false;
+			editor.update(
+				() => {
+					if ($readMarkdownValue(type) !== markdownValue) return;
+					applied = applyHistoryCaretSourceOffset({
+						isMentionNode: $isMentionNode,
+						loadValue: (value) => $loadMarkdownValue(value, type),
+						normalizedValue: markdownValue,
+						offset: request.offset,
+						readValue: () => $readMarkdownValue(type),
+						sourceValue: historySourceValue,
+					});
+				},
+				{ discrete: true, tag: EXTERNAL_UPDATE_TAG },
+			);
+			if (applied) event.preventDefault();
+		};
+		let rootElement: HTMLElement | null = null;
+		const unregister = editor.registerRootListener((nextRoot, previousRoot) => {
+			previousRoot?.removeEventListener(
+				HISTORY_CARET_REQUEST_EVENT,
+				handleRequest,
+			);
+			nextRoot?.addEventListener(HISTORY_CARET_REQUEST_EVENT, handleRequest);
+			rootElement = nextRoot;
+		});
+		return () => {
+			rootElement?.removeEventListener(
+				HISTORY_CARET_REQUEST_EVENT,
+				handleRequest,
+			);
+			unregister();
+		};
+	}, [editor, historySourceValue, markdownValue, type]);
+}
+
 interface LexicalEditableFieldViewProps {
 	enableHistory: boolean;
 	handleBlur: (event: FocusEvent<HTMLElement>) => void;
@@ -723,6 +784,7 @@ interface LexicalEditableFieldViewProps {
 	handleMouseLeave: () => void;
 	handleMouseMove: (event: MouseEvent<HTMLElement>) => void;
 	handlePaste: (event: ClipboardEvent<HTMLElement>) => void;
+	historySourceValue: string;
 	isActive: boolean;
 	isDisabled: boolean;
 	lastEventRef: MutableRefObject<unknown>;
@@ -744,6 +806,7 @@ function LexicalEditableFieldView({
 	handleMouseLeave,
 	handleMouseMove,
 	handlePaste,
+	historySourceValue,
 	isActive,
 	isDisabled,
 	lastEventRef,
@@ -767,6 +830,10 @@ function LexicalEditableFieldView({
 			role="textbox"
 			aria-multiline={presentation.ariaMultiline}
 			data-app-history-shortcuts={presentation.historyShortcuts}
+			data-history-caret-owner="lexical"
+			data-history-caret-revision={getHistoryCaretValueRevision(
+				historySourceValue,
+			)}
 			data-placeholder={placeholder}
 			tabIndex={presentation.tabIndex}
 			onBlur={handleBlur}
@@ -814,6 +881,7 @@ function LexicalEditableFieldView({
 function LexicalEditableField({
 	openMentionPicker,
 	enableHistory,
+	historySourceValue,
 	isActive,
 	isDisabled,
 	lastEventRef,
@@ -832,6 +900,7 @@ function LexicalEditableField({
 	type,
 }: LexicalEditableFieldProps) {
 	const [editor] = useLexicalComposerContext();
+	useHistoryCaretRequests({ editor, historySourceValue, markdownValue, type });
 	useCommandHandlers({
 		openMentionPicker,
 		enableHistory,
@@ -942,6 +1011,7 @@ function LexicalEditableField({
 			handleMouseLeave={handleMouseLeave}
 			handleMouseMove={handleMouseMove}
 			handlePaste={handlePaste}
+			historySourceValue={historySourceValue}
 			isActive={isActive}
 			isDisabled={isDisabled}
 			lastEventRef={lastEventRef}
@@ -1029,6 +1099,7 @@ function EditableFieldView({
 	EntityModal,
 	enableHistory,
 	handleCopy,
+	historySourceValue,
 	initialConfig,
 	isActive,
 	isDisabled,
@@ -1086,6 +1157,7 @@ function EditableFieldView({
 						<LexicalEditableField
 							openMentionPicker={openMentionPicker}
 							enableHistory={enableHistory}
+							historySourceValue={historySourceValue}
 							isActive={isActive}
 							isDisabled={isDisabled}
 							lastEventRef={lastEventRef}
@@ -1289,6 +1361,7 @@ export default function EditableField({
 			EntityModal={EntityModal}
 			enableHistory={enableHistory}
 			handleCopy={handleCopy}
+			historySourceValue={markdownValue}
 			initialConfig={initialConfig}
 			isActive={isActive}
 			isDisabled={isDisabled}

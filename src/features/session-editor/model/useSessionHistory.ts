@@ -1,30 +1,11 @@
+import { useCallback, type Dispatch, type SetStateAction } from "react";
+import { sessionApi } from "../../../entities/session/index.js";
 import {
-	useCallback,
-	useRef,
-	useState,
-	type Dispatch,
-	type SetStateAction,
-} from "react";
-import {
-	addUndoSnapshot,
-	clearRedoStack,
-	createDistinctRedoTransition,
-	createDistinctUndoTransition,
-} from "../../../shared/lib/index.js";
-import type {
-	SessionEditorData,
-	SessionEditorSession,
-} from "./sessionMutations.ts";
-import type { ScheduleSessionSave } from "./useSessionPersistence.ts";
-
-export interface SessionHistorySnapshot {
-	data: SessionEditorData | undefined;
-}
-
-interface RecordDataChangeOptions {
-	hasPendingSave?: boolean;
-	instant?: boolean;
-}
+	usePersistentCampaignHistory,
+	type HistoryMutationResult,
+} from "../../../entities/history/index.js";
+import type { SessionEditorSession } from "./sessionMutations.ts";
+import type { SessionSaveOptions } from "./useSessionPersistence.ts";
 
 interface ExternalSessionReplacementOptions {
 	discardPendingSave: () => void;
@@ -32,144 +13,137 @@ interface ExternalSessionReplacementOptions {
 }
 
 interface SessionHistoryOptions {
+	campaignSlug: string;
+	sessionId: string;
 	session: SessionEditorSession | null;
 	setSession: Dispatch<SetStateAction<SessionEditorSession | null>>;
-	scheduleSave: ScheduleSessionSave;
+	flushPendingSave: (
+		options?: SessionSaveOptions,
+	) => Promise<unknown>;
+	normalizeSession: (session: unknown) => SessionEditorSession;
+	onSessionFileChanged?: (session: SessionEditorSession & { fileName?: string }) => void;
+	onHistoryConflict?: (error: unknown) => void | Promise<void>;
+	onHistoryError?: (error: unknown) => void;
+	onHistoryRestored?: (result: HistoryMutationResult) => void | Promise<void>;
+	syncVersion?: unknown;
 }
 
 export interface SessionHistory {
+	canRedo: boolean;
+	canUndo: boolean;
 	handleRedo: () => void;
 	handleUndo: () => void;
-	recordDataChange: (
-		currentData: SessionEditorData | undefined,
-		nextData: SessionEditorData | undefined,
-		options?: RecordDataChangeOptions,
-	) => void;
-	redoStack: SessionHistorySnapshot[];
+	isRestoring: boolean;
+	redoLabel: string;
 	replaceFromExternalUpdate: (
 		updatedSession: unknown,
 		options: ExternalSessionReplacementOptions,
 	) => void;
-	resetHistory: () => void;
-	undoStack: SessionHistorySnapshot[];
+	undoLabel: string;
 }
 
-const sameData = (
-	left: SessionHistorySnapshot,
-	right: SessionHistorySnapshot,
-): boolean => JSON.stringify(left?.data) === JSON.stringify(right?.data);
-
 export function useSessionHistory({
+	campaignSlug,
+	sessionId,
 	session,
 	setSession,
-	scheduleSave,
+	flushPendingSave,
+	normalizeSession,
+	onSessionFileChanged,
+	onHistoryConflict,
+	onHistoryError,
+	onHistoryRestored,
+	syncVersion,
 }: SessionHistoryOptions): SessionHistory {
-	const [undoStack, setUndoStack] = useState<SessionHistorySnapshot[]>([]);
-	const [redoStack, setRedoStack] = useState<SessionHistorySnapshot[]>([]);
-	const isApplyingHistoryRef = useRef(false);
-
-	const resetHistory = useCallback(() => {
-		setUndoStack([]);
-		setRedoStack([]);
-	}, []);
-
-	const recordDataChange = useCallback(
-		(
-			currentData: SessionEditorData | undefined,
-			nextData: SessionEditorData | undefined,
-			{ hasPendingSave = false, instant = false }: RecordDataChangeOptions = {},
-		) => {
-			if (
-				isApplyingHistoryRef.current ||
-				JSON.stringify(currentData) === JSON.stringify(nextData) ||
-				(hasPendingSave && !instant)
-			) {
-				return;
-			}
-			setUndoStack((current) =>
-				addUndoSnapshot(current, { data: currentData }),
-			);
-			setRedoStack(clearRedoStack<SessionHistorySnapshot>());
-		},
-		[],
-	);
-
-	const finishHistoryApplication = () => {
-		setTimeout(() => {
-			isApplyingHistoryRef.current = false;
-		}, 0);
-	};
-
-	const applyTransition = useCallback(
-		(transition: {
-			target: SessionHistorySnapshot | null;
-			undoStack: SessionHistorySnapshot[];
-			redoStack: SessionHistorySnapshot[];
-		}) => {
-			if (!transition.target) return;
-			isApplyingHistoryRef.current = true;
-			setUndoStack(transition.undoStack);
-			setRedoStack(transition.redoStack);
-			setSession((current) => {
-				if (!current) return current;
-				const updated = { ...current, data: transition.target?.data };
-				scheduleSave(updated, true);
-				return updated;
-			});
-			finishHistoryApplication();
-		},
-		[scheduleSave, setSession],
-	);
-
-	const handleUndo = useCallback(() => {
-		if (!session || undoStack.length === 0) return;
-		applyTransition(
-			createDistinctUndoTransition({
-				undoStack,
-				redoStack,
-				current: { data: session.data },
-				isEqual: sameData,
-			}),
+	const reloadRestoredSession = useCallback(async () => {
+		const sessions = await sessionApi.listSessions(campaignSlug);
+		const currentId = session?.id;
+		const summary = (sessions || []).find(
+			(item) => currentId != null && String(item.id) === String(currentId),
+		) || (sessions || []).find((item) => item.fileName === sessionId);
+		if (!summary?.fileName) {
+			setSession(null);
+			return;
+		}
+		const loaded = normalizeSession(
+			await sessionApi.getSession(campaignSlug, summary.fileName),
 		);
-	}, [applyTransition, redoStack, session, undoStack]);
-
-	const handleRedo = useCallback(() => {
-		if (!session || redoStack.length === 0) return;
-		applyTransition(
-			createDistinctRedoTransition({
-				undoStack,
-				redoStack,
-				current: { data: session.data },
-				isEqual: sameData,
-			}),
+		setSession(loaded);
+		if (summary.fileName !== sessionId) onSessionFileChanged?.(loaded);
+	}, [
+		campaignSlug,
+		normalizeSession,
+		onSessionFileChanged,
+		session?.id,
+		sessionId,
+		setSession,
+	]);
+	const beforeRestore = useCallback(async () => {
+		await flushPendingSave({ throwOnError: true });
+	}, [flushPendingSave]);
+	const reloadAffectedSession = useCallback(async (
+		result: HistoryMutationResult,
+	) => {
+		const affectedSessions = result.transaction?.affected.sessions;
+		const currentId = session?.id;
+		const affectsCurrent = !affectedSessions || affectedSessions.some(
+			(id) =>
+				(currentId != null && String(id) === String(currentId)) ||
+				String(id) === String(sessionId),
 		);
-	}, [applyTransition, redoStack, session, undoStack]);
+		if (affectsCurrent) await reloadRestoredSession();
+		await onHistoryRestored?.(result);
+	}, [
+		onHistoryRestored,
+		reloadRestoredSession,
+		session?.id,
+		sessionId,
+	]);
+	const reloadAfterConflict = useCallback(async (error: unknown) => {
+		try {
+			await reloadRestoredSession();
+		} finally {
+			await onHistoryConflict?.(error);
+		}
+	}, [onHistoryConflict, reloadRestoredSession]);
+	const persistent = usePersistentCampaignHistory({
+		campaignSlug,
+		beforeRestore,
+		onConflict: reloadAfterConflict,
+		onRestored: reloadAffectedSession,
+		onError: onHistoryError,
+		syncVersion,
+	});
+	const refreshHistory = persistent.refreshHistory;
+	const handleRedo = persistent.handleRedo;
+	const handleUndo = persistent.handleUndo;
 
 	const replaceFromExternalUpdate = useCallback(
 		(
 			updatedSession: unknown,
-			{ discardPendingSave, normalizeSession }: ExternalSessionReplacementOptions,
+			{ discardPendingSave, normalizeSession: normalize }: ExternalSessionReplacementOptions,
 		) => {
-			if (!session) return;
-			setUndoStack((current) =>
-				addUndoSnapshot(current, { data: session.data }),
-			);
-			setRedoStack(clearRedoStack<SessionHistorySnapshot>());
-			isApplyingHistoryRef.current = true;
 			discardPendingSave();
-			setSession(normalizeSession(updatedSession));
-			finishHistoryApplication();
+			setSession(normalize(updatedSession));
+			void refreshHistory();
 		},
-		[session, setSession],
+		[refreshHistory, setSession],
 	);
+	const invokeRedo = useCallback(() => {
+		void handleRedo();
+	}, [handleRedo]);
+	const invokeUndo = useCallback(() => {
+		void handleUndo();
+	}, [handleUndo]);
 
 	return {
-		handleRedo,
-		handleUndo,
-		recordDataChange,
-		redoStack,
+		canRedo: persistent.canRedo,
+		canUndo: persistent.canUndo,
+		handleRedo: invokeRedo,
+		handleUndo: invokeUndo,
+		isRestoring: persistent.isRestoring,
+		redoLabel: persistent.redoLabel,
 		replaceFromExternalUpdate,
-		resetHistory,
-		undoStack,
+		undoLabel: persistent.undoLabel,
 	};
 }

@@ -1,4 +1,5 @@
 import {
+	useCallback,
 	useEffect,
 	useMemo,
 	useRef,
@@ -8,6 +9,7 @@ import {
 } from "react";
 
 import { campaignApi } from "../../../entities/campaign/index.js";
+import { usePersistentApplicationHistory } from "../../../entities/history/index.js";
 import {
 	backupApi,
 	type BackupImportStrategy,
@@ -73,6 +75,8 @@ export default function Sidebar({
 		openModal,
 		reportError,
 		requestRulesReferenceNavigation,
+		setCampaigns,
+		syncEvent,
 	} = useSidebarRuntime();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [dbImportStrategy, setDbImportStrategy] =
@@ -86,6 +90,35 @@ export default function Sidebar({
 	const [isCompletedCampaignsCollapsed, setIsCompletedCampaignsCollapsed] =
 		useState(true);
 	const effectiveActiveSlug = activeCampaignId || activeNavigationSlug;
+	const reportApplicationHistoryError = useCallback((error: unknown) => {
+		reportError({
+			title: lang.t("Error"),
+			message: getSidebarErrorMessage(error, lang.t("Unknown error")),
+		});
+	}, [reportError]);
+	const reloadApplicationCampaigns = useCallback(async () => {
+		const latestCampaigns = (await campaignApi.listCampaigns()) || [];
+		setLocalCampaigns(latestCampaigns as SidebarCampaign[]);
+		setCampaigns(latestCampaigns);
+	}, [setCampaigns]);
+	const handleApplicationHistoryConflict = useCallback(async () => {
+		try {
+			await reloadApplicationCampaigns();
+		} finally {
+			reportError({
+				title: lang.t("History conflict"),
+				message: lang.t(
+					"The change could not be restored because the data was edited elsewhere. Current data and history were reloaded; review the latest changes and try again.",
+				),
+			});
+		}
+	}, [reloadApplicationCampaigns, reportError]);
+	const applicationHistory = usePersistentApplicationHistory({
+		onRestored: reloadApplicationCampaigns,
+		onConflict: handleApplicationHistoryConflict,
+		onError: reportApplicationHistoryError,
+		syncVersion: syncEvent?.version,
+	});
 
 	useEffect(() => {
 		setLocalCampaigns(campaigns);
@@ -285,6 +318,24 @@ export default function Sidebar({
 							"Campaigns, sessions, and planning in one local workspace.",
 						)}
 					</p>
+					<div className="Sidebar__historyActions">
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="undo"
+							disabled={!applicationHistory.canUndo || applicationHistory.isRestoring}
+							onClick={() => void applicationHistory.handleUndo()}
+							title={applicationHistory.undoLabel}
+						/>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="redo"
+							disabled={!applicationHistory.canRedo || applicationHistory.isRestoring}
+							onClick={() => void applicationHistory.handleRedo()}
+							title={applicationHistory.redoLabel}
+						/>
+					</div>
 				</div>
 
 				<SidebarLinks

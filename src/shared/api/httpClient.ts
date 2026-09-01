@@ -12,6 +12,7 @@ export interface HttpRequestError extends Error {
 }
 
 const API_BASE = "/api";
+export const API_MUTATION_EVENT = "prm:api-mutation-complete";
 
 function getSyncClientHeader(): Record<string, string> {
 	if (typeof window === "undefined") return {};
@@ -50,7 +51,23 @@ export async function request<TResult = unknown>(
 				},
 		...options,
 	});
-	if (response.status === 204) return null;
+	const notifyMutation = () => {
+		if (
+			typeof window !== "undefined" &&
+			options.method &&
+			options.method !== "GET"
+		) {
+			window.dispatchEvent(
+				new CustomEvent(API_MUTATION_EVENT, {
+					detail: { path, method: options.method },
+				}),
+			);
+		}
+	};
+	if (response.status === 204) {
+		notifyMutation();
+		return null;
+	}
 	const data: unknown = await response.json().catch(() => null);
 	if (!response.ok) {
 		const error = new Error(lang.t(getErrorText(data))) as HttpRequestError;
@@ -58,6 +75,7 @@ export async function request<TResult = unknown>(
 		error.data = data;
 		throw error;
 	}
+	notifyMutation();
 	return data as TResult;
 }
 

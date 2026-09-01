@@ -53,7 +53,6 @@ async function executeCustomBestiarySynchronization({
 		);
 		if (!result.changed || !result.encounter) return;
 		applyEncounterUpdate(result.encounter, {
-			pushUndo: false,
 			preferredId: selectedInstanceId || null,
 		});
 	} catch (error) {

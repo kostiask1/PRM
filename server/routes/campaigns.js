@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const storage = require("../storage");
+const { historyService } = require("../modules/history/runtime");
 const {
 	CAMPAIGN_ENTITY_TYPES,
 	createCampaignEntityCommands,
@@ -23,6 +24,9 @@ const {
 const {
 	validateBody,
 } = require("../http/requestValidation");
+const {
+	validateHistoryRestoreRequest,
+} = require("../modules/history/http/historyRequestSchemas");
 
 const campaignEntityRepository = createFileCampaignEntityRepository(storage);
 const campaignEntityCommands = createCampaignEntityCommands(
@@ -46,6 +50,42 @@ function validateEntityMoveRequest(req, _res, next) {
 router.get("/", async (req, res, next) => {
 	try {
 		res.json(await campaignCommands.list());
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.get("/:slug/history", async (req, res, next) => {
+	try {
+		res.json(await historyService.getCampaignStatus(req.params.slug));
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post("/:slug/history/undo", validateBody(validateHistoryRestoreRequest), async (req, res, next) => {
+	try {
+		res.json(
+			await historyService.applyCampaignHistory(
+				req.params.slug,
+				"undo",
+				req.validatedBody.expectedRevision,
+			),
+		);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post("/:slug/history/redo", validateBody(validateHistoryRestoreRequest), async (req, res, next) => {
+	try {
+		res.json(
+			await historyService.applyCampaignHistory(
+				req.params.slug,
+				"redo",
+				req.validatedBody.expectedRevision,
+			),
+		);
 	} catch (error) {
 		next(error);
 	}

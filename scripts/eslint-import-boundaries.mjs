@@ -5,6 +5,7 @@ export const FSD_SLICE_NAMES = Object.freeze({
 		"bestiary",
 		"campaign",
 		"encounter",
+		"history",
 		"reference",
 		"session",
 		"spell",

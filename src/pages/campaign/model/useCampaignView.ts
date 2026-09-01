@@ -22,19 +22,12 @@ import { sanitizeNotesForSave, upsertNoteById } from "../../../shared/lib/index.
 import type { SharedNote } from "../../../shared/lib/index.js";
 import { downloadBlob } from "../../../shared/lib/index.js";
 import {
-	addUndoSnapshot,
-	clearRedoStack,
-	createDistinctRedoTransition,
-	createDistinctUndoTransition,
 	isHistoryShortcutEvent,
 	shouldUseAppHistoryForEvent,
 } from "../../../shared/lib/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { getEntityDisplayName } from "../../../entities/campaign/index.js";
 import {
-	areHistoryStatesEqual,
-	campaignHistoryPayload,
-	cloneHistoryList,
 	getLocationDisplayName,
 	normalizeMentionName,
 	replaceMentionsInValue,
@@ -44,7 +37,6 @@ import {
 import type {
 	CampaignAiUpdateOptions,
 	CampaignGraphNoteSave,
-	CampaignHistoryState,
 	CampaignPageCampaign,
 	CampaignPageEntity,
 	CampaignSessionDetail,
@@ -52,6 +44,10 @@ import type {
 	DescriptionChangeEvent,
 	UseCampaignViewProps,
 } from "./contracts.ts";
+import {
+	usePersistentCampaignHistory,
+	type HistoryMutationResult,
+} from "../../../entities/history/index.js";
 import { useCampaignPageRuntime } from "./CampaignPageRuntime.tsx";
 import {
 	getCampaignKeyboardAction,
@@ -145,14 +141,12 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const pendingCampaignUpdatesRef = useRef<Partial<CampaignPageCampaign> | null>(null);
 	const isSavingRef = useRef(false);
-	const [undoStack, setUndoStack] = useState<CampaignHistoryState[]>([]);
-	const [redoStack, setRedoStack] = useState<CampaignHistoryState[]>([]);
-	const isUpdatingHistory = useRef(false);
+	const [isCampaignSaving, setIsCampaignSaving] = useState(false);
 	const lastSlugRef = useRef(campaign.slug);
 	const {
 		clearSave: clearEntitySaveTimer,
-		discardSaves: discardEntitySaveTimers,
 		flushSaves: flushEntitySaves,
+		isSaving: isEntitySaving,
 		scheduleSave: scheduleEntityUpdate,
 	} = useCampaignEntityPersistence({
 		campaignSlug: campaign.slug,
@@ -168,14 +162,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		setIsCharactersCollapsed(nextState.isCharactersCollapsed);
 		setIsNpcsCollapsed(nextState.isNpcsCollapsed);
 		setIsLocationsCollapsed(nextState.isLocationsCollapsed);
-	}, []);
-
-	const discardCampaignSaveTimer = useCallback(() => {
-		if (saveTimeout.current) {
-			clearTimeout(saveTimeout.current);
-			saveTimeout.current = null;
-		}
-		pendingCampaignUpdatesRef.current = null;
 	}, []);
 
 	const loadCharacters = useCallback(async () => {
@@ -202,6 +188,14 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			setLocations((data || []).map(sanitizeLoadedEntity));
 		} catch (err) {
 			console.error("Failed to load locations", err);
+		}
+	}, [campaign.slug]);
+	const loadSessions = useCallback(async () => {
+		try {
+			const data = await api.listSessions(campaign.slug);
+			setSessions(data || []);
+		} catch (err) {
+			console.error("Failed to load sessions", err);
 		}
 	}, [campaign.slug]);
 
@@ -231,8 +225,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			setIsGraphDataLoading(false);
 			isGraphDataLoadingRef.current = false;
 			setGraphDataError("");
-			setUndoStack([]);
-			setRedoStack([]);
 			lastSlugRef.current = campaign.slug;
 		}
 	}, [
@@ -280,21 +272,29 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	}, [entityRefreshVersion, loadCharacters, loadNpcs, loadLocations]);
 
 	const saveToServer = useCallback(
-		async (updates: Partial<CampaignPageCampaign> | null) => {
+		async (
+			updates: Partial<CampaignPageCampaign> | null,
+			{ throwOnError = false }: { throwOnError?: boolean } = {},
+		) => {
 			if (!updates) return;
 			isSavingRef.current = true;
+			setIsCampaignSaving(true);
 			try {
 				await api.updateCampaign(campaign.slug, updates);
 			} catch (err) {
 				console.error("Failed to save campaign updates", err);
+				if (throwOnError) throw err;
 			} finally {
 				isSavingRef.current = false;
+				setIsCampaignSaving(false);
 			}
 		},
 		[campaign.slug],
 	);
 
-	const flushCampaignSave = useCallback(async () => {
+	const flushCampaignSave = useCallback(async (
+		options: { throwOnError?: boolean } = {},
+	) => {
 		if (saveTimeout.current) {
 			clearTimeout(saveTimeout.current);
 			saveTimeout.current = null;
@@ -302,146 +302,70 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 
 		const updates = pendingCampaignUpdatesRef.current;
 		pendingCampaignUpdatesRef.current = null;
-		if (updates) await saveToServer(updates);
+		if (updates) await saveToServer(updates, options);
 	}, [saveToServer]);
 
-	const createHistoryState = useCallback(
-		(): CampaignHistoryState => ({
-			description,
-			notes: cloneHistoryList(notes),
-			characters: cloneHistoryList(characters),
-			npcs: cloneHistoryList(npcs),
-			locations: cloneHistoryList(locations),
-			completed: campaign.completed,
-			completedAt: campaign.completedAt,
-		}),
-		[
-			description,
-			notes,
-			characters,
-			npcs,
-			locations,
-			campaign.completed,
-			campaign.completedAt,
-		],
-	);
-
-	const restoreHistoryState = useCallback(
-		async (state: CampaignHistoryState) => {
-			discardEntitySaveTimers();
-			discardCampaignSaveTimer();
-
-			const nextNotes = cloneHistoryList<SharedNote>(state.notes);
-			const nextCharacters = cloneHistoryList(state.characters);
-			const nextNpcs = cloneHistoryList(state.npcs);
-			const nextLocations = cloneHistoryList(state.locations);
-
-			setDescription(state.description || "");
-			setNotes(nextNotes);
-			setCharacters(nextCharacters);
-			setNpcs(nextNpcs);
-			setLocations(nextLocations);
-
-			await Promise.all([
-				api.updateCampaign(campaign.slug, campaignHistoryPayload(state)),
-				api.replaceEntities(campaign.slug, "characters", nextCharacters),
-				api.replaceEntities(campaign.slug, "npc", nextNpcs),
-				api.replaceEntities(campaign.slug, "locations", nextLocations),
-			]);
-		},
-		[campaign.slug, discardCampaignSaveTimer, discardEntitySaveTimers],
-	);
-
-	const handleUndo = useCallback(async () => {
-		if (undoStack.length === 0) return;
-
-		const currentState = createHistoryState();
-		const transition = createDistinctUndoTransition({
-			undoStack,
-			redoStack,
-			current: currentState,
-			isEqual: areHistoryStatesEqual,
-		});
-
-		if (transition.target) {
-			isUpdatingHistory.current = true;
-			setRedoStack(transition.redoStack);
-			setUndoStack(transition.undoStack);
-
-			try {
-				await restoreHistoryState(transition.target);
-			} catch (err) {
-				console.error("Failed to restore campaign undo state", err);
-				showMessage({
-					title: lang.t("Error"),
-					message: lang.t("Failed to update entity."),
-				});
-				loadCharacters();
-				loadNpcs();
-				loadLocations();
-			} finally {
-				isUpdatingHistory.current = false;
-			}
+	const beforeHistoryRestore = useCallback(async () => {
+		await flushCampaignSave({ throwOnError: true });
+		await flushEntitySaves({ throwOnError: true });
+	}, [flushCampaignSave, flushEntitySaves]);
+	const afterHistoryRestore = useCallback(async (
+		result?: HistoryMutationResult,
+	) => {
+		const affected = result?.transaction?.affected;
+		await requestCampaignReload();
+		const reloads: Array<Promise<unknown>> = [];
+		if (!affected || affected.entities.length > 0) {
+			reloads.push(loadCharacters(), loadNpcs(), loadLocations());
 		}
+		if (!affected || affected.sessions.length > 0) {
+			reloads.push(loadSessions());
+			setSessionDetails({});
+			sessionDetailsRef.current = {};
+		}
+		await Promise.all(reloads);
 	}, [
-		undoStack,
-		redoStack,
-		createHistoryState,
-		restoreHistoryState,
 		loadCharacters,
-		loadNpcs,
 		loadLocations,
-		showMessage,
+		loadNpcs,
+		loadSessions,
+		requestCampaignReload,
 	]);
-
-	const handleRedo = useCallback(async () => {
-		if (redoStack.length === 0) return;
-
-		const currentState = createHistoryState();
-		const transition = createDistinctRedoTransition({
-			undoStack,
-			redoStack,
-			current: currentState,
-			isEqual: areHistoryStatesEqual,
+	const reportHistoryError = useCallback((error: unknown) => {
+		console.error("Failed to restore campaign history", error);
+		showMessage({
+			title: lang.t("Error"),
+			message: getErrorMessage(error),
 		});
-
-		if (transition.target) {
-			isUpdatingHistory.current = true;
-			setUndoStack(transition.undoStack);
-			setRedoStack(transition.redoStack);
-
-			try {
-				await restoreHistoryState(transition.target);
-			} catch (err) {
-				console.error("Failed to restore campaign redo state", err);
-				showMessage({
-					title: lang.t("Error"),
-					message: lang.t("Failed to update entity."),
-				});
-				loadCharacters();
-				loadNpcs();
-				loadLocations();
-			} finally {
-				isUpdatingHistory.current = false;
-			}
+	}, [showMessage]);
+	const reportHistoryConflict = useCallback(async () => {
+		try {
+			await afterHistoryRestore();
+		} finally {
+			showMessage({
+				title: lang.t("History conflict"),
+				message: lang.t(
+					"The change could not be restored because the data was edited elsewhere. Current data and history were reloaded; review the latest changes and try again.",
+				),
+			});
 		}
-	}, [
-		undoStack,
-		redoStack,
-		createHistoryState,
-		restoreHistoryState,
-		loadCharacters,
-		loadNpcs,
-		loadLocations,
-		showMessage,
-	]);
-
-	const pushToUndo = useCallback(() => {
-		if (!isUpdatingHistory.current) {
-			setUndoStack((prev) => addUndoSnapshot(prev, createHistoryState()));
-			setRedoStack(clearRedoStack());
-		}
-	}, [createHistoryState]);
+	}, [afterHistoryRestore, showMessage]);
+	const {
+		canRedo,
+		canUndo,
+		handleRedo,
+		handleUndo,
+		isRestoring: isHistoryRestoring,
+		redoLabel,
+		undoLabel,
+	} = usePersistentCampaignHistory({
+		campaignSlug: campaign.slug,
+		beforeRestore: beforeHistoryRestore,
+		onConflict: reportHistoryConflict,
+		onRestored: afterHistoryRestore,
+		onError: reportHistoryError,
+		syncVersion: syncEvent?.version,
+	});
 
 	const triggerSave = useCallback(
 		(updates: Partial<CampaignPageCampaign>) => {
@@ -455,7 +379,7 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 				saveTimeout.current = null;
 				const pendingUpdates = pendingCampaignUpdatesRef.current;
 				pendingCampaignUpdatesRef.current = null;
-				saveToServer(pendingUpdates);
+				void saveToServer(pendingUpdates);
 			}, 500);
 		},
 		[saveToServer],
@@ -525,7 +449,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		confirmMentionUpdate: confirmMentionReferenceUpdate,
 		applyMentionRename: applyMentionRenameToLocalState,
 		reload: loadCharacters,
-		pushUndo: pushToUndo,
 		onError: reportEntityWorkflowError,
 	});
 	const npcWorkflow = useCampaignEntityCollection({
@@ -541,7 +464,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		confirmMentionUpdate: confirmMentionReferenceUpdate,
 		applyMentionRename: applyMentionRenameToLocalState,
 		reload: loadNpcs,
-		pushUndo: pushToUndo,
 		onError: reportEntityWorkflowError,
 	});
 	const locationWorkflow = useCampaignEntityCollection({
@@ -557,7 +479,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		confirmMentionUpdate: confirmMentionReferenceUpdate,
 		applyMentionRename: applyMentionRenameToLocalState,
 		reload: loadLocations,
-		pushUndo: pushToUndo,
 		onError: reportEntityWorkflowError,
 	});
 	const {
@@ -618,14 +539,12 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		reloadCharacters: loadCharacters,
 		reloadNpcs: loadNpcs,
 		reloadLocations: loadLocations,
-		pushUndo: pushToUndo,
 		onReorderError: reportReorderError,
 		onMoveError: reportMoveError,
 	});
 
 	const handleDescriptionChange = (e: DescriptionChangeEvent) => {
 		const val = e.target.value;
-		if (!saveTimeout.current) pushToUndo();
 		setDescription(val);
 		triggerSave({ description: val });
 	};
@@ -639,7 +558,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	};
 
 	const handleNoteTitleChange = (id: string | number, title: string) => {
-		if (!saveTimeout.current) pushToUndo();
 		const newNotes = upsertNoteById(notes, id, { title });
 
 		setNotes(newNotes);
@@ -647,7 +565,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	};
 
 	const handleNoteChange = (id: string | number, text: string) => {
-		if (!saveTimeout.current) pushToUndo();
 		const newNotes = upsertNoteById(notes, id, { text });
 
 		setNotes(newNotes);
@@ -655,7 +572,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	};
 
 	const handleDeleteNote = (id: string | number) => {
-		pushToUndo();
 		const newNotes = notes.filter((n) => n.id !== id);
 
 		setNotes(newNotes);
@@ -663,21 +579,11 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	};
 
 	const handleNotesReorder = (newNotes: SharedNote[]) => {
-		if (!saveTimeout.current) pushToUndo();
 		const sanitizedNotes = sanitizeNotesForSave(newNotes);
 		setNotes(sanitizedNotes);
 		triggerSave({ notes: sanitizedNotes });
 	};
 
-
-	const loadSessions = useCallback(async () => {
-		try {
-			const data = await api.listSessions(campaign.slug);
-			setSessions(data || []);
-		} catch (err) {
-			console.error("Failed to load sessions", err);
-		}
-	}, [campaign.slug]);
 
 	useEffect(() => {
 		loadSessions();
@@ -793,7 +699,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			if (plan.kind === "none") return;
 
 			if (plan.kind === "campaign-note") {
-				if (!saveTimeout.current) pushToUndo();
 				setNotes((prev) => {
 					const next = applyCampaignGraphCampaignNoteSave(prev, plan);
 					triggerSave({ notes: sanitizeNotesForSave(next) });
@@ -804,7 +709,7 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 
 			saveGraphSessionNote(plan);
 		},
-		[pushToUndo, saveGraphSessionNote, triggerSave],
+		[saveGraphSessionNote, triggerSave],
 	);
 
 	const handleDeleteCampaign = async () => {
@@ -982,7 +887,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		updatedCampaign: Partial<CampaignPageCampaign> | null,
 		options: CampaignAiUpdateOptions = {},
 	) => {
-		pushToUndo();
 		const plan = getCampaignAiUpdatePlan(updatedCampaign, options);
 		if (plan.campaignState) {
 			setDescription(plan.campaignState.description);
@@ -1030,8 +934,12 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		setIsNpcsCollapsed,
 		isLocationsCollapsed,
 		setIsLocationsCollapsed,
-		undoStack,
-		redoStack,
+		canUndo,
+		canRedo,
+		isSaving: isCampaignSaving || isEntitySaving,
+		isHistoryRestoring,
+		undoLabel,
+		redoLabel,
 		handleUndo,
 		handleRedo,
 		triggerSave,

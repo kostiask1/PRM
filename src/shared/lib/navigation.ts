@@ -44,7 +44,7 @@ export function buildNavigationUrl(
 	let url = `/campaign/${encodeURIComponent(slug)}`;
 	if (fileName) {
 		url += `/session/${encodeURIComponent(fileName)}`;
-		if (encounterId) {
+		if (encounterId !== null && encounterId !== undefined) {
 			url += `/encounter/${encodeURIComponent(encounterId)}`;
 		}
 	}
