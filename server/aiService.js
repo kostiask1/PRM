@@ -30,23 +30,17 @@ const {
 const GEMINI_MODELS_ENDPOINT =
 	"https://generativelanguage.googleapis.com/v1beta/models";
 const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
-const CORE_TEXT_MODELS = [
-	"gemini-3.1-flash-lite-preview",
-	"gemini-3-flash-preview",
-	"gemini-2.5-flash",
-	"gemini-2.5-pro",
-	"gemini-2.5-flash-lite",
-	"gemini-2.0-flash",
+const TEXT_MODEL_CATALOG = [
+	"gemini-3.8-flash",
+	"gemini-3.7-flash",
+	"gemini-3.6-flash",
+	"gemini-3.5-flash",
+	"gemini-3.5-flash-lite",
+	"gemini-3.1-pro-preview",
+	"gemini-3.1-flash-lite",
 ];
-const FALLBACK_TEXT_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"];
-const PREFERRED_FAST_TEXT_MODELS = [
-	"gemini-3.1-flash-lite-preview",
-	"gemini-3-flash-preview",
-	"gemini-2.5-flash",
-	"gemini-2.5-flash-lite",
-	"gemini-2.0-flash",
-	"gemini-1.5-flash",
-];
+const DEFAULT_TEXT_MODEL = TEXT_MODEL_CATALOG[0];
+const TEXT_MODEL_NAMES = new Set(TEXT_MODEL_CATALOG);
 let modelCache = {
 	expiresAt: 0,
 	data: null,
@@ -57,26 +51,12 @@ function clearModelCache() {
 		data: null,
 	};
 }
-
-function isLikelyTextModel(name) {
-	const lower = normalizeModelName(name).toLowerCase();
-	return !["imagen", "veo", "embedding", "aqa", "learnlm"].some((token) =>
-		lower.includes(token),
-	);
-}
-
-function isCoreTextModel(name) {
-	const lower = normalizeModelName(name).toLowerCase();
-	return CORE_TEXT_MODELS.some(
-		(core) => lower === core || lower.startsWith(`${core}-`),
-	);
-}
-
 function pickDefaultModel(models) {
-	for (const preferred of PREFERRED_FAST_TEXT_MODELS) {
-		if (models.some((model) => model.name === preferred)) return preferred;
-	}
-	return models[0]?.name || FALLBACK_TEXT_MODELS[0];
+	return models[0]?.name || DEFAULT_TEXT_MODEL;
+}
+
+function buildFallbackModelCatalog() {
+	return TEXT_MODEL_CATALOG.map((name) => ({ name, displayName: name }));
 }
 
 async function listAvailableModels({ forceRefresh = false } = {}) {
@@ -87,8 +67,8 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 
 	if (!process.env.GEMINI_API_KEY) {
 		const fallback = {
-			models: FALLBACK_TEXT_MODELS.map((name) => ({ name, displayName: name })),
-			defaultModel: FALLBACK_TEXT_MODELS[0],
+			models: buildFallbackModelCatalog(),
+			defaultModel: DEFAULT_TEXT_MODEL,
 			source: "fallback",
 		};
 		modelCache = { data: fallback, expiresAt: now + MODEL_CACHE_TTL_MS };
@@ -97,7 +77,7 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 
 	try {
 		const response = await fetch(
-			`${GEMINI_MODELS_ENDPOINT}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,
+			`${GEMINI_MODELS_ENDPOINT}?pageSize=1000&key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,
 		);
 		if (!response.ok) {
 			throw new Error(`Gemini models request failed: ${response.status}`);
@@ -116,30 +96,20 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 				outputTokenLimit: model.outputTokenLimit,
 			}))
 			.filter((model) => model.name)
-			.filter((model) => isLikelyTextModel(model.name));
+			.filter((model) => TEXT_MODEL_NAMES.has(model.name));
 
-		const deduped = Array.from(
-			new Map(models.map((model) => [model.name, model])).values(),
-		).filter((model) => isCoreTextModel(model.name));
-
-		const ordered = deduped.sort((a, b) => {
-			const aName = a.name.toLowerCase();
-			const bName = b.name.toLowerCase();
-			const aIdx = CORE_TEXT_MODELS.findIndex(
-				(core) => aName === core || aName.startsWith(`${core}-`),
-			);
-			const bIdx = CORE_TEXT_MODELS.findIndex(
-				(core) => bName === core || bName.startsWith(`${core}-`),
-			);
-			const safeA = aIdx === -1 ? Number.MAX_SAFE_INTEGER : aIdx;
-			const safeB = bIdx === -1 ? Number.MAX_SAFE_INTEGER : bIdx;
-			return safeA - safeB || a.name.localeCompare(b.name);
+		const modelsByName = new Map(
+			models.map((model) => [model.name, model]),
+		);
+		const ordered = TEXT_MODEL_CATALOG.flatMap((name) => {
+			const model = modelsByName.get(name);
+			return model ? [model] : [];
 		});
 
 		const result = {
 			models: ordered.length
 				? ordered
-				: FALLBACK_TEXT_MODELS.map((name) => ({ name, displayName: name })),
+				: buildFallbackModelCatalog(),
 			defaultModel: pickDefaultModel(ordered),
 			source: "api",
 		};
@@ -147,8 +117,8 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 		return result;
 	} catch (error) {
 		const fallback = {
-			models: FALLBACK_TEXT_MODELS.map((name) => ({ name, displayName: name })),
-			defaultModel: FALLBACK_TEXT_MODELS[0],
+			models: buildFallbackModelCatalog(),
+			defaultModel: DEFAULT_TEXT_MODEL,
 			source: "fallback",
 			error: error.message,
 		};
