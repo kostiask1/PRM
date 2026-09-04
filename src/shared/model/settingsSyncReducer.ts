@@ -26,14 +26,18 @@ export function reduceSettingsAndSyncState(
 					...action.payload,
 				},
 			};
-		case DATA_SYNC_RECEIVED:
+		case DATA_SYNC_RECEIVED: {
+			const nextVersion = currentState.sync.version + 1;
 			return {
 				...currentState,
 				sync: {
-					version: currentState.sync.version + 1,
-					event: action.payload,
+					version: nextVersion,
+					event: action.payload
+						? { ...action.payload, version: nextVersion }
+						: null,
 				},
 			};
+		}
 		default:
 			return undefined;
 	}

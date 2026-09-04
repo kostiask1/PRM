@@ -46,6 +46,7 @@ import {
 	SET_UI_SETTINGS,
 	closeMentionPickerAction,
 	closeModalAction,
+	dataSyncReceivedAction,
 	hideMessageBox,
 	normalizeUiSettingsPatch,
 	openMentionPickerAction,
@@ -67,6 +68,7 @@ import {
 } from "../src/shared/model/actions.js";
 import { reduceWorkflowState } from "../src/shared/model/workflowReducer.ts";
 import { reduceNavigationState } from "../src/shared/model/navigationStateReducer.ts";
+import { reduceSettingsAndSyncState } from "../src/shared/model/settingsSyncReducer.ts";
 import {
 	matchesMonsterSearch,
 	getMonsterTypeString,
@@ -20570,6 +20572,96 @@ await run("UI settings actions apply declarative field normalization", () => {
 	});
 });
 
+await run("sync reducer versions local AI events across page policies", () => {
+	const stableBranch = { value: "незмінне" };
+	const baseState = {
+		stableBranch,
+		sync: { version: 0, event: null },
+	};
+	const localAiPayload = Object.freeze({
+		resource: "ai",
+		campaignSlug: "кампанія",
+		sessionFileName: "сесія.json",
+	});
+	const firstState = reduceSettingsAndSyncState(
+		baseState,
+		dataSyncReceivedAction(localAiPayload),
+	);
+
+	assert.equal(firstState.stableBranch, stableBranch);
+	assert.deepEqual(firstState.sync, {
+		version: 1,
+		event: {
+			...localAiPayload,
+			version: 1,
+		},
+	});
+	assert.deepEqual(localAiPayload, {
+		resource: "ai",
+		campaignSlug: "кампанія",
+		sessionFileName: "сесія.json",
+	});
+	assert.equal(
+		getSessionSyncAction(
+			firstState.sync.event,
+			"кампанія",
+			"сесія.json",
+			true,
+		),
+		"discard-and-reload",
+	);
+	assert.deepEqual(
+		getCampaignSyncPlan(firstState.sync.event, "кампанія"),
+		{ reloadEntities: true, reloadSessions: true },
+	);
+	assert.equal(
+		shouldReloadEncounterFromSync(
+			firstState.sync.event,
+			"кампанія",
+			"сесія.json",
+			false,
+		),
+		true,
+	);
+	assert.equal(
+		shouldReloadEncounterFromSync(
+			firstState.sync.event,
+			"інша-кампанія",
+			"сесія.json",
+			false,
+		),
+		false,
+	);
+
+	const remotePayload = Object.freeze({
+		...localAiPayload,
+		version: 999,
+	});
+	const secondState = reduceSettingsAndSyncState(
+		firstState,
+		dataSyncReceivedAction(remotePayload),
+	);
+	assert.equal(secondState.sync.version, 2);
+	assert.equal(secondState.sync.event.version, 2);
+	assert.notEqual(secondState.sync.event, remotePayload);
+	assert.equal(remotePayload.version, 999);
+	assert.equal(
+		getSessionSyncAction(
+			secondState.sync.event,
+			"кампанія",
+			"інша-сесія.json",
+			false,
+		),
+		"ignore",
+	);
+
+	const clearedState = reduceSettingsAndSyncState(
+		secondState,
+		dataSyncReceivedAction(null),
+	);
+	assert.deepEqual(clearedState.sync, { version: 3, event: null });
+});
+
 await run("workflow reducers preserve domain transitions and state identity", () => {
 	const baseState = {
 		modal: { requestId: null, config: null },
@@ -31611,6 +31703,145 @@ await run(
 		assert.throws(() => parseAiResponseText(), TypeError);
 	},
 );
+
+await run("AI model discovery exposes only ordered current Gemini 3 text models", async () => {
+	const expectedCatalog = [
+		"gemini-3.8-flash",
+		"gemini-3.7-flash",
+		"gemini-3.6-flash",
+		"gemini-3.5-flash",
+		"gemini-3.5-flash-lite",
+		"gemini-3.1-pro-preview",
+		"gemini-3.1-flash-lite",
+	];
+	const previousApiKey = process.env.GEMINI_API_KEY;
+	const previousFetch = globalThis.fetch;
+	const requestedUrls = [];
+	const modelRow = (
+		name,
+		supportedGenerationMethods = ["generateContent"],
+	) => ({
+		name: `models/${name}`,
+		displayName: `Display ${name}`,
+		description: `Description ${name}`,
+		inputTokenLimit: 1_000_000,
+		outputTokenLimit: 65_000,
+		supportedGenerationMethods,
+	});
+
+	try {
+		process.env.GEMINI_API_KEY = "model-test-key";
+		globalThis.fetch = async (url) => {
+			requestedUrls.push(String(url));
+			return {
+				ok: true,
+				async json() {
+					return {
+						models: [
+							modelRow("gemini-3.8-flash", ["countTokens"]),
+							modelRow("gemini-3.1-flash-lite-image"),
+							modelRow("gemini-3.1-pro-preview-customtools"),
+							modelRow("gemini-3.5-flash-preview-tts"),
+							modelRow("gemini-3.1-flash-live-preview"),
+							modelRow("gemini-3-flash-preview"),
+							modelRow("gemini-2.5-flash"),
+							modelRow("gemini-unknown"),
+							...[...expectedCatalog].reverse().map((name) => modelRow(name)),
+						],
+					};
+				},
+			};
+		};
+		aiService.clearModelCache();
+
+		const discovered = await aiService.listAvailableModels({
+			forceRefresh: true,
+		});
+		assert.deepEqual(
+			discovered.models.map((model) => model.name),
+			expectedCatalog,
+		);
+		assert.equal(discovered.defaultModel, "gemini-3.8-flash");
+		assert.equal(discovered.source, "api");
+		assert.equal(
+			discovered.models[0].displayName,
+			"Display gemini-3.8-flash",
+		);
+		assert.equal(requestedUrls.length, 1);
+		const modelsUrl = new URL(requestedUrls[0]);
+		assert.equal(modelsUrl.pathname, "/v1beta/models");
+		assert.equal(modelsUrl.searchParams.get("pageSize"), "1000");
+		assert.equal(modelsUrl.searchParams.get("key"), "model-test-key");
+		assert.equal(
+			selectAiModel(discovered, "gemini-2.5-flash"),
+			"gemini-3.8-flash",
+		);
+
+		let partialDiscoveryFetches = 0;
+		globalThis.fetch = async () => {
+			partialDiscoveryFetches += 1;
+			return {
+				ok: true,
+				async json() {
+					return {
+						models: [
+							modelRow("gemini-3.1-flash-lite"),
+							modelRow("gemini-3.5-flash-lite"),
+						],
+					};
+				},
+			};
+		};
+		const cachedDiscovery = await aiService.listAvailableModels();
+		assert.equal(cachedDiscovery, discovered);
+		assert.equal(partialDiscoveryFetches, 0);
+		aiService.clearModelCache();
+		const partialDiscovery = await aiService.listAvailableModels();
+		assert.equal(partialDiscoveryFetches, 1);
+		assert.deepEqual(
+			partialDiscovery.models.map((model) => model.name),
+			["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
+		);
+		assert.equal(partialDiscovery.defaultModel, "gemini-3.5-flash-lite");
+
+		globalThis.fetch = async () => ({ ok: false, status: 503 });
+		aiService.clearModelCache();
+		const apiFailure = await aiService.listAvailableModels({
+			forceRefresh: true,
+		});
+		assert.deepEqual(
+			apiFailure.models.map((model) => model.name),
+			expectedCatalog,
+		);
+		assert.equal(apiFailure.defaultModel, "gemini-3.8-flash");
+		assert.equal(apiFailure.source, "fallback");
+		assert.equal(apiFailure.error, "Gemini models request failed: 503");
+
+		delete process.env.GEMINI_API_KEY;
+		let noKeyFetches = 0;
+		globalThis.fetch = async () => {
+			noKeyFetches += 1;
+			throw new Error("Model discovery must not run without an API key");
+		};
+		aiService.clearModelCache();
+		const noKeyFallback = await aiService.listAvailableModels({
+			forceRefresh: true,
+		});
+		assert.deepEqual(
+			noKeyFallback.models.map((model) => model.name),
+			expectedCatalog,
+		);
+		assert.equal(noKeyFallback.defaultModel, "gemini-3.8-flash");
+		assert.equal(noKeyFallback.source, "fallback");
+		assert.equal(noKeyFallback.error, undefined);
+		assert.equal(noKeyFetches, 0);
+	} finally {
+		if (previousApiKey === undefined) delete process.env.GEMINI_API_KEY;
+		else process.env.GEMINI_API_KEY = previousApiKey;
+		globalThis.fetch = previousFetch;
+		aiService.clearModelCache();
+	}
+});
 
 await run("AI request resolution selects modes scopes and model fallbacks", () => {
 	const scene = resolveAiRequest({
