@@ -32,7 +32,7 @@ import {
 } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 
-import { idsEqual } from "../src/shared/lib/index.js";
+import { idsEqual, lang } from "../src/shared/lib/index.js";
 import { isJsonObject, isJsonString } from "../src/shared/lib/index.js";
 import { mapWithConcurrency } from "../src/shared/lib/index.js";
 import { isAbortError } from "../src/shared/api/index.ts";
@@ -1330,6 +1330,46 @@ await run("idsEqual compares values by string representation", () => {
 	assert.equal(idsEqual("abc", "abc"), true);
 	assert.equal(idsEqual(null, "1"), false);
 	assert.equal(idsEqual(undefined, undefined), false);
+});
+
+await run("localization translation remains safe as a UI callback", () => {
+	const translate = lang.t;
+	assert.equal(
+		translate("Привіт, {name}!", { name: "герою" }),
+		"Привіт, герою!",
+	);
+
+	const monsterPresentation = getMonsterAiEditPresentation("edit", translate);
+	assert.equal(monsterPresentation.title, "AI edit custom creature");
+	assert.equal(
+		getMonsterAiGenerationPlan("edit", "", { name: "Гоблін" }, translate)
+			.validationError,
+		"Describe what to change.",
+	);
+
+	const spellPresentation = getSpellListItemPresentation(
+		{ name: "Magic Missile", level: 0, source: "PHB" },
+		{
+			selected: false,
+			capitalizeName: (value) => value,
+			resolveSourceName: (value) => value,
+			translate,
+		},
+	);
+	assert.equal(spellPresentation.levelLabel, "Cantrip");
+
+	const sessionPresentation = getSessionScopeImportPresentation(
+		{ type: "locations" },
+		translate,
+	);
+	assert.equal(
+		sessionPresentation.copy.title,
+		"Choose location/faction to move into this session",
+	);
+	assert.equal(
+		getCampaignDeleteConfirmationConfig(false, translate).title,
+		"Delete campaign",
+	);
 });
 
 await run("JSON helpers validate object and string payloads", () => {

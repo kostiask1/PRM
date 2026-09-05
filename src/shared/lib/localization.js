@@ -42,6 +42,7 @@ class Localization {
 		const initialLanguage = options.initialLanguage || this.defaultLanguage;
 
 		this.currentLanguage = this.normalizeLanguage(initialLanguage);
+		this.t = this.t.bind(this);
 	}
 
 	normalizeLanguage(code) {
