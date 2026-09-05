@@ -370,6 +370,26 @@ export default function MonsterFieldEditModal({
 									{renderTextField("speed", "Speed", 2)}
 									{renderTextField("senses", "Senses", 2)}
 									{renderTextField("languages", "Languages", 2)}
+									{renderTextField(
+										"vulnerable",
+										"Damage Vulnerabilities",
+										2,
+									)}
+									{renderTextField(
+										"resist",
+										"Damage Resistances",
+										2,
+									)}
+									{renderTextField(
+										"immune",
+										"Damage Immunities",
+										2,
+									)}
+									{renderTextField(
+										"conditionImmune",
+										"Condition Immunities",
+										2,
+									)}
 									{renderTextField("desc", "Description", 4)}
 								</>
 							}

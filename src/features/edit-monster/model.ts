@@ -1,5 +1,6 @@
 import {
 	getMonsterTypeString,
+	MonsterStatBlockModel,
 	type MonsterData,
 	type MonsterEntry,
 	type MonsterTypeDescriptor,
@@ -61,7 +62,17 @@ export type CreatureEditableFieldKey =
 	| "speed"
 	| "senses"
 	| "languages"
+	| "vulnerable"
+	| "resist"
+	| "immune"
+	| "conditionImmune"
 	| "desc";
+
+type CreatureDefenseFieldKey =
+	| "vulnerable"
+	| "resist"
+	| "immune"
+	| "conditionImmune";
 
 export type MonsterEditMode = "fields" | "json";
 
@@ -320,6 +331,14 @@ export function getCreatureEditableFieldInput(
 	if (key === "type" && isRecord(monster.type)) {
 		return getMonsterTypeString(monster.type);
 	}
+	if (
+		key === "vulnerable" ||
+		key === "resist" ||
+		key === "immune" ||
+		key === "conditionImmune"
+	) {
+		return new MonsterStatBlockModel(monster).formatDamageProperty(monster[key]) || "";
+	}
 	return listLikeValueToText(monster[key]);
 }
 
@@ -365,6 +384,17 @@ function updateType(monster: MonsterData, value: string): MonsterData {
 	};
 }
 
+function updateDefenseField(
+	monster: MonsterData,
+	key: CreatureDefenseFieldKey,
+	value: string,
+): MonsterData {
+	const next = { ...monster };
+	if (value.trim()) next[key] = value;
+	else delete next[key];
+	return next;
+}
+
 const FIELD_UPDATERS: Partial<
 	Record<CreatureEditableFieldKey, (monster: MonsterData, value: string) => MonsterData>
 > = {
@@ -380,6 +410,12 @@ const FIELD_UPDATERS: Partial<
 		...monster,
 		languages: Array.isArray(monster.languages) ? splitListText(value) : value,
 	}),
+	vulnerable: (monster, value) =>
+		updateDefenseField(monster, "vulnerable", value),
+	resist: (monster, value) => updateDefenseField(monster, "resist", value),
+	immune: (monster, value) => updateDefenseField(monster, "immune", value),
+	conditionImmune: (monster, value) =>
+		updateDefenseField(monster, "conditionImmune", value),
 	size: (monster, value) => ({ ...monster, size: [value] }),
 	alignment: (monster, value) => ({
 		...monster,

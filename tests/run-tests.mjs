@@ -867,6 +867,7 @@ import {
 	addMonsterAction,
 	applyRuleReferenceTag,
 	calculateDiceAverage,
+	getCreatureEditableFieldInput,
 	isRulesReferenceShortcut,
 	parseMonsterJson,
 	parseSpeedText,
@@ -4568,6 +4569,14 @@ await run(
 				'renderTextField("speed", "Speed", 2)',
 				'renderTextField("senses", "Senses", 2)',
 				'renderTextField("languages", "Languages", 2)',
+				'"vulnerable",',
+				'"Damage Vulnerabilities",',
+				'"resist",',
+				'"Damage Resistances",',
+				'"immune",',
+				'"Damage Immunities",',
+				'"conditionImmune",',
+				'"Condition Immunities",',
 				'renderTextField("desc", "Description", 4)',
 				"actionSections={",
 				"<MonsterActionSections",
@@ -28626,6 +28635,65 @@ await run("monster field editing preserves schema variants and rule insertion", 
 	});
 	assert.equal(hpMonster.hit_points, 30);
 
+	const defenses = {
+		name: "Мімік",
+		vulnerable: ["cold"],
+		resist: [
+			"fire",
+			{
+				resist: ["bludgeoning", "piercing"],
+				preNote: "from",
+				note: "nonmagical attacks",
+			},
+		],
+		immune: "poison",
+		conditionImmune: ["charmed", "frightened"],
+	};
+	assert.equal(getCreatureEditableFieldInput(defenses, "vulnerable"), "cold");
+	assert.equal(
+		getCreatureEditableFieldInput(defenses, "resist"),
+		"fire, from bludgeoning, piercing nonmagical attacks",
+	);
+	assert.equal(getCreatureEditableFieldInput(defenses, "immune"), "poison");
+	assert.equal(
+		getCreatureEditableFieldInput(defenses, "conditionImmune"),
+		"charmed, frightened",
+	);
+	const changedVulnerabilities = updateCreatureBasicField(
+		defenses,
+		"vulnerable",
+		"radiant, thunder",
+	);
+	assert.equal(changedVulnerabilities.vulnerable, "radiant, thunder");
+	assert.deepEqual(defenses.vulnerable, ["cold"]);
+	const changedResistances = updateCreatureBasicField(
+		changedVulnerabilities,
+		"resist",
+		"acid; bludgeoning from nonmagical attacks",
+	);
+	assert.equal(
+		changedResistances.resist,
+		"acid; bludgeoning from nonmagical attacks",
+	);
+	const changedImmunities = updateCreatureBasicField(
+		changedResistances,
+		"immune",
+		"fire, poison",
+	);
+	assert.equal(changedImmunities.immune, "fire, poison");
+	const changedConditionImmunities = updateCreatureBasicField(
+		changedImmunities,
+		"conditionImmune",
+		"poisoned",
+	);
+	assert.equal(changedConditionImmunities.conditionImmune, "poisoned");
+	const clearedImmunities = updateCreatureBasicField(
+		changedConditionImmunities,
+		"immune",
+		"   ",
+	);
+	assert.equal("immune" in clearedImmunities, false);
+
 	assert.equal(actionEntriesToText({ desc: "Old text" }), "Old text");
 	assert.deepEqual(actionFromText({ desc: "Old text" }, "New text"), {
 		desc: "New text",
@@ -28658,6 +28726,31 @@ await run("monster field editing preserves schema variants and rule insertion", 
 });
 
 await run("monster field editing validates JSON and restores source on save", () => {
+	assert.deepEqual(
+		prepareMonsterDraftForSave({
+			draft: {
+				name: "Захисник",
+				vulnerable: "radiant",
+				resist: "cold, fire",
+				immune: "poison",
+				conditionImmune: "poisoned",
+			},
+			jsonText: "",
+			editMode: "fields",
+			source: "CUSTOM",
+		}),
+		{
+			ok: true,
+			monster: {
+				name: "Захисник",
+				vulnerable: "radiant",
+				resist: "cold, fire",
+				immune: "poison",
+				conditionImmune: "poisoned",
+				source: "CUSTOM",
+			},
+		},
+	);
 	assert.deepEqual(parseMonsterJson("[]"), {
 		ok: false,
 		reason: "not-object",
