@@ -19,6 +19,7 @@ export function useAiAssistantControls({
 	const [attachedImages, setAttachedImages] = useState<AiUiAttachment[]>([]);
 	const [attachedFiles, setAttachedFiles] = useState<AiUiAttachment[]>([]);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
+	const [editEncounterCreatures, setEditEncounterCreatures] = useState(false);
 	const [generateCharacters, setGenerateCharacters] = useState(false);
 	const [generateNpcs, setGenerateNpcs] = useState(true);
 	const [generateLocations, setGenerateLocations] = useState(true);
@@ -31,6 +32,7 @@ export function useAiAssistantControls({
 		attachedFiles,
 		attachedImages,
 		error,
+		editEncounterCreatures,
 		generateCharacters,
 		generateCustomMonsters,
 		generateEncounters,
@@ -43,6 +45,7 @@ export function useAiAssistantControls({
 		setAttachedFiles,
 		setAttachedImages,
 		setError,
+		setEditEncounterCreatures,
 		setGenerateCharacters,
 		setGenerateCustomMonsters,
 		setGenerateEncounters,

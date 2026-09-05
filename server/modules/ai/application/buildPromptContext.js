@@ -229,6 +229,20 @@ function projectEncounterMonsters(monsters) {
 	return asArray(monsters).map(projectEncounterMonster);
 }
 
+function isEncounterCharacter(monster) {
+	return readProperty(monster, "participantType") === "character";
+}
+
+function projectEditableEncounterMonster(monster) {
+	return { ...valueOr(monster, {}) };
+}
+
+function projectEditableEncounterMonsters(monsters) {
+	return asArray(monsters)
+		.filter((monster) => !isEncounterCharacter(monster))
+		.map(projectEditableEncounterMonster);
+}
+
 function appendSelectedSceneEncounter(
 	result,
 	scene,
@@ -394,12 +408,14 @@ function projectCurrentScene(scene, noteToContextNote) {
 	};
 }
 
-function projectCurrentEncounter(encounter) {
+function projectCurrentEncounter(encounter, creatureEditingEnabled = false) {
 	const value = valueOr(encounter, {});
 	return {
 		id: value.id,
 		name: value.name,
-		monsters: projectEncounterMonsters(value.monsters),
+		monsters: creatureEditingEnabled
+			? projectEditableEncounterMonsters(value.monsters)
+			: projectEncounterMonsters(value.monsters),
 	};
 }
 
@@ -412,7 +428,9 @@ function appendCurrentSessionScenes(result, data, noteToContextNote) {
 
 function appendCurrentSessionEncounters(result, data) {
 	if (!Array.isArray(data.encounters) || data.encounters.length === 0) return;
-	result.encounters = data.encounters.map(projectCurrentEncounter);
+	result.encounters = data.encounters.map((encounter) =>
+		projectCurrentEncounter(encounter),
+	);
 }
 
 function appendCurrentSessionNpcs(result, data, noteToContextNote) {
@@ -517,14 +535,24 @@ function appendSelectedSessionsContext(result, contextData, noteToContextNote) {
 	if (selectedSessions.length > 0) result.selectedSessions = selectedSessions;
 }
 
-function appendCurrentEncounterContext(result, session, encounterId) {
+function appendCurrentEncounterContext(
+	result,
+	session,
+	encounterId,
+	creatureEditingEnabled,
+) {
 	if (!encounterId) return;
 	if (!session) return;
 	const encounter = findEncounter(
 		readNestedProperty(session, ["data", "encounters"]),
 		encounterId,
 	);
-	if (encounter) result.currentEncounter = projectCurrentEncounter(encounter);
+	if (encounter) {
+		result.currentEncounter = projectCurrentEncounter(
+			encounter,
+			creatureEditingEnabled,
+		);
+	}
 }
 
 function createNoteProjector(simplifiedNotesEnabled) {
@@ -539,6 +567,7 @@ function buildPromptContext({
 	entityTargetScope,
 	encounterId,
 	simplifiedNotesEnabled = false,
+	encounterCreatureEditingEnabled = false,
 }) {
 	const noteToContextNote = createNoteProjector(simplifiedNotesEnabled);
 	const result = {};
@@ -552,7 +581,12 @@ function buildPromptContext({
 		noteToContextNote,
 	);
 	appendSelectedSessionsContext(result, contextData, noteToContextNote);
-	appendCurrentEncounterContext(result, session, encounterId);
+	appendCurrentEncounterContext(
+		result,
+		session,
+		encounterId,
+		encounterCreatureEditingEnabled,
+	);
 	return result;
 }
 

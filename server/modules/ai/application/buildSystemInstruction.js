@@ -20,7 +20,7 @@ Do not include combat encounter operations unless task instructions explicitly s
 Your goal is to help build a specific combat encounter.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
-The JSON must contain operation-based changes only. Update the current encounter with an "update" operation for entity "encounter".
+The JSON must contain operation-based changes only. Use an "update" operation for entity "encounter" when changing the encounter name or monster composition.
 The encounter patch shape is:
 { "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name or exact custom creature name", "name": "Optional display name" }] }.
 Balance rules:
@@ -125,11 +125,11 @@ const structuredJsonResponseContract = `PARSED JSON RESPONSE CONTRACT:
 2. Return raw JSON only: no Markdown fence, no prose, no comments, no keys outside "version" and "operations".
 3. The response is a domain patch, not final state. Never return full arrays of unchanged characters, NPCs, locations, scenes, notes, encounters, or monsters.
 4. Operation names are case-sensitive. Use exactly: "create", "update", "delete", "appendNote", "updateNote", "deleteNote", "moveScope".
-5. Entity names are case-sensitive. Prefer exactly: "campaign", "session", "character", "npc", "location", "scene", "encounter", "monster".
+5. Entity names are case-sensitive. Prefer exactly: "campaign", "session", "character", "npc", "location", "scene", "encounter", "encounter-creature", "monster".
 6. Every operation must describe one precise change requested by USER INSTRUCTIONS. Omit all unchanged data.
 7. Supported operation shapes:
 - Create: { "op": "create", "entity": "npc|location|character|scene|encounter|monster", "scope": "campaign|session", "clientId": "optional-temp-id", "data": { ...new object fields... } }
-- Update: { "op": "update", "entity": "npc|location|character|scene|encounter|monster", "scope": "campaign|session", "id": "existing-id", "patch": { ...changed fields only... } }
+- Update: { "op": "update", "entity": "npc|location|character|scene|encounter|encounter-creature|monster", "scope": "campaign|session", "id": "existing-id", "patch": { ...changed fields only... } }
 - Update campaign description: { "op": "update", "entity": "campaign", "patch": { "description": "..." } }
 - Delete: { "op": "delete", "entity": "npc|location|character|scene|encounter|monster", "scope": "campaign|session", "id": "existing-id" }
 - Append note: { "op": "appendNote", "entity": "campaign|session|scene|npc|location|character", "scope": "campaign|session", "id": "existing-owner-id-if-needed", "targetClientId": "new-owner-clientId-if-needed", "note": { "title": "...", "text": "Markdown note text..." } }
@@ -137,7 +137,7 @@ const structuredJsonResponseContract = `PARSED JSON RESPONSE CONTRACT:
 - Delete note: { "op": "deleteNote", "entity": "campaign|session|scene|npc|location|character", "scope": "campaign|session", "id": "existing-owner-id-if-needed", "noteId": "existing-note-id" }
 - Move scope: { "op": "moveScope", "entity": "npc|location", "id": "existing-id-or-use-targetClientId", "targetClientId": "new-entity-clientId-if-needed", "from": "session|campaign", "to": "campaign|session" }
 8. For existing targets, use the exact "id" from INPUT DATA whenever available. Use "slug" or exact "name" only if no id exists. Campaign updates are the only update operations that do not need an id.
-9. Omit "scope" for "monster" operations. Monsters belong to the custom bestiary, not campaign/session scope.
+9. Omit "scope" for "monster" and "encounter-creature" operations. Monsters belong to the custom bestiary; encounter creatures belong only to the current encounter.
 10. For new targets, never invent a final id. Use "clientId" on the create operation only when another operation in the same response needs to reference the new item. Later operations must reference it with "targetClientId", including moveScope operations for an entity created earlier in the same response.
 11. Patch objects must contain only changed fields. Do not copy unchanged fields into "patch".
 12. To add a note, prefer appendNote. To change a note, use updateNote with noteId. Do not replace whole note arrays unless explicitly necessary.
@@ -251,6 +251,20 @@ If you create custom monsters, use "create" operations for entity "monster" and 
 const CUSTOM_MONSTER_DISABLED_CONTRACT = `Custom monster generation is disabled. Do not output operations for entity "monster". Use official bestiary monsters or existing INPUT DATA.customBestiary.monsterNames only.`;
 
 const ENCOUNTER_CUSTOM_MONSTER_ENABLED_CONTRACT = `Custom monster generation is enabled for this encounter, but official D&D monsters are preferred. Use official bestiary monsters when they fit. Create new custom monsters only for sufficiently unique threats. If you create custom monsters, output "create" operations for entity "monster" before the encounter update operation, then reference each new creature by its exact "name" in encounter "monsterName".`;
+
+const ENCOUNTER_CREATURE_EDITING_ENABLED_CONTRACT = `ENCOUNTER CREATURE EDITING IS ENABLED:
+INPUT DATA.currentEncounter.monsters contains the complete local stat block for every non-character creature in the current encounter. Each creature has a stable "instanceId" for this request.
+To edit a creature only in this encounter, output one operation per affected instance:
+{ "op": "update", "entity": "encounter-creature", "id": "exact instanceId", "patch": { ...changed stat-block fields only... } }
+You may edit fields such as name, size, type, alignment, ac, hp, speed, str, dex, con, int, wis, cha, cr, save, skill, senses, languages, resist, immune, vulnerable, conditionImmune, spellcasting, trait, action, bonus, reaction, and legendary.
+Use the same 5eTools-style field shapes already present in INPUT DATA. To replace or remove an array field, return its complete new array, including an empty array when it should be removed. Never return the complete unchanged creature in "patch".
+Creature edits are encounter-local. Never use entity "monster" for these edits and never change the global custom bestiary. Preserve id, instanceId, source, originalBestiaryName, participantType, _localOverride, currentHp, and imageUrl. Do not output encounter-creature operations for player-character participants.
+When the same creature appears multiple times, update only the exact instanceIds requested. To edit every copy, output a separate encounter-creature update for every matching instanceId.
+Do not combine encounter-creature operations with any entity "encounter" operation in the same response. If both are requested, prioritize encounter-creature edits and leave the encounter name and composition unchanged.`;
+
+const ENCOUNTER_CREATURE_EDITING_DISABLED_CONTRACT = `Encounter creature editing is disabled. Do not output operations for entity "encounter-creature" and do not change creature stat-block fields. You may still change encounter name or composition only when encounter generation is enabled.`;
+
+const ENCOUNTER_COMPOSITION_DISABLED_CONTRACT = `Encounter generation is disabled. Do not output operations for entity "encounter" and do not change the encounter name or monster composition. Only requested encounter-creature stat-block edits are allowed.`;
 
 const SESSION_CAMPAIGN_ENTITY_OUTPUT_CONTRACT = `SESSION/CAMPAIGN ENTITY OUTPUT RULE:
 Do not create session copies of campaign-scoped NPCs or campaign-scoped locations/factions.
@@ -386,6 +400,18 @@ function appendEncounterCustomMonsterPolicy(parts, options) {
 	);
 }
 
+function appendEncounterCreatureEditingPolicy(parts, options) {
+	if (options.useKey !== "encounter") return;
+	parts.push(
+		options.encounterCreatureEditingEnabled
+			? ENCOUNTER_CREATURE_EDITING_ENABLED_CONTRACT
+			: ENCOUNTER_CREATURE_EDITING_DISABLED_CONTRACT,
+	);
+	if (!options.encounterGenerationEnabled) {
+		parts.push(ENCOUNTER_COMPOSITION_DISABLED_CONTRACT);
+	}
+}
+
 function characterGenerationInstruction(enabled) {
 	return enabled
 		? `Character generation is enabled. You may create, update, delete, or add notes to entity "character" only when the user explicitly asks for player characters.`
@@ -481,6 +507,7 @@ const SYSTEM_INSTRUCTION_APPEND_POLICIES = Object.freeze([
 	appendAdditiveGenerationContract,
 	appendSceneEncounterPolicy,
 	appendEncounterCustomMonsterPolicy,
+	appendEncounterCreatureEditingPolicy,
 	appendEntityGenerationToggles,
 	appendSessionEntityScopeContracts,
 	appendBasePromptInstructions,

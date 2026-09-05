@@ -115,6 +115,9 @@ function createGenerationInput(request, loaded) {
 		parseAIResponse: preparedRequest.shouldParseAIResponse,
 		contextData: loaded.contextData,
 		generateCharacters: preparedRequest.characterGenerationEnabled,
+		...(preparedRequest.encounterCreatureEditingEnabled
+			? { editEncounterCreatures: true }
+			: {}),
 		generateNpcs: preparedRequest.npcGenerationEnabled,
 		generateLocations: preparedRequest.locationGenerationEnabled,
 		generateEncounters: preparedRequest.encounterGenerationEnabled,
@@ -215,6 +218,9 @@ function createPersistenceInput(request, loaded, generatedContent) {
 		parseAIResponse: payload.parseAIResponse,
 		shouldParseAIResponse: preparedRequest.shouldParseAIResponse,
 		characterGenerationEnabled: preparedRequest.characterGenerationEnabled,
+		...(preparedRequest.encounterCreatureEditingEnabled
+			? { encounterCreatureEditingEnabled: true }
+			: {}),
 		npcGenerationEnabled: preparedRequest.npcGenerationEnabled,
 		locationGenerationEnabled: preparedRequest.locationGenerationEnabled,
 		encounterGenerationEnabled: preparedRequest.encounterGenerationEnabled,

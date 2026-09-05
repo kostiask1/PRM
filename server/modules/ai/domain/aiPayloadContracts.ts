@@ -22,6 +22,7 @@ export type AiOperationEntity =
 	| "scenes"
 	| "encounter"
 	| "encounters"
+	| "encounter-creature"
 	| "monster"
 	| "custom-monster"
 	| "customMonster";

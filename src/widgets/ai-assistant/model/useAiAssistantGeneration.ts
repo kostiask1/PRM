@@ -42,6 +42,7 @@ interface UseAiAssistantGenerationOptions {
 	deleteAiResponse: ExecuteAiHistoryRetryOptions["deleteAiResponse"];
 	generateAi: ExecuteAiGenerationOptions["generateAi"];
 	generateCharacters: boolean;
+	editEncounterCreatures: boolean;
 	generateCustomMonsters: boolean;
 	generateEncounters: boolean;
 	generateLocations: boolean;
@@ -76,6 +77,7 @@ export function useAiAssistantGeneration({
 	deleteAiResponse,
 	generateAi,
 	generateCharacters,
+	editEncounterCreatures,
 	generateCustomMonsters,
 	generateEncounters,
 	generateLocations,
@@ -144,6 +146,7 @@ export function useAiAssistantGeneration({
 				attachedFiles,
 				imagePromptBasePromptOverride,
 				generateCharacters,
+				editEncounterCreatures,
 				generateNpcs,
 				generateLocations,
 				generateEncounters,

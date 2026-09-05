@@ -146,6 +146,7 @@ async function generateContent({
 	generateLocations,
 	generateEncounters,
 	generateCustomMonsters,
+	editEncounterCreatures,
 	entityScope,
 	modelName,
 	language,
@@ -157,6 +158,7 @@ async function generateContent({
 	const {
 		characterGenerationEnabled,
 		customMonsterGenerationEnabled,
+		encounterCreatureEditingEnabled,
 		effectiveParseAIResponse,
 		encounterGenerationEnabled,
 		entityTargetScope,
@@ -176,6 +178,7 @@ async function generateContent({
 		generateLocations,
 		generateEncounters,
 		generateCustomMonsters,
+		editEncounterCreatures,
 		entityScope,
 		language,
 		simplifiedNotes,
@@ -193,6 +196,7 @@ async function generateContent({
 		locationGenerationEnabled,
 		encounterGenerationEnabled,
 		customMonsterGenerationEnabled,
+		encounterCreatureEditingEnabled,
 		characterGenerationEnabled,
 		entityTargetScope,
 		globalBasePrompt,
@@ -207,6 +211,7 @@ async function generateContent({
 		entityTargetScope,
 		encounterId,
 		simplifiedNotesEnabled,
+		encounterCreatureEditingEnabled,
 	});
 	const userPrompt = buildUserPrompt({
 		contextJson,
@@ -217,6 +222,7 @@ async function generateContent({
 		encounterId,
 		customMonsterGenerationEnabled,
 		encounterGenerationEnabled,
+		encounterCreatureEditingEnabled,
 		userInstructions,
 	});
 	const imageParts = await buildImageParts(attachedImages);

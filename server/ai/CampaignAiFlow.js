@@ -23,6 +23,7 @@ class CampaignAiFlow {
 		parseAIResponse,
 		shouldParseAIResponse,
 		characterGenerationEnabled,
+		encounterCreatureEditingEnabled,
 		npcGenerationEnabled,
 		locationGenerationEnabled,
 		encounterGenerationEnabled,
@@ -48,6 +49,7 @@ class CampaignAiFlow {
 			parseAIResponse,
 			shouldParseAIResponse,
 			generateCharacters: characterGenerationEnabled,
+			editEncounterCreatures: encounterCreatureEditingEnabled,
 			generateNpcs: npcGenerationEnabled,
 			generateLocations: locationGenerationEnabled,
 			generateEncounters: encounterGenerationEnabled,
@@ -88,9 +90,12 @@ class CampaignAiFlow {
 			simplifiedNotes: simplifiedNotesEnabled,
 			permissions: {
 				allowCharacters: characterGenerationEnabled,
+				allowCustomMonsters: customMonsterGenerationEnabled,
+				allowEncounterCreatureEditing:
+					encounterCreatureEditingEnabled,
 				allowNpcs: npcGenerationEnabled,
 				allowLocations: locationGenerationEnabled,
-				allowEncounters: encounterGenerationEnabled || Boolean(path.encounter),
+				allowEncounters: encounterGenerationEnabled,
 			},
 		});
 		const extraChangeResources = applied.customBestiaryChange?.hasChanges

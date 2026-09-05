@@ -60,6 +60,7 @@ const HISTORY_MODE_LABELS: Record<string, string> = {
 };
 
 const HISTORY_GENERATION_OPTIONS = [
+	["Creature editing", "creatureEditing"],
 	["Create characters", "characterGeneration"],
 	["Create NPCs", "npcGeneration"],
 	["Create locations/factions", "locationGeneration"],
@@ -157,8 +158,12 @@ function getHistoryGenerationOptionRows(
 	translate: AssistantTranslate,
 	getOnOffLabel: (value: unknown) => string,
 ): string[] {
-	return HISTORY_GENERATION_OPTIONS.map(
-		([label, key]) => `${translate(label)}: ${getOnOffLabel(options[key])}`,
+	return HISTORY_GENERATION_OPTIONS.filter(
+		([, key]) =>
+			key !== "creatureEditing" ||
+			Object.prototype.hasOwnProperty.call(options, key),
+	).map(([label, key]) =>
+		`${translate(label)}: ${getOnOffLabel(options[key])}`,
 	);
 }
 

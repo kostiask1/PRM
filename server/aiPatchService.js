@@ -2218,6 +2218,148 @@ async function applyEncounterOperation(state, operation) {
 	return handler ? handler(context) : null;
 }
 
+const ENCOUNTER_CREATURE_PROTECTED_FIELDS = Object.freeze([
+	"id",
+	"instanceId",
+	"source",
+	"originalBestiaryName",
+	"participantType",
+	"_localOverride",
+	"currentHp",
+	"imageUrl",
+]);
+
+function canApplyEncounterCreatureOperation(state, operation) {
+	if (!state.sessionData) {
+		state.warnings.push(
+			`Skipped encounter creature ${operation.op}; no session target.`,
+		);
+		return false;
+	}
+	if (state.permissions.allowEncounterCreatureEditing !== true) {
+		state.warnings.push(
+			`Skipped encounter creature ${operation.op}; creature editing disabled.`,
+		);
+		return false;
+	}
+	if (!asText(state.encounterId)) {
+		state.warnings.push(
+			`Skipped encounter creature ${operation.op}; no encounter target.`,
+		);
+		return false;
+	}
+	return true;
+}
+
+function getEncounterCreatureTargetId(operation) {
+	return firstIdentityText(
+		operation.id,
+		operation.targetId,
+		operation.instanceId,
+	);
+}
+
+function isEncounterCreatureTarget(monster, targetId) {
+	return (
+		monster?.participantType !== "character" &&
+		asText(monster?.instanceId) === targetId
+	);
+}
+
+function getEncounterCreaturePatch(operation) {
+	const patch = { ...operationPatch(operation) };
+	for (const key of ENCOUNTER_CREATURE_PROTECTED_FIELDS) delete patch[key];
+	return patch;
+}
+
+function parseEncounterCreatureHpAverage(monster) {
+	if (!monster.hp || typeof monster.hp !== "object") return NaN;
+	return Number.parseInt(monster.hp.average, 10);
+}
+
+function getEncounterCreatureMaxHp(monster = {}, fallback = 0) {
+	const values = [
+		parseEncounterCreatureHpAverage(monster),
+		Number.parseInt(monster.hit_points, 10),
+		Number.parseInt(fallback, 10),
+	];
+	const result = values.find(Number.isFinite);
+	return result === undefined ? 0 : result;
+}
+
+function getEncounterCreatureCurrentHp(monster, nextMaxHp) {
+	const currentHp = Number.parseInt(monster.currentHp, 10);
+	return Number.isFinite(currentHp)
+		? Math.min(currentHp, nextMaxHp || currentHp)
+		: nextMaxHp;
+}
+
+function buildEditedEncounterCreature(monster, patch) {
+	const normalized = normalizeCustomMonster({
+		...monster,
+		...patch,
+		id: monster.id,
+		name: patch.name || monster.name,
+	});
+	if (!normalized) return null;
+	const nextMaxHp = getEncounterCreatureMaxHp(
+		normalized,
+		monster.hit_points,
+	);
+	const editedMonster = {
+		...normalized,
+		instanceId: monster.instanceId,
+		source: monster.source,
+		originalBestiaryName:
+			monster.originalBestiaryName ||
+			normalized.originalBestiaryName ||
+			normalized.name,
+		_localOverride: true,
+		currentHp: getEncounterCreatureCurrentHp(monster, nextMaxHp),
+		hit_points: nextMaxHp,
+	};
+	for (const key of ["id", "participantType", "imageUrl"]) {
+		if (hasOwn(monster, key)) editedMonster[key] = monster[key];
+	}
+	return editedMonster;
+}
+
+function replaceEncounterCreatureTargets(monsters, targetId, patch) {
+	let saved = null;
+	const nextMonsters = monsters.map((monster) => {
+		if (!isEncounterCreatureTarget(monster, targetId)) return monster;
+		const nextMonster = buildEditedEncounterCreature(monster, patch);
+		if (!nextMonster) return monster;
+		saved ||= nextMonster;
+		return nextMonster;
+	});
+	return { nextMonsters, saved };
+}
+
+function applyEncounterCreatureUpdate(state, operation) {
+	const encounters = getSessionEncounters(state.sessionData);
+	const encounter = findEncounterById(encounters, asText(state.encounterId));
+	const targetId = getEncounterCreatureTargetId(operation);
+	const patch = getEncounterCreaturePatch(operation);
+	if (!encounter || !targetId || Object.keys(patch).length === 0) return null;
+	const monsters = Array.isArray(encounter.monsters) ? encounter.monsters : [];
+	const replacement = replaceEncounterCreatureTargets(
+		monsters,
+		targetId,
+		patch,
+	);
+	if (!replacement.saved) return null;
+	encounter.monsters = replacement.nextMonsters;
+	return { type: "encounter-creature", saved: replacement.saved };
+}
+
+function applyEncounterCreatureOperation(state, operation) {
+	if (!canApplyEncounterCreatureOperation(state, operation)) return null;
+	return asText(operation.op).toLowerCase() === "update"
+		? applyEncounterCreatureUpdate(state, operation)
+		: null;
+}
+
 async function ensureCampaignEntityCache(state, type) {
 	if (!state.campaignEntityCache.has(type)) {
 		state.campaignEntityCache.set(
@@ -2486,6 +2628,19 @@ function isMonsterOperation(operation) {
 	);
 }
 
+function getAllowedMonsterOperations(state, operations) {
+	const monsterOperations = operations.filter(isMonsterOperation);
+	if (state.permissions.allowCustomMonsters !== false) {
+		return monsterOperations;
+	}
+	for (const operation of monsterOperations) {
+		state.warnings.push(
+			`Skipped ${operation.op} for disabled custom monsters.`,
+		);
+	}
+	return [];
+}
+
 function getDefaultEntityScope(sessionFile, entityScope) {
 	return sessionFile && entityScope !== "campaign" ? "session" : "campaign";
 }
@@ -2584,6 +2739,14 @@ async function dispatchEncounterOperation(state, operation) {
 	return operationOutcome(result, false, true);
 }
 
+function dispatchEncounterCreatureOperation(state, operation) {
+	return operationOutcome(
+		applyEncounterCreatureOperation(state, operation),
+		false,
+		true,
+	);
+}
+
 async function dispatchEntityOperation(state, operation, options) {
 	const result = await applyEntityOperation(state, operation, options);
 	const sessionChanged = Boolean(
@@ -2598,6 +2761,7 @@ const ENTITY_OPERATION_DISPATCHERS = new Map([
 	["scenes", dispatchSceneOperation],
 	["encounter", dispatchEncounterOperation],
 	["encounters", dispatchEncounterOperation],
+	["encounter-creature", dispatchEncounterCreatureOperation],
 ]);
 
 function isDispatchableAiOperation(operation) {
@@ -2748,7 +2912,7 @@ async function applyAiOperations({
 		campaignMetaChanged: false,
 		sessionDataChanged: false,
 	};
-	const monsterOperations = operations.filter(isMonsterOperation);
+	const monsterOperations = getAllowedMonsterOperations(state, operations);
 	let customBestiaryChange = null;
 
 	if (monsterOperations.length > 0) {

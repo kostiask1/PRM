@@ -13,6 +13,7 @@ export interface AiPromptTokenVisibility {
 
 export interface AiToolbarVisibility {
 	showCharacterGeneration: boolean;
+	showEncounterCreatureEditing: boolean;
 	showParsedGenerationOptions: boolean;
 }
 
@@ -32,16 +33,21 @@ export interface AiEncounterGenerationActionsView {
 export function getAiToolbarVisibility({
 	isBestiary,
 	isCampaign,
+	isEncounter,
 	parseAIResponse,
 }: {
 	isBestiary: boolean;
 	isCampaign: boolean;
+	isEncounter: boolean;
 	parseAIResponse: boolean;
 }): AiToolbarVisibility {
 	const showParsedGenerationOptions = !isBestiary && parseAIResponse;
 	return {
 		showParsedGenerationOptions,
 		showCharacterGeneration: showParsedGenerationOptions && isCampaign,
+		showEncounterCreatureEditing: Boolean(
+			showParsedGenerationOptions && isEncounter,
+		),
 	};
 }
 

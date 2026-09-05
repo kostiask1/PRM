@@ -44,12 +44,17 @@ function resolveGenerationFlags({
 	generateLocations,
 	generateEncounters,
 	generateCustomMonsters,
+	editEncounterCreatures,
+	encounterId,
 }) {
 	const encounterGenerationEnabled = Boolean(generateEncounters);
 	return {
 		characterGenerationEnabled: isGenerationEnabled(generateCharacters),
 		customMonsterGenerationEnabled:
 			encounterGenerationEnabled && Boolean(generateCustomMonsters),
+		encounterCreatureEditingEnabled: Boolean(
+			encounterId && editEncounterCreatures,
+		),
 		encounterGenerationEnabled,
 		locationGenerationEnabled: isGenerationEnabled(generateLocations),
 		npcGenerationEnabled: isGenerationEnabled(generateNpcs),
@@ -67,8 +72,16 @@ function resolveEntityTargetScope(session, encounterId, entityScope) {
 	return entityScope === "session" ? "session" : "mixed";
 }
 
-function canParseAiResponse(parseAIResponse, encounterId, encounterEnabled) {
-	return Boolean(parseAIResponse) && (!encounterId || encounterEnabled);
+function canParseAiResponse(
+	parseAIResponse,
+	encounterId,
+	encounterEnabled,
+	creatureEditingEnabled,
+) {
+	return (
+		Boolean(parseAIResponse) &&
+		(!encounterId || encounterEnabled || creatureEditingEnabled)
+	);
 }
 
 function resolveEffectiveParsing(
@@ -76,10 +89,16 @@ function resolveEffectiveParsing(
 	parseAIResponse,
 	encounterId,
 	encounterEnabled,
+	creatureEditingEnabled,
 ) {
 	return (
 		type === "custom-monster" ||
-		canParseAiResponse(parseAIResponse, encounterId, encounterEnabled)
+		canParseAiResponse(
+			parseAIResponse,
+			encounterId,
+			encounterEnabled,
+			creatureEditingEnabled,
+		)
 	);
 }
 
@@ -125,6 +144,7 @@ function resolveAiRequest({
 	generateLocations,
 	generateEncounters,
 	generateCustomMonsters,
+	editEncounterCreatures,
 	entityScope,
 	language,
 	simplifiedNotes,
@@ -137,6 +157,8 @@ function resolveAiRequest({
 		generateLocations,
 		generateEncounters,
 		generateCustomMonsters,
+		editEncounterCreatures,
+		encounterId,
 	});
 	const entityTargetScope = resolveEntityTargetScope(
 		session,
@@ -148,6 +170,11 @@ function resolveAiRequest({
 		parseAIResponse,
 		encounterId,
 		generationFlags.encounterGenerationEnabled,
+		generationFlags.encounterCreatureEditingEnabled,
+	);
+	const encounterCreatureEditingEnabled = Boolean(
+		effectiveParseAIResponse &&
+			generationFlags.encounterCreatureEditingEnabled,
 	);
 	const requestedType = resolveRequestedType(
 		type,
@@ -163,6 +190,7 @@ function resolveAiRequest({
 		characterGenerationEnabled: generationFlags.characterGenerationEnabled,
 		customMonsterGenerationEnabled:
 			generationFlags.customMonsterGenerationEnabled,
+		encounterCreatureEditingEnabled,
 		effectiveParseAIResponse,
 		encounterGenerationEnabled: generationFlags.encounterGenerationEnabled,
 		entityTargetScope,

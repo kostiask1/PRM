@@ -21,6 +21,7 @@ export interface AiGenerationRequestInput {
 	attachedFiles?: Record<string, unknown>[];
 	imagePromptBasePromptOverride?: string;
 	generateCharacters?: boolean;
+	editEncounterCreatures?: boolean;
 	generateNpcs?: boolean;
 	generateLocations?: boolean;
 	generateEncounters?: boolean;
@@ -42,6 +43,7 @@ export interface AiGenerationRequestPolicy {
 }
 
 export interface AiGenerationRequestOptions {
+	editEncounterCreatures: boolean;
 	generateCharacters: boolean;
 	generateNpcs: boolean;
 	generateLocations: boolean;
@@ -135,6 +137,11 @@ export function buildAiGenerationRequestOptions(
 	);
 	const generateEncounters = shouldGenerateEncounters(input, policy);
 	return {
+		editEncounterCreatures: Boolean(
+			policy.shouldParseResponse &&
+				input.isEncounter &&
+				input.editEncounterCreatures,
+		),
 		generateCharacters: structuredEntityOptionsEnabled
 			? Boolean(input.generateCharacters)
 			: true,

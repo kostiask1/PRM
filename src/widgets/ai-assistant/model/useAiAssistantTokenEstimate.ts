@@ -14,6 +14,7 @@ export function useAiAssistantTokenEstimate(input: AiTokenEstimateInput) {
 		input.charactersList,
 		input.contextConfig,
 		input.currentLanguage,
+		input.editEncounterCreatures,
 		input.generateCharacters,
 		input.generateCustomMonsters,
 		input.generateEncounters,

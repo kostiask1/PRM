@@ -23,6 +23,7 @@ const ALLOWED_ENTITIES = new Set([
 	"scenes",
 	"encounter",
 	"encounters",
+	"encounter-creature",
 	"monster",
 	"custom-monster",
 	"customMonster",

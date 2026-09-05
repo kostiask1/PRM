@@ -29330,6 +29330,12 @@ await run("AI operations schema validates patch contracts", () => {
 				patch: { description: "Sharper premise" },
 			},
 			{
+				op: "update",
+				entity: "encounter-creature",
+				id: "instance-1",
+				patch: { hp: { average: 27, formula: "5d8 + 5" } },
+			},
+			{
 				op: "moveScope",
 				entity: "npc",
 				targetClientId: "npc-1",
@@ -29397,7 +29403,7 @@ await run("AI operation schema preserves ordered malformed and scope errors", ()
 			{
 				path: "operations[0].entity",
 				message:
-					"must be one of: campaign, session, character, characters, npc, npcs, location, locations, faction, factions, scene, scenes, encounter, encounters, monster, custom-monster, customMonster",
+					"must be one of: campaign, session, character, characters, npc, npcs, location, locations, faction, factions, scene, scenes, encounter, encounters, encounter-creature, monster, custom-monster, customMonster",
 			},
 			{
 				path: "operations[0].scope",
@@ -30011,6 +30017,59 @@ await run("AI prompt context preserves complete projection policies", () => {
 	assert.deepEqual(campaignScope, {});
 });
 
+await run("AI prompt context exposes editable encounter creatures only when enabled", () => {
+	const action = [{ name: "Спис", entries: ["Атака списом."] }];
+	const monster = {
+		id: "goblin-base",
+		instanceId: "goblin-1",
+		name: "Вартовий",
+		originalBestiaryName: "Goblin",
+		source: "MM",
+		currentHp: 7,
+		hp: { average: 12, formula: "2d6 + 5" },
+		str: 14,
+		action,
+	};
+	const character = {
+		id: "hero",
+		instanceId: "hero-1",
+		name: "Герой",
+		participantType: "character",
+		currentHp: 20,
+	};
+	const session = {
+		data: {
+			encounters: [
+				{ id: "encounter-1", name: "Брама", monsters: [monster, character] },
+			],
+		},
+	};
+
+	const compactContext = buildPromptContext({
+		session,
+		contextData: {},
+		encounterId: "encounter-1",
+	});
+	assert.deepEqual(compactContext.currentEncounter.monsters, [
+		{ name: "Вартовий", monsterName: "Goblin", cr: undefined },
+		{ name: "Герой", monsterName: "Герой", cr: undefined },
+	]);
+
+	const editableContext = buildPromptContext({
+		session,
+		contextData: {},
+		encounterId: "encounter-1",
+		encounterCreatureEditingEnabled: true,
+	});
+	assert.deepEqual(editableContext.currentEncounter, {
+		id: "encounter-1",
+		name: "Брама",
+		monsters: [monster],
+	});
+	assert.notStrictEqual(editableContext.currentEncounter.monsters[0], monster);
+	assert.strictEqual(editableContext.currentEncounter.monsters[0].action, action);
+});
+
 await run("AI user prompt preserves mode-specific scope and encounter rules", () => {
 	const scenePrompt = buildUserPrompt({
 		contextJson: { campaign: { name: "Demo" } },
@@ -30041,6 +30100,14 @@ await run("AI user prompt preserves mode-specific scope and encounter rules", ()
 	});
 	assert.match(encounterPrompt, /enc-1/);
 	assert.match(encounterPrompt, /Custom monster creation is allowed/);
+	const creatureEditingPrompt = buildUserPrompt({
+		contextJson: {},
+		useKey: "encounter",
+		encounterId: "enc-1",
+		encounterCreatureEditingEnabled: true,
+	});
+	assert.match(creatureEditingPrompt, /Encounter creature editing is enabled/);
+	assert.match(creatureEditingPrompt, /instanceId/);
 });
 
 await run("AI task instructions preserve the exact mode decision table", () => {
@@ -30566,15 +30633,41 @@ await run(
 			responseLanguage: { label: "English" },
 			customMonsterGenerationEnabled: false,
 		});
+		const encounterCreatureEditing = buildSystemInstruction({
+			useKey: "encounter",
+			responseLanguage: { label: "English" },
+			encounterCreatureEditingEnabled: true,
+		});
 		assert.match(
 			encounterEnabled,
 			/Custom monster generation is enabled for this encounter/,
 		);
 		assert.doesNotMatch(encounterEnabled, /Custom monster generation is disabled/);
 		assert.match(encounterDisabled, /Custom monster generation is disabled/);
+		assert.match(
+			encounterDisabled,
+			/Encounter creature editing is disabled/,
+		);
 		assert.doesNotMatch(
 			encounterDisabled,
 			/Custom monster generation is enabled for this encounter/,
+		);
+		assert.match(
+			encounterCreatureEditing,
+			/ENCOUNTER CREATURE EDITING IS ENABLED/,
+		);
+		assert.match(
+			encounterCreatureEditing,
+			/"entity": "encounter-creature"/,
+		);
+		assert.match(encounterCreatureEditing, /exact instanceId/);
+		assert.match(
+			encounterCreatureEditing,
+			/Encounter generation is disabled/,
+		);
+		assert.doesNotMatch(
+			encounterCreatureEditing,
+			/Encounter creature editing is disabled/,
 		);
 
 		const promptInstruction = buildSystemInstruction({
@@ -32005,6 +32098,7 @@ await run("AI request resolution preserves the complete routing decision matrix"
 		characterGenerationEnabled: true,
 		customMonsterGenerationEnabled: false,
 		effectiveParseAIResponse: false,
+		encounterCreatureEditingEnabled: false,
 		encounterGenerationEnabled: false,
 		entityTargetScope: "campaign",
 		locationGenerationEnabled: true,
@@ -32114,6 +32208,27 @@ await run("AI request resolution preserves the complete routing decision matrix"
 	});
 	assert.equal(gatedImage.useKey, "image");
 	assert.equal(gatedImage.effectiveParseAIResponse, false);
+
+	const creatureEditingRequest = resolveAiRequest({
+		language: "en",
+		encounterId: "encounter",
+		parseAIResponse: true,
+		generateEncounters: false,
+		editEncounterCreatures: true,
+	});
+	assert.equal(creatureEditingRequest.useKey, "encounter");
+	assert.equal(creatureEditingRequest.effectiveParseAIResponse, true);
+	assert.equal(creatureEditingRequest.encounterGenerationEnabled, false);
+	assert.equal(creatureEditingRequest.encounterCreatureEditingEnabled, true);
+	assert.equal(creatureEditingRequest.usesStructuredJsonContract, true);
+	const editingWithoutParsing = resolveAiRequest({
+		language: "en",
+		encounterId: "encounter",
+		parseAIResponse: false,
+		editEncounterCreatures: true,
+	});
+	assert.equal(editingWithoutParsing.effectiveParseAIResponse, false);
+	assert.equal(editingWithoutParsing.encounterCreatureEditingEnabled, false);
 
 	const forcedCustomMonster = resolveAiRequest({
 		type: "custom-monster",
@@ -32388,6 +32503,8 @@ await run("AI generation preparation preserves the complete request decision tab
 			characters: blockedEncounter.characterGenerationEnabled,
 			npcs: blockedEncounter.npcGenerationEnabled,
 			locations: blockedEncounter.locationGenerationEnabled,
+			creatureEditing:
+				blockedEncounter.encounterCreatureEditingEnabled,
 			scope: blockedEncounter.entityTargetScope,
 		},
 		{
@@ -32397,9 +32514,24 @@ await run("AI generation preparation preserves the complete request decision tab
 			characters: true,
 			npcs: true,
 			locations: true,
+			creatureEditing: false,
 			scope: "campaign",
 		},
 	);
+	const editableEncounter = await prepare({
+		type: "scene",
+		language: "en",
+		path: { campaign: "demo", session: "s", encounter: "e" },
+		parseAIResponse: true,
+		generateEncounters: false,
+		editEncounterCreatures: true,
+		generateCustomMonsters: true,
+	});
+	assert.equal(editableEncounter.shouldParseAIResponse, true);
+	assert.equal(editableEncounter.encounterCreatureEditingEnabled, true);
+	assert.equal(editableEncounter.encounterGenerationEnabled, false);
+	assert.equal(editableEncounter.customMonsterGenerationEnabled, false);
+	assert.equal(editableEncounter.entityTargetScope, "campaign");
 	const enabledEncounter = await prepare({
 		type: "scene",
 		language: "en",
@@ -32410,6 +32542,7 @@ await run("AI generation preparation preserves the complete request decision tab
 	});
 	assert.equal(enabledEncounter.shouldParseAIResponse, true);
 	assert.equal(enabledEncounter.encounterGenerationEnabled, true);
+	assert.equal(enabledEncounter.encounterCreatureEditingEnabled, false);
 	assert.equal(enabledEncounter.customMonsterGenerationEnabled, true);
 	assert.equal(enabledEncounter.entityTargetScope, "campaign");
 
@@ -36767,6 +36900,7 @@ await run("AI history snapshot policies preserve exact projections", () => {
 			language: "uk",
 			responseParsing: true,
 			requestedResponseParsing: false,
+			creatureEditing: false,
 			characterGeneration: true,
 			npcGeneration: false,
 			locationGeneration: false,
@@ -36780,7 +36914,7 @@ await run("AI history snapshot policies preserve exact projections", () => {
 			imageTarget: { type: "7", name: "Ціль" },
 		},
 		optionsSummary:
-			"mode: encounter; parse: on; context: on; characters: on; npcs: off; locations: off; encounters: on; custom-monsters: off; model: модель; scene: сцена; image-target: 7: Ціль; global-base-prompt: on; image-base-prompt: on; campaign-base-prompt: on",
+			"mode: encounter; parse: on; context: on; creatures: off; characters: on; npcs: off; locations: off; encounters: on; custom-monsters: off; model: модель; scene: сцена; image-target: 7: Ціль; global-base-prompt: on; image-base-prompt: on; campaign-base-prompt: on",
 		context: {
 			enabled: true,
 			campaignNotes: 1,
@@ -37152,6 +37286,16 @@ await run("AI history failed writer preserves parsing and persistence failures",
 					parseAIResponse: true,
 				},
 				expected: false,
+			},
+			{
+				payload: {
+					path: { campaign: "c", encounter: "e" },
+					type: "prompt",
+					parseAIResponse: true,
+					generateEncounters: false,
+					editEncounterCreatures: true,
+				},
+				expected: true,
 			},
 			{
 				payload: {
@@ -40258,12 +40402,29 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 			scenePolicy,
 		),
 		{
+			editEncounterCreatures: false,
 			generateCharacters: false,
 			generateNpcs: true,
 			generateLocations: false,
 			generateEncounters: true,
 			generateCustomMonsters: true,
 		},
+	);
+	const encounterPolicy = resolveAiGenerationRequestPolicy({
+		initialRoute: { ...generationRoute, encounter: "encounter-1" },
+		isEncounter: true,
+		parseAIResponse: true,
+	});
+	assert.equal(
+		buildAiGenerationRequestOptions(
+			{
+				initialRoute: { ...generationRoute, encounter: "encounter-1" },
+				isEncounter: true,
+				editEncounterCreatures: true,
+			},
+			encounterPolicy,
+		).editEncounterCreatures,
+		true,
 	);
 	const imagePolicy = resolveAiGenerationRequestPolicy({
 		type: "image",
@@ -40280,6 +40441,7 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 			imagePolicy,
 		),
 		{
+			editEncounterCreatures: false,
 			generateCharacters: true,
 			generateNpcs: true,
 			generateLocations: true,
@@ -40364,6 +40526,20 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 	assert.equal(imageRequest.requestType, "image");
 	assert.equal(imageRequest.shouldParseResponse, false);
 	assert.equal(imageRequest.payload.generateEncounters, false);
+	assert.equal(imageRequest.payload.editEncounterCreatures, false);
+
+	const encounterEditingRequest = buildAiGenerationRequest({
+		isEncounter: true,
+		parseAIResponse: true,
+		editEncounterCreatures: true,
+		initialRoute: {
+			campaign: "demo",
+			session: "session.json",
+			encounter: "encounter-1",
+		},
+	});
+	assert.equal(encounterEditingRequest.shouldParseResponse, true);
+	assert.equal(encounterEditingRequest.payload.editEncounterCreatures, true);
 
 	const generating = aiGenerationLifecycleReducer(initialAiGenerationLifecycle, {
 		type: "start-generation",
@@ -42959,9 +43135,36 @@ await run("AI presentation policies preserve API key and prompt decisions", () =
 		getAiToolbarVisibility({
 			isBestiary: false,
 			isCampaign: true,
+			isEncounter: false,
 			parseAIResponse: true,
 		}),
-		{ showCharacterGeneration: true, showParsedGenerationOptions: true },
+		{
+			showCharacterGeneration: true,
+			showEncounterCreatureEditing: false,
+			showParsedGenerationOptions: true,
+		},
+	);
+	assert.deepEqual(
+		getAiToolbarVisibility({
+			isBestiary: false,
+			isCampaign: false,
+			isEncounter: true,
+			parseAIResponse: true,
+		}),
+		{
+			showCharacterGeneration: false,
+			showEncounterCreatureEditing: true,
+			showParsedGenerationOptions: true,
+		},
+	);
+	assert.equal(
+		getAiToolbarVisibility({
+			isBestiary: false,
+			isCampaign: false,
+			isEncounter: true,
+			parseAIResponse: false,
+		}).showEncounterCreatureEditing,
+		false,
 	);
 	assert.deepEqual(getAiEncounterGenerationTogglePlan(false), {
 		generateCustomMonsters: null,
@@ -51363,6 +51566,24 @@ await run("AI assistant presentation preserves history and entity contracts", ()
 			},
 		}),
 		"Mode: AI Story Assistant; Response parsing: On; Create characters: On; Create NPCs: Off; Create locations/factions: On; Encounter generation: Off; Custom monster generation: On; Context: On",
+	);
+	assert.equal(
+		presentation.getHistoryOptionsSummary({
+			request: {
+				options: {
+					mode: "encounter",
+					responseParsing: true,
+					creatureEditing: true,
+					characterGeneration: false,
+					npcGeneration: false,
+					locationGeneration: false,
+					encounterGeneration: false,
+					customMonsterGeneration: false,
+					contextEnabled: false,
+				},
+			},
+		}),
+		"Mode: AI Encounter Assistant; Response parsing: On; Creature editing: On; Create characters: Off; Create NPCs: Off; Create locations/factions: Off; Encounter generation: Off; Custom monster generation: Off; Context: Off",
 	);
 	assert.equal(
 		presentation.getHistoryContextSummary({
@@ -61379,6 +61600,190 @@ await run(
 				),
 			);
 		});
+	},
+);
+
+await run(
+	"AI patch service edits every requested encounter creature locally and preserves combat identity",
+	async () => {
+		const firstMonster = {
+			id: "goblin-base-a",
+			instanceId: "goblin-a",
+			name: "Вартовий",
+			originalBestiaryName: "Goblin",
+			source: "MM",
+			participantType: "monster",
+			imageUrl: "/token.png",
+			currentHp: 7,
+			hit_points: 12,
+			hp: { average: 12, formula: "2d6 + 5" },
+			str: 10,
+			dex: 14,
+			action: [{ name: "Спис", entries: ["Стара атака."] }],
+		};
+		const secondMonster = {
+			id: "goblin-base-b",
+			instanceId: 0,
+			name: "Лучник",
+			originalBestiaryName: "Goblin",
+			source: "MM",
+			currentHp: 9,
+			hit_points: 12,
+			hp: { average: 12, formula: "2d6 + 5" },
+			dex: 14,
+			reaction: [{ name: "Ухил", entries: ["Відступає."] }],
+		};
+		const character = {
+			id: "hero",
+			instanceId: "hero-1",
+			name: "Герой",
+			participantType: "character",
+			currentHp: 20,
+			str: 16,
+		};
+		const otherEncounterMonster = {
+			...firstMonster,
+			name: "Інший бій",
+		};
+		const encounter = {
+			id: "encounter-1",
+			name: "Брама",
+			monsters: [firstMonster, secondMonster, character],
+		};
+		const session = {
+			id: "session-id",
+			data: {
+				scenes: [],
+				encounters: [
+					encounter,
+					{
+						id: "encounter-2",
+						name: "Інша сутичка",
+						monsters: [otherEncounterMonster],
+					},
+				],
+				notes: [],
+				npcs: [],
+				locations: [],
+			},
+		};
+		const operations = [
+			{
+				op: "create",
+				entity: "monster",
+				data: { name: "Не змінювати глобальний бестіарій" },
+			},
+			{
+				op: "update",
+				entity: "encounter-creature",
+				id: "goblin-a",
+				patch: {
+					id: "forbidden-id",
+					instanceId: "forbidden-instance",
+					name: "Вартовий капітан",
+					originalBestiaryName: "Forbidden",
+					source: "CUSTOM",
+					participantType: "character",
+					imageUrl: "/forbidden.png",
+					currentHp: 99,
+					_localOverride: false,
+					hp: { average: 30, formula: "4d8 + 12" },
+					str: 18,
+					action: [{ name: "Команда", entries: ["Союзник атакує."] }],
+				},
+			},
+			{
+				op: "update",
+				entity: "encounter-creature",
+				targetId: 0,
+				patch: {
+					hp: { average: 4, formula: "1d6 + 1" },
+					dex: 16,
+					reaction: [],
+				},
+			},
+			{
+				op: "update",
+				entity: "encounter-creature",
+				id: "hero-1",
+				patch: { str: 1 },
+			},
+			{
+				op: "update",
+				entity: "encounter-creature",
+				id: "missing",
+				patch: { str: 1 },
+			},
+		];
+		const originalReadSession = storage.readSession;
+		const originalWriteJson = storage.writeJson;
+		let sessionWrites = 0;
+		storage.readSession = async () => session;
+		storage.writeJson = async () => {
+			sessionWrites += 1;
+		};
+
+		let disabledResult;
+		let result;
+		try {
+			disabledResult = await aiPatchService.applyAiOperations({
+				payload: { operations: [operations[1]] },
+				campaignSlug: "bestiary",
+				sessionFile: "session.json",
+				encounterId: "encounter-1",
+				permissions: { allowEncounterCreatureEditing: false },
+			});
+			result = await aiPatchService.applyAiOperations({
+				payload: { operations },
+				campaignSlug: "bestiary",
+				sessionFile: "session.json",
+				encounterId: "encounter-1",
+				permissions: {
+					allowCustomMonsters: false,
+					allowEncounterCreatureEditing: true,
+				},
+			});
+		} finally {
+			storage.readSession = originalReadSession;
+			storage.writeJson = originalWriteJson;
+		}
+
+		assert.equal(disabledResult.updated, null);
+		assert.match(disabledResult.warnings[0], /creature editing disabled/);
+		assert.equal(sessionWrites, 1);
+		assert.equal(result.updated.fileName, "session.json");
+		assert.deepEqual(result.warnings, [
+			"Skipped create for disabled custom monsters.",
+		]);
+		const [first, second, savedCharacter] = encounter.monsters;
+		assert.equal(first.id, "goblin-base-a");
+		assert.equal(first.instanceId, "goblin-a");
+		assert.equal(first.name, "Вартовий капітан");
+		assert.equal(first.originalBestiaryName, "Goblin");
+		assert.equal(first.source, "MM");
+		assert.equal(first.participantType, "monster");
+		assert.equal(first.imageUrl, "/token.png");
+		assert.equal(first.currentHp, 7);
+		assert.equal(first.hit_points, 30);
+		assert.equal(first.hp.average, 30);
+		assert.equal(first.str, 18);
+		assert.equal(first._localOverride, true);
+		assert.deepEqual(first.action, [
+			{ name: "Команда", entries: ["Союзник атакує."] },
+		]);
+		assert.equal(second.instanceId, 0);
+		assert.equal(second.currentHp, 4);
+		assert.equal(second.hit_points, 4);
+		assert.equal(second.dex, 16);
+		assert.equal("reaction" in second, false);
+		assert.equal(second._localOverride, true);
+		assert.strictEqual(savedCharacter, character);
+		assert.equal(savedCharacter.str, 16);
+		assert.strictEqual(
+			result.updated.data.encounters[1].monsters[0],
+			otherEncounterMonster,
+		);
+		assert.equal(otherEncounterMonster.name, "Інший бій");
 	},
 );
 

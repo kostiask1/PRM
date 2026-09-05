@@ -69,9 +69,13 @@ function isParsingRequested(payload) {
 	return Boolean(payload.parseAIResponse);
 }
 
-function encounterTargetAllowsParsing(requestPath, requestedGeneration) {
+function encounterTargetAllowsParsing(
+	requestPath,
+	requestedGeneration,
+	requestedCreatureEditing,
+) {
 	if (!readProperty(requestPath, "encounter")) return true;
-	return requestedGeneration;
+	return requestedGeneration || requestedCreatureEditing;
 }
 
 function enableWhenParsing(shouldParseAIResponse, requestedValue) {
@@ -81,11 +85,21 @@ function enableWhenParsing(shouldParseAIResponse, requestedValue) {
 
 function getParsingPolicy(payload, requestPath) {
 	const requestedEncounterGeneration = Boolean(payload.generateEncounters);
+	const requestedCreatureEditing = Boolean(payload.editEncounterCreatures);
 	const shouldParseAIResponse =
 		isParsingRequested(payload) &&
-		encounterTargetAllowsParsing(requestPath, requestedEncounterGeneration);
+		encounterTargetAllowsParsing(
+			requestPath,
+			requestedEncounterGeneration,
+			requestedCreatureEditing,
+		);
 	return {
 		shouldParseAIResponse,
+		encounterCreatureEditingEnabled: Boolean(
+			shouldParseAIResponse &&
+				readProperty(requestPath, "encounter") &&
+				requestedCreatureEditing,
+		),
 		encounterGenerationEnabled: enableWhenParsing(
 			shouldParseAIResponse,
 			requestedEncounterGeneration,

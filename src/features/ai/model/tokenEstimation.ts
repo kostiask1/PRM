@@ -99,6 +99,7 @@ export interface AiTokenEstimateInput {
 	charactersList?: EstimateEntity[];
 	contextConfig: EstimateContextConfig;
 	currentLanguage?: string;
+	editEncounterCreatures?: boolean;
 	generateCharacters?: boolean;
 	generateCustomMonsters?: boolean;
 	generateEncounters?: boolean;
@@ -412,6 +413,9 @@ function buildAiTokenEstimateRequestShape(
 		userInstructions: input.userInstructions,
 		options: {
 			responseParsing: mode !== "prompt",
+			...(mode === "encounter"
+				? { creatureEditing: Boolean(input.editEncounterCreatures) }
+				: {}),
 			characterGeneration: input.generateCharacters,
 			npcGeneration: input.generateNpcs,
 			locationGeneration: input.generateLocations,

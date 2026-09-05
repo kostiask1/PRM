@@ -14,6 +14,8 @@ const LOCATION_SESSION_RULE =
 	"Do not create session copies of campaign-scoped locations/factions. If an existing campaign location/faction is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the location/faction's logical use means that campaign entity should become session-only, use moveScope from campaign to session.\n";
 const ENCOUNTER_CUSTOM_MONSTER_RULE =
 	"Custom monster creation is allowed only when existing official or custom monsters do not fit well.\n";
+const ENCOUNTER_CREATURE_EDITING_RULE =
+	'Encounter creature editing is enabled. Use entity "encounter-creature" with each target creature instanceId to change local stat-block fields.\n';
 const SCENE_TASK =
 	"TASK: Based on current session and context, apply the user's requested session changes.\n";
 const SCENE_SCOPE_RULE =
@@ -72,12 +74,18 @@ function appendTaskRule(task, enabled, rule) {
 function buildEncounterTask({
 	encounterId,
 	customMonsterGenerationEnabled,
+	encounterCreatureEditingEnabled,
 }) {
 	const task = `TASK: Update current combat encounter (id: ${encounterId}) according to USER INSTRUCTIONS. Use exact official monster names or exact INPUT DATA.customBestiary.monsterNames values in monsterName.\n`;
-	return appendTaskRule(
+	const customMonsterTask = appendTaskRule(
 		task,
 		customMonsterGenerationEnabled,
 		ENCOUNTER_CUSTOM_MONSTER_RULE,
+	);
+	return appendTaskRule(
+		customMonsterTask,
+		encounterCreatureEditingEnabled,
+		ENCOUNTER_CREATURE_EDITING_RULE,
 	);
 }
 
@@ -128,6 +136,7 @@ function buildTaskInstructions({
 	encounterId,
 	customMonsterGenerationEnabled,
 	encounterGenerationEnabled,
+	encounterCreatureEditingEnabled,
 }) {
 	const taskBuilder = TASK_BUILDERS.get(useKey);
 	if (!taskBuilder) return "";
@@ -139,6 +148,7 @@ function buildTaskInstructions({
 		encounterId,
 		customMonsterGenerationEnabled,
 		encounterGenerationEnabled,
+		encounterCreatureEditingEnabled,
 	});
 }
 
@@ -166,6 +176,7 @@ function buildUserPrompt({
 	encounterId,
 	customMonsterGenerationEnabled,
 	encounterGenerationEnabled,
+	encounterCreatureEditingEnabled,
 	userInstructions,
 }) {
 	let prompt = buildInputDataSection(contextJson);
@@ -178,6 +189,7 @@ function buildUserPrompt({
 		encounterId,
 		customMonsterGenerationEnabled,
 		encounterGenerationEnabled,
+		encounterCreatureEditingEnabled,
 	});
 	prompt += buildUserInstructionsSection(userInstructions);
 	return prompt;

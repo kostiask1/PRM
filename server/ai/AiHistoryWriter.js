@@ -110,7 +110,9 @@ function shouldParseFailedResponse(payload, path) {
 	return (
 		payload.type !== "image" &&
 		Boolean(payload.parseAIResponse) &&
-		(!path.encounter || payload.generateEncounters)
+		(!path.encounter ||
+			payload.generateEncounters ||
+			Boolean(payload.editEncounterCreatures))
 	);
 }
 
@@ -131,6 +133,13 @@ function createFailedRequestSnapshotInput({
 		parseAIResponse: payload.parseAIResponse,
 		shouldParseAIResponse: shouldParseFailedResponse(payload, path),
 		generateCharacters: payload.generateCharacters !== false,
+		...(path.encounter
+			? {
+					editEncounterCreatures: Boolean(
+						payload.editEncounterCreatures,
+					),
+				}
+			: {}),
 		generateNpcs: payload.generateNpcs !== false,
 		generateLocations: payload.generateLocations !== false,
 		generateEncounters: Boolean(payload.generateEncounters),

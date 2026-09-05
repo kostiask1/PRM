@@ -23,7 +23,7 @@ function AiGenerationToggleButton({
 	active: boolean;
 	children: ReactNode;
 	disabled: boolean;
-	icon: "folder-npc" | "map" | "users" | "wand";
+	icon: "edit" | "folder-npc" | "map" | "users" | "wand";
 	setActive: AiBooleanSetter;
 	title: string;
 }) {
@@ -257,6 +257,33 @@ export function AiResponseParsingAction({
 		>
 			{lang.t("Response parsing")}
 		</Button>
+	);
+}
+
+export function AiEncounterCreatureEditingAction({
+	editEncounterCreatures,
+	loading,
+	setEditEncounterCreatures,
+	showAction,
+}: {
+	editEncounterCreatures: boolean;
+	loading: boolean;
+	setEditEncounterCreatures: AiBooleanSetter;
+	showAction: boolean;
+}) {
+	if (!showAction) return null;
+	return (
+		<AiGenerationToggleButton
+			active={editEncounterCreatures}
+			disabled={loading}
+			icon="edit"
+			setActive={setEditEncounterCreatures}
+			title={lang.t(
+				"Allow AI to edit creature stats in this encounter",
+			)}
+		>
+			{lang.t("Creature editing")}
+		</AiGenerationToggleButton>
 	);
 }
 

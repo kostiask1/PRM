@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { AiModelDescriptor } from "../api/aiApi.ts";
 import {
 	AiContextActions,
+	AiEncounterCreatureEditingAction,
 	AiEncounterGenerationActions,
 	AiEntityGenerationActions,
 	AiImagePromptAction,
@@ -14,6 +15,7 @@ import { getAiToolbarVisibility } from "./presentationModel.ts";
 
 export interface AiAssistantToolbarProps {
 	aiModels: AiModelDescriptor[];
+	editEncounterCreatures: boolean;
 	generateCharacters: boolean;
 	generateCustomMonsters: boolean;
 	generateEncounters: boolean;
@@ -31,6 +33,7 @@ export interface AiAssistantToolbarProps {
 	parseAIResponse: boolean;
 	selectedModel: string;
 	setGenerateCharacters: AiBooleanSetter;
+	setEditEncounterCreatures: AiBooleanSetter;
 	setGenerateCustomMonsters: AiBooleanSetter;
 	setGenerateEncounters: AiBooleanSetter;
 	setGenerateLocations: AiBooleanSetter;
@@ -42,8 +45,11 @@ export interface AiAssistantToolbarProps {
 }
 
 export default function AiAssistantToolbar(props: AiAssistantToolbarProps) {
-	const { showCharacterGeneration, showParsedGenerationOptions } =
-		getAiToolbarVisibility(props);
+	const {
+		showCharacterGeneration,
+		showEncounterCreatureEditing,
+		showParsedGenerationOptions,
+	} = getAiToolbarVisibility(props);
 	return (
 		<div className="AiAssistantPanel__actions">
 			<AiModelPicker
@@ -82,6 +88,12 @@ export default function AiAssistantToolbar(props: AiAssistantToolbarProps) {
 				loading={props.loading}
 				parseAIResponse={props.parseAIResponse}
 				setParseAIResponse={props.setParseAIResponse}
+			/>
+			<AiEncounterCreatureEditingAction
+				editEncounterCreatures={props.editEncounterCreatures}
+				loading={props.loading}
+				setEditEncounterCreatures={props.setEditEncounterCreatures}
+				showAction={showEncounterCreatureEditing}
 			/>
 			<AiEncounterGenerationActions
 				generateCustomMonsters={props.generateCustomMonsters}

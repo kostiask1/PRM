@@ -46,6 +46,11 @@ function appendBooleanSummaries(parts, options, summaries) {
 
 function appendParsingSummaries(parts, options) {
 	if (!options.responseParsing) return;
+	if (Object.prototype.hasOwnProperty.call(options, "creatureEditing")) {
+		parts.push(
+			`creatures: ${options.creatureEditing ? "on" : "off"}`,
+		);
+	}
 	appendBooleanSummaries(parts, options, PARSING_OPTION_SUMMARIES);
 }
 
@@ -187,12 +192,16 @@ function projectImageTarget(imageTarget) {
 }
 
 function buildSnapshotOptions(input) {
+	const mode = getAiRequestMode(input.type, input.path);
 	return {
-		mode: getAiRequestMode(input.type, input.path),
+		mode,
 		modelName: input.modelName || null,
 		language: input.language,
 		responseParsing: Boolean(input.shouldParseAIResponse),
 		requestedResponseParsing: Boolean(input.parseAIResponse),
+		...(mode === "encounter"
+			? { creatureEditing: Boolean(input.editEncounterCreatures) }
+			: {}),
 		characterGeneration: Boolean(input.generateCharacters),
 		npcGeneration: Boolean(input.generateNpcs),
 		locationGeneration: Boolean(input.generateLocations),
