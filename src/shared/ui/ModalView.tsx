@@ -16,22 +16,26 @@ interface ModalViewProps extends ModalProps {
 
 function ModalHeader({
 	title,
+	headerActions,
 	cancelDisabled,
 	controller,
-}: Pick<ModalProps, "title" | "cancelDisabled"> & {
+}: Pick<ModalProps, "title" | "headerActions" | "cancelDisabled"> & {
 	controller: ModalController;
 }) {
 	return (
 		<div className="Modal__header">
 			<h3>{title}</h3>
-			<button
-				className="Modal__close"
-				disabled={cancelDisabled}
-				onMouseDown={controller.suppressMouseEvent}
-				onClick={controller.handleCloseButtonClick}
-			>
-				<Icon name="x" />
-			</button>
+			<div className="Modal__header_actions">
+				{headerActions}
+				<button
+					className="Modal__close"
+					disabled={cancelDisabled}
+					onMouseDown={controller.suppressMouseEvent}
+					onClick={controller.handleCloseButtonClick}
+				>
+					<Icon name="x" />
+				</button>
+			</div>
 		</div>
 	);
 }
@@ -139,6 +143,7 @@ function ModalFooter({
 
 export function ModalView({
 	title,
+	headerActions,
 	message,
 	type,
 	onCancel,
@@ -170,6 +175,7 @@ export function ModalView({
 			>
 				<ModalHeader
 					title={title}
+					headerActions={headerActions}
 					cancelDisabled={cancelDisabled}
 					controller={controller}
 				/>

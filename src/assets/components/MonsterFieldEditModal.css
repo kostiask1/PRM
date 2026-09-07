@@ -29,6 +29,158 @@
 	gap: var(--space-2);
 }
 
+.MonsterFieldEditModal__help_button.Button {
+	width: var(--control-h-sm);
+	padding: 0;
+	color: var(--muted);
+}
+
+.MonsterFieldEditModal__help_button.Button:hover,
+.MonsterFieldEditModal__help_button.Button.is_active {
+	color: var(--accent);
+	border-color: color-mix(in srgb, var(--accent), var(--border) 55%);
+	background: color-mix(in srgb, var(--accent), transparent 90%);
+}
+
+.MonsterFieldEditModal__help {
+	display: grid;
+	gap: var(--space-4);
+	max-height: calc(72vh - var(--control-h) - var(--space-6));
+	min-height: 0;
+	overflow-y: auto;
+	padding-right: var(--space-2);
+}
+
+.MonsterFieldEditModal__help_intro,
+.MonsterFieldEditModal__help_section {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__help_intro {
+	padding: var(--space-4);
+	border: 1px solid color-mix(in srgb, var(--accent), var(--border) 55%);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--accent), transparent 94%);
+}
+
+.MonsterFieldEditModal__help h4,
+.MonsterFieldEditModal__help h5,
+.MonsterFieldEditModal__help p,
+.MonsterFieldEditModal__help dl,
+.MonsterFieldEditModal__help dd,
+.MonsterFieldEditModal__help ul,
+.MonsterFieldEditModal__help pre {
+	margin: 0;
+}
+
+.MonsterFieldEditModal__help h4 {
+	color: var(--text-bright);
+	font-size: 1.08rem;
+}
+
+.MonsterFieldEditModal__help h5 {
+	color: var(--text-bright);
+	font-size: 0.96rem;
+}
+
+.MonsterFieldEditModal__help_section {
+	padding: var(--space-4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-2);
+}
+
+.MonsterFieldEditModal__help_example {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__help_rows {
+	display: grid;
+}
+
+.MonsterFieldEditModal__help_row {
+	display: grid;
+	grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.5fr);
+	gap: var(--space-4);
+	padding: var(--space-3) 0;
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+}
+
+.MonsterFieldEditModal__help_row:first-child {
+	padding-top: 0;
+	border-top: 0;
+}
+
+.MonsterFieldEditModal__help_row:last-child {
+	padding-bottom: 0;
+}
+
+.MonsterFieldEditModal__help_row dd {
+	display: grid;
+	align-content: start;
+	gap: var(--space-2);
+	line-height: 1.5;
+}
+
+.MonsterFieldEditModal__help_syntaxes {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--space-1);
+}
+
+.MonsterFieldEditModal__help code {
+	max-width: 100%;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 18%);
+	border-radius: 4px;
+	background: color-mix(in srgb, var(--panel-2), var(--bg) 24%);
+	padding: 0.12rem 0.35rem;
+	color: var(--text-bright);
+	font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+	font-size: 0.78rem;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+	user-select: all;
+}
+
+.MonsterFieldEditModal__help_note {
+	color: var(--muted);
+	font-size: 0.84rem;
+}
+
+.MonsterFieldEditModal__help_code_grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__help_code_block {
+	max-width: 100%;
+	overflow-x: auto;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 18%);
+	border-radius: var(--radius-sm);
+	background: var(--bg);
+	padding: var(--space-3);
+}
+
+.MonsterFieldEditModal__help_code_block code {
+	display: block;
+	width: max-content;
+	min-width: 100%;
+	border: 0;
+	background: transparent;
+	padding: 0;
+	white-space: pre;
+}
+
+.MonsterFieldEditModal__help ul {
+	display: grid;
+	gap: var(--space-1);
+	padding-left: var(--space-5);
+}
+
 .MonsterFieldEditModal__abilities {
 	grid-template-columns: repeat(6, minmax(80px, 1fr));
 }
@@ -166,5 +318,10 @@
 	.MonsterFieldEditModal__abilities,
 	.MonsterFieldEditModal__text_fields {
 		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.MonsterFieldEditModal__help_row {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-2);
 	}
 }

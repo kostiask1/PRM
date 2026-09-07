@@ -4,6 +4,7 @@ import {
 	type KeyboardEvent,
 	type ReactNode,
 	useEffect,
+	useId,
 	useState,
 } from "react";
 
@@ -43,6 +44,7 @@ import {
 } from "../model.ts";
 import MonsterActionSections from "./MonsterActionSections.tsx";
 import MonsterFieldSections from "./MonsterFieldSections.tsx";
+import MonsterTextParsingHelp from "./MonsterTextParsingHelp.tsx";
 import "../../../assets/components/MonsterFieldEditModal.css";
 
 interface RulesReferenceContentProps {
@@ -86,8 +88,10 @@ export default function MonsterFieldEditModal({
 	const [jsonText, setJsonText] = useState("");
 	const [editMode, setEditMode] = useState<MonsterEditMode>("fields");
 	const [error, setError] = useState("");
+	const [isHelpOpen, setIsHelpOpen] = useState(false);
 	const [ruleInsertTarget, setRuleInsertTarget] =
 		useState<RuleInsertTarget | null>(null);
+	const parsingHelpId = useId();
 
 	useEffect(() => {
 		const nextDraft = editingMonster ? cloneMonster(editingMonster) : null;
@@ -95,6 +99,7 @@ export default function MonsterFieldEditModal({
 		setJsonText(nextDraft ? JSON.stringify(nextDraft, null, 2) : "");
 		setEditMode("fields");
 		setError("");
+		setIsHelpOpen(false);
 		setRuleInsertTarget(null);
 	}, [editingMonster]);
 
@@ -230,6 +235,10 @@ export default function MonsterFieldEditModal({
 		}
 	};
 
+	const toggleParsingHelp = () => {
+		setIsHelpOpen((current) => !current);
+	};
+
 	const renderInputField = (
 		key: CreatureEditableFieldKey,
 		label: string,
@@ -318,6 +327,23 @@ export default function MonsterFieldEditModal({
 		<>
 			<Modal
 				title={title}
+				headerActions={
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="help"
+						className={`MonsterFieldEditModal__help_button${isHelpOpen ? " is_active" : ""}`}
+						title={lang.t(
+							isHelpOpen ? "Hide text parsing help" : "Show text parsing help",
+						)}
+						aria-label={lang.t(
+							isHelpOpen ? "Hide text parsing help" : "Show text parsing help",
+						)}
+						aria-controls={parsingHelpId}
+						aria-expanded={isHelpOpen}
+						onClick={toggleParsingHelp}
+					/>
+				}
 				onConfirm={() => {}}
 				onCancel={onCancel}
 				showFooter={false}
@@ -325,110 +351,125 @@ export default function MonsterFieldEditModal({
 				overlayClassName="MonsterFieldEditModal__overlay"
 			>
 				<div className="MonsterFieldEditModal">
-					{error && <div className="MonsterFieldEditModal__error">{error}</div>}
-					<div className="MonsterFieldEditModal__mode_switch">
-						<Button
-							variant={editMode === "fields" ? "primary" : "ghost"}
-							size={Button.SIZES.SMALL}
-							onClick={() => switchEditMode("fields")}
-						>
-							{lang.t("Fields")}
-						</Button>
-						<Button
-							variant={editMode === "json" ? "primary" : "ghost"}
-							size={Button.SIZES.SMALL}
-							onClick={() => switchEditMode("json")}
-						>
-							JSON
-						</Button>
-					</div>
-					{editMode === "fields" ? (
-						<MonsterFieldSections
-							basicFields={
-								<>
-									{renderInputField("name", "Name")}
-									{renderInputField("source", "Source", { disabled: true })}
-									{renderSelectField("size", "Size", SIZE_OPTIONS)}
-									{renderInputField("type", "Type")}
-									{renderSelectField(
-										"alignment",
-										"Alignment",
-										ALIGNMENT_OPTIONS,
-									)}
-									{renderInputField("ac", "Armor Class")}
-									{renderInputField("hpFormula", "HP Formula")}
-									{renderInputField("cr", "Challenge Rating")}
-								</>
-							}
-							abilityFields={CREATURE_ABILITY_KEYS.map((ability) =>
-								renderInputField(ability, ability.toUpperCase(), {
-									type: "number",
-								}),
-							)}
-							textFields={
-								<>
-									{renderTextField("speed", "Speed", 2)}
-									{renderTextField("senses", "Senses", 2)}
-									{renderTextField("languages", "Languages", 2)}
-									{renderTextField(
-										"vulnerable",
-										"Damage Vulnerabilities",
-										2,
-									)}
-									{renderTextField(
-										"resist",
-										"Damage Resistances",
-										2,
-									)}
-									{renderTextField(
-										"immune",
-										"Damage Immunities",
-										2,
-									)}
-									{renderTextField(
-										"conditionImmune",
-										"Condition Immunities",
-										2,
-									)}
-									{renderTextField("desc", "Description", 4)}
-								</>
-							}
-							actionSections={
-								<MonsterActionSections
-									draft={draft}
-									onAddAction={addAction}
-									onActionNameChange={updateActionName}
-									onActionTextChange={updateActionText}
-									onActionTextKeyDown={openActionRuleInsertPicker}
-									onRemoveAction={removeAction}
-								/>
-							}
-						/>
+					{isHelpOpen ? (
+						<>
+							<MonsterTextParsingHelp id={parsingHelpId} />
+							<div className="MonsterFieldEditModal__footer">
+								<Button variant="primary" onClick={() => setIsHelpOpen(false)}>
+									{lang.t("Back to creature editing")}
+								</Button>
+							</div>
+						</>
 					) : (
-						<textarea
-							className="Input Input__textarea MonsterFieldEditModal__json"
-							value={jsonText}
-							onChange={(event) => {
-								const text = event.target.value;
-								setJsonText(text);
-								const parsed = parseMonsterJson(text);
-								if (parsed.ok) {
-									setDraft(parsed.monster);
-									setError("");
-								} else if (parsed.reason === "invalid-json") {
-									setError(lang.t("Invalid JSON."));
-								}
-							}}
-						/>
+						<>
+							{error && (
+								<div className="MonsterFieldEditModal__error">{error}</div>
+							)}
+							<div className="MonsterFieldEditModal__mode_switch">
+								<Button
+									variant={editMode === "fields" ? "primary" : "ghost"}
+									size={Button.SIZES.SMALL}
+									onClick={() => switchEditMode("fields")}
+								>
+									{lang.t("Fields")}
+								</Button>
+								<Button
+									variant={editMode === "json" ? "primary" : "ghost"}
+									size={Button.SIZES.SMALL}
+									onClick={() => switchEditMode("json")}
+								>
+									JSON
+								</Button>
+							</div>
+							{editMode === "fields" ? (
+								<MonsterFieldSections
+									basicFields={
+										<>
+											{renderInputField("name", "Name")}
+											{renderInputField("source", "Source", { disabled: true })}
+											{renderSelectField("size", "Size", SIZE_OPTIONS)}
+											{renderInputField("type", "Type")}
+											{renderSelectField(
+												"alignment",
+												"Alignment",
+												ALIGNMENT_OPTIONS,
+											)}
+											{renderInputField("ac", "Armor Class")}
+											{renderInputField("hpFormula", "HP Formula")}
+											{renderInputField("cr", "Challenge Rating")}
+										</>
+									}
+									abilityFields={CREATURE_ABILITY_KEYS.map((ability) =>
+										renderInputField(ability, ability.toUpperCase(), {
+											type: "number",
+										}),
+									)}
+									textFields={
+										<>
+											{renderTextField("speed", "Speed", 2)}
+											{renderTextField("senses", "Senses", 2)}
+											{renderTextField("languages", "Languages", 2)}
+											{renderTextField(
+												"vulnerable",
+												"Damage Vulnerabilities",
+												2,
+											)}
+											{renderTextField(
+												"resist",
+												"Damage Resistances",
+												2,
+											)}
+											{renderTextField(
+												"immune",
+												"Damage Immunities",
+												2,
+											)}
+											{renderTextField(
+												"conditionImmune",
+												"Condition Immunities",
+												2,
+											)}
+											{renderTextField("desc", "Description", 4)}
+										</>
+									}
+									actionSections={
+										<MonsterActionSections
+											draft={draft}
+											onAddAction={addAction}
+											onActionNameChange={updateActionName}
+											onActionTextChange={updateActionText}
+											onActionTextKeyDown={openActionRuleInsertPicker}
+											onRemoveAction={removeAction}
+										/>
+									}
+								/>
+							) : (
+								<textarea
+									className="Input Input__textarea MonsterFieldEditModal__json"
+									value={jsonText}
+									onChange={(event) => {
+										const text = event.target.value;
+										setJsonText(text);
+										const parsed = parseMonsterJson(text);
+										if (parsed.ok) {
+											setDraft(parsed.monster);
+											setError("");
+										} else if (parsed.reason === "invalid-json") {
+											setError(lang.t("Invalid JSON."));
+										}
+									}}
+								/>
+							)}
+							<div className="MonsterFieldEditModal__footer">
+								<Button variant="ghost" onClick={onCancel}>
+									{lang.t("Cancel")}
+								</Button>
+								<Button variant="primary" onClick={saveDraft}>
+									{lang.t("Save")}
+								</Button>
+							</div>
+						</>
 					)}
-					<div className="MonsterFieldEditModal__footer">
-						<Button variant="ghost" onClick={onCancel}>
-							{lang.t("Cancel")}
-						</Button>
-						<Button variant="primary" onClick={saveDraft}>
-							{lang.t("Save")}
-						</Button>
-					</div>
 				</div>
 			</Modal>
 			{ruleInsertTarget && RulesReferenceContent && (

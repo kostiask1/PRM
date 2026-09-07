@@ -4623,6 +4623,127 @@ await run(
 );
 
 await run(
+	"monster field editor exposes complete text parsing help",
+	async () => {
+		const [
+			modalSource,
+			helpSource,
+			modalModelSource,
+			modalViewSource,
+			modalCss,
+			monsterModalCss,
+			ukSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterTextParsingHelp.tsx",
+				"utf8",
+			),
+			fs.readFile("src/shared/ui/modalModel.ts", "utf8"),
+			fs.readFile("src/shared/ui/ModalView.tsx", "utf8"),
+			fs.readFile("src/assets/components/Modal.css", "utf8"),
+			fs.readFile(
+				"src/assets/components/MonsterFieldEditModal.css",
+				"utf8",
+			),
+			fs.readFile("src/langs/uk.json", "utf8"),
+		]);
+
+		assert.match(modalModelSource, /headerActions\?: ReactNode;/);
+		assert.match(modalViewSource, /className="Modal__header_actions"/);
+		assert.match(modalViewSource, /\{headerActions\}/);
+		assert.match(modalCss, /\.Modal__header_actions\s*\{[\s\S]*?display: flex;/);
+		assertSourceTokensInOrder(
+			modalSource,
+			[
+				'import MonsterTextParsingHelp from "./MonsterTextParsingHelp.tsx";',
+				"const [isHelpOpen, setIsHelpOpen] = useState(false);",
+				"const parsingHelpId = useId();",
+				"setIsHelpOpen(false);",
+				"const toggleParsingHelp = () => {",
+				"headerActions={",
+				'icon="help"',
+				"aria-controls={parsingHelpId}",
+				"aria-expanded={isHelpOpen}",
+				"onClick={toggleParsingHelp}",
+				"{isHelpOpen ? (",
+				"<MonsterTextParsingHelp id={parsingHelpId} />",
+				'lang.t("Back to creature editing")',
+			],
+			"Monster parsing-help disclosure",
+		);
+		assert.match(
+			modalSource,
+			/aria-label=\{lang\.t\([\s\S]*?Show text parsing help/,
+		);
+		assert.match(
+			monsterModalCss,
+			/\.MonsterFieldEditModal__help\s*\{[\s\S]*?max-height:[^;]+;[\s\S]*?overflow-y: auto;/,
+		);
+		assert.match(
+			monsterModalCss,
+			/\.MonsterFieldEditModal__help code\s*\{[\s\S]*?overflow-wrap: anywhere;/,
+		);
+
+		const documentedTags = [
+			"{@h}",
+			"{@dc 15}",
+			"{@atk mw}",
+			"{@atkr m}",
+			"{@hit 9}",
+			"{@hitYourSpellAttack}",
+			"{@damage 2d6 + 2}",
+			"{@scaledamage 2d6 + 2}",
+			"{@scaledice 2d6 + 2}",
+			"{@dice 2d6 + 3}",
+			"{@recharge 5}",
+			"{@spell Fireball|PHB|Flame Burst}",
+			"{@creature Goblin|MM|Goblin scout}",
+			"{@condition Poisoned}",
+			"{@status Concentration}",
+			"{@disease Sight Rot}",
+			"{@variantrule Flanking|DMG}",
+			"{@skill Arcana}",
+			"{@sense Darkvision}",
+			"{@quickref Cover||3||Total cover}",
+			"{@ability str}",
+			"{@savingThrow dex}",
+			"{@actSave wis}",
+			"{@actSaveFail}",
+			"{@actSaveSuccess}",
+			"{@actSaveSuccessOrFail}",
+			"{@chance 25}",
+			"{@note visible text}",
+			"{@filter Light|items|type=Light Armor}",
+			"{@i italic text}",
+			"{@italic italic text}",
+			"{@b bold text}",
+			"{@bold bold text}",
+			"{@hom}",
+			"{@loader internal data}",
+		];
+		for (const tag of documentedTags) {
+			assert.equal(helpSource.includes(tag), true, `${tag} is documented`);
+		}
+		assert.match(helpSource, /primary\|fallback\|label/);
+		assert.match(helpSource, /name\|source\|label/);
+		assert.match(
+			helpSource,
+			/\{@h\}9 \(\{@damage 2d6 \+ 2\}\) bludgeoning damage plus 7 \(\{@damage 2d6\}\) necrotic damage/,
+		);
+		assert.doesNotMatch(`${helpSource}\n${ukSource}`, /\uFFFD/);
+		const uk = JSON.parse(ukSource);
+		assert.equal(
+			uk["Creature text parsing reference"],
+			"Довідка з парсингу тексту істоти",
+		);
+	},
+);
+
+await run(
 	"Phase 174 isolates Session header action presentation",
 	async () => {
 		const [
@@ -47176,6 +47297,25 @@ await run("content tokens parse hit and recharge tags safely", () => {
 	assert.equal(damage[0].fullMatch, "{@damage 3d6}");
 	assert.equal(damage[0].damageRoll, "3d6");
 	assert.equal(damage[0].damageRemainder, "");
+
+	const documentedExample =
+		"{@h}9 ({@damage 2d6 + 2}) bludgeoning damage plus 7 ({@damage 2d6}) necrotic damage";
+	assert.equal(
+		preprocessTags(documentedExample),
+		"Hit: 9 (2d6 + 2) bludgeoning damage plus 7 (2d6) necrotic damage",
+	);
+	assert.deepEqual(
+		extractContentTokens(documentedExample).map(
+			({ damageRoll, damageRemainder }) => ({
+				damageRoll,
+				damageRemainder,
+			}),
+		),
+		[
+			{ damageRoll: "2d6 + 2", damageRemainder: "" },
+			{ damageRoll: "2d6", damageRemainder: "" },
+		],
+	);
 
 	const damageWithLevel = extractContentTokens(
 		"{@h}{@damage 1d10 + 3 + summonSpellLevel}",

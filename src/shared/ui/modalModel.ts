@@ -5,6 +5,7 @@ export type ModalConfirmInput = string | boolean;
 
 export interface ModalProps {
 	title?: ReactNode;
+	headerActions?: ReactNode;
 	message?: ReactNode;
 	type?: ModalType;
 	defaultValue?: string;
