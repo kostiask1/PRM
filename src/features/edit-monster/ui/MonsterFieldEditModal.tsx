@@ -12,6 +12,10 @@ import type {
 	MonsterData,
 	MonsterEntry,
 } from "../../../entities/bestiary/index.js";
+import {
+	formatModifier,
+	getAbilityModifier,
+} from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	Button,
@@ -36,6 +40,7 @@ import {
 	updateCreatureBasicField,
 	updateMonsterAction,
 	type CreatureActionSection,
+	type CreatureAbilityKey,
 	type CreatureEditableFieldKey,
 	type MonsterEditMode,
 	type NamedMonsterData,
@@ -248,7 +253,9 @@ export default function MonsterFieldEditModal({
 			key={key}
 			className={`MonsterFieldEditModal__field${options.disabled ? " is_disabled" : ""}`}
 		>
-			<span>{lang.t(label)}</span>
+			<span className="MonsterFieldEditModal__field_label">
+				{lang.t(label)}
+			</span>
 			<TextInput
 				type={options.type || "text"}
 				disabled={options.disabled}
@@ -280,7 +287,9 @@ export default function MonsterFieldEditModal({
 
 		return (
 			<label key={key} className="MonsterFieldEditModal__field">
-				<span>{lang.t(label)}</span>
+				<span className="MonsterFieldEditModal__field_label">
+					{lang.t(label)}
+				</span>
 				<Select
 					value={currentValue}
 					onChange={(event) =>
@@ -305,7 +314,9 @@ export default function MonsterFieldEditModal({
 		rows = 3,
 	) => (
 		<label key={key} className="MonsterFieldEditModal__field">
-			<span>{lang.t(label)}</span>
+			<span className="MonsterFieldEditModal__field_label">
+				{lang.t(label)}
+			</span>
 			<textarea
 				className="Input Input__textarea MonsterFieldEditModal__textarea"
 				rows={rows}
@@ -322,6 +333,44 @@ export default function MonsterFieldEditModal({
 			/>
 		</label>
 	);
+
+	const renderAbilityField = (ability: CreatureAbilityKey) => {
+		const value = getCreatureEditableFieldInput(draft, ability);
+		const parsedScore = Number.parseInt(value, 10);
+		const modifier =
+			value.trim() && !Number.isNaN(parsedScore)
+				? formatModifier(getAbilityModifier(parsedScore))
+				: "—";
+
+		return (
+			<label
+				key={ability}
+				className="MonsterFieldEditModal__ability_field"
+			>
+				<span className="MonsterFieldEditModal__ability_label">
+					{ability.toUpperCase()}
+				</span>
+				<span className="MonsterFieldEditModal__ability_modifier">
+					{modifier}
+				</span>
+				<TextInput
+					type="number"
+					className="MonsterFieldEditModal__ability_input"
+					aria-label={ability.toUpperCase()}
+					value={value}
+					onChange={(event) =>
+						updateDraft((current) =>
+							updateCreatureBasicField(
+								current,
+								ability,
+								event.target.value,
+							),
+						)
+					}
+				/>
+			</label>
+		);
+	};
 
 	return (
 		<>
@@ -383,10 +432,9 @@ export default function MonsterFieldEditModal({
 							</div>
 							{editMode === "fields" ? (
 								<MonsterFieldSections
-									basicFields={
+									nameField={renderInputField("name", "Name")}
+									metaFields={
 										<>
-											{renderInputField("name", "Name")}
-											{renderInputField("source", "Source", { disabled: true })}
 											{renderSelectField("size", "Size", SIZE_OPTIONS)}
 											{renderInputField("type", "Type")}
 											{renderSelectField(
@@ -394,21 +442,20 @@ export default function MonsterFieldEditModal({
 												"Alignment",
 												ALIGNMENT_OPTIONS,
 											)}
-											{renderInputField("ac", "Armor Class")}
-											{renderInputField("hpFormula", "HP Formula")}
-											{renderInputField("cr", "Challenge Rating")}
 										</>
 									}
-									abilityFields={CREATURE_ABILITY_KEYS.map((ability) =>
-										renderInputField(ability, ability.toUpperCase(), {
-											type: "number",
-										}),
-									)}
-									textFields={
+									sourceField={renderInputField("source", "Source", {
+										disabled: true,
+									})}
+									statFields={
 										<>
+											{renderInputField("hpFormula", "HP Formula")}
+											{renderInputField("ac", "Armor Class")}
 											{renderTextField("speed", "Speed", 2)}
-											{renderTextField("senses", "Senses", 2)}
-											{renderTextField("languages", "Languages", 2)}
+										</>
+									}
+									defenseFields={
+										<>
 											{renderTextField(
 												"vulnerable",
 												"Damage Vulnerabilities",
@@ -429,9 +476,19 @@ export default function MonsterFieldEditModal({
 												"Condition Immunities",
 												2,
 											)}
-											{renderTextField("desc", "Description", 4)}
 										</>
 									}
+									descriptionFields={
+										<>
+											{renderTextField("senses", "Senses", 2)}
+											{renderTextField("languages", "Languages", 2)}
+											{renderInputField("cr", "Challenge Rating")}
+										</>
+									}
+									loreField={renderTextField("desc", "Description", 4)}
+									abilityFields={CREATURE_ABILITY_KEYS.map(
+										renderAbilityField,
+									)}
 									actionSections={
 										<MonsterActionSections
 											draft={draft}

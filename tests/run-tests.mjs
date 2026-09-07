@@ -4503,6 +4503,7 @@ await run(
 				"value={String(action?.name || \"\")}",
 				"onActionNameChange(event, section.key, index)",
 				"onClick={() => onRemoveAction(section.key, index)}",
+				'aria-label={lang.t("Remove action")}',
 				"value={actionEntriesToText(action)}",
 				"onActionTextChange(event, section.key, index)",
 				"onActionTextKeyDown(event, section.key, index)",
@@ -4519,14 +4520,23 @@ await run(
 await run(
 	"Phase 173 isolates Monster fields-mode layout presentation",
 	async () => {
-		const [modalSource, fieldSectionsSource, runtimeEntrySource, typeEntrySource] =
-			await Promise.all([
+		const [
+			modalSource,
+			fieldSectionsSource,
+			modalCss,
+			runtimeEntrySource,
+			typeEntrySource,
+		] = await Promise.all([
 				fs.readFile(
 					"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
 					"utf8",
 				),
 				fs.readFile(
 					"src/features/edit-monster/ui/MonsterFieldSections.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/assets/components/MonsterFieldEditModal.css",
 					"utf8",
 				),
 				fs.readFile("src/features/edit-monster/index.js", "utf8"),
@@ -4550,25 +4560,33 @@ await run(
 				"currentValue || lang.t(\"Custom\")",
 				"const renderTextField = (",
 				"openRuleInsertPicker(event, { type: \"field\", key })",
+				"const renderAbilityField = (ability: CreatureAbilityKey) => {",
+				"const value = getCreatureEditableFieldInput(draft, ability);",
+				"const parsedScore = Number.parseInt(value, 10);",
+				"formatModifier(getAbilityModifier(parsedScore))",
+				'\t\t\t\t: "—";',
+				'className="MonsterFieldEditModal__ability_field"',
+				'className="MonsterFieldEditModal__ability_modifier"',
+				'\t\t\t\t\ttype="number"',
+				"aria-label={ability.toUpperCase()}",
+				"updateCreatureBasicField(",
+				"ability,",
+				"event.target.value,",
 				"<MonsterFieldSections",
-				"basicFields={",
-				'renderInputField("name", "Name")',
-				'renderInputField("source", "Source", { disabled: true })',
+				'nameField={renderInputField("name", "Name")}',
+				"metaFields={",
 				'renderSelectField("size", "Size", SIZE_OPTIONS)',
 				'renderInputField("type", "Type")',
 				'"alignment",',
 				'"Alignment",',
 				"ALIGNMENT_OPTIONS,",
-				'renderInputField("ac", "Armor Class")',
+				'sourceField={renderInputField("source", "Source", {',
+				"disabled: true,",
+				"statFields={",
 				'renderInputField("hpFormula", "HP Formula")',
-				'renderInputField("cr", "Challenge Rating")',
-				"abilityFields={CREATURE_ABILITY_KEYS.map((ability) =>",
-				"renderInputField(ability, ability.toUpperCase(), {",
-				'type: "number",',
-				"textFields={",
+				'renderInputField("ac", "Armor Class")',
 				'renderTextField("speed", "Speed", 2)',
-				'renderTextField("senses", "Senses", 2)',
-				'renderTextField("languages", "Languages", 2)',
+				"defenseFields={",
 				'"vulnerable",',
 				'"Damage Vulnerabilities",',
 				'"resist",',
@@ -4577,17 +4595,51 @@ await run(
 				'"Damage Immunities",',
 				'"conditionImmune",',
 				'"Condition Immunities",',
-				'renderTextField("desc", "Description", 4)',
+				"descriptionFields={",
+				'renderTextField("senses", "Senses", 2)',
+				'renderTextField("languages", "Languages", 2)',
+				'renderInputField("cr", "Challenge Rating")',
+				'loreField={renderTextField("desc", "Description", 4)}',
+				"abilityFields={CREATURE_ABILITY_KEYS.map(",
+				"renderAbilityField,",
 				"actionSections={",
 				"<MonsterActionSections",
 				"draft={draft}",
 				"onActionTextKeyDown={openActionRuleInsertPicker}",
 			],
-			"Monster fields-mode raw field and action composition",
+			"Monster fields-mode stat-block field and action composition",
 		);
+		for (const key of [
+			"name",
+			"size",
+			"type",
+			"alignment",
+			"source",
+			"hpFormula",
+			"ac",
+			"speed",
+			"vulnerable",
+			"resist",
+			"immune",
+			"conditionImmune",
+			"senses",
+			"languages",
+			"cr",
+			"desc",
+		]) {
+			const pattern = new RegExp(
+				`render(?:Input|Select|Text)Field\\(\\s*"${key}"(?:\\s*,|\\s*\\))`,
+				"g",
+			);
+			assert.equal(
+				Array.from(modalSource.matchAll(pattern)).length,
+				1,
+				`Expected exactly one fields-mode control for ${key}`,
+			);
+		}
 		assert.doesNotMatch(
 			modalSource,
-			/MonsterFieldEditModal__(?:fields|abilities|text_fields|actions)/,
+			/\bbasicFields=|\btextFields=|from ["'][^"']*widgets\/monster-stat-block/,
 		);
 		assert.doesNotMatch(
 			`${runtimeEntrySource}\n${typeEntrySource}`,
@@ -4600,16 +4652,36 @@ await run(
 				"interface MonsterFieldSectionsProps {",
 				"actionSections: ReactNode;",
 				"abilityFields: ReactNode;",
-				"basicFields: ReactNode;",
-				"textFields: ReactNode;",
+				"defenseFields: ReactNode;",
+				"descriptionFields: ReactNode;",
+				"loreField: ReactNode;",
+				"metaFields: ReactNode;",
+				"nameField: ReactNode;",
+				"sourceField: ReactNode;",
+				"statFields: ReactNode;",
 				"export default function MonsterFieldSections({",
 				"return (",
-				'"MonsterFieldEditModal__fields"',
-				"{basicFields}",
-				'"MonsterFieldEditModal__fields MonsterFieldEditModal__abilities"',
+				'"MonsterFieldEditModal__stat_block"',
+				'"MonsterFieldEditModal__stat_header"',
+				'"MonsterFieldEditModal__identity"',
+				'"MonsterFieldEditModal__name_row"',
+				"{nameField}",
+				'"MonsterFieldEditModal__meta_fields"',
+				"{metaFields}",
+				'"MonsterFieldEditModal__source_field"',
+				"{sourceField}",
+				'"MonsterFieldEditModal__stats_wrap"',
+				'"MonsterFieldEditModal__primary_stats"',
+				"{statFields}",
+				'"MonsterFieldEditModal__properties"',
+				'"MonsterFieldEditModal__defense_fields"',
+				"{defenseFields}",
+				'"MonsterFieldEditModal__description_fields"',
+				"{descriptionFields}",
+				'"MonsterFieldEditModal__lore_field"',
+				"{loreField}",
+				'"MonsterFieldEditModal__abilities"',
 				"{abilityFields}",
-				'"MonsterFieldEditModal__text_fields"',
-				"{textFields}",
 				'"MonsterFieldEditModal__actions"',
 				"{actionSections}",
 			],
@@ -4617,7 +4689,31 @@ await run(
 		);
 		assert.doesNotMatch(
 			fieldSectionsSource,
-			/MonsterActionSections|useState|useEffect|<Modal\b|TextInput|Select|parseMonsterJson|prepareMonsterDraftForSave|updateCreatureBasicField|openRuleInsertPicker|event\.target\.value/,
+			/MonsterActionSections|useState|useEffect|<Modal\b|TextInput|Select|parseMonsterJson|prepareMonsterDraftForSave|updateCreatureBasicField|openRuleInsertPicker|event\.target\.value|basicFields|textFields/,
+		);
+		assert.match(
+			modalCss,
+			/\.MonsterFieldEditModal__stats_wrap\s*\{[\s\S]*?grid-template-columns:\s*minmax\(240px, 0\.72fr\) minmax\(0, 1\.28fr\);/,
+		);
+		assert.match(
+			modalCss,
+			/\.MonsterFieldEditModal__abilities\s*\{[\s\S]*?grid-template-columns:\s*repeat\(6, minmax\(0, 1fr\)\);/,
+		);
+		assert.match(
+			modalCss,
+			/\.MonsterFieldEditModal__action_section\s*\{[\s\S]*?border-top:/,
+		);
+		assert.match(
+			modalCss,
+			/\.MonsterFieldEditModal__action_header h4\s*\{[\s\S]*?color:\s*var\(--accent\);[\s\S]*?text-transform:\s*uppercase;/,
+		);
+		assert.match(
+			modalCss,
+			/@media \(max-width: 860px\)\s*\{[\s\S]*?\.MonsterFieldEditModal__stats_wrap\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\);/,
+		);
+		assert.doesNotMatch(
+			modalCss,
+			/\.MonsterFieldEditModal__(?:fields|text_fields)\b|\.MonsterFieldEditModal__abilities\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/,
 		);
 	},
 );

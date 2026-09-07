@@ -72,7 +72,9 @@ export default function MonsterActionSections({
 									>
 										<div className="MonsterFieldEditModal__action_title">
 											<label className="MonsterFieldEditModal__field">
-												<span>{lang.t("Name")}</span>
+												<span className="MonsterFieldEditModal__field_label">
+													{lang.t("Name")}
+												</span>
 												<TextInput
 													value={String(action?.name || "")}
 													onChange={(event) =>
@@ -86,10 +88,13 @@ export default function MonsterActionSections({
 												icon="trash"
 												onClick={() => onRemoveAction(section.key, index)}
 												title={lang.t("Remove action")}
+												aria-label={lang.t("Remove action")}
 											/>
 										</div>
 										<label className="MonsterFieldEditModal__field">
-											<span>{lang.t("Text")}</span>
+											<span className="MonsterFieldEditModal__field_label">
+												{lang.t("Text")}
+											</span>
 											<textarea
 												className="Input Input__textarea MonsterFieldEditModal__textarea"
 												rows={4}

@@ -17,16 +17,119 @@
 	padding-right: 2px;
 }
 
-.MonsterFieldEditModal__fields {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-	gap: var(--space-3);
-}
-
 .MonsterFieldEditModal__mode_switch {
 	display: flex;
 	justify-content: flex-end;
 	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__stat_block {
+	padding: var(--space-4);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--panel), var(--bg) 14%);
+}
+
+.MonsterFieldEditModal__stat_header,
+.MonsterFieldEditModal__identity {
+	display: grid;
+}
+
+.MonsterFieldEditModal__stat_header {
+	gap: var(--space-4);
+}
+
+.MonsterFieldEditModal__identity {
+	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__name_row .MonsterFieldEditModal__field {
+	gap: 0;
+}
+
+.MonsterFieldEditModal__name_row .MonsterFieldEditModal__field_label {
+	color: var(--accent);
+	font-size: 0.68rem;
+}
+
+.MonsterFieldEditModal__name_row .Input {
+	min-height: 0;
+	padding: var(--space-1) 0 var(--space-2);
+	border-width: 0 0 1px;
+	border-radius: 0;
+	background: transparent;
+	color: var(--text-bright);
+	font-size: 2rem;
+	font-weight: 700;
+	line-height: 1.1;
+}
+
+.MonsterFieldEditModal__name_row .Input:hover,
+.MonsterFieldEditModal__name_row .Input:focus {
+	background: color-mix(in srgb, var(--accent), transparent 96%);
+}
+
+.MonsterFieldEditModal__meta_fields {
+	display: grid;
+	grid-template-columns: minmax(110px, 0.65fr) minmax(180px, 1.35fr) minmax(180px, 1fr);
+	gap: var(--space-3);
+}
+
+.MonsterFieldEditModal__source_field {
+	max-width: 360px;
+}
+
+.MonsterFieldEditModal__source_field .MonsterFieldEditModal__field {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__source_field .Input {
+	min-height: var(--control-h-sm);
+	padding-block: var(--space-1);
+	font-size: 0.82rem;
+}
+
+.MonsterFieldEditModal__stats_wrap {
+	display: grid;
+	grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
+	align-items: start;
+	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__primary_stats,
+.MonsterFieldEditModal__properties {
+	display: grid;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border-radius: var(--radius-md);
+	background: var(--bg);
+}
+
+.MonsterFieldEditModal__primary_stats {
+	gap: var(--space-3);
+}
+
+.MonsterFieldEditModal__properties {
+	border: 1px solid color-mix(in srgb, var(--border), transparent 70%);
+}
+
+.MonsterFieldEditModal__defense_fields,
+.MonsterFieldEditModal__description_fields {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__description_fields,
+.MonsterFieldEditModal__lore_field {
+	padding-top: var(--space-2);
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 70%);
+}
+
+.MonsterFieldEditModal__lore_field .MonsterFieldEditModal__textarea {
+	font-style: italic;
 }
 
 .MonsterFieldEditModal__help_button.Button {
@@ -182,7 +285,10 @@
 }
 
 .MonsterFieldEditModal__abilities {
-	grid-template-columns: repeat(6, minmax(80px, 1fr));
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: var(--space-3);
+	text-align: center;
 }
 
 .MonsterFieldEditModal__field {
@@ -192,7 +298,7 @@
 	gap: var(--space-1);
 }
 
-.MonsterFieldEditModal__field>span {
+.MonsterFieldEditModal__field_label {
 	color: var(--muted);
 	font-size: 0.74rem;
 	font-weight: 700;
@@ -200,18 +306,89 @@
 	letter-spacing: 0.04em;
 }
 
-.MonsterFieldEditModal__field.is_disabled>span {
+.MonsterFieldEditModal__field.is_disabled .MonsterFieldEditModal__field_label {
 	color: color-mix(in srgb, var(--muted), transparent 22%);
 }
 
-.MonsterFieldEditModal__text_fields {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: var(--space-3);
+.MonsterFieldEditModal__field > .Input,
+.MonsterFieldEditModal__field > .Select {
+	width: 100%;
+	min-width: 0;
 }
 
-.MonsterFieldEditModal__text_fields .MonsterFieldEditModal__field:last-child {
-	grid-column: 1 / -1;
+.MonsterFieldEditModal__stats_wrap .MonsterFieldEditModal__field {
+	display: grid;
+	grid-template-columns: minmax(135px, 0.75fr) minmax(0, 1.25fr);
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.MonsterFieldEditModal__stats_wrap .MonsterFieldEditModal__field_label {
+	padding-top: 0.1rem;
+	color: var(--accent);
+	font-size: 0.8rem;
+	line-height: 1.25;
+	text-transform: none;
+	letter-spacing: 0;
+}
+
+.MonsterFieldEditModal__stats_wrap .MonsterFieldEditModal__textarea {
+	min-height: 58px;
+}
+
+.MonsterFieldEditModal__ability_field {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	align-items: center;
+	padding: var(--space-3) var(--space-1);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 50%);
+	border-radius: var(--radius-lg);
+	background: color-mix(in srgb, var(--bg), transparent 40%);
+	transition:
+		border-color 0.2s ease,
+		background-color 0.2s ease,
+		transform 0.2s ease;
+}
+
+.MonsterFieldEditModal__ability_field:hover,
+.MonsterFieldEditModal__ability_field:focus-within {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), transparent 90%);
+	transform: translateY(-2px);
+}
+
+.MonsterFieldEditModal__ability_label {
+	color: var(--muted);
+	font-size: 0.7rem;
+	font-weight: 800;
+}
+
+.MonsterFieldEditModal__ability_modifier {
+	margin: var(--space-1) 0;
+	color: var(--text-bright);
+	font-size: 1.2rem;
+	font-weight: 700;
+}
+
+.MonsterFieldEditModal__ability_input.Input {
+	width: min(68px, 100%);
+	min-height: 30px;
+	padding: 2px var(--space-1);
+	text-align: center;
+	font-size: 0.75rem;
+	opacity: 0.72;
+	appearance: textfield;
+}
+
+.MonsterFieldEditModal__ability_input::-webkit-inner-spin-button,
+.MonsterFieldEditModal__ability_input::-webkit-outer-spin-button {
+	margin: 0;
+	appearance: none;
+}
+
+.MonsterFieldEditModal__ability_input.Input:focus {
+	opacity: 1;
 }
 
 .MonsterFieldEditModal__textarea {
@@ -233,16 +410,15 @@
 
 .MonsterFieldEditModal__actions {
 	display: grid;
-	gap: var(--space-3);
+	gap: 0;
 }
 
 .MonsterFieldEditModal__action_section {
 	display: grid;
 	gap: var(--space-2);
-	padding: var(--space-3);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-sm);
-	background: var(--bg-2);
+	margin-top: var(--space-3);
+	padding-top: var(--space-3);
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 70%);
 }
 
 .MonsterFieldEditModal__action_header,
@@ -256,8 +432,11 @@
 
 .MonsterFieldEditModal__action_header h4 {
 	margin: 0;
-	color: var(--text-bright);
+	color: var(--accent);
 	font-size: 0.9rem;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
 }
 
 .MonsterFieldEditModal__action_list {
@@ -268,17 +447,21 @@
 .MonsterFieldEditModal__action_item {
 	display: grid;
 	gap: var(--space-2);
-	padding-top: var(--space-3);
-	border-top: 1px solid color-mix(in srgb, var(--border), transparent 30%);
+	padding: var(--space-2) 0 var(--space-3);
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 55%);
 }
 
-.MonsterFieldEditModal__action_item:first-child {
-	padding-top: 0;
-	border-top: 0;
+.MonsterFieldEditModal__action_item:last-child {
+	padding-bottom: 0;
+	border-bottom: 0;
 }
 
 .MonsterFieldEditModal__action_title .MonsterFieldEditModal__field {
 	flex: 1;
+}
+
+.MonsterFieldEditModal__action_title .Input {
+	font-weight: 700;
 }
 
 .MonsterFieldEditModal__empty {
@@ -314,14 +497,93 @@
 }
 
 @media (max-width: 860px) {
+	.MonsterFieldEditModal__stat_block {
+		padding: var(--space-3);
+	}
 
-	.MonsterFieldEditModal__abilities,
-	.MonsterFieldEditModal__text_fields {
+	.MonsterFieldEditModal__stats_wrap {
 		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.MonsterFieldEditModal__abilities {
+		gap: var(--space-1);
+	}
+
+	.MonsterFieldEditModal__ability_field {
+		padding: var(--space-2) var(--space-1);
+		border-radius: var(--radius-sm);
+	}
+
+	.MonsterFieldEditModal__ability_modifier {
+		margin: 0;
+		font-size: 0.96rem;
 	}
 
 	.MonsterFieldEditModal__help_row {
 		grid-template-columns: minmax(0, 1fr);
 		gap: var(--space-2);
+	}
+}
+
+@media (max-width: 640px) {
+	.MonsterFieldEditModal__stat_block {
+		padding: var(--space-2);
+	}
+
+	.MonsterFieldEditModal__stat_header {
+		gap: var(--space-3);
+	}
+
+	.MonsterFieldEditModal__name_row .Input {
+		font-size: 1.35rem;
+	}
+
+	.MonsterFieldEditModal__meta_fields {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-2);
+	}
+
+	.MonsterFieldEditModal__source_field {
+		max-width: none;
+	}
+
+	.MonsterFieldEditModal__primary_stats,
+	.MonsterFieldEditModal__properties {
+		padding: var(--space-2);
+	}
+
+	.MonsterFieldEditModal__ability_field {
+		padding: var(--space-1) 2px;
+	}
+
+	.MonsterFieldEditModal__ability_label {
+		font-size: 0.58rem;
+	}
+
+	.MonsterFieldEditModal__ability_modifier {
+		font-size: 0.88rem;
+	}
+
+	.MonsterFieldEditModal__ability_input.Input {
+		width: min(46px, 100%);
+		min-height: 28px;
+		padding-inline: 1px;
+		font-size: 0.7rem;
+	}
+
+	.MonsterFieldEditModal__action_header h4 {
+		font-size: 0.8rem;
+		letter-spacing: 0.06em;
+	}
+}
+
+@media (max-width: 520px) {
+	.MonsterFieldEditModal__stats_wrap .MonsterFieldEditModal__field {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-1);
+	}
+
+	.MonsterFieldEditModal__action_header {
+		align-items: flex-start;
 	}
 }
