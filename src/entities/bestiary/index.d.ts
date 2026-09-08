@@ -8,6 +8,9 @@ export {
 export { default as MonsterStatBlockModel } from "./model/MonsterStatBlockModel.ts";
 export type {
 	MonsterData,
+	MonsterLegendaryGroupReference,
+	MonsterSpellLevel,
+	MonsterSpellcasting,
 	MonsterEntry,
 	MonsterTypeChoice,
 	MonsterTypeDescriptor,

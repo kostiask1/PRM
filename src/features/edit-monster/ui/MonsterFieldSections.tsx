@@ -5,10 +5,14 @@ interface MonsterFieldSectionsProps {
 	abilityFields: ReactNode;
 	defenseFields: ReactNode;
 	descriptionFields: ReactNode;
+	exactDataSection: ReactNode;
 	loreField: ReactNode;
 	metaFields: ReactNode;
+	modifierFields: ReactNode;
 	nameField: ReactNode;
+	referenceFields: ReactNode;
 	sourceField: ReactNode;
+	spellcastingSections: ReactNode;
 	statFields: ReactNode;
 }
 
@@ -17,10 +21,14 @@ export default function MonsterFieldSections({
 	abilityFields,
 	defenseFields,
 	descriptionFields,
+	exactDataSection,
 	loreField,
 	metaFields,
+	modifierFields,
 	nameField,
+	referenceFields,
 	sourceField,
+	spellcastingSections,
 	statFields,
 }: MonsterFieldSectionsProps) {
 	return (
@@ -36,6 +44,7 @@ export default function MonsterFieldSections({
 						{statFields}
 					</div>
 					<div className="MonsterFieldEditModal__properties">
+						{modifierFields}
 						<div className="MonsterFieldEditModal__defense_fields">
 							{defenseFields}
 						</div>
@@ -45,11 +54,16 @@ export default function MonsterFieldSections({
 						<div className="MonsterFieldEditModal__lore_field">
 							{loreField}
 						</div>
+						{referenceFields}
 					</div>
 				</div>
 				<div className="MonsterFieldEditModal__abilities">{abilityFields}</div>
 			</div>
-			<div className="MonsterFieldEditModal__actions">{actionSections}</div>
+			<div className="MonsterFieldEditModal__actions">
+				{spellcastingSections}
+				{actionSections}
+			</div>
+			{exactDataSection}
 		</div>
 	);
 }

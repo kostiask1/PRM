@@ -267,13 +267,31 @@ const SPELLCASTING_JSON_EXAMPLE = `{
   "spellcasting": [
     {
       "name": "Spellcasting",
+	  "type": "spellcasting",
+	  "ability": "int",
+	  "displayAs": "action",
       "headerEntries": ["Introductory text"],
       "will": ["{@spell Light|XPHB}"],
-      "daily": { "1": ["{@spell Fireball|XPHB}"] },
+	  "daily": {
+		"1": ["{@spell Fireball|XPHB}"],
+		"1e": ["{@spell Fly|XPHB}", "{@spell Haste|XPHB}"]
+	  },
+	  "rest": { "1": ["{@spell Darkness|XPHB}"] },
+	  "restLong": { "1": ["{@spell Scrying|XPHB}"] },
+	  "recharge": { "5": ["{@spell Cone of Cold|XPHB}"] },
+	  "legendary": { "2": ["{@spell Teleport|XPHB}"] },
+	  "ritual": ["{@spell Detect Magic|XPHB}"],
+	  "charges": { "1e": ["{@spell Blight|XPHB}"] },
+	  "chargesItem": "wand of orcus|dmg",
       "spells": {
         "0": { "spells": ["{@spell Mage Hand|XPHB}"] },
-        "3": { "slots": 2, "spells": ["{@spell Fireball|XPHB}"] }
+		"5": {
+		  "lower": 1,
+		  "slots": 2,
+		  "spells": ["{@spell Fireball|XPHB}"]
+		}
       },
+	  "hidden": ["recharge"],
       "footerEntries": ["Closing text"]
     }
   ]
@@ -362,7 +380,7 @@ export default function MonsterTextParsingHelp({
 				</p>
 				<p>
 					{lang.t(
-						"Press Ctrl+K or Cmd+K in Armor Class, Senses, Description, or an action name or body (Ctrl+Л on a Ukrainian keyboard) to open the parser action chooser. It can build rolls, combat notation, and formatting, or open the spell and rules browsers. A selected text range is used as the initial value and replaced after insertion.",
+						"Press Ctrl+K or Cmd+K in Armor Class, Special HP, Senses, Description, any spellcasting text or spell, or an action name or body (Ctrl+Л on a Ukrainian keyboard) to open the template chooser. It can build rolls, combat notation, and formatting, or open the spell and rules browsers. A selected text range is used as the initial value and replaced after insertion.",
 					)}
 				</p>
 				<p>
@@ -456,22 +474,39 @@ export default function MonsterTextParsingHelp({
 					</li>
 					<li>
 						{lang.t(
-							"Editing an action's rich entries in Fields mode converts that edited body to one plain text entry. Use JSON mode to create or retain lists, sections, and tables.",
+							"Editing an action's main text control converts that edited body to one plain text entry. Use Exact structured data in Fields mode to create or retain lists, sections, tables, and other nested values without flattening them.",
 						)}
 					</li>
 				</ul>
 			</HelpSection>
 
-			<HelpSection title="Structured spellcasting in JSON mode">
+			<HelpSection title="Structured spellcasting">
 				<CodeBlock>{SPELLCASTING_JSON_EXAMPLE}</CodeBlock>
 				<p>
 					{lang.t(
-						"Only name, headerEntries, will, daily, spells, and footerEntries are read from each spellcasting block. Their values use rich parsing, so spell names should use spell tags.",
+						"Fields mode can add, remove, reorder, and edit complete spellcasting blocks. It supports introductory and footer entries, at-will and ritual lists, daily/rest/long-rest/recharge/legendary/charge frequency maps, spell levels with slots and lower bounds, placement, ability, hidden generated lists, and the charged item. Unknown sibling metadata is preserved.",
 					)}
 				</p>
+				<ul>
+					<li>
+						{lang.t(
+							"Frequency keys use a number such as 1, 2, or 3. Add e (for example 1e) when every listed spell can be used that many times.",
+						)}
+					</li>
+					<li>
+						{lang.t(
+							"Press Ctrl+K while editing any spellcasting name, paragraph, or spell row to open templates; choose the spell action there to open the spell browser and insert a spell tag.",
+						)}
+					</li>
+					<li>
+						{lang.t(
+							"An entry object such as {entry, hidden} keeps its metadata when its text is edited. Other structured entries remain editable as per-entry JSON.",
+						)}
+					</li>
+				</ul>
 				<p className="MonsterFieldEditModal__help_note">
 					{lang.t(
-						"Legacy spell_list is separate: it accepts spell URLs or slugs, loads matching spells, and groups them by level.",
+						"Legacy spell_list is separate: it accepts spell URLs or slugs, loads matching spells, and groups them by level. It remains available under Exact structured data in Fields mode.",
 					)}
 				</p>
 			</HelpSection>

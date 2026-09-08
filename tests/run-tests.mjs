@@ -240,6 +240,7 @@ import {
 	getSenseTextParts,
 	getTokenDragPayload,
 	getUploadedTokenUrl,
+	groupMonsterSpellcastingEntriesByDisplayAs,
 	groupMonsterSpellsByLevel,
 	loadMonsterSpells,
 	shouldShowMonsterTokenDropzone,
@@ -869,6 +870,7 @@ import {
 	canInsertParserActionText,
 	calculateDiceAverage,
 	getCreatureEditableFieldInput,
+	getMonsterModifierEntries,
 	isRulesReferenceShortcut,
 	parseMonsterJson,
 	parseSpeedText,
@@ -876,7 +878,31 @@ import {
 	removeMonsterAction,
 	speedToText,
 	updateCreatureBasicField,
+	updateMonsterModifierEntry,
 } from "../src/features/edit-monster/model.ts";
+import {
+	addMonsterSpellcastingBlock,
+	addMonsterSpellcastingBucketGroup,
+	addMonsterSpellcastingItem,
+	addMonsterSpellcastingLevel,
+	getMonsterSpellcastingBlocks,
+	getMonsterSpellcastingBucketGroups,
+	getMonsterSpellcastingItems,
+	getMonsterSpellcastingLevels,
+	moveMonsterSpellcastingBlock,
+	moveMonsterSpellcastingItem,
+	removeMonsterSpellcastingBlock,
+	removeMonsterSpellcastingBucketGroup,
+	removeMonsterSpellcastingItem,
+	removeMonsterSpellcastingLevel,
+	renameMonsterSpellcastingBucketGroup,
+	renameMonsterSpellcastingLevel,
+	replaceMonsterSpellcastingItem,
+	updateMonsterSpellcastingBlock,
+	updateMonsterSpellcastingItemText,
+	updateMonsterSpellcastingLevel,
+	updateMonsterSpellcastingScalar,
+} from "../src/features/edit-monster/model/monsterSpellcasting.ts";
 import {
 	getParserActionInitialValues,
 	getParserActionValidationIssue,
@@ -4577,6 +4603,7 @@ await run(
 				"currentValue || lang.t(\"Custom\")",
 				"const renderTextField = (",
 				"supportsParsing = false,",
+				"const renderStructuredAwareTextField = (",
 				"const renderAbilityField = (ability: CreatureAbilityKey) => {",
 				"const value = getCreatureEditableFieldInput(draft, ability);",
 				"const parsedScore = Number.parseInt(value, 10);",
@@ -4614,10 +4641,10 @@ await run(
 				'"conditionImmune",',
 				'"Condition Immunities",',
 				"descriptionFields={",
-				'renderTextField("senses", "Senses", 2, true)',
-				'renderTextField("languages", "Languages", 2)',
+				'renderStructuredAwareTextField("senses", "Senses", 2, true)',
+				'renderStructuredAwareTextField("languages", "Languages", 2)',
 				'renderInputField("cr", "Challenge Rating")',
-				'loreField={renderTextField("desc", "Description", 4, true)}',
+				'loreField={renderStructuredAwareTextField("desc", "Description", 4, true)}',
 				"abilityFields={CREATURE_ABILITY_KEYS.map(",
 				"renderAbilityField,",
 				"actionSections={",
@@ -4647,7 +4674,7 @@ await run(
 			"desc",
 		]) {
 			const pattern = new RegExp(
-				`render(?:Input|Select|Text)Field\\(\\s*"${key}"(?:\\s*,|\\s*\\))`,
+				`render(?:Input|Select|Text|StructuredAwareText)Field\\(\\s*"${key}"(?:\\s*,|\\s*\\))`,
 				"g",
 			);
 			assert.equal(
@@ -4830,8 +4857,8 @@ await run(
 			/"data-parser-target": `field-\$\{key\}`/,
 		);
 		assert.match(modalSource, /renderInputField\("ac", "Armor Class", \{\s*supportsParsing: true,/);
-		assert.match(modalSource, /renderTextField\("senses", "Senses", 2, true\)/);
-		assert.match(modalSource, /renderTextField\("desc", "Description", 4, true\)/);
+		assert.match(modalSource, /renderStructuredAwareTextField\("senses", "Senses", 2, true\)/);
+		assert.match(modalSource, /renderStructuredAwareTextField\("desc", "Description", 4, true\)/);
 		assert.match(actionSource, /data-parser-target=\{`action-\$\{section\.key\}-\$\{index\}-name`\}/);
 		assert.match(actionSource, /data-parser-target=\{`action-\$\{section\.key\}-\$\{index\}-text`\}/);
 		assert.match(css, /\.MonsterParserActionDialog__action_grid/);
@@ -29018,17 +29045,15 @@ await run("monster field editing preserves schema variants and rule insertion", 
 		"vulnerable",
 		"radiant, thunder",
 	);
-	assert.equal(changedVulnerabilities.vulnerable, "radiant, thunder");
+	assert.deepEqual(changedVulnerabilities.vulnerable, ["radiant", "thunder"]);
 	assert.deepEqual(defenses.vulnerable, ["cold"]);
 	const changedResistances = updateCreatureBasicField(
 		changedVulnerabilities,
 		"resist",
 		"acid; bludgeoning from nonmagical attacks",
 	);
-	assert.equal(
-		changedResistances.resist,
-		"acid; bludgeoning from nonmagical attacks",
-	);
+	assert.strictEqual(changedResistances, changedVulnerabilities);
+	assert.strictEqual(changedResistances.resist, defenses.resist);
 	const changedImmunities = updateCreatureBasicField(
 		changedResistances,
 		"immune",
@@ -29040,7 +29065,7 @@ await run("monster field editing preserves schema variants and rule insertion", 
 		"conditionImmune",
 		"poisoned",
 	);
-	assert.equal(changedConditionImmunities.conditionImmune, "poisoned");
+	assert.deepEqual(changedConditionImmunities.conditionImmune, ["poisoned"]);
 	const clearedImmunities = updateCreatureBasicField(
 		changedConditionImmunities,
 		"immune",
@@ -29138,6 +29163,311 @@ await run("monster field editing preserves schema variants and rule insertion", 
 	);
 	assert.equal(isRulesReferenceShortcut({ metaKey: true, key: "k" }), true);
 	assert.equal(isRulesReferenceShortcut({ ctrlKey: false, key: "k" }), false);
+
+	const modifiers = { save: { str: "+4", dex: "+3" } };
+	assert.strictEqual(
+		updateMonsterModifierEntry(modifiers, "save", 0, ["dex", "+4"]),
+		modifiers,
+	);
+	assert.deepEqual(
+		getMonsterModifierEntries(
+			updateMonsterModifierEntry(modifiers, "save", 0, ["  con  ", "+4"]),
+			"save",
+		),
+		[
+			["con", "+4"],
+			["dex", "+3"],
+		],
+	);
+	const otherSkills = [{ oneOf: { arcana: "+7", history: "+7" } }];
+	const structuredModifiers = {
+		skill: { perception: "+5", other: otherSkills },
+	};
+	const updatedStructuredModifiers = updateMonsterModifierEntry(
+		structuredModifiers,
+		"skill",
+		0,
+		["perception", "+6"],
+	);
+	assert.equal(updatedStructuredModifiers.skill.perception, "+6");
+	assert.strictEqual(updatedStructuredModifiers.skill.other, otherSkills);
+
+	const structuredResistance = {
+		resist: ["cold", { resist: ["fire"], note: "from spells" }],
+	};
+	assert.strictEqual(
+		updateCreatureBasicField(structuredResistance, "resist", "lightning"),
+		structuredResistance,
+	);
+	assert.deepEqual(
+		updateCreatureBasicField({ immune: ["cold", "fire"] }, "immune", "acid, fire")
+			.immune,
+		["acid", "fire"],
+	);
+	const structuredAlignment = { alignment: [{ alignment: ["N"], chance: 50 }] };
+	assert.strictEqual(
+		updateCreatureBasicField(structuredAlignment, "alignment", "C E"),
+		structuredAlignment,
+	);
+});
+
+await run("monster spellcasting editing preserves complete nested data", () => {
+	const hiddenSpell = { entry: "{@spell Shield|XPHB}", hidden: true, note: "keep" };
+	const firstBlock = {
+		name: "Innate Spellcasting",
+		type: "spellcasting",
+		ability: "cha",
+		displayAs: "action",
+		headerEntries: ["Intro"],
+		will: [hiddenSpell, "{@spell Light|XPHB}"],
+		daily: { "1e": ["{@spell Fly|XPHB}"] },
+		spells: {
+			"5": {
+				lower: 1,
+				slots: 2,
+				spells: ["{@spell Fireball|XPHB}"],
+				unknownLevelMetadata: "keep",
+			},
+		},
+		unknownBlockMetadata: { keep: true },
+	};
+	const secondBlock = { name: "Second", ritual: ["{@spell Knock|PHB}"] };
+	const original = { name: "Архімаг", spellcasting: [firstBlock, secondBlock] };
+
+	const detached = getMonsterSpellcastingBlocks(original);
+	assert.deepEqual(detached, [firstBlock, secondBlock]);
+	assert.notStrictEqual(detached[0], firstBlock);
+
+	let edited = updateMonsterSpellcastingScalar(original, 0, "ability", "int");
+	assert.equal(edited.spellcasting[0].ability, "int");
+	assert.deepEqual(edited.spellcasting[0].unknownBlockMetadata, { keep: true });
+	assert.equal(original.spellcasting[0].ability, "cha");
+
+	edited = updateMonsterSpellcastingBlock(edited, 0, {
+		hidden: ["daily"],
+		chargesItem: "wand|dmg",
+	});
+	assert.deepEqual(edited.spellcasting[0].hidden, ["daily"]);
+	assert.equal(edited.spellcasting[0].chargesItem, "wand|dmg");
+
+	const willTarget = { kind: "rich", key: "will" };
+	edited = updateMonsterSpellcastingItemText(
+		edited,
+		0,
+		willTarget,
+		0,
+		"{@spell Absorb Elements|XPHB}",
+	);
+	assert.deepEqual(edited.spellcasting[0].will[0], {
+		entry: "{@spell Absorb Elements|XPHB}",
+		hidden: true,
+		note: "keep",
+	});
+	edited = addMonsterSpellcastingItem(edited, 0, willTarget, "new");
+	edited = moveMonsterSpellcastingItem(edited, 0, willTarget, 2, 1);
+	assert.deepEqual(
+		getMonsterSpellcastingItems(getMonsterSpellcastingBlocks(edited)[0], willTarget),
+		[
+			{
+				entry: "{@spell Absorb Elements|XPHB}",
+				hidden: true,
+				note: "keep",
+			},
+			"new",
+			"{@spell Light|XPHB}",
+		],
+	);
+	edited = replaceMonsterSpellcastingItem(edited, 0, willTarget, 1, {
+		entry: "replacement",
+		hidden: false,
+	});
+	edited = removeMonsterSpellcastingItem(edited, 0, willTarget, 2);
+	assert.deepEqual(edited.spellcasting[0].will[1], {
+		entry: "replacement",
+		hidden: false,
+	});
+
+	edited = addMonsterSpellcastingBucketGroup(edited, 0, "restLong", "1");
+	edited = addMonsterSpellcastingItem(
+		edited,
+		0,
+		{ kind: "bucket", key: "restLong", group: "1" },
+		"{@spell Scrying|XPHB}",
+	);
+	assert.deepEqual(
+		getMonsterSpellcastingBucketGroups(
+			getMonsterSpellcastingBlocks(edited)[0],
+			"restLong",
+		),
+		[{ key: "1", items: ["{@spell Scrying|XPHB}"] }],
+	);
+	edited = renameMonsterSpellcastingBucketGroup(
+		edited,
+		0,
+		"restLong",
+		"1",
+		"2e",
+	);
+	assert.deepEqual(edited.spellcasting[0].restLong, {
+		"2e": ["{@spell Scrying|XPHB}"],
+	});
+	edited = removeMonsterSpellcastingBucketGroup(edited, 0, "restLong", "2e");
+	assert.deepEqual(edited.spellcasting[0].restLong, {});
+
+	edited = addMonsterSpellcastingLevel(edited, 0, "3", { slots: 3 });
+	edited = updateMonsterSpellcastingLevel(edited, 0, "3", {
+		slots: 4,
+		lower: 2,
+	});
+	edited = addMonsterSpellcastingItem(
+		edited,
+		0,
+		{ kind: "level", level: "3" },
+		"{@spell Counterspell|XPHB}",
+	);
+	assert.deepEqual(
+		getMonsterSpellcastingLevels(getMonsterSpellcastingBlocks(edited)[0]),
+		[
+			{
+				level: "3",
+				slots: 4,
+				lower: 2,
+				spells: ["{@spell Counterspell|XPHB}"],
+			},
+			{
+				level: "5",
+				slots: 2,
+				lower: 1,
+				spells: ["{@spell Fireball|XPHB}"],
+			},
+		],
+	);
+	assert.equal(
+		edited.spellcasting[0].spells["5"].unknownLevelMetadata,
+		"keep",
+	);
+	edited = renameMonsterSpellcastingLevel(edited, 0, "3", "4");
+	assert.equal(edited.spellcasting[0].spells["4"].slots, 4);
+	edited = removeMonsterSpellcastingLevel(edited, 0, "4");
+	assert.equal("4" in edited.spellcasting[0].spells, false);
+
+	edited = addMonsterSpellcastingBlock(edited, { name: "Third" });
+	edited = moveMonsterSpellcastingBlock(edited, 2, 0);
+	assert.equal(edited.spellcasting[0].name, "Third");
+	edited = removeMonsterSpellcastingBlock(edited, 0);
+	assert.equal(edited.spellcasting.length, 2);
+});
+
+await run("monster Fields mode covers every bundled creature property", async () => {
+	const [allJson, modalSource, exactSource, spellcastingSource, modifierSource] =
+		await Promise.all([
+			fs.readFile("database/bestiary/all.json", "utf8"),
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterExactDataSection.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterSpellcastingSections.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterModifierSections.tsx",
+				"utf8",
+			),
+		]);
+	const bundledMonsters = JSON.parse(allJson);
+	const bundledKeys = new Set(
+		bundledMonsters.flatMap((monster) => Object.keys(monster)),
+	);
+	const friendlyFields = new Set([
+		"name",
+		"source",
+		"size",
+		"type",
+		"alignment",
+		"ac",
+		"hp",
+		"speed",
+		"str",
+		"dex",
+		"con",
+		"int",
+		"wis",
+		"cha",
+		"cr",
+		"languages",
+		"senses",
+		"vulnerable",
+		"resist",
+		"immune",
+		"conditionImmune",
+		"trait",
+		"bonus",
+		"action",
+		"reaction",
+		"legendary",
+		"save",
+		"skill",
+		"spellcasting",
+		"legendaryGroup",
+	]);
+	assert.deepEqual(
+		[...bundledKeys].filter((key) => !friendlyFields.has(key)),
+		[],
+	);
+	assert.match(modalSource, /<MonsterModifierSections/);
+	assert.match(modalSource, /<MonsterLegendaryGroupEditor/);
+	assert.match(modalSource, /<MonsterSpellcastingSections/);
+	assert.match(modalSource, /<MonsterExactDataSection/);
+	assert.match(exactSource, /Add structured field/);
+	assert.match(exactSource, /getInitialExactFieldValue/);
+	for (const field of [
+		"size",
+		"type",
+		"alignment",
+		"ac",
+		"hp",
+		"speed",
+		"cr",
+		"save",
+		"skill",
+		"vulnerable",
+		"resist",
+		"immune",
+		"conditionImmune",
+		"trait",
+		"bonus",
+		"action",
+		"reaction",
+		"legendary",
+		"legendaryGroup",
+		"spellcasting",
+	]) {
+		assert.match(exactSource, new RegExp(`"${field}"`));
+	}
+	assert.match(modifierSource, /field: "save"/);
+	assert.match(modifierSource, /field: "skill"/);
+	for (const bucket of [
+		"daily",
+		"rest",
+		"restLong",
+		"recharge",
+		"legendary",
+		"charges",
+		"ritual",
+		"will",
+		"spells",
+	]) {
+		assert.match(spellcastingSource, new RegExp(`"${bucket}"`));
+	}
+	assert.match(spellcastingSource, /Ctrl\+K/);
+	assert.match(spellcastingSource, /moveMonsterSpellcastingItem/);
+	assert.match(spellcastingSource, /addMonsterSpellcastingBucketGroup/);
+	assert.match(spellcastingSource, /addMonsterSpellcastingLevel/);
 });
 
 await run("monster field editing validates JSON and restores source on save", () => {
@@ -48025,7 +48355,7 @@ await run("monster stat block presentation policies normalize source variants", 
 	assert.equal(spellcastingPresentation.willLine.values, spellWill);
 	assert.equal(spellcastingPresentation.footerEntries, spellFooter);
 	assert.deepEqual(spellcastingPresentation.dailyLines, [
-		{ key: "1/day", label: "1/day each", values: dailySpell },
+		{ key: "1/day", label: "1/day", values: dailySpell },
 	]);
 	assert.deepEqual(spellcastingPresentation.spellLines, [
 		{ key: "0", label: "Cantrips", values: cantrips },
@@ -48047,6 +48377,92 @@ await run("monster stat block presentation policies normalize source variants", 
 			spells: { "-1": { slots: -1, spells: [] } },
 		}).spellLines[0].label,
 		"Level -1 (-1 slots)",
+	);
+	const completeSpellcastingPresentation =
+		getMonsterSpellcastingEntryPresentation({
+			name: "Повне чарування",
+			will: [
+				{ entry: "hidden spell", hidden: true },
+				"visible spell",
+			],
+			daily: {
+				"1": ["one shared use"],
+				"2e": ["two uses each"],
+			},
+			rest: { "1": ["short or long rest"] },
+			restLong: { "1": ["long rest"] },
+			recharge: { "5": ["recharge spell"] },
+			legendary: { "2": ["legendary spell"] },
+			charges: { "1e": ["charged spell"] },
+			chargesItem: "wand of tests|tst",
+			ritual: ["ritual spell"],
+			spells: {
+				"5": { lower: 1, slots: 2, spells: ["leveled spell"] },
+			},
+		});
+	assert.deepEqual(completeSpellcastingPresentation.willLine, {
+		key: "will",
+		label: "At will",
+		values: ["visible spell"],
+	});
+	assert.deepEqual(
+		completeSpellcastingPresentation.dailyLines.map((line) => line.label),
+		["1/day", "2/day each"],
+	);
+	assert.equal(completeSpellcastingPresentation.restLines[0].label, "1/rest");
+	assert.equal(
+		completeSpellcastingPresentation.restLongLines[0].label,
+		"1/long rest",
+	);
+	assert.equal(
+		completeSpellcastingPresentation.rechargeLines[0].label,
+		"Recharge 5–6",
+	);
+	assert.equal(
+		completeSpellcastingPresentation.legendaryLines[0].label,
+		"2 Legendary Actions",
+	);
+	assert.equal(
+		completeSpellcastingPresentation.chargesLines[0].label,
+		"1 charge each — wand of tests",
+	);
+	assert.equal(completeSpellcastingPresentation.ritualLine.label, "Rituals");
+	assert.equal(
+		completeSpellcastingPresentation.spellLines[0].label,
+		"Levels 1–5 (2 slots)",
+	);
+	assert.deepEqual(
+		getMonsterSpellcastingEntryPresentation({
+			name: "Приховане",
+			daily: { "1e": ["hidden group"] },
+			hidden: ["daily"],
+		}).dailyLines,
+		[],
+	);
+	const placementEntry = (name, displayAs) => ({ name, displayAs });
+	const placementGroups = groupMonsterSpellcastingEntriesByDisplayAs([
+		placementEntry("Default", undefined),
+		placementEntry("Trait", "trait"),
+		placementEntry("Bonus", "bonus"),
+		placementEntry("Action", "action"),
+		placementEntry("Reaction", "reaction"),
+		placementEntry("Legendary", "legendary"),
+	]);
+	assert.deepEqual(
+		Object.fromEntries(
+			Object.entries(placementGroups).map(([key, entries]) => [
+				key,
+				entries.map((entry) => entry.name),
+			]),
+		),
+		{
+			standalone: ["Default"],
+			trait: ["Trait"],
+			bonus: ["Bonus"],
+			action: ["Action"],
+			reaction: ["Reaction"],
+			legendary: ["Legendary"],
+		},
 	);
 	const monster = { id: "custom-1", name: "Вартовий", source: "CUSTOM", imageUrl: "/custom.webp" };
 	assert.deepEqual(getMonsterMetadataPresentation(monster, "MM"), {

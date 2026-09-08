@@ -36,6 +36,8 @@ import {
 	getCreatureEditableFieldInput,
 	getCreatureSelectValue,
 	getRuleInsertValue,
+	hasStructuredCreatureFieldValue,
+	insertParserActionText,
 	isRulesReferenceShortcut,
 	parseMonsterJson,
 	prepareMonsterDraftForSave,
@@ -51,10 +53,17 @@ import {
 } from "../model.ts";
 import type { ParserActionContext } from "../model/parserActions.ts";
 import MonsterActionSections from "./MonsterActionSections.tsx";
+import MonsterExactDataSection from "./MonsterExactDataSection.tsx";
 import MonsterFieldSections from "./MonsterFieldSections.tsx";
+import MonsterJsonValueInput from "./MonsterJsonValueInput.tsx";
+import MonsterLegendaryGroupEditor from "./MonsterLegendaryGroupEditor.tsx";
+import MonsterModifierSections from "./MonsterModifierSections.tsx";
 import MonsterParserActionDialog, {
 	type MonsterParserReferenceContentProps,
 } from "./MonsterParserActionDialog.tsx";
+import MonsterSpellcastingSections, {
+	type MonsterNestedParserRequest,
+} from "./MonsterSpellcastingSections.tsx";
 import MonsterTextParsingHelp from "./MonsterTextParsingHelp.tsx";
 import "../../../assets/components/MonsterFieldEditModal.css";
 
@@ -92,7 +101,12 @@ interface PendingParserFocus {
 	selectionEnd: number;
 }
 
-function getParserTargetId(target: RuleInsertTarget): string {
+type ActiveRuleInsertTarget =
+	| RuleInsertTarget
+	| (MonsterNestedParserRequest & { type: "nested" });
+
+function getParserTargetId(target: ActiveRuleInsertTarget): string {
+	if (target.type === "nested") return target.targetId;
 	return target.type === "field"
 		? `field-${target.key}`
 		: `action-${target.section}-${target.index}-${target.part}`;
@@ -115,7 +129,7 @@ export default function MonsterFieldEditModal({
 	const [error, setError] = useState("");
 	const [isHelpOpen, setIsHelpOpen] = useState(false);
 	const [ruleInsertTarget, setRuleInsertTarget] =
-		useState<RuleInsertTarget | null>(null);
+		useState<ActiveRuleInsertTarget | null>(null);
 	const pendingParserFocusRef = useRef<PendingParserFocus | null>(null);
 	const parsingHelpId = useId();
 
@@ -267,6 +281,10 @@ export default function MonsterFieldEditModal({
 			part: "name",
 		});
 	};
+	const openNestedParser = (request: MonsterNestedParserRequest) => {
+		setError("");
+		setRuleInsertTarget({ ...request, type: "nested" });
+	};
 
 	const applyParserInsert = (text: string) => {
 		if (!ruleInsertTarget || !text) {
@@ -279,9 +297,15 @@ export default function MonsterFieldEditModal({
 			selectionStart: caretPosition,
 			selectionEnd: caretPosition,
 		};
-		updateDraft((current) =>
-			applyParserActionText(current, ruleInsertTarget, text),
-		);
+		if (ruleInsertTarget.type === "nested") {
+			ruleInsertTarget.onChange(
+				insertParserActionText(ruleInsertTarget.value, ruleInsertTarget, text),
+			);
+		} else {
+			updateDraft((current) =>
+				applyParserActionText(current, ruleInsertTarget, text),
+			);
+		}
 		setRuleInsertTarget(null);
 	};
 	const closeParserActions = () => {
@@ -358,11 +382,32 @@ export default function MonsterFieldEditModal({
 		</label>
 	);
 
+	const renderStructuredValueField = (key: string, label: string) => (
+		<div key={key} className="MonsterFieldEditModal__field">
+			<span className="MonsterFieldEditModal__field_label">{lang.t(label)}</span>
+			<MonsterJsonValueInput
+				ariaLabel={lang.t("Exact JSON value for {field}", { field: key })}
+				value={draft[key]}
+				onChange={(value) =>
+					updateDraft((current) => ({ ...current, [key]: value }))
+				}
+			/>
+			<span className="MonsterFieldEditModal__field_hint">
+				{lang.t(
+					"This value has a nested structure, so it is edited as JSON to preserve every condition and note.",
+				)}
+			</span>
+		</div>
+	);
+
 	const renderSelectField = (
 		key: "size" | "alignment",
 		label: string,
 		options: readonly SelectFieldOption[],
 	) => {
+		if (hasStructuredCreatureFieldValue(draft, key)) {
+			return renderStructuredValueField(key, label);
+		}
 		const currentValue = getCreatureSelectValue(draft, key);
 		const fullOptions = options.some((option) => option.value === currentValue)
 			? options
@@ -428,6 +473,16 @@ export default function MonsterFieldEditModal({
 		</label>
 	);
 
+	const renderStructuredAwareTextField = (
+		key: CreatureEditableFieldKey,
+		label: string,
+		rows = 3,
+		supportsParsing = false,
+	) =>
+		hasStructuredCreatureFieldValue(draft, key)
+			? renderStructuredValueField(key, label)
+			: renderTextField(key, label, rows, supportsParsing);
+
 	const renderAbilityField = (ability: CreatureAbilityKey) => {
 		const value = getCreatureEditableFieldInput(draft, ability);
 		const parsedScore = Number.parseInt(value, 10);
@@ -466,14 +521,21 @@ export default function MonsterFieldEditModal({
 		);
 	};
 
+	const ruleInsertValue = ruleInsertTarget
+		? ruleInsertTarget.type === "nested"
+			? ruleInsertTarget.value
+			: getRuleInsertValue(draft, ruleInsertTarget)
+		: "";
 	const selectedText = ruleInsertTarget
-		? getRuleInsertValue(draft, ruleInsertTarget).slice(
+		? ruleInsertValue.slice(
 				ruleInsertTarget.selectionStart,
 				ruleInsertTarget.selectionEnd,
 			)
 		: "";
 	const parserActionContext: ParserActionContext =
-		ruleInsertTarget?.type === "action"
+		ruleInsertTarget?.type === "nested"
+			? ruleInsertTarget.context
+			: ruleInsertTarget?.type === "action"
 			? ruleInsertTarget.part === "name"
 				? "action-name"
 				: "rich-text"
@@ -569,7 +631,13 @@ export default function MonsterFieldEditModal({
 									})}
 									statFields={
 										<>
+											{renderInputField("hpAverage", "Average HP", {
+												type: "number",
+											})}
 											{renderInputField("hpFormula", "HP Formula")}
+											{renderInputField("hpSpecial", "Special HP", {
+												supportsParsing: true,
+											})}
 											{renderInputField("ac", "Armor Class", {
 												supportsParsing: true,
 											})}
@@ -578,22 +646,22 @@ export default function MonsterFieldEditModal({
 									}
 									defenseFields={
 										<>
-											{renderTextField(
+											{renderStructuredAwareTextField(
 												"vulnerable",
 												"Damage Vulnerabilities",
 												2,
 											)}
-											{renderTextField(
+											{renderStructuredAwareTextField(
 												"resist",
 												"Damage Resistances",
 												2,
 											)}
-											{renderTextField(
+											{renderStructuredAwareTextField(
 												"immune",
 												"Damage Immunities",
 												2,
 											)}
-											{renderTextField(
+											{renderStructuredAwareTextField(
 												"conditionImmune",
 												"Condition Immunities",
 												2,
@@ -602,15 +670,40 @@ export default function MonsterFieldEditModal({
 									}
 									descriptionFields={
 										<>
-											{renderTextField("senses", "Senses", 2, true)}
-											{renderTextField("languages", "Languages", 2)}
+										{renderStructuredAwareTextField("senses", "Senses", 2, true)}
+										{renderStructuredAwareTextField("languages", "Languages", 2)}
 											{renderInputField("cr", "Challenge Rating")}
 										</>
 									}
-									loreField={renderTextField("desc", "Description", 4, true)}
+								loreField={renderStructuredAwareTextField("desc", "Description", 4, true)}
+									modifierFields={
+										<MonsterModifierSections
+											draft={draft}
+											onChange={updateDraft}
+										/>
+									}
+									referenceFields={
+										<MonsterLegendaryGroupEditor
+											draft={draft}
+											onChange={updateDraft}
+										/>
+									}
 									abilityFields={CREATURE_ABILITY_KEYS.map(
 										renderAbilityField,
 									)}
+									exactDataSection={
+										<MonsterExactDataSection
+											draft={draft}
+											onChange={updateDraft}
+										/>
+									}
+									spellcastingSections={
+										<MonsterSpellcastingSections
+											draft={draft}
+											onChange={updateDraft}
+											onOpenParser={openNestedParser}
+										/>
+									}
 									actionSections={
 										<MonsterActionSections
 											draft={draft}

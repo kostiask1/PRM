@@ -23,6 +23,7 @@ import {
 	getMonsterEntries,
 	getMonsterMutationKey,
 	getMonsterSpellcastingEntries,
+	groupMonsterSpellcastingEntriesByDisplayAs,
 	getMonsterTokenSources,
 	getSenseTextParts,
 	getTokenDragPayload,
@@ -250,6 +251,9 @@ export default function MonsterStatBlock({
 	});
 	const spellGroups = groupMonsterSpellsByLevel(spells);
 	const spellcastingEntries = getMonsterSpellcastingEntries(monster.spellcasting);
+	const spellcastingPlacements = groupMonsterSpellcastingEntriesByDisplayAs(
+		spellcastingEntries,
+	);
 	const isGridLayout = layoutMode === "grid";
 	const renderSenses = () => {
 		const senses = Array.isArray(monster.senses) ? monster.senses : [monster.senses];
@@ -302,12 +306,12 @@ export default function MonsterStatBlock({
 			</div>
 			{isGridLayout && <div className="MonsterStatBlock__abilities"><MonsterAbilities model={model} helpers={helpers} onRoll={requestDiceRoll} /></div>}
 			<LegacySpellcastingSection loading={loadingSpells} groups={spellGroups} helpers={helpers} />
-			<StructuredSpellcastingSection entries={spellcastingEntries} helpers={helpers} />
-			<MonsterActionList actions={getMonsterEntries(monster.trait)} title="Traits" field="trait" helpers={helpers} />
-			<MonsterActionList actions={getMonsterEntries(monster.bonus)} title="Bonus Actions" field="bonus" helpers={helpers} />
-			<MonsterActionList actions={getMonsterEntries(monster.action)} title="Actions" field="action" helpers={helpers} />
-			<MonsterActionList actions={getMonsterEntries(monster.reaction)} title="Reactions" field="reaction" helpers={helpers} />
-			<MonsterActionList actions={getMonsterEntries(monster.legendary)} title="Legendary Actions" field="legendary" helpers={helpers} />
+			<StructuredSpellcastingSection entries={spellcastingPlacements.standalone} helpers={helpers} />
+			<MonsterActionList actions={getMonsterEntries(monster.trait)} spellcastingEntries={spellcastingPlacements.trait} title="Traits" field="trait" helpers={helpers} />
+			<MonsterActionList actions={getMonsterEntries(monster.bonus)} spellcastingEntries={spellcastingPlacements.bonus} title="Bonus Actions" field="bonus" helpers={helpers} />
+			<MonsterActionList actions={getMonsterEntries(monster.action)} spellcastingEntries={spellcastingPlacements.action} title="Actions" field="action" helpers={helpers} />
+			<MonsterActionList actions={getMonsterEntries(monster.reaction)} spellcastingEntries={spellcastingPlacements.reaction} title="Reactions" field="reaction" helpers={helpers} />
+			<MonsterActionList actions={getMonsterEntries(monster.legendary)} spellcastingEntries={spellcastingPlacements.legendary} title="Legendary Actions" field="legendary" helpers={helpers} />
 			<MonsterContentSection content={getMonsterContentArray(monster.lairActions)} title="Lair Actions" field="lairActions" helpers={helpers} />
 			<MonsterContentSection content={getMonsterContentArray(monster.regionalEffects)} title="Regional Effects" field="regionalEffects" helpers={helpers} />
 		</div>

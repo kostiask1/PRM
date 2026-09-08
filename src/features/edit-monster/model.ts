@@ -49,6 +49,7 @@ export const CREATURE_ABILITY_KEYS = [
 ] as const;
 
 export type CreatureAbilityKey = (typeof CREATURE_ABILITY_KEYS)[number];
+export type CreatureModifierField = "save" | "skill";
 export type CreatureEditableFieldKey =
 	| CreatureAbilityKey
 	| "name"
@@ -57,7 +58,9 @@ export type CreatureEditableFieldKey =
 	| "type"
 	| "alignment"
 	| "ac"
+	| "hpAverage"
 	| "hpFormula"
+	| "hpSpecial"
 	| "cr"
 	| "speed"
 	| "senses"
@@ -115,6 +118,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasOwn(object: unknown, key: string): boolean {
 	return isRecord(object) && Object.prototype.hasOwnProperty.call(object, key);
+}
+
+export function hasStructuredCreatureFieldValue(
+	monster: MonsterData,
+	key: string,
+): boolean {
+	const value = monster[key];
+	return (
+		isRecord(value) ||
+		(Array.isArray(value) &&
+			value.some((entry) => isRecord(entry) || Array.isArray(entry)))
+	);
 }
 
 export function cloneMonster<T extends MonsterData>(
@@ -200,6 +215,16 @@ function getCreatureHpFormulaInput(monster: MonsterData): string {
 	return isRecord(monster.hp) ? String(monster.hp.formula ?? "") : String(monster.hit_dice ?? "");
 }
 
+function getCreatureHpAverageInput(monster: MonsterData): string {
+	return isRecord(monster.hp)
+		? String(monster.hp.average ?? "")
+		: String(monster.hit_points ?? "");
+}
+
+function getCreatureHpSpecialInput(monster: MonsterData): string {
+	return isRecord(monster.hp) ? String(monster.hp.special ?? "") : "";
+}
+
 function listLikeValueToText(value: unknown): string {
 	if (Array.isArray(value)) {
 		return value
@@ -214,9 +239,9 @@ function listLikeValueToText(value: unknown): string {
 	return String(value ?? "");
 }
 
-function splitListText(value: unknown): string[] {
+function splitLineText(value: unknown): string[] {
 	return String(value || "")
-		.split(",")
+		.split(/\r?\n/)
 		.map((item) => item.trim())
 		.filter(Boolean);
 }
@@ -315,7 +340,9 @@ export function getCreatureEditableFieldInput(
 	key: CreatureEditableFieldKey,
 ): string {
 	if (key === "ac") return getCreatureAcInput(monster);
+	if (key === "hpAverage") return getCreatureHpAverageInput(monster);
 	if (key === "hpFormula") return getCreatureHpFormulaInput(monster);
+	if (key === "hpSpecial") return getCreatureHpSpecialInput(monster);
 	if (key === "speed") return speedToText(monster.speed);
 	if (key === "desc" && Array.isArray(monster.desc)) {
 		return monster.desc
@@ -326,6 +353,18 @@ export function getCreatureEditableFieldInput(
 	}
 	if (key === "type" && isRecord(monster.type)) {
 		return getMonsterTypeString(monster.type);
+	}
+	if (key === "cr" && isRecord(monster.cr)) {
+		return String(monster.cr.cr ?? "");
+	}
+	if ((key === "senses" || key === "languages") && Array.isArray(monster[key])) {
+		return monster[key]
+			.map((entry) =>
+				typeof entry === "string" || typeof entry === "number"
+					? String(entry)
+					: JSON.stringify(entry),
+			)
+			.join("\n");
 	}
 	if (
 		key === "vulnerable" ||
@@ -352,7 +391,31 @@ export function getCreatureSelectValue(
 
 function updateAc(monster: MonsterData, value: string): MonsterData {
 	const parsed = parseMaybeNumber(value) ?? "";
-	return { ...monster, ac: [parsed], armor_class: parsed };
+	const currentAc = Array.isArray(monster.ac) ? monster.ac : [];
+	const first = currentAc[0];
+	const nextFirst = isRecord(first)
+		? hasOwn(first, "special") && !hasOwn(first, "ac")
+			? { ...first, special: value }
+			: { ...first, ac: parsed }
+		: parsed;
+	return {
+		...monster,
+		ac: [nextFirst, ...currentAc.slice(1)],
+		armor_class: parsed,
+	};
+}
+
+function updateHpAverage(monster: MonsterData, value: string): MonsterData {
+	const average = parseMaybeNumber(value);
+	const currentHp = isRecord(monster.hp) ? monster.hp : {};
+	const hp = { ...currentHp };
+	if (average === undefined) delete hp.average;
+	else hp.average = average;
+	return {
+		...monster,
+		hp,
+		...(average === undefined ? {} : { hit_points: average }),
+	};
 }
 
 function updateHpFormula(monster: MonsterData, value: string): MonsterData {
@@ -380,13 +443,40 @@ function updateType(monster: MonsterData, value: string): MonsterData {
 	};
 }
 
+function updateHpSpecial(monster: MonsterData, value: string): MonsterData {
+	const currentHp = isRecord(monster.hp) ? monster.hp : {};
+	const hp = { ...currentHp };
+	if (value === "") delete hp.special;
+	else hp.special = value;
+	return { ...monster, hp };
+}
+
+function updateSpeed(monster: MonsterData, value: string): MonsterData {
+	const parsed = parseSpeedText(value);
+	if (!isRecord(monster.speed) || !isRecord(parsed)) {
+		return { ...monster, speed: parsed };
+	}
+	const speed = { ...monster.speed };
+	for (const key of SPEED_KEYS) delete speed[key];
+	delete speed.canHover;
+	return { ...monster, speed: { ...speed, ...parsed } };
+}
+
 function updateDefenseField(
 	monster: MonsterData,
 	key: CreatureDefenseFieldKey,
 	value: string,
 ): MonsterData {
+	if (hasStructuredCreatureFieldValue(monster, key)) return monster;
 	const next = { ...monster };
-	if (value.trim()) next[key] = value;
+	if (value.trim()) {
+		next[key] = Array.isArray(monster[key])
+			? String(value)
+					.split(/[,\n]/)
+					.map((entry) => entry.trim())
+					.filter(Boolean)
+			: value;
+	}
 	else delete next[key];
 	return next;
 }
@@ -395,39 +485,62 @@ const FIELD_UPDATERS: Partial<
 	Record<CreatureEditableFieldKey, (monster: MonsterData, value: string) => MonsterData>
 > = {
 	ac: updateAc,
+	hpAverage: updateHpAverage,
 	hpFormula: updateHpFormula,
-	cr: (monster, value) => ({ ...monster, cr: value }),
-	speed: (monster, value) => ({ ...monster, speed: parseSpeedText(value) }),
-	senses: (monster, value) => ({
+	hpSpecial: updateHpSpecial,
+	cr: (monster, value) => ({
 		...monster,
-		senses: Array.isArray(monster.senses) ? splitListText(value) : value,
+		cr: isRecord(monster.cr) ? { ...monster.cr, cr: value } : value,
 	}),
-	languages: (monster, value) => ({
-		...monster,
-		languages: Array.isArray(monster.languages) ? splitListText(value) : value,
-	}),
+	speed: updateSpeed,
+	senses: (monster, value) =>
+		hasStructuredCreatureFieldValue(monster, "senses")
+			? monster
+			: {
+					...monster,
+					senses: Array.isArray(monster.senses) ? splitLineText(value) : value,
+				},
+	languages: (monster, value) =>
+		hasStructuredCreatureFieldValue(monster, "languages")
+			? monster
+			: {
+					...monster,
+					languages: Array.isArray(monster.languages) ? splitLineText(value) : value,
+				},
 	vulnerable: (monster, value) =>
 		updateDefenseField(monster, "vulnerable", value),
 	resist: (monster, value) => updateDefenseField(monster, "resist", value),
 	immune: (monster, value) => updateDefenseField(monster, "immune", value),
 	conditionImmune: (monster, value) =>
 		updateDefenseField(monster, "conditionImmune", value),
-	size: (monster, value) => ({ ...monster, size: [value] }),
-	alignment: (monster, value) => ({
+	size: (monster, value) => ({
 		...monster,
-		alignment: String(value || "").trim().split(/\s+/).filter(Boolean).length
-			? String(value).trim().split(/\s+/).filter(Boolean)
-			: ["U"],
+		size: Array.isArray(monster.size)
+			? [value, ...monster.size.slice(1)]
+			: [value],
 	}),
+	alignment: (monster, value) =>
+		hasStructuredCreatureFieldValue(monster, "alignment")
+			? monster
+			: {
+					...monster,
+					alignment: String(value || "").trim().split(/\s+/).filter(Boolean)
+						.length
+						? String(value).trim().split(/\s+/).filter(Boolean)
+						: ["U"],
+				},
 	type: updateType,
-	desc: (monster, value) => ({
-		...monster,
-		desc: Array.isArray(monster.desc)
-			? String(value || "").trim()
-				? [value]
-				: []
-			: value,
-	}),
+	desc: (monster, value) =>
+		hasStructuredCreatureFieldValue(monster, "desc")
+			? monster
+			: {
+					...monster,
+					desc: Array.isArray(monster.desc)
+						? String(value || "").trim()
+							? [value]
+							: []
+						: value,
+				},
 };
 
 export function updateCreatureBasicField(
@@ -507,6 +620,111 @@ export function insertParserActionText(
 	const start = Math.max(0, target.selectionStart || 0);
 	const end = Math.max(start, target.selectionEnd || start);
 	return value.slice(0, start) + text + value.slice(end);
+}
+
+export function getMonsterModifierEntries(
+	monster: MonsterData,
+	field: CreatureModifierField,
+): Array<[string, string | number]> {
+	const value = monster[field];
+	return isRecord(value)
+		? Object.entries(value).filter(
+				(entry): entry is [string, string | number] =>
+					typeof entry[1] === "string" || typeof entry[1] === "number",
+			)
+		: [];
+}
+
+function replaceModifierEntries(
+	monster: MonsterData,
+	field: CreatureModifierField,
+	entries: Array<[string, string | number]>,
+): MonsterData {
+	const storedValue = monster[field];
+	const storedEntries = isRecord(storedValue) ? Object.entries(storedValue) : [];
+	let editableIndex = 0;
+	const mergedEntries: Array<[string, unknown]> = [];
+	for (const storedEntry of storedEntries) {
+		if (
+			typeof storedEntry[1] === "string" ||
+			typeof storedEntry[1] === "number"
+		) {
+			const editableEntry = entries[editableIndex];
+			editableIndex += 1;
+			if (editableEntry) mergedEntries.push(editableEntry);
+		} else {
+			mergedEntries.push(storedEntry);
+		}
+	}
+	for (; editableIndex < entries.length; editableIndex += 1) {
+		mergedEntries.push(entries[editableIndex]);
+	}
+	const next = { ...monster };
+	if (mergedEntries.length > 0) next[field] = Object.fromEntries(mergedEntries);
+	else delete next[field];
+	return next;
+}
+
+export function updateMonsterModifierEntry(
+	monster: MonsterData,
+	field: CreatureModifierField,
+	index: number,
+	entry: [string, string | number],
+): MonsterData {
+	const entries = getMonsterModifierEntries(monster, field);
+	if (!Number.isInteger(index) || index < 0 || index >= entries.length) {
+		return monster;
+	}
+	const normalizedKey = String(entry[0] ?? "").trim();
+	const storedValue = monster[field];
+	const currentKey = entries[index]?.[0];
+	if (
+		!normalizedKey ||
+		(normalizedKey !== currentKey && hasOwn(storedValue, normalizedKey)) ||
+		entries.some(
+			([key], entryIndex) => entryIndex !== index && key === normalizedKey,
+		)
+	) {
+		return monster;
+	}
+	return replaceModifierEntries(
+		monster,
+		field,
+		entries.map((current, entryIndex) =>
+			entryIndex === index ? [normalizedKey, entry[1]] : current,
+		),
+	);
+}
+
+export function addMonsterModifierEntry(
+	monster: MonsterData,
+	field: CreatureModifierField,
+): MonsterData {
+	const entries = getMonsterModifierEntries(monster, field);
+	const usedKeys = new Set(
+		isRecord(monster[field]) ? Object.keys(monster[field]) : entries.map(([key]) => key),
+	);
+	let suffix = entries.length + 1;
+	let key = field === "save" ? "str" : "skill";
+	while (usedKeys.has(key)) {
+		key = `${field === "save" ? "save" : "skill"}${suffix}`;
+		suffix += 1;
+	}
+	return replaceModifierEntries(monster, field, [...entries, [key, "+0"]]);
+}
+
+export function removeMonsterModifierEntry(
+	monster: MonsterData,
+	field: CreatureModifierField,
+	index: number,
+): MonsterData {
+	return replaceModifierEntries(
+		monster,
+		field,
+		getMonsterModifierEntries(monster, field).filter(
+			(_entry, entryIndex) => entryIndex !== index,
+		),
+	);
 }
 
 export function getRuleInsertValue(

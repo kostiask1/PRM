@@ -51,6 +51,37 @@ export interface MonsterEntry extends Record<string, unknown> {
 	damage_dice?: string;
 }
 
+export interface MonsterSpellLevel extends Record<string, unknown> {
+	slots?: number;
+	lower?: number | boolean;
+	spells?: unknown[];
+}
+
+export interface MonsterSpellcasting extends Record<string, unknown> {
+	name?: string;
+	type?: string;
+	headerEntries?: unknown[];
+	footerEntries?: unknown[];
+	will?: unknown[];
+	daily?: Record<string, unknown[]>;
+	rest?: Record<string, unknown[]>;
+	restLong?: Record<string, unknown[]>;
+	recharge?: Record<string, unknown[]>;
+	legendary?: Record<string, unknown[]>;
+	charges?: Record<string, unknown[]>;
+	ritual?: unknown[];
+	spells?: Record<string, MonsterSpellLevel>;
+	ability?: string;
+	displayAs?: string;
+	hidden?: string[];
+	chargesItem?: string;
+}
+
+export interface MonsterLegendaryGroupReference extends Record<string, unknown> {
+	name?: string;
+	source?: string;
+}
+
 export interface MonsterDamageDescriptor extends Record<string, unknown> {
 	resist?: string | string[];
 	immune?: string | string[];
@@ -64,7 +95,7 @@ export interface MonsterData extends Record<string, unknown> {
 	name?: string;
 	source?: string;
 	originalBestiaryName?: string;
-	hp?: { average?: number; formula?: string; special?: string | number };
+	hp?: { average?: number | string; formula?: string; special?: string | number };
 	hit_points?: unknown;
 	hit_dice?: string;
 	ac?: Array<number | string | { ac?: number | string; special?: string; from?: string[] }>;
@@ -86,16 +117,23 @@ export interface MonsterData extends Record<string, unknown> {
 	intelligence?: number;
 	wisdom?: number;
 	charisma?: number;
-	save?: Record<string, string | number>;
-	skill?: Record<string, string | number>;
+	save?: Record<string, unknown>;
+	skill?: Record<string, unknown>;
 	skills?: Record<string, string | number>;
 	languages?: string | string[];
 	cr?: string | number | { cr?: string | number };
-	trait?: MonsterEntry[];
-	bonus?: MonsterEntry[];
-	action?: MonsterEntry[];
-	reaction?: MonsterEntry[];
-	legendary?: MonsterEntry[];
+	trait?: MonsterEntry[] | null;
+	bonus?: MonsterEntry[] | null;
+	action?: MonsterEntry[] | null;
+	reaction?: MonsterEntry[] | null;
+	legendary?: MonsterEntry[] | null;
+	legendaryGroup?: MonsterLegendaryGroupReference;
+	spellcasting?: MonsterSpellcasting[] | null;
+	spell_list?: string[];
+	senses?: string | unknown[];
+	lairActions?: unknown;
+	regionalEffects?: unknown;
+	desc?: string | unknown[];
 	vulnerable?: string | Array<string | MonsterDamageDescriptor>;
 	resist?: string | Array<string | MonsterDamageDescriptor>;
 	immune?: string | Array<string | MonsterDamageDescriptor>;
@@ -353,7 +391,10 @@ export default class MonsterStatBlockModel {
 	}
 
 	get skills() {
-		return Object.entries(this.monster.skill || this.monster.skills || {});
+		return Object.entries(this.monster.skill || this.monster.skills || {}).filter(
+			(entry): entry is [string, string | number] =>
+				typeof entry[1] === "string" || typeof entry[1] === "number",
+		);
 	}
 
 	get languages() {

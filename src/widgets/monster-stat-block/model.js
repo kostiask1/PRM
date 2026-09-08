@@ -4,6 +4,7 @@ export {
 	getChangedFieldClass,
 	getMonsterContentArray,
 	getMonsterEntries,
+	groupMonsterSpellcastingEntriesByDisplayAs,
 	getMonsterMutationKey,
 	getMonsterMetadataPresentation,
 	getMonsterNameRowPresentation,

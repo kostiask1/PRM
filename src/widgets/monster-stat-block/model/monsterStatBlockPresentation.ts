@@ -22,8 +22,17 @@ export interface SpellLevelGroup {
 
 export interface MonsterSpellLevel {
 	slots?: number;
+	lower?: number | boolean;
 	spells: unknown[];
 }
+
+export type MonsterSpellcastingPlacement =
+	| "standalone"
+	| "trait"
+	| "bonus"
+	| "action"
+	| "reaction"
+	| "legendary";
 
 export interface MonsterSpellcastingEntry {
 	name: string;
@@ -31,7 +40,25 @@ export interface MonsterSpellcastingEntry {
 	footerEntries?: unknown[];
 	will?: unknown[];
 	daily?: Record<string, unknown[]>;
+	rest?: Record<string, unknown[]>;
+	restLong?: Record<string, unknown[]>;
+	recharge?: Record<string, unknown[]>;
+	legendary?: Record<string, unknown[]>;
+	charges?: Record<string, unknown[]>;
+	ritual?: unknown[];
 	spells?: Record<string, MonsterSpellLevel>;
+	displayAs?: string;
+	hidden?: string[];
+	chargesItem?: string;
+}
+
+export interface MonsterSpellcastingPlacementGroups {
+	standalone: MonsterSpellcastingEntry[];
+	trait: MonsterSpellcastingEntry[];
+	bonus: MonsterSpellcastingEntry[];
+	action: MonsterSpellcastingEntry[];
+	reaction: MonsterSpellcastingEntry[];
+	legendary: MonsterSpellcastingEntry[];
 }
 
 export interface MonsterSpellContentLinePlan {
@@ -44,6 +71,12 @@ export interface MonsterSpellcastingEntryPresentation {
 	headerEntries: unknown[] | null;
 	willLine: MonsterSpellContentLinePlan | null;
 	dailyLines: MonsterSpellContentLinePlan[];
+	restLines?: MonsterSpellContentLinePlan[];
+	restLongLines?: MonsterSpellContentLinePlan[];
+	rechargeLines?: MonsterSpellContentLinePlan[];
+	legendaryLines?: MonsterSpellContentLinePlan[];
+	chargesLines?: MonsterSpellContentLinePlan[];
+	ritualLine?: MonsterSpellContentLinePlan | null;
 	spellLines: MonsterSpellContentLinePlan[];
 	footerEntries: unknown[] | null;
 }
@@ -158,6 +191,12 @@ function readUnknownArray(value: unknown): unknown[] | undefined {
 	return Array.isArray(value) ? value : undefined;
 }
 
+function readStringArray(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const values = value.filter((entry): entry is string => typeof entry === "string");
+	return values.length > 0 ? values : undefined;
+}
+
 function readUnknownArrayRecord(
 	value: unknown,
 ): Record<string, unknown[]> | undefined {
@@ -176,6 +215,9 @@ function readSpellLevelRecord(
 		if (!isRecord(rawInfo) || !Array.isArray(rawInfo.spells)) return [];
 		const info: MonsterSpellLevel = { spells: rawInfo.spells };
 		if (typeof rawInfo.slots === "number") info.slots = rawInfo.slots;
+		if (typeof rawInfo.lower === "number" || typeof rawInfo.lower === "boolean") {
+			info.lower = rawInfo.lower;
+		}
 		return [[level, info] as const];
 	});
 	return entries.length > 0 ? Object.fromEntries(entries) : undefined;
@@ -197,6 +239,15 @@ export function getMonsterSpellcastingEntries(
 	if (!Array.isArray(value)) return [];
 	return value.flatMap((rawEntry) => {
 		if (!isRecord(rawEntry)) return [];
+		const rest = readUnknownArrayRecord(rawEntry.rest);
+		const restLong = readUnknownArrayRecord(rawEntry.restLong);
+		const recharge = readUnknownArrayRecord(rawEntry.recharge);
+		const legendary = readUnknownArrayRecord(rawEntry.legendary);
+		const charges = readUnknownArrayRecord(rawEntry.charges);
+		const ritual = readUnknownArray(rawEntry.ritual);
+		const displayAs = readString(rawEntry.displayAs);
+		const hidden = readStringArray(rawEntry.hidden);
+		const chargesItem = readString(rawEntry.chargesItem);
 		return [{
 			name: readString(rawEntry.name),
 			headerEntries: readUnknownArray(rawEntry.headerEntries),
@@ -204,6 +255,15 @@ export function getMonsterSpellcastingEntries(
 			will: readUnknownArray(rawEntry.will),
 			daily: readUnknownArrayRecord(rawEntry.daily),
 			spells: readSpellLevelRecord(rawEntry.spells),
+			...(rest ? { rest } : {}),
+			...(restLong ? { restLong } : {}),
+			...(recharge ? { recharge } : {}),
+			...(legendary ? { legendary } : {}),
+			...(charges ? { charges } : {}),
+			...(ritual ? { ritual } : {}),
+			...(displayAs ? { displayAs } : {}),
+			...(hidden ? { hidden } : {}),
+			...(chargesItem ? { chargesItem } : {}),
 		}];
 	});
 }
@@ -212,19 +272,184 @@ function getOptionalSpellContent(value: unknown[] | undefined): unknown[] | null
 	return value ?? null;
 }
 
+function getVisibleSpellValues(values: unknown[]): unknown[] {
+	const hasHiddenValues = values.some(
+		(value) => isRecord(value) && value.hidden === true,
+	);
+	return hasHiddenValues
+		? values.filter((value) => !isRecord(value) || value.hidden !== true)
+		: values;
+}
+
+function createSpellContentLine(
+	key: string,
+	label: string,
+	values: unknown[],
+): MonsterSpellContentLinePlan | null {
+	const visibleValues = getVisibleSpellValues(values);
+	if (values.length > 0 && visibleValues.length === 0) return null;
+	return { key, label, values: visibleValues };
+}
+
+function getMonsterSpellcastingPlacement(
+	displayAs: string | undefined,
+): MonsterSpellcastingPlacement {
+	switch (displayAs?.trim().toLowerCase()) {
+		case "trait":
+		case "bonus":
+		case "action":
+		case "reaction":
+		case "legendary":
+			return displayAs.trim().toLowerCase() as MonsterSpellcastingPlacement;
+		default:
+			return "standalone";
+	}
+}
+
+export function groupMonsterSpellcastingEntriesByDisplayAs(
+	entries: MonsterSpellcastingEntry[],
+): MonsterSpellcastingPlacementGroups {
+	const groups: MonsterSpellcastingPlacementGroups = {
+		standalone: [],
+		trait: [],
+		bonus: [],
+		action: [],
+		reaction: [],
+		legendary: [],
+	};
+	for (const entry of entries) {
+		groups[getMonsterSpellcastingPlacement(entry.displayAs)].push(entry);
+	}
+	return groups;
+}
+
+function isMonsterSpellcastingPartHidden(
+	entry: MonsterSpellcastingEntry,
+	part: string,
+): boolean {
+	const normalizedPart = part.toLowerCase();
+	return Boolean(
+		entry.hidden?.some((value) => value.trim().toLowerCase() === normalizedPart),
+	);
+}
+
+interface SpellUseKey {
+	amount: string;
+	each: boolean;
+}
+
+function parseSpellUseKey(value: string): SpellUseKey {
+	const normalized = value.trim();
+	const each = normalized.toLowerCase().endsWith("e");
+	return {
+		amount: each ? normalized.slice(0, -1) : normalized,
+		each,
+	};
+}
+
+function getPeriodSpellLabel(
+	frequency: string,
+	period: string,
+): string {
+	const { amount, each } = parseSpellUseKey(frequency);
+	if (amount.includes("/")) return `${amount}${each ? " each" : ""}`;
+	return `${amount}/${period}${each ? " each" : ""}`;
+}
+
 function getMonsterDailySpellLines(
 	daily: Record<string, unknown[]> | undefined,
 ): MonsterSpellContentLinePlan[] {
 	if (!daily) return [];
-	return Object.entries(daily).map(([frequency, values]) => ({
-		key: frequency,
-		label: `${frequency} each`,
-		values,
-	}));
+	return Object.entries(daily).flatMap(([frequency, values]) => {
+		const line = createSpellContentLine(
+			frequency,
+			getPeriodSpellLabel(frequency, "day"),
+			values,
+		);
+		return line ? [line] : [];
+	});
 }
 
-function getMonsterSpellLevelLabel(level: string, slots: number | undefined): string {
-	const levelLabel = level === "0" ? "Cantrips" : `Level ${level}`;
+function getMonsterRestSpellLines(
+	rest: Record<string, unknown[]> | undefined,
+	period: "rest" | "long rest",
+): MonsterSpellContentLinePlan[] {
+	if (!rest) return [];
+	return Object.entries(rest).flatMap(([frequency, values]) => {
+		const line = createSpellContentLine(
+			frequency,
+			getPeriodSpellLabel(frequency, period),
+			values,
+		);
+		return line ? [line] : [];
+	});
+}
+
+function getMonsterRechargeSpellLines(
+	recharge: Record<string, unknown[]> | undefined,
+): MonsterSpellContentLinePlan[] {
+	if (!recharge) return [];
+	return Object.entries(recharge).flatMap(([threshold, values]) => {
+		const normalizedThreshold = threshold.trim();
+		const numericThreshold = Number(normalizedThreshold);
+		const range = Number.isFinite(numericThreshold) && numericThreshold < 6
+			? `${normalizedThreshold}–6`
+			: normalizedThreshold;
+		const line = createSpellContentLine(
+			threshold,
+			`Recharge ${range}`,
+			values,
+		);
+		return line ? [line] : [];
+	});
+}
+
+function getMonsterLegendarySpellLines(
+	legendary: Record<string, unknown[]> | undefined,
+): MonsterSpellContentLinePlan[] {
+	if (!legendary) return [];
+	return Object.entries(legendary).flatMap(([cost, values]) => {
+		const { amount, each } = parseSpellUseKey(cost);
+		const line = createSpellContentLine(
+			cost,
+			`${amount} Legendary Action${amount === "1" ? "" : "s"}${each ? " each" : ""}`,
+			values,
+		);
+		return line ? [line] : [];
+	});
+}
+
+function getMonsterChargeSpellLines(
+	charges: Record<string, unknown[]> | undefined,
+	chargesItem: string | undefined,
+): MonsterSpellContentLinePlan[] {
+	if (!charges) return [];
+	const itemName = chargesItem?.split("|")[0]?.trim();
+	return Object.entries(charges).flatMap(([cost, values]) => {
+		const { amount, each } = parseSpellUseKey(cost);
+		const unit = amount === "1" ? "charge" : "charges";
+		const line = createSpellContentLine(
+			cost,
+			`${amount} ${unit}${each ? " each" : ""}${itemName ? ` — ${itemName}` : ""}`,
+			values,
+		);
+		return line ? [line] : [];
+	});
+}
+
+function getMonsterSpellLevelLabel(
+	level: string,
+	slots: number | undefined,
+	lower: number | boolean | undefined,
+): string {
+	let levelLabel = level === "0" ? "Cantrips" : `Level ${level}`;
+	if (lower === true) {
+		levelLabel = `${levelLabel} or lower`;
+	} else if (typeof lower === "number" && String(lower) !== level) {
+		levelLabel = lower === 0
+			? `Cantrips–Level ${level}`
+			: `Levels ${lower}–${level}`;
+	}
 	const slotsLabel = slots ? `(${slots} slots)` : "";
 	return `${levelLabel} ${slotsLabel}`.trim();
 }
@@ -233,25 +458,67 @@ function getMonsterSpellLevelLines(
 	spells: Record<string, MonsterSpellLevel> | undefined,
 ): MonsterSpellContentLinePlan[] {
 	if (!spells) return [];
-	return Object.entries(spells).map(([level, info]) => ({
-		key: level,
-		label: getMonsterSpellLevelLabel(level, info.slots),
-		values: info.spells,
-	}));
+	return Object.entries(spells).flatMap(([level, info]) => {
+		const line = createSpellContentLine(
+			level,
+			getMonsterSpellLevelLabel(level, info.slots, info.lower),
+			info.spells,
+		);
+		return line ? [line] : [];
+	});
 }
 
 export function getMonsterSpellcastingEntryPresentation(
 	entry: MonsterSpellcastingEntry,
 ): MonsterSpellcastingEntryPresentation {
-	return {
-		headerEntries: getOptionalSpellContent(entry.headerEntries),
-		willLine: entry.will
-			? { key: "will", label: "At will", values: entry.will }
+	const presentation: MonsterSpellcastingEntryPresentation = {
+		headerEntries: isMonsterSpellcastingPartHidden(entry, "headerEntries")
+			? null
+			: getOptionalSpellContent(entry.headerEntries),
+		willLine: entry.will && !isMonsterSpellcastingPartHidden(entry, "will")
+			? createSpellContentLine("will", "At will", entry.will)
 			: null,
-		dailyLines: getMonsterDailySpellLines(entry.daily),
-		spellLines: getMonsterSpellLevelLines(entry.spells),
-		footerEntries: getOptionalSpellContent(entry.footerEntries),
+		dailyLines: isMonsterSpellcastingPartHidden(entry, "daily")
+			? []
+			: getMonsterDailySpellLines(entry.daily),
+		spellLines: isMonsterSpellcastingPartHidden(entry, "spells")
+			? []
+			: getMonsterSpellLevelLines(entry.spells),
+		footerEntries: isMonsterSpellcastingPartHidden(entry, "footerEntries")
+			? null
+			: getOptionalSpellContent(entry.footerEntries),
 	};
+	if (entry.rest) {
+		presentation.restLines = isMonsterSpellcastingPartHidden(entry, "rest")
+			? []
+			: getMonsterRestSpellLines(entry.rest, "rest");
+	}
+	if (entry.restLong) {
+		presentation.restLongLines = isMonsterSpellcastingPartHidden(entry, "restLong")
+			? []
+			: getMonsterRestSpellLines(entry.restLong, "long rest");
+	}
+	if (entry.recharge) {
+		presentation.rechargeLines = isMonsterSpellcastingPartHidden(entry, "recharge")
+			? []
+			: getMonsterRechargeSpellLines(entry.recharge);
+	}
+	if (entry.legendary) {
+		presentation.legendaryLines = isMonsterSpellcastingPartHidden(entry, "legendary")
+			? []
+			: getMonsterLegendarySpellLines(entry.legendary);
+	}
+	if (entry.charges) {
+		presentation.chargesLines = isMonsterSpellcastingPartHidden(entry, "charges")
+			? []
+			: getMonsterChargeSpellLines(entry.charges, entry.chargesItem);
+	}
+	if (entry.ritual) {
+		presentation.ritualLine = isMonsterSpellcastingPartHidden(entry, "ritual")
+			? null
+			: createSpellContentLine("ritual", "Rituals", entry.ritual);
+	}
+	return presentation;
 }
 
 export function getChangedFieldClass(

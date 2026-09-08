@@ -572,22 +572,42 @@ export function StructuredSpellcastingSection({ entries, helpers }: SpellSection
 function StructuredSpellcastingEntry({
 	entry,
 	helpers,
+	embedded = false,
 }: {
 	entry: MonsterSpellcastingEntry;
 	helpers: RenderHelpers;
+	embedded?: boolean;
 }) {
 	const presentation = getMonsterSpellcastingEntryPresentation(entry);
 	return (
 		<div className="MonsterStatBlock__action">
-			<h4>{entry.name}:</h4>
-			{presentation.headerEntries && (
-				<p>{helpers.renderContent(presentation.headerEntries)}</p>
+			{embedded ? (
+				<p className="MonsterStatBlock__action">
+					<strong>{helpers.renderActionName(entry.name)}.</strong>{" "}
+					{presentation.headerEntries && helpers.renderContent(presentation.headerEntries)}
+				</p>
+			) : (
+				<>
+					<h4>{helpers.renderActionName(entry.name)}:</h4>
+					{presentation.headerEntries && (
+						<p>{helpers.renderContent(presentation.headerEntries)}</p>
+					)}
+				</>
 			)}
 			<OptionalSpellContentLine
 				line={presentation.willLine}
 				helpers={helpers}
 			/>
+			<OptionalSpellContentLine
+				line={presentation.ritualLine ?? null}
+				helpers={helpers}
+			/>
 			<SpellContentLines lines={presentation.dailyLines} helpers={helpers} />
+			<SpellContentLines lines={presentation.restLines ?? []} helpers={helpers} />
+			<SpellContentLines lines={presentation.restLongLines ?? []} helpers={helpers} />
+			<SpellContentLines lines={presentation.rechargeLines ?? []} helpers={helpers} />
+			<SpellContentLines lines={presentation.legendaryLines ?? []} helpers={helpers} />
+			<SpellContentLines lines={presentation.chargesLines ?? []} helpers={helpers} />
 			<SpellContentLines lines={presentation.spellLines} helpers={helpers} />
 			{presentation.footerEntries && (
 				<p>{helpers.renderContent(presentation.footerEntries)}</p>
@@ -628,9 +648,9 @@ function SpellContentLine({ label, values, helpers }: { label: string; values: u
 	return <p className="MonsterStatBlock__action"><strong>{label}:</strong>{" "}{values.map((value, index) => <React.Fragment key={index}>{helpers.renderContent(value)}{index < values.length - 1 ? ", " : ""}</React.Fragment>)}</p>;
 }
 
-export function MonsterActionList({ actions, title, field, helpers }: { actions: MonsterEntry[]; title: string; field: string; helpers: RenderHelpers }) {
-	if (actions.length === 0) return null;
-	return <div className={classNames("MonsterStatBlock__section", helpers.changedClass(field))}><h4>{title}:</h4>{actions.map((action, index) => <div key={index} className="MonsterStatBlock__action"><strong>{helpers.renderActionName(action.name)}.</strong>{" "}{helpers.renderContent(action.entries ?? action.desc)}<div className="MonsterStatBlock__actionRolls">{action.attack_bonus != null && <div className="MonsterStatBlock__statItem">Atk:{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(action.attack_bonus)))}`}>{formatModifier(Number.parseInt(String(action.attack_bonus)))}</RollDice></div>}{action.damage_dice && <div className="MonsterStatBlock__statItem">Dmg:{" "}<RollDice formula={`${action.damage_dice}${getDamageBonus(action)}`} /></div>}</div></div>)}</div>;
+export function MonsterActionList({ actions, spellcastingEntries = [], title, field, helpers }: { actions: MonsterEntry[]; spellcastingEntries?: MonsterSpellcastingEntry[]; title: string; field: string; helpers: RenderHelpers }) {
+	if (actions.length === 0 && spellcastingEntries.length === 0) return null;
+	return <div className={classNames("MonsterStatBlock__section", helpers.changedClass(field), spellcastingEntries.length > 0 && helpers.changedClass("spellcasting"))}><h4>{title}:</h4>{spellcastingEntries.map((entry, index) => <StructuredSpellcastingEntry key={`spellcasting-${entry.name}-${index}`} entry={entry} helpers={helpers} embedded />)}{actions.map((action, index) => <div key={index} className="MonsterStatBlock__action"><strong>{helpers.renderActionName(action.name)}.</strong>{" "}{helpers.renderContent(action.entries ?? action.desc)}<div className="MonsterStatBlock__actionRolls">{action.attack_bonus != null && <div className="MonsterStatBlock__statItem">Atk:{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(action.attack_bonus)))}`}>{formatModifier(Number.parseInt(String(action.attack_bonus)))}</RollDice></div>}{action.damage_dice && <div className="MonsterStatBlock__statItem">Dmg:{" "}<RollDice formula={`${action.damage_dice}${getDamageBonus(action)}`} /></div>}</div></div>)}</div>;
 }
 
 export function MonsterContentSection({ content, title, field, helpers }: { content: unknown[]; title: string; field: string; helpers: RenderHelpers }) {
