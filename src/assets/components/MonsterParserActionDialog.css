@@ -1,0 +1,218 @@
+.MonsterParserActionDialog {
+	display: flex;
+	min-height: 0;
+	flex: 1;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.MonsterParserActionDialog__catalog,
+.MonsterParserActionDialog__groups,
+.MonsterParserActionDialog__group,
+.MonsterParserActionDialog__step,
+.MonsterParserActionDialog__form {
+	display: grid;
+	gap: var(--space-3);
+}
+
+.MonsterParserActionDialog__intro {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(240px, 0.55fr);
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-3);
+	border: 1px solid color-mix(in srgb, var(--accent), var(--border) 60%);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--accent), transparent 95%);
+}
+
+.MonsterParserActionDialog__intro p,
+.MonsterParserActionDialog__step_header p,
+.MonsterParserActionDialog__load_error p {
+	margin: 0;
+}
+
+.MonsterParserActionDialog__group h4,
+.MonsterParserActionDialog__step_header h4 {
+	margin: 0;
+	color: var(--accent);
+}
+
+.MonsterParserActionDialog__group h4 {
+	font-size: 0.82rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.MonsterParserActionDialog__action_grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: var(--space-2);
+}
+
+.MonsterParserActionDialog__action {
+	display: grid;
+	min-width: 0;
+	gap: var(--space-1);
+	padding: var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--bg-2);
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		border-color 0.15s ease,
+		background-color 0.15s ease,
+		transform 0.15s ease;
+}
+
+.MonsterParserActionDialog__action:hover,
+.MonsterParserActionDialog__action:focus-visible {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), var(--bg-2) 92%);
+	transform: translateY(-1px);
+}
+
+.MonsterParserActionDialog__action_title {
+	color: var(--text-bright);
+	font-weight: 750;
+}
+
+.MonsterParserActionDialog__action_description {
+	color: var(--muted);
+	font-size: 0.82rem;
+	line-height: 1.4;
+}
+
+.MonsterParserActionDialog__action code,
+.MonsterParserActionDialog__preview code {
+	max-width: 100%;
+	padding: 0.2rem 0.4rem;
+	border-radius: 4px;
+	background: var(--bg);
+	color: var(--text-bright);
+	font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+	font-size: 0.76rem;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+
+.MonsterParserActionDialog__step_header {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: start;
+	gap: var(--space-3);
+	padding-bottom: var(--space-3);
+	border-bottom: 1px solid var(--border);
+}
+
+.MonsterParserActionDialog__step_header p {
+	margin-top: var(--space-1);
+	color: var(--muted);
+}
+
+.MonsterParserActionDialog__form {
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.MonsterParserActionDialog__field {
+	display: grid;
+	gap: var(--space-1);
+}
+
+.MonsterParserActionDialog__field_label,
+.MonsterParserActionDialog__preview > span {
+	color: var(--muted);
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.MonsterParserActionDialog__field > .Input,
+.MonsterParserActionDialog__field > .Select {
+	width: 100%;
+}
+
+.MonsterParserActionDialog__textarea {
+	min-height: 96px;
+	resize: vertical;
+}
+
+.MonsterParserActionDialog__preview {
+	display: grid;
+	gap: var(--space-1);
+	padding: var(--space-3);
+	border: 1px solid color-mix(in srgb, var(--accent), var(--border) 65%);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--accent), transparent 96%);
+}
+
+.MonsterParserActionDialog__preview code {
+	font-size: 0.9rem;
+}
+
+.MonsterParserActionDialog__footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	position: sticky;
+	bottom: 0;
+	padding-top: var(--space-3);
+	border-top: 1px solid var(--border);
+	background: var(--panel);
+}
+
+.MonsterParserActionDialog__reference_step {
+	min-height: 58vh;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.MonsterParserActionDialog__reference_browser {
+	display: flex;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.MonsterParserActionDialog__reference_browser > * {
+	min-width: 0;
+	flex: 1;
+}
+
+.MonsterParserActionDialog__error,
+.MonsterParserActionDialog__load_error {
+	padding: var(--space-3);
+	border: 1px solid color-mix(in srgb, #d1242f, transparent 45%);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, #d1242f, transparent 88%);
+}
+
+.MonsterParserActionDialog__load_error {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+
+.MonsterParserActionDialog__empty {
+	color: var(--muted);
+	text-align: center;
+}
+
+@media (max-width: 640px) {
+	.MonsterParserActionDialog__intro,
+	.MonsterParserActionDialog__step_header {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.MonsterParserActionDialog__action_grid,
+	.MonsterParserActionDialog__form {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.MonsterParserActionDialog__reference_step {
+		min-height: 65vh;
+	}
+}

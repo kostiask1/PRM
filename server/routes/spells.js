@@ -68,6 +68,14 @@ router.get("/senses", async (_req, res, next) => {
 	}
 });
 
+router.get("/parser-actions", async (_req, res, next) => {
+	try {
+		res.json(await referenceCommands.listParserActions());
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.get("/:source", async (req, res, next) => {
 	try {
 		res.json(

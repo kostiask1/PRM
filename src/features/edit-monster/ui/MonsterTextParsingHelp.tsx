@@ -362,7 +362,7 @@ export default function MonsterTextParsingHelp({
 				</p>
 				<p>
 					{lang.t(
-						"Press Ctrl+K or Cmd+K in a multiline field (Ctrl+Л on a Ukrainian keyboard) to insert a spell, creature, condition or status, disease, sense, skill, or variant-rule reference. A selected text range is replaced.",
+						"Press Ctrl+K or Cmd+K in Armor Class, Senses, Description, or an action name or body (Ctrl+Л on a Ukrainian keyboard) to open the parser action chooser. It can build rolls, combat notation, and formatting, or open the spell and rules browsers. A selected text range is used as the initial value and replaced after insertion.",
 					)}
 				</p>
 				<p>

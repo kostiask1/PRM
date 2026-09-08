@@ -76,11 +76,6 @@ type CreatureDefenseFieldKey =
 
 export type MonsterEditMode = "fields" | "json";
 
-export interface RuleReferenceSelection {
-	tag?: string;
-	[key: string]: unknown;
-}
-
 interface RuleInsertSelection {
 	selectionStart: number;
 	selectionEnd: number;
@@ -95,6 +90,7 @@ export type RuleInsertTarget =
 			type: "action";
 			section: CreatureActionSection;
 			index: number;
+			part: "name" | "text";
 	  });
 
 type JsonParseResult =
@@ -503,14 +499,14 @@ export function isRulesReferenceShortcut(event: {
 	return Boolean((event.ctrlKey || event.metaKey) && (key === "k" || key === "л"));
 }
 
-export function insertRuleReferenceTag(
+export function insertParserActionText(
 	value: string,
 	target: RuleInsertSelection,
-	tag: string,
+	text: string,
 ): string {
 	const start = Math.max(0, target.selectionStart || 0);
 	const end = Math.max(start, target.selectionEnd || start);
-	return value.slice(0, start) + tag + value.slice(end);
+	return value.slice(0, start) + text + value.slice(end);
 }
 
 export function getRuleInsertValue(
@@ -520,27 +516,182 @@ export function getRuleInsertValue(
 	if (target.type === "field") {
 		return getCreatureEditableFieldInput(monster, target.key);
 	}
+	const action = getMonsterActionList(monster, target.section)[target.index] || {};
+	if (target.part === "name") return String(action.name || "");
 	return actionEntriesToText(
-		getMonsterActionList(monster, target.section)[target.index] || {},
+		action,
 	);
 }
 
-export function applyRuleReferenceTag(
+interface RichTextSegment {
+	start: number;
+	end: number;
+	index: number;
+	value: string;
+}
+
+function getRichTextSegments(
+	entries: unknown[],
+	serializeEntry: (entry: unknown) => string,
+): RichTextSegment[] {
+	let offset = 0;
+	return entries.map((entry, index) => {
+		const value = serializeEntry(entry);
+		const segment = {
+			start: offset,
+			end: offset + value.length,
+			index,
+			value,
+		};
+		offset = segment.end + 1;
+		return segment;
+	});
+}
+
+function findEditableRichTextSegment(
+	entries: unknown[],
+	target: RuleInsertSelection,
+	serializeEntry: (entry: unknown) => string,
+): RichTextSegment | null {
+	const start = Math.max(0, target.selectionStart || 0);
+	const end = Math.max(start, target.selectionEnd || start);
+	return (
+		getRichTextSegments(entries, serializeEntry).find(
+			(segment) =>
+				typeof entries[segment.index] === "string" &&
+				start >= segment.start &&
+				end <= segment.end,
+		) || null
+	);
+}
+
+function insertIntoRichTextArray(
+	entries: unknown[],
+	target: RuleInsertSelection,
+	text: string,
+	serializeEntry: (entry: unknown) => string,
+): unknown[] | null {
+	if (entries.length === 0) {
+		return [insertParserActionText("", target, text)];
+	}
+	const segment = findEditableRichTextSegment(entries, target, serializeEntry);
+	if (!segment) return null;
+	const localTarget = {
+		selectionStart: target.selectionStart - segment.start,
+		selectionEnd: target.selectionEnd - segment.start,
+	};
+	return entries.map((entry, index) =>
+		index === segment.index
+			? insertParserActionText(segment.value, localTarget, text)
+			: entry,
+	);
+}
+
+function canInsertIntoRichTextValue(
+	value: unknown,
+	target: RuleInsertSelection,
+	serializeEntry: (entry: unknown) => string,
+): boolean {
+	if (!Array.isArray(value)) return typeof value !== "object" || value === null;
+	if (value.length === 0) return true;
+	return Boolean(findEditableRichTextSegment(value, target, serializeEntry));
+}
+
+export function canInsertParserActionText(
 	monster: MonsterData,
 	target: RuleInsertTarget,
-	tag: string,
-): MonsterData {
-	const nextValue = insertRuleReferenceTag(
-		getRuleInsertValue(monster, target),
-		target,
-		tag,
-	);
+): boolean {
 	if (target.type === "field") {
+		if (target.key !== "desc") return true;
+		return canInsertIntoRichTextValue(monster.desc, target, (entry) =>
+			typeof entry === "string" ? entry : JSON.stringify(entry) || "",
+		);
+	}
+	if (target.part === "name") return true;
+	const action = getMonsterActionList(monster, target.section)[target.index] || {};
+	if (Array.isArray(action.entries)) {
+		return canInsertIntoRichTextValue(action.entries, target, (entry) =>
+			typeof entry === "string"
+				? entry
+				: JSON.stringify(entry, null, 2) || "",
+		);
+	}
+	if (Array.isArray(action.desc)) {
+		return canInsertIntoRichTextValue(action.desc, target, (entry) =>
+			String(entry),
+		);
+	}
+	return typeof action.desc !== "object" || action.desc === null;
+}
+
+function insertIntoActionBody(
+	action: MonsterEntry,
+	target: RuleInsertSelection,
+	text: string,
+): MonsterEntry {
+	if (Array.isArray(action.entries)) {
+		const entries = insertIntoRichTextArray(
+			action.entries,
+			target,
+			text,
+			(entry) =>
+				typeof entry === "string"
+					? entry
+					: JSON.stringify(entry, null, 2) || "",
+		);
+		return entries ? { ...action, entries } : action;
+	}
+	if (Array.isArray(action.desc)) {
+		const desc = insertIntoRichTextArray(
+			action.desc,
+			target,
+			text,
+			(entry) => String(entry),
+		) as string[] | null;
+		return desc ? ({ ...action, desc } as unknown as MonsterEntry) : action;
+	}
+	const nextValue = insertParserActionText(
+		String(action.desc || ""),
+		target,
+		text,
+	);
+	return hasOwn(action, "desc")
+		? { ...action, desc: nextValue }
+		: actionFromText(action, nextValue);
+}
+
+export function applyParserActionText(
+	monster: MonsterData,
+	target: RuleInsertTarget,
+	text: string,
+): MonsterData {
+	if (target.type === "field") {
+		if (target.key === "desc" && Array.isArray(monster.desc)) {
+			const desc = insertIntoRichTextArray(
+				monster.desc,
+				target,
+				text,
+				(entry) =>
+					typeof entry === "string" ? entry : JSON.stringify(entry) || "",
+			);
+			return desc ? { ...monster, desc } : monster;
+		}
+		const nextValue = insertParserActionText(
+			getRuleInsertValue(monster, target),
+			target,
+			text,
+		);
 		return updateCreatureBasicField(monster, target.key, nextValue);
 	}
-	return updateMonsterAction(monster, target.section, target.index, (action) =>
-		actionFromText(action, nextValue),
-	);
+	return updateMonsterAction(monster, target.section, target.index, (action) => {
+		if (target.part === "name") {
+			return {
+				...action,
+				name: insertParserActionText(String(action.name || ""), target, text),
+			};
+		}
+		return insertIntoActionBody(action, target, text);
+	});
 }
 
 export function parseMonsterJson(jsonText: string): JsonParseResult {

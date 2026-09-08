@@ -865,7 +865,8 @@ import {
 	actionEntriesToText,
 	actionFromText,
 	addMonsterAction,
-	applyRuleReferenceTag,
+	applyParserActionText,
+	canInsertParserActionText,
 	calculateDiceAverage,
 	getCreatureEditableFieldInput,
 	isRulesReferenceShortcut,
@@ -876,6 +877,13 @@ import {
 	speedToText,
 	updateCreatureBasicField,
 } from "../src/features/edit-monster/model.ts";
+import {
+	getParserActionInitialValues,
+	getParserActionValidationIssue,
+	normalizeParserActions,
+	renderParserActionTemplate,
+	renderParserReferenceAction,
+} from "../src/features/edit-monster/model/parserActions.ts";
 import {
 	buildTooltipTextParts,
 	formatRulesTooltipText,
@@ -4457,15 +4465,20 @@ await run(
 				"if (!isRulesReferenceShortcut(event)) return;",
 				"event.preventDefault();",
 				"event.stopPropagation();",
-				"setRuleInsertTarget({",
-				"const openActionRuleInsertPicker = (",
-				"openRuleInsertPicker(event, { type: \"action\", section, index });",
+				"const nextTarget: RuleInsertTarget = {",
+				"if (!canInsertParserActionText(draft, nextTarget)) {",
+				"setRuleInsertTarget(nextTarget);",
+				"const openActionTextParser = (",
+				'part: "text",',
+				"const openActionNameParser = (",
+				'part: "name",',
 				"<MonsterActionSections",
 				"draft={draft}",
 				"onAddAction={addAction}",
 				"onActionNameChange={updateActionName}",
+				"onActionNameKeyDown={openActionNameParser}",
 				"onActionTextChange={updateActionText}",
-				"onActionTextKeyDown={openActionRuleInsertPicker}",
+				"onActionTextKeyDown={openActionTextParser}",
 				"onRemoveAction={removeAction}",
 			],
 			"Monster action-section raw mutation and rule-picker ownership",
@@ -4489,6 +4502,7 @@ await run(
 				"draft: MonsterData;",
 				"onAddAction: (section: CreatureActionSection) => void;",
 				"onActionNameChange: (",
+				"onActionNameKeyDown: (",
 				"onActionTextChange: (",
 				"onActionTextKeyDown: (",
 				"onRemoveAction: (section: CreatureActionSection, index: number) => void;",
@@ -4502,6 +4516,7 @@ await run(
 				"key={`${section.key}-${index}`}",
 				"value={String(action?.name || \"\")}",
 				"onActionNameChange(event, section.key, index)",
+				"onActionNameKeyDown(event, section.key, index)",
 				"onClick={() => onRemoveAction(section.key, index)}",
 				'aria-label={lang.t("Remove action")}',
 				"value={actionEntriesToText(action)}",
@@ -4512,7 +4527,7 @@ await run(
 		);
 		assert.doesNotMatch(
 			actionSectionsSource,
-			/useState|useEffect|<Modal\b|parseMonsterJson|prepareMonsterDraftForSave|updateMonsterAction|addMonsterAction|removeMonsterAction|isRulesReferenceShortcut|applyRuleReferenceTag|event\.target\.value/,
+			/useState|useEffect|<Modal\b|parseMonsterJson|prepareMonsterDraftForSave|updateMonsterAction|addMonsterAction|removeMonsterAction|isRulesReferenceShortcut|applyParserActionText|event\.target\.value/,
 		);
 	},
 );
@@ -4554,12 +4569,14 @@ await run(
 				"getCreatureEditableFieldInput(draft, key)",
 				"updateDraft((current) =>",
 				"updateCreatureBasicField(current, key, event.target.value)",
+				"options.supportsParsing",
+				"openRuleInsertPicker(event, { type: \"field\", key })",
 				"const renderSelectField = (",
 				"const currentValue = getCreatureSelectValue(draft, key);",
 				"options.some((option) => option.value === currentValue)",
 				"currentValue || lang.t(\"Custom\")",
 				"const renderTextField = (",
-				"openRuleInsertPicker(event, { type: \"field\", key })",
+				"supportsParsing = false,",
 				"const renderAbilityField = (ability: CreatureAbilityKey) => {",
 				"const value = getCreatureEditableFieldInput(draft, ability);",
 				"const parsedScore = Number.parseInt(value, 10);",
@@ -4584,7 +4601,8 @@ await run(
 				"disabled: true,",
 				"statFields={",
 				'renderInputField("hpFormula", "HP Formula")',
-				'renderInputField("ac", "Armor Class")',
+				'renderInputField("ac", "Armor Class", {',
+				"supportsParsing: true,",
 				'renderTextField("speed", "Speed", 2)',
 				"defenseFields={",
 				'"vulnerable",',
@@ -4596,16 +4614,17 @@ await run(
 				'"conditionImmune",',
 				'"Condition Immunities",',
 				"descriptionFields={",
-				'renderTextField("senses", "Senses", 2)',
+				'renderTextField("senses", "Senses", 2, true)',
 				'renderTextField("languages", "Languages", 2)',
 				'renderInputField("cr", "Challenge Rating")',
-				'loreField={renderTextField("desc", "Description", 4)}',
+				'loreField={renderTextField("desc", "Description", 4, true)}',
 				"abilityFields={CREATURE_ABILITY_KEYS.map(",
 				"renderAbilityField,",
 				"actionSections={",
 				"<MonsterActionSections",
 				"draft={draft}",
-				"onActionTextKeyDown={openActionRuleInsertPicker}",
+				"onActionNameKeyDown={openActionNameParser}",
+				"onActionTextKeyDown={openActionTextParser}",
 			],
 			"Monster fields-mode stat-block field and action composition",
 		);
@@ -4719,6 +4738,108 @@ await run(
 );
 
 await run(
+	"monster parser action dialog composes catalog, form, and reference workflows",
+	async () => {
+		const [dialogSource, apiSource, modelSource, modalSource, actionSource, css] =
+			await Promise.all([
+				fs.readFile(
+					"src/features/edit-monster/ui/MonsterParserActionDialog.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/features/edit-monster/api/parserActionsApi.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/features/edit-monster/model/parserActions.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/features/edit-monster/ui/MonsterActionSections.tsx",
+					"utf8",
+				),
+				fs.readFile(
+					"src/assets/components/MonsterParserActionDialog.css",
+					"utf8",
+				),
+			]);
+
+		assert.match(apiSource, /request<unknown>\("\/spells\/parser-actions", options\)/);
+		assertSourceTokensInOrder(
+			dialogSource,
+			[
+				"const controller = new AbortController();",
+				".list({ signal: controller.signal })",
+				"normalizeParserActions(result)",
+				"return () => controller.abort();",
+				'if (action.interaction === "direct") {',
+				"renderParserActionTemplate(action.template, {})",
+				'<ActionCatalog',
+				'selectedAction.interaction === "form"',
+				"<ActionForm",
+				"<ReferenceAction",
+			],
+			"parser action loading and step selection",
+		);
+		assert.match(
+			dialogSource,
+			/getParserActionValidationIssue\(action, values\)[\s\S]*?onInsert\(preview\)/,
+		);
+		assert.match(
+			dialogSource,
+			/<RulesReferenceContent[\s\S]*?initialTab=\{action\.referenceTab\}[\s\S]*?forceTab[\s\S]*?renderParserReferenceAction\(action, selection\)[\s\S]*?onInsert\(text\)/,
+		);
+		assert.doesNotMatch(dialogSource, /<Modal\b|SpellsBrowser/);
+		assert.match(modelSource, /"direct",\s*"form",\s*"reference"/);
+		assert.match(modelSource, /OPTIONAL_TEMPLATE_PLACEHOLDER_REGEX/);
+		assert.match(modelSource, /contexts: contexts\.length/);
+		assert.match(
+			modalSource,
+			/title=\{ruleInsertTarget \? lang\.t\("Insert parsed content"\) : title\}/,
+		);
+		assert.match(
+			modalSource,
+			/onCancel=\{ruleInsertTarget \? closeParserActions : onCancel\}/,
+		);
+		assertSourceTokensInOrder(
+			modalSource,
+			[
+				"requestAnimationFrame(() => {",
+				"element.focus()",
+				"element.setSelectionRange",
+			],
+			"parser action focus restoration",
+		);
+		assertSourceTokensInOrder(
+			modalSource,
+			[
+				"const closeParserActions = () => {",
+				"pendingParserFocusRef.current = {",
+				"targetId: getParserTargetId(ruleInsertTarget)",
+				"setRuleInsertTarget(null)",
+			],
+			"parser action cancellation focus target",
+		);
+		assert.doesNotMatch(modalSource, /MonsterFieldEditModal__rules_(?:modal|overlay)/);
+		assert.match(
+			modalSource,
+			/"data-parser-target": `field-\$\{key\}`/,
+		);
+		assert.match(modalSource, /renderInputField\("ac", "Armor Class", \{\s*supportsParsing: true,/);
+		assert.match(modalSource, /renderTextField\("senses", "Senses", 2, true\)/);
+		assert.match(modalSource, /renderTextField\("desc", "Description", 4, true\)/);
+		assert.match(actionSource, /data-parser-target=\{`action-\$\{section\.key\}-\$\{index\}-name`\}/);
+		assert.match(actionSource, /data-parser-target=\{`action-\$\{section\.key\}-\$\{index\}-text`\}/);
+		assert.match(css, /\.MonsterParserActionDialog__action_grid/);
+		assert.match(css, /\.MonsterParserActionDialog__reference_browser/);
+	},
+);
+
+await run(
 	"monster field editor exposes complete text parsing help",
 	async () => {
 		const [
@@ -4765,7 +4886,7 @@ await run(
 				"aria-controls={parsingHelpId}",
 				"aria-expanded={isHelpOpen}",
 				"onClick={toggleParsingHelp}",
-				"{isHelpOpen ? (",
+				") : isHelpOpen ? (",
 				"<MonsterTextParsingHelp id={parsingHelpId} />",
 				'lang.t("Back to creature editing")',
 			],
@@ -8915,6 +9036,7 @@ await run(
 			editorRuntimeEntrySource,
 			editorTypeEntrySource,
 			featureEditorSource,
+			parserDialogSource,
 		] = await Promise.all([
 			fs.readFile("src/App.tsx", "utf8"),
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
@@ -8949,6 +9071,10 @@ await run(
 			fs.readFile("src/widgets/monster-editor-modal/index.d.ts", "utf8"),
 			fs.readFile(
 				"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterParserActionDialog.tsx",
 				"utf8",
 			),
 		]);
@@ -9236,7 +9362,7 @@ await run(
 		);
 		assert.match(
 			editorCompositionSource,
-			/export interface MonsterEditorRulesReferenceContentSlotProps \{\s*onSelectReference: \(selection: \{ tag: string \}\) => void;\s*\}/,
+			/export type MonsterEditorRulesReferenceContentSlotProps =\s*MonsterParserReferenceContentProps;/,
 		);
 		assert.match(
 			editorCompositionSource,
@@ -9264,6 +9390,8 @@ await run(
 			editorSource,
 			/onSelectReference=\{\(selection\) =>\s*onSelectReference\(\{ \.\.\.selection \}\)\s*\}/,
 		);
+		assert.match(editorSource, /initialTab=\{initialTab\}/);
+		assert.match(editorSource, /forceTab=\{forceTab\}/);
 		const configuredEditorTag = getRequiredSourceMatch(
 			editorSource,
 			/<MonsterEditorModal(?=\s|>)[\s\S]*?\/>/,
@@ -9275,7 +9403,15 @@ await run(
 		);
 		assert.match(
 			featureEditorSource,
-			/\{ruleInsertTarget && RulesReferenceContent && \([\s\S]*?<RulesReferenceContent onSelectReference=\{applyRuleInsert\} \/>[\s\S]*?\)\}/,
+			/\{ruleInsertTarget \? \([\s\S]*?<MonsterParserActionDialog[\s\S]*?RulesReferenceContent=\{RulesReferenceContent\}/,
+		);
+		assert.match(
+			parserDialogSource,
+			/<RulesReferenceContent[\s\S]*?initialTab=\{action\.referenceTab\}[\s\S]*?forceTab[\s\S]*?onSelectReference=/,
+		);
+		assert.match(
+			parserDialogSource,
+			/renderParserReferenceAction\(action, selection\)/,
 		);
 
 		const appHostTag = getRequiredSourceMatch(
@@ -19957,6 +20093,7 @@ await run(
 			"src/features/dice/ui/DiceCalculator.tsx",
 			"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
 			"src/features/edit-monster/ui/MonsterActionSections.tsx",
+			"src/features/edit-monster/ui/MonsterParserActionDialog.tsx",
 			"src/features/player-questions/ui/PlayerQuestionsModalContent.tsx",
 		];
 		const [textInputSource, runtimeBarrel, declarationBarrel, ...consumers] =
@@ -20013,7 +20150,7 @@ await run(
 					total + Array.from(source.matchAll(/<TextInput\b/g)).length,
 				0,
 			),
-			6,
+			9,
 		);
 	},
 );
@@ -28916,12 +29053,13 @@ await run("monster field editing preserves schema variants and rule insertion", 
 		desc: "New text",
 	});
 	let actionMonster = addMonsterAction({ name: "Мімік" }, "action");
-	actionMonster = applyRuleReferenceTag(
+	actionMonster = applyParserActionText(
 		actionMonster,
 		{
 			type: "action",
 			section: "action",
 			index: 0,
+			part: "text",
 			selectionStart: 0,
 			selectionEnd: 0,
 		},
@@ -28930,6 +29068,66 @@ await run("monster field editing preserves schema variants and rule insertion", 
 	assert.equal(
 		actionEntriesToText(actionMonster.action[0]),
 		"{@spell Shield|XPHB}",
+	);
+	actionMonster = applyParserActionText(
+		actionMonster,
+		{
+			type: "action",
+			section: "action",
+			index: 0,
+			part: "name",
+			selectionStart: 0,
+			selectionEnd: 0,
+		},
+		"Breath {@recharge 5}",
+	);
+	assert.equal(actionMonster.action[0].name, "Breath {@recharge 5}");
+
+	const structuredEntry = { type: "list", items: ["first"] };
+	const structuredMonster = {
+		name: "Літописець",
+		action: [{ name: "Lore", entries: [structuredEntry, "Tail"] }],
+	};
+	const structuredText = actionEntriesToText(structuredMonster.action[0]);
+	const tailStart = structuredText.lastIndexOf("Tail");
+	const structuredTarget = {
+		type: "action",
+		section: "action",
+		index: 0,
+		part: "text",
+		selectionStart: tailStart + 4,
+		selectionEnd: tailStart + 4,
+	};
+	assert.equal(canInsertParserActionText(structuredMonster, structuredTarget), true);
+	const insertedStructuredMonster = applyParserActionText(
+		structuredMonster,
+		structuredTarget,
+		" {@spell Shield|XPHB}",
+	);
+	assert.strictEqual(insertedStructuredMonster.action[0].entries[0], structuredEntry);
+	assert.equal(
+		insertedStructuredMonster.action[0].entries[1],
+		"Tail {@spell Shield|XPHB}",
+	);
+	assert.equal(
+		canInsertParserActionText(structuredMonster, {
+			...structuredTarget,
+			selectionStart: 1,
+			selectionEnd: 1,
+		}),
+		false,
+	);
+	const emptyEntriesTarget = {
+		...structuredTarget,
+		selectionStart: 0,
+		selectionEnd: 0,
+	};
+	const emptyEntriesMonster = { name: "Порожня дія", action: [{ entries: [] }] };
+	assert.equal(canInsertParserActionText(emptyEntriesMonster, emptyEntriesTarget), true);
+	assert.deepEqual(
+		applyParserActionText(emptyEntriesMonster, emptyEntriesTarget, "{@h}")
+			.action[0].entries,
+		["{@h}"],
 	);
 	actionMonster = removeMonsterAction(actionMonster, "action", 0);
 	assert.deepEqual(actionMonster.action, []);
@@ -30325,6 +30523,105 @@ await run("AI prompt context preserves complete projection policies", () => {
 		encounterId: 0,
 	});
 	assert.deepEqual(campaignScope, {});
+});
+
+await run("parser action catalog normalizes, validates, and renders every workflow", async () => {
+	const catalogText = await fs.readFile("database/parser-actions.json", "utf8");
+	assert.doesNotMatch(catalogText, /\uFFFD/);
+	const catalog = JSON.parse(catalogText);
+	assert.equal(catalog.version, 1);
+	assert.equal(catalog.source, "database/bestiary/all.json");
+	const actions = normalizeParserActions(catalog.actions);
+	assert.equal(actions.length, catalog.actions.length);
+	assert.equal(new Set(actions.map((action) => action.type)).size, actions.length);
+	assert.deepEqual(
+		new Set(actions.map((action) => action.interaction)),
+		new Set(["direct", "form", "reference"]),
+	);
+	for (const requiredType of [
+		"damage",
+		"dice",
+		"hit",
+		"dc",
+		"recharge",
+		"spell-reference",
+		"condition-status-reference",
+		"creature-reference",
+		"disease-reference",
+		"variant-rule-reference",
+		"skill-reference",
+		"sense-reference",
+	]) {
+		assert.ok(actions.some((action) => action.type === requiredType), requiredType);
+	}
+	assert.equal(
+		actions.some((action) =>
+			/actTrigger|actResponse|skillCheck|dcYourSpellSave|actSaveFailBy/.test(
+				action.template,
+			),
+		),
+		false,
+	);
+
+	const damage = actions.find((action) => action.type === "damage");
+	assert.ok(damage);
+	assert.deepEqual(getParserActionInitialValues(damage, "3d8 + 4"), {
+		formula: "3d8 + 4",
+		label: "",
+	});
+	assert.equal(
+		renderParserActionTemplate(damage.template, {
+			formula: "2d6 + 2",
+			label: "",
+		}),
+		"({@damage 2d6 + 2})",
+	);
+	assert.equal(
+		renderParserActionTemplate(damage.template, {
+			formula: "2d6 + 2",
+			label: "9 damage",
+		}),
+		"({@damage 2d6 + 2||9 damage})",
+	);
+	assert.equal(
+		getParserActionValidationIssue(damage, { formula: "d6", label: "" })
+			?.reason,
+		"pattern",
+	);
+	assert.equal(
+		getParserActionValidationIssue(damage, { formula: "2d6 + 2", label: "" }),
+		null,
+	);
+
+	const spellAction = actions.find((action) => action.type === "spell-reference");
+	assert.equal(
+		renderParserReferenceAction(spellAction, {
+			tabId: "spells",
+			name: "Fireball",
+			item: { name: "Fireball", source: "XPHB" },
+			tag: "{@spell Fireball|XPHB}",
+		}),
+		"{@spell Fireball|XPHB}",
+	);
+	const conditionAction = actions.find(
+		(action) => action.type === "condition-status-reference",
+	);
+	assert.equal(
+		renderParserReferenceAction(conditionAction, {
+			tabId: "conditions",
+			name: "Concentration",
+			item: { name: "Concentration", kind: "status", source: "XPHB" },
+			tag: "{@status Concentration}",
+		}),
+		"{@status Concentration|XPHB}",
+	);
+	assert.equal(
+		renderParserReferenceAction(spellAction, {
+			tabId: "conditions",
+			tag: "{@condition Blinded}",
+		}),
+		"{@condition Blinded}",
+	);
 });
 
 await run("AI prompt context exposes editable encounter creatures only when enabled", () => {
@@ -65624,6 +65921,18 @@ await run("Reference commands own spell search sources and named precedence", as
 		"diseases.json": {
 			disease: [{ name: "Cackle Fever", source: "DMG", type: "disease" }],
 		},
+		"parser-actions.json": {
+			actions: [
+				{
+					type: "damage",
+					interaction: "form",
+					template: "({@damage {{formula}}})",
+					description: "Damage roll",
+				},
+				{ type: "missing-template", description: "invalid" },
+				null,
+			],
+		},
 	};
 	const commands = createReferenceCommands({
 		readSpellAggregate: async () => ({
@@ -65656,6 +65965,14 @@ await run("Reference commands own spell search sources and named precedence", as
 			page: null,
 			type: "disease",
 			entries: [],
+		},
+	]);
+	assert.deepEqual(await commands.listParserActions(), [
+		{
+			type: "damage",
+			interaction: "form",
+			template: "({@damage {{formula}}})",
+			description: "Damage roll",
 		},
 	]);
 	assert.deepEqual(await commands.getSpellSource({ source: "xphb" }), [
@@ -65896,6 +66213,68 @@ await run(
 				"reference:senses.json",
 			],
 		);
+	},
+);
+
+await run(
+	"spells parser-actions route serves the database catalog before dynamic sources",
+	async () => {
+		const parserLayerIndex = spellsRouter.stack.findIndex(
+			(item) => item.route?.path === "/parser-actions",
+		);
+		const sourceLayerIndex = spellsRouter.stack.findIndex(
+			(item) => item.route?.path === "/:source",
+		);
+		assert.ok(parserLayerIndex >= 0);
+		assert.ok(sourceLayerIndex > parserLayerIndex);
+
+		const originalExists = storage.exists;
+		const originalReadJson = storage.readJson;
+		const readPaths = [];
+		storage.exists = async () => true;
+		storage.readJson = async (filePath) => {
+			readPaths.push(filePath);
+			return {
+				actions: [
+					{
+						type: "hit",
+						interaction: "direct",
+						template: "{@h}",
+						description: "Hit",
+					},
+					{ type: "invalid", template: "", description: "Invalid" },
+				],
+			};
+		};
+
+		try {
+			let jsonPayload = null;
+			await spellsRouter.stack[parserLayerIndex].route.stack[0].handle(
+				{},
+				{
+					json(value) {
+						jsonPayload = value;
+						return value;
+					},
+				},
+				(error) => {
+					throw error;
+				},
+			);
+			assert.deepEqual(jsonPayload, [
+				{
+					type: "hit",
+					interaction: "direct",
+					template: "{@h}",
+					description: "Hit",
+				},
+			]);
+			assert.equal(readPaths.length, 1);
+			assert.equal(path.basename(readPaths[0]), "parser-actions.json");
+		} finally {
+			storage.exists = originalExists;
+			storage.readJson = originalReadJson;
+		}
 	},
 );
 

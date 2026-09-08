@@ -486,16 +486,6 @@
 	border-top: 1px solid var(--border);
 }
 
-.MonsterFieldEditModal__rules_overlay {
-	z-index: 1300;
-}
-
-.MonsterFieldEditModal__rules_overlay .Modal__card,
-.Modal__card.MonsterFieldEditModal__rules_modal {
-	width: min(1180px, 96vw);
-	max-width: 1180px;
-}
-
 @media (max-width: 860px) {
 	.MonsterFieldEditModal__stat_block {
 		padding: var(--space-3);

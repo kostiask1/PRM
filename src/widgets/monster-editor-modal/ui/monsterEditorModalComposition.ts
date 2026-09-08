@@ -1,6 +1,9 @@
 import type { ComponentType, ReactNode } from "react";
 
-import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
+import type {
+	MonsterFieldEditModalProps,
+	MonsterParserReferenceContentProps,
+} from "../../../features/edit-monster/index.js";
 
 export type MonsterEditorModalProps = Omit<
 	MonsterFieldEditModalProps,
@@ -9,9 +12,8 @@ export type MonsterEditorModalProps = Omit<
 
 export type MonsterEditorModalComponent = ComponentType<MonsterEditorModalProps>;
 
-export interface MonsterEditorRulesReferenceContentSlotProps {
-	onSelectReference: (selection: { tag: string }) => void;
-}
+export type MonsterEditorRulesReferenceContentSlotProps =
+	MonsterParserReferenceContentProps;
 
 export interface MonsterEditorModalCompositionSlots {
 	RulesReferenceContent: (

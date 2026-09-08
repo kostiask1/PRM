@@ -17,10 +17,14 @@ export function createMonsterEditorModalComponent({
 	RulesReferenceContent,
 }: MonsterEditorModalCompositionSlots): MonsterEditorModalComponent {
 	function RulesReferenceAdapter({
+		initialTab,
+		forceTab,
 		onSelectReference,
 	}: MonsterEditorRulesReferenceContentSlotProps) {
 		return (
 			<RulesReferenceContent
+				initialTab={initialTab}
+				forceTab={forceTab}
 				onSelectReference={(selection) =>
 					onSelectReference({ ...selection })
 				}

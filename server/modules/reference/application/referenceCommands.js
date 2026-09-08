@@ -8,6 +8,7 @@ const SOURCE_PRIORITIES = new Map([
 	["PHB", 2],
 	["DMG", 2],
 ]);
+const PARSER_ACTION_INTERACTIONS = new Set(["direct", "form", "reference"]);
 
 function getSourcePriority(source) {
 	return SOURCE_PRIORITIES.get(String(source || "").toUpperCase()) || 1;
@@ -147,6 +148,27 @@ async function readNamedReferences(
 	return normalizeNamedReferenceRecords(data?.[listKey], kind, extraFields);
 }
 
+function isParserActionRecord(item) {
+	return Boolean(
+		item &&
+			typeof item === "object" &&
+			!Array.isArray(item) &&
+			typeof item.type === "string" &&
+			item.type.trim() &&
+			PARSER_ACTION_INTERACTIONS.has(item.interaction) &&
+			typeof item.template === "string" &&
+			item.template.trim() &&
+			typeof item.description === "string" &&
+			item.description.trim(),
+	);
+}
+
+async function listParserActions(repository) {
+	const data = await repository.readReferenceFile("parser-actions.json");
+	const actions = Array.isArray(data?.actions) ? data.actions : [];
+	return actions.filter(isParserActionRecord);
+}
+
 function getReferenceCollection(data, key) {
 	return data?.[key] || [];
 }
@@ -252,6 +274,7 @@ function createReferenceCommands(repository) {
 			),
 		listSenses: () =>
 			readNamedReferences(repository, "senses.json", "sense", "sense"),
+		listParserActions: () => listParserActions(repository),
 		getSpellSource: (query) => getSpellSource(repository, query),
 	};
 }

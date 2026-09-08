@@ -1,0 +1,576 @@
+{
+	"version": 1,
+	"source": "database/bestiary/all.json",
+	"actions": [
+		{
+			"type": "damage",
+			"interaction": "form",
+			"label": "Roll damage",
+			"group": "Rolls and damage",
+			"template": "({@damage {{formula}}{{||label}}})",
+			"description": "Insert a clickable damage roll. An optional label changes the displayed text without changing the formula.",
+			"example": "({@damage 2d6 + 2})",
+			"fields": [
+				{
+					"name": "formula",
+					"label": "Dice formula",
+					"control": "text",
+					"required": true,
+					"defaultValue": "2d6 + 2",
+					"placeholder": "2d6 + 2",
+					"useSelection": true,
+					"pattern": "^\\s*\\d+d\\d+(?:\\s*[+-]\\s*(?:\\d+d\\d+|\\d+))*\\s*$",
+					"validationMessage": "Use a fixed damage formula such as 2d6 + 2."
+				},
+				{
+					"name": "label",
+					"label": "Displayed label",
+					"control": "text",
+					"required": false,
+					"defaultValue": "",
+					"placeholder": "9 damage",
+					"useSelection": false
+				}
+			]
+		},
+		{
+			"type": "dice",
+			"interaction": "form",
+			"label": "Roll dice",
+			"group": "Rolls and damage",
+			"template": "{@dice {{formula}}{{|label}}}",
+			"description": "Insert a clickable general-purpose dice roll with an optional displayed label.",
+			"example": "{@dice 1d20 + 5|attack roll}",
+			"fields": [
+				{
+					"name": "formula",
+					"label": "Dice formula",
+					"control": "text",
+					"required": true,
+					"defaultValue": "1d20 + 5",
+					"placeholder": "1d20 + 5",
+					"useSelection": true
+				},
+				{
+					"name": "label",
+					"label": "Displayed label",
+					"control": "text",
+					"required": false,
+					"defaultValue": "",
+					"placeholder": "attack roll",
+					"useSelection": false
+				}
+			]
+		},
+		{
+			"type": "hit-damage-line",
+			"interaction": "form",
+			"label": "Add hit and damage line",
+			"group": "Rolls and damage",
+			"template": "{@h}{{average}} ({@damage {{formula}}}) {{damageType}} damage",
+			"description": "Build the common Hit: average (dice) damage line used throughout the Bestiary.",
+			"example": "{@h}9 ({@damage 2d6 + 2}) bludgeoning damage",
+			"fields": [
+				{
+					"name": "average",
+					"label": "Average damage",
+					"control": "number",
+					"required": true,
+					"defaultValue": "9",
+					"placeholder": "9",
+					"useSelection": false,
+					"min": 0
+				},
+				{
+					"name": "formula",
+					"label": "Dice formula",
+					"control": "text",
+					"required": true,
+					"defaultValue": "2d6 + 2",
+					"placeholder": "2d6 + 2",
+					"useSelection": true,
+					"pattern": "^\\s*\\d+d\\d+(?:\\s*[+-]\\s*(?:\\d+d\\d+|\\d+))*\\s*$",
+					"validationMessage": "Use a fixed damage formula such as 2d6 + 2."
+				},
+				{
+					"name": "damageType",
+					"label": "Damage type",
+					"control": "text",
+					"required": true,
+					"defaultValue": "bludgeoning",
+					"placeholder": "bludgeoning",
+					"useSelection": false
+				}
+			]
+		},
+		{
+			"type": "hit",
+			"interaction": "form",
+			"label": "Add attack bonus",
+			"group": "Rolls and damage",
+			"template": "{@hit {{bonus}}}",
+			"description": "Insert a clickable d20 attack roll using the specified attack bonus.",
+			"example": "{@hit +7}",
+			"fields": [
+				{
+					"name": "bonus",
+					"label": "Attack bonus",
+					"control": "number",
+					"required": true,
+					"defaultValue": "5",
+					"placeholder": "+5",
+					"useSelection": true,
+					"min": -100,
+					"max": 100
+				}
+			]
+		},
+		{
+			"type": "dc",
+			"interaction": "form",
+			"label": "Add difficulty class",
+			"group": "Rolls and damage",
+			"template": "{@dc {{dc}}}",
+			"description": "Insert a formatted difficulty class value.",
+			"example": "{@dc 15}",
+			"fields": [
+				{
+					"name": "dc",
+					"label": "Difficulty class",
+					"control": "number",
+					"required": true,
+					"defaultValue": "15",
+					"placeholder": "15",
+					"useSelection": true,
+					"min": 1,
+					"max": 99
+				}
+			]
+		},
+		{
+			"type": "hit-marker",
+			"interaction": "direct",
+			"label": "Add Hit marker",
+			"group": "Combat notation",
+			"template": "{@h}",
+			"description": "Insert the standard Hit: prefix used before an attack result.",
+			"example": "{@h}9 ({@damage 2d6 + 2}) bludgeoning damage",
+			"fields": []
+		},
+		{
+			"type": "recharge",
+			"interaction": "form",
+			"label": "Add recharge",
+			"group": "Combat notation",
+			"contexts": ["rich-text", "action-name"],
+			"template": "{@recharge {{threshold}}}",
+			"description": "Insert a recharge marker. A threshold of 5 is displayed as Recharge 5–6.",
+			"example": "{@recharge 5}",
+			"fields": [
+				{
+					"name": "threshold",
+					"label": "Recharge threshold",
+					"control": "select",
+					"required": true,
+					"defaultValue": "5",
+					"placeholder": "",
+					"useSelection": false,
+					"options": [
+						{ "value": "6", "label": "Recharge 6" },
+						{ "value": "5", "label": "Recharge 5–6" },
+						{ "value": "4", "label": "Recharge 4–6" }
+					]
+				}
+			]
+		},
+		{
+			"type": "attack-type",
+			"interaction": "form",
+			"label": "Add attack type",
+			"group": "Combat notation",
+			"template": "{@atk {{attackType}}}",
+			"description": "Insert a standard weapon or spell attack heading.",
+			"example": "{@atk mw}",
+			"fields": [
+				{
+					"name": "attackType",
+					"label": "Attack type",
+					"control": "select",
+					"required": true,
+					"defaultValue": "mw",
+					"placeholder": "",
+					"useSelection": false,
+					"options": [
+						{ "value": "mw", "label": "Melee weapon attack" },
+						{ "value": "rw", "label": "Ranged weapon attack" },
+						{ "value": "mw,rw", "label": "Melee or ranged weapon attack" },
+						{ "value": "ms", "label": "Melee spell attack" },
+						{ "value": "rs", "label": "Ranged spell attack" },
+						{ "value": "ms,rs", "label": "Melee or ranged spell attack" }
+					]
+				}
+			]
+		},
+		{
+			"type": "attack-roll-type",
+			"interaction": "form",
+			"label": "Add attack roll type",
+			"group": "Combat notation",
+			"template": "{@atkr {{attackType}}}",
+			"description": "Insert the compact melee, ranged, or combined attack heading used by newer stat blocks.",
+			"example": "{@atkr m,r}",
+			"fields": [
+				{
+					"name": "attackType",
+					"label": "Attack type",
+					"control": "select",
+					"required": true,
+					"defaultValue": "m",
+					"placeholder": "",
+					"useSelection": false,
+					"options": [
+						{ "value": "m", "label": "Melee attack" },
+						{ "value": "r", "label": "Ranged attack" },
+						{ "value": "m,r", "label": "Melee or ranged attack" }
+					]
+				}
+			]
+		},
+		{
+			"type": "spell-attack-bonus",
+			"interaction": "direct",
+			"label": "Add spell attack bonus",
+			"group": "Combat notation",
+			"template": "{@hitYourSpellAttack}",
+			"description": "Insert a placeholder for the user's spell attack bonus.",
+			"example": "{@hitYourSpellAttack}",
+			"fields": []
+		},
+		{
+			"type": "ability",
+			"interaction": "form",
+			"label": "Add ability name",
+			"group": "Saving throws",
+			"template": "{@ability {{ability}}}",
+			"description": "Insert the full name of an ability from its three-letter code.",
+			"example": "{@ability wis}",
+			"fields": [
+				{
+					"name": "ability",
+					"label": "Ability",
+					"control": "select",
+					"required": true,
+					"defaultValue": "str",
+					"placeholder": "",
+					"useSelection": false,
+					"options": [
+						{ "value": "str", "label": "Strength" },
+						{ "value": "dex", "label": "Dexterity" },
+						{ "value": "con", "label": "Constitution" },
+						{ "value": "int", "label": "Intelligence" },
+						{ "value": "wis", "label": "Wisdom" },
+						{ "value": "cha", "label": "Charisma" }
+					]
+				}
+			]
+		},
+		{
+			"type": "saving-throw",
+			"interaction": "form",
+			"label": "Add saving throw",
+			"group": "Saving throws",
+			"template": "{@savingThrow {{ability}}}",
+			"description": "Insert a formatted saving throw phrase for an ability.",
+			"example": "{@savingThrow dex}",
+			"fields": [
+				{
+					"name": "ability",
+					"label": "Ability",
+					"control": "select",
+					"required": true,
+					"defaultValue": "dex",
+					"placeholder": "",
+					"useSelection": false,
+					"options": [
+						{ "value": "str", "label": "Strength" },
+						{ "value": "dex", "label": "Dexterity" },
+						{ "value": "con", "label": "Constitution" },
+						{ "value": "int", "label": "Intelligence" },
+						{ "value": "wis", "label": "Wisdom" },
+						{ "value": "cha", "label": "Charisma" }
+					]
+				}
+			]
+		},
+		{
+			"type": "action-save",
+			"interaction": "form",
+			"label": "Add action saving throw",
+			"group": "Saving throws",
+			"template": "{@actSave {{ability}}}",
+			"description": "Insert the saving throw phrase used in action result clauses.",
+			"example": "{@actSave con}",
+			"fields": [
+				{
+					"name": "ability",
+					"label": "Ability",
+					"control": "select",
+					"required": true,
+					"defaultValue": "con",
+					"placeholder": "",
+					"useSelection": false,
+					"options": [
+						{ "value": "str", "label": "Strength" },
+						{ "value": "dex", "label": "Dexterity" },
+						{ "value": "con", "label": "Constitution" },
+						{ "value": "int", "label": "Intelligence" },
+						{ "value": "wis", "label": "Wisdom" },
+						{ "value": "cha", "label": "Charisma" }
+					]
+				}
+			]
+		},
+		{
+			"type": "save-failure",
+			"interaction": "direct",
+			"label": "Add save failure",
+			"group": "Saving throws",
+			"template": "{@actSaveFail}",
+			"description": "Insert the standard On a failure, result prefix.",
+			"example": "{@actSaveFail}",
+			"fields": []
+		},
+		{
+			"type": "save-failure-margin",
+			"interaction": "form",
+			"label": "Add save failure margin",
+			"group": "Saving throws",
+			"template": "{@actSaveFail {{margin}}}",
+			"description": "Insert an On a failure by N or more, result prefix.",
+			"example": "{@actSaveFail 5}",
+			"fields": [
+				{
+					"name": "margin",
+					"label": "Failure margin",
+					"control": "number",
+					"required": true,
+					"defaultValue": "5",
+					"placeholder": "5",
+					"useSelection": true,
+					"min": 1,
+					"max": 99
+				}
+			]
+		},
+		{
+			"type": "save-success",
+			"interaction": "direct",
+			"label": "Add save success",
+			"group": "Saving throws",
+			"template": "{@actSaveSuccess}",
+			"description": "Insert the standard On a success, result prefix.",
+			"example": "{@actSaveSuccess}",
+			"fields": []
+		},
+		{
+			"type": "save-success-or-failure",
+			"interaction": "direct",
+			"label": "Add save success or failure",
+			"group": "Saving throws",
+			"template": "{@actSaveSuccessOrFail}",
+			"description": "Insert the standard On a success or failure, result prefix.",
+			"example": "{@actSaveSuccessOrFail}",
+			"fields": []
+		},
+		{
+			"type": "chance",
+			"interaction": "form",
+			"label": "Add percentage chance",
+			"group": "Rolls and damage",
+			"template": "{@chance {{percent}}{{|label}}}",
+			"description": "Insert a percentage chance with an optional displayed label.",
+			"example": "{@chance 50|50 percent chance}",
+			"fields": [
+				{
+					"name": "percent",
+					"label": "Chance, percent",
+					"control": "number",
+					"required": true,
+					"defaultValue": "50",
+					"placeholder": "50",
+					"useSelection": true,
+					"min": 0,
+					"max": 100
+				},
+				{
+					"name": "label",
+					"label": "Displayed label",
+					"control": "text",
+					"required": false,
+					"defaultValue": "",
+					"placeholder": "50 percent chance",
+					"useSelection": false
+				}
+			]
+		},
+		{
+			"type": "spell-reference",
+			"interaction": "reference",
+			"label": "Add spell",
+			"group": "References",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@spell {{name}}{{|source}}}",
+			"description": "Choose a spell from the spell browser and insert a link to it.",
+			"example": "{@spell fireball|PHB}",
+			"referenceTab": "spells",
+			"fields": []
+		},
+		{
+			"type": "condition-status-reference",
+			"interaction": "reference",
+			"label": "Add condition or status",
+			"group": "References",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@{{kind}} {{name}}{{|source}}}",
+			"description": "Choose a condition or status from the rules browser and insert the matching link type.",
+			"example": "{@condition frightened|PHB}",
+			"referenceTab": "conditions",
+			"fields": []
+		},
+		{
+			"type": "creature-reference",
+			"interaction": "reference",
+			"label": "Add creature",
+			"group": "References",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@creature {{name}}{{|source}}}",
+			"description": "Choose a creature from the bestiary and insert a link to its stat block.",
+			"example": "{@creature goblin|MM}",
+			"referenceTab": "bestiary",
+			"fields": []
+		},
+		{
+			"type": "disease-reference",
+			"interaction": "reference",
+			"label": "Add disease",
+			"group": "References",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@disease {{name}}{{|source}}}",
+			"description": "Choose a disease from the rules browser and insert a link to it.",
+			"example": "{@disease cackle fever|DMG}",
+			"referenceTab": "diseases",
+			"fields": []
+		},
+		{
+			"type": "variant-rule-reference",
+			"interaction": "reference",
+			"label": "Add variant rule",
+			"group": "References",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@variantrule {{name}}{{|source}}}",
+			"description": "Choose a variant rule from the rules browser and insert a link to it.",
+			"example": "{@variantrule flanking|DMG}",
+			"referenceTab": "variantrules",
+			"fields": []
+		},
+		{
+			"type": "skill-reference",
+			"interaction": "reference",
+			"label": "Add skill",
+			"group": "References",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@skill {{name}}{{|source}}}",
+			"description": "Choose a skill from the rules browser and insert a link to it.",
+			"example": "{@skill perception|PHB}",
+			"referenceTab": "skills",
+			"fields": []
+		},
+		{
+			"type": "quick-reference",
+			"interaction": "reference",
+			"label": "Add quick reference",
+			"group": "References",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@quickref {{name}}}",
+			"description": "Choose a variant rule and insert it using the compact quick-reference tag.",
+			"example": "{@quickref difficult terrain||3}",
+			"referenceTab": "variantrules",
+			"fields": []
+		},
+		{
+			"type": "sense-reference",
+			"interaction": "reference",
+			"label": "Add sense",
+			"group": "References",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@sense {{name}}{{|source}}}",
+			"description": "Choose a sense from the rules browser and insert a link to it.",
+			"example": "{@sense darkvision|PHB}",
+			"referenceTab": "senses",
+			"fields": []
+		},
+		{
+			"type": "bold",
+			"interaction": "form",
+			"label": "Make text bold",
+			"group": "Formatting",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@bold {{text}}}",
+			"description": "Wrap text in the bold formatting tag.",
+			"example": "{@bold important}",
+			"fields": [
+				{
+					"name": "text",
+					"label": "Text",
+					"control": "textarea",
+					"required": true,
+					"defaultValue": "",
+					"placeholder": "important",
+					"useSelection": true
+				}
+			]
+		},
+		{
+			"type": "italic",
+			"interaction": "form",
+			"label": "Make text italic",
+			"group": "Formatting",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@italic {{text}}}",
+			"description": "Wrap text in the italic formatting tag.",
+			"example": "{@italic whispered words}",
+			"fields": [
+				{
+					"name": "text",
+					"label": "Text",
+					"control": "textarea",
+					"required": true,
+					"defaultValue": "",
+					"placeholder": "whispered words",
+					"useSelection": true
+				}
+			]
+		},
+		{
+			"type": "note",
+			"interaction": "form",
+			"label": "Add note",
+			"group": "Formatting",
+			"contexts": ["rich-text", "action-name", "armor-class", "senses"],
+			"template": "{@note {{text}}}",
+			"description": "Wrap explanatory text in a note tag while keeping it readable in the stat block.",
+			"example": "{@note This effect ends at dawn.}",
+			"fields": [
+				{
+					"name": "text",
+					"label": "Text",
+					"control": "textarea",
+					"required": true,
+					"defaultValue": "",
+					"placeholder": "This effect ends at dawn.",
+					"useSelection": true
+				}
+			]
+		}
+	]
+}

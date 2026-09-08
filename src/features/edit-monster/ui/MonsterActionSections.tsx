@@ -18,6 +18,11 @@ interface MonsterActionSectionsProps {
 		section: CreatureActionSection,
 		index: number,
 	) => void;
+	onActionNameKeyDown: (
+		event: KeyboardEvent<HTMLInputElement>,
+		section: CreatureActionSection,
+		index: number,
+	) => void;
 	onActionTextChange: (
 		event: ChangeEvent<HTMLTextAreaElement>,
 		section: CreatureActionSection,
@@ -35,6 +40,7 @@ export default function MonsterActionSections({
 	draft,
 	onAddAction,
 	onActionNameChange,
+	onActionNameKeyDown,
 	onActionTextChange,
 	onActionTextKeyDown,
 	onRemoveAction,
@@ -80,6 +86,11 @@ export default function MonsterActionSections({
 													onChange={(event) =>
 														onActionNameChange(event, section.key, index)
 													}
+													onKeyDown={(event) =>
+														onActionNameKeyDown(event, section.key, index)
+													}
+													title={lang.t("Ctrl+K — Insert parsed content")}
+													data-parser-target={`action-${section.key}-${index}-name`}
 												/>
 											</label>
 											<Button
@@ -105,7 +116,8 @@ export default function MonsterActionSections({
 												onKeyDown={(event) =>
 													onActionTextKeyDown(event, section.key, index)
 												}
-												title={lang.t("Ctrl+K — Insert rule reference")}
+												title={lang.t("Ctrl+K — Insert parsed content")}
+												data-parser-target={`action-${section.key}-${index}-text`}
 											/>
 										</label>
 									</div>

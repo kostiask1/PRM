@@ -5,6 +5,7 @@ import {
 	type ReactNode,
 	useEffect,
 	useId,
+	useRef,
 	useState,
 } from "react";
 
@@ -29,10 +30,12 @@ import {
 	SIZE_OPTIONS,
 	actionFromText,
 	addMonsterAction,
-	applyRuleReferenceTag,
+	applyParserActionText,
+	canInsertParserActionText,
 	cloneMonster,
 	getCreatureEditableFieldInput,
 	getCreatureSelectValue,
+	getRuleInsertValue,
 	isRulesReferenceShortcut,
 	parseMonsterJson,
 	prepareMonsterDraftForSave,
@@ -45,28 +48,28 @@ import {
 	type MonsterEditMode,
 	type NamedMonsterData,
 	type RuleInsertTarget,
-	type RuleReferenceSelection,
 } from "../model.ts";
+import type { ParserActionContext } from "../model/parserActions.ts";
 import MonsterActionSections from "./MonsterActionSections.tsx";
 import MonsterFieldSections from "./MonsterFieldSections.tsx";
+import MonsterParserActionDialog, {
+	type MonsterParserReferenceContentProps,
+} from "./MonsterParserActionDialog.tsx";
 import MonsterTextParsingHelp from "./MonsterTextParsingHelp.tsx";
 import "../../../assets/components/MonsterFieldEditModal.css";
-
-interface RulesReferenceContentProps {
-	onSelectReference: (selection: RuleReferenceSelection) => void;
-}
 
 export interface MonsterFieldEditModalProps {
 	editingMonster?: MonsterData | null;
 	title?: ReactNode;
 	onCancel: () => void;
 	onSave?: (monster: NamedMonsterData) => void | Promise<void>;
-	RulesReferenceContent?: ComponentType<RulesReferenceContentProps> | null;
+	RulesReferenceContent?: ComponentType<MonsterParserReferenceContentProps> | null;
 }
 
 interface InputFieldOptions {
 	type?: "text" | "number";
 	disabled?: boolean;
+	supportsParsing?: boolean;
 }
 
 interface SelectFieldOption {
@@ -76,7 +79,24 @@ interface SelectFieldOption {
 
 type RuleInsertTargetInput =
 	| { type: "field"; key: CreatureEditableFieldKey }
-	| { type: "action"; section: CreatureActionSection; index: number };
+	| {
+			type: "action";
+			section: CreatureActionSection;
+			index: number;
+			part: "name" | "text";
+	  };
+
+interface PendingParserFocus {
+	targetId: string;
+	selectionStart: number;
+	selectionEnd: number;
+}
+
+function getParserTargetId(target: RuleInsertTarget): string {
+	return target.type === "field"
+		? `field-${target.key}`
+		: `action-${target.section}-${target.index}-${target.part}`;
+}
 
 function getErrorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error && error.message ? error.message : fallback;
@@ -96,6 +116,7 @@ export default function MonsterFieldEditModal({
 	const [isHelpOpen, setIsHelpOpen] = useState(false);
 	const [ruleInsertTarget, setRuleInsertTarget] =
 		useState<RuleInsertTarget | null>(null);
+	const pendingParserFocusRef = useRef<PendingParserFocus | null>(null);
 	const parsingHelpId = useId();
 
 	useEffect(() => {
@@ -106,7 +127,24 @@ export default function MonsterFieldEditModal({
 		setError("");
 		setIsHelpOpen(false);
 		setRuleInsertTarget(null);
+		pendingParserFocusRef.current = null;
 	}, [editingMonster]);
+
+	useEffect(() => {
+		if (ruleInsertTarget || !pendingParserFocusRef.current) return;
+		if (typeof document === "undefined") return;
+		const pending = pendingParserFocusRef.current;
+		pendingParserFocusRef.current = null;
+		const frame = requestAnimationFrame(() => {
+			const element = document.querySelector<
+				HTMLInputElement | HTMLTextAreaElement
+			>(`[data-parser-target="${pending.targetId}"]`);
+			if (!element) return;
+			element.focus();
+			element.setSelectionRange(pending.selectionStart, pending.selectionEnd);
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [ruleInsertTarget]);
 
 	if (!editingMonster || !draft) return null;
 
@@ -181,36 +219,79 @@ export default function MonsterFieldEditModal({
 	};
 
 	const openRuleInsertPicker = (
-		event: KeyboardEvent<HTMLTextAreaElement>,
+		event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
 		target: RuleInsertTargetInput,
 	) => {
 		if (!isRulesReferenceShortcut(event)) return;
 		event.preventDefault();
 		event.stopPropagation();
 		const node = event.currentTarget;
-		setRuleInsertTarget({
+		const nextTarget: RuleInsertTarget = {
 			...target,
 			selectionStart: node.selectionStart ?? node.value.length,
 			selectionEnd:
 				node.selectionEnd ?? node.selectionStart ?? node.value.length,
-		});
+		};
+		if (!canInsertParserActionText(draft, nextTarget)) {
+			setError(
+				lang.t(
+					"Place the cursor inside a plain text entry to use parser actions. Structured entries remain unchanged.",
+				),
+			);
+			return;
+		}
+		setError("");
+		setRuleInsertTarget(nextTarget);
 	};
-	const openActionRuleInsertPicker = (
+	const openActionTextParser = (
 		event: KeyboardEvent<HTMLTextAreaElement>,
 		section: CreatureActionSection,
 		index: number,
 	) => {
-		openRuleInsertPicker(event, { type: "action", section, index });
+		openRuleInsertPicker(event, {
+			type: "action",
+			section,
+			index,
+			part: "text",
+		});
+	};
+	const openActionNameParser = (
+		event: KeyboardEvent<HTMLInputElement>,
+		section: CreatureActionSection,
+		index: number,
+	) => {
+		openRuleInsertPicker(event, {
+			type: "action",
+			section,
+			index,
+			part: "name",
+		});
 	};
 
-	const applyRuleInsert = ({ tag }: RuleReferenceSelection) => {
-		if (!ruleInsertTarget || !tag) {
+	const applyParserInsert = (text: string) => {
+		if (!ruleInsertTarget || !text) {
 			setRuleInsertTarget(null);
 			return;
 		}
+		const caretPosition = ruleInsertTarget.selectionStart + text.length;
+		pendingParserFocusRef.current = {
+			targetId: getParserTargetId(ruleInsertTarget),
+			selectionStart: caretPosition,
+			selectionEnd: caretPosition,
+		};
 		updateDraft((current) =>
-			applyRuleReferenceTag(current, ruleInsertTarget, tag),
+			applyParserActionText(current, ruleInsertTarget, text),
 		);
+		setRuleInsertTarget(null);
+	};
+	const closeParserActions = () => {
+		if (ruleInsertTarget) {
+			pendingParserFocusRef.current = {
+				targetId: getParserTargetId(ruleInsertTarget),
+				selectionStart: ruleInsertTarget.selectionStart,
+				selectionEnd: ruleInsertTarget.selectionEnd,
+			};
+		}
 		setRuleInsertTarget(null);
 	};
 
@@ -265,6 +346,14 @@ export default function MonsterFieldEditModal({
 						updateCreatureBasicField(current, key, event.target.value),
 					)
 				}
+				{...(options.supportsParsing
+					? {
+							onKeyDown: (event: KeyboardEvent<HTMLInputElement>) =>
+								openRuleInsertPicker(event, { type: "field", key }),
+							title: lang.t("Ctrl+K — Insert parsed content"),
+							"data-parser-target": `field-${key}`,
+						}
+					: {})}
 			/>
 		</label>
 	);
@@ -312,6 +401,7 @@ export default function MonsterFieldEditModal({
 		key: CreatureEditableFieldKey,
 		label: string,
 		rows = 3,
+		supportsParsing = false,
 	) => (
 		<label key={key} className="MonsterFieldEditModal__field">
 			<span className="MonsterFieldEditModal__field_label">
@@ -326,10 +416,14 @@ export default function MonsterFieldEditModal({
 						updateCreatureBasicField(current, key, event.target.value),
 					)
 				}
-				onKeyDown={(event) =>
-					openRuleInsertPicker(event, { type: "field", key })
-				}
-				title={lang.t("Ctrl+K — Insert rule reference")}
+				{...(supportsParsing
+					? {
+							onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) =>
+								openRuleInsertPicker(event, { type: "field", key }),
+							title: lang.t("Ctrl+K — Insert parsed content"),
+							"data-parser-target": `field-${key}`,
+						}
+					: {})}
 			/>
 		</label>
 	);
@@ -372,11 +466,28 @@ export default function MonsterFieldEditModal({
 		);
 	};
 
+	const selectedText = ruleInsertTarget
+		? getRuleInsertValue(draft, ruleInsertTarget).slice(
+				ruleInsertTarget.selectionStart,
+				ruleInsertTarget.selectionEnd,
+			)
+		: "";
+	const parserActionContext: ParserActionContext =
+		ruleInsertTarget?.type === "action"
+			? ruleInsertTarget.part === "name"
+				? "action-name"
+				: "rich-text"
+			: ruleInsertTarget?.key === "ac"
+				? "armor-class"
+				: ruleInsertTarget?.key === "senses"
+					? "senses"
+					: "rich-text";
+
 	return (
-		<>
-			<Modal
-				title={title}
-				headerActions={
+		<Modal
+			title={ruleInsertTarget ? lang.t("Insert parsed content") : title}
+			headerActions={
+				ruleInsertTarget ? null : (
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
@@ -392,15 +503,24 @@ export default function MonsterFieldEditModal({
 						aria-expanded={isHelpOpen}
 						onClick={toggleParsingHelp}
 					/>
-				}
-				onConfirm={() => {}}
-				onCancel={onCancel}
-				showFooter={false}
-				className="MonsterFieldEditModal__modal"
-				overlayClassName="MonsterFieldEditModal__overlay"
-			>
+				)
+			}
+			onConfirm={() => {}}
+			onCancel={ruleInsertTarget ? closeParserActions : onCancel}
+			showFooter={false}
+			className="MonsterFieldEditModal__modal"
+			overlayClassName="MonsterFieldEditModal__overlay"
+		>
 				<div className="MonsterFieldEditModal">
-					{isHelpOpen ? (
+					{ruleInsertTarget ? (
+						<MonsterParserActionDialog
+							context={parserActionContext}
+							selectedText={selectedText}
+							onCancel={closeParserActions}
+							onInsert={applyParserInsert}
+							RulesReferenceContent={RulesReferenceContent}
+						/>
+					) : isHelpOpen ? (
 						<>
 							<MonsterTextParsingHelp id={parsingHelpId} />
 							<div className="MonsterFieldEditModal__footer">
@@ -450,7 +570,9 @@ export default function MonsterFieldEditModal({
 									statFields={
 										<>
 											{renderInputField("hpFormula", "HP Formula")}
-											{renderInputField("ac", "Armor Class")}
+											{renderInputField("ac", "Armor Class", {
+												supportsParsing: true,
+											})}
 											{renderTextField("speed", "Speed", 2)}
 										</>
 									}
@@ -480,12 +602,12 @@ export default function MonsterFieldEditModal({
 									}
 									descriptionFields={
 										<>
-											{renderTextField("senses", "Senses", 2)}
+											{renderTextField("senses", "Senses", 2, true)}
 											{renderTextField("languages", "Languages", 2)}
 											{renderInputField("cr", "Challenge Rating")}
 										</>
 									}
-									loreField={renderTextField("desc", "Description", 4)}
+									loreField={renderTextField("desc", "Description", 4, true)}
 									abilityFields={CREATURE_ABILITY_KEYS.map(
 										renderAbilityField,
 									)}
@@ -494,8 +616,9 @@ export default function MonsterFieldEditModal({
 											draft={draft}
 											onAddAction={addAction}
 											onActionNameChange={updateActionName}
+											onActionNameKeyDown={openActionNameParser}
 											onActionTextChange={updateActionText}
-											onActionTextKeyDown={openActionRuleInsertPicker}
+											onActionTextKeyDown={openActionTextParser}
 											onRemoveAction={removeAction}
 										/>
 									}
@@ -528,20 +651,6 @@ export default function MonsterFieldEditModal({
 						</>
 					)}
 				</div>
-			</Modal>
-			{ruleInsertTarget && RulesReferenceContent && (
-				<Modal
-					title={lang.t("Rules Reference")}
-					onConfirm={() => {}}
-					onCancel={() => setRuleInsertTarget(null)}
-					showFooter={false}
-					type="custom"
-					className="MonsterFieldEditModal__rules_modal"
-					overlayClassName="MonsterFieldEditModal__rules_overlay"
-				>
-					<RulesReferenceContent onSelectReference={applyRuleInsert} />
-				</Modal>
-			)}
-		</>
+		</Modal>
 	);
 }
