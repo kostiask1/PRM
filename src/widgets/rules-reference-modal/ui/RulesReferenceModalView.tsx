@@ -5,10 +5,9 @@ import { RollDice } from "../../../features/dice/index.js";
 import { createRichContentRenderers } from "../../../features/rich-content/index.js";
 import { createRulesLinkComponent } from "../../../features/rules-reference/index.js";
 import { Input } from "../../../features/editor/ui/index.js";
-import { formatSourceLabel } from "../../../entities/reference/index.js";
-import { classNames, lang } from "../../../shared/lib/index.js";
-import { Button, highlightText, Icon, Select } from "../../../shared/ui/index.js";
-import { getReferenceItemKey, getSpellReferenceName, type ReferenceBestiarySortOrder, type ReferenceItem, type ReferenceTabId, type ReferenceTabPolicy } from "../model.js";
+import { lang } from "../../../shared/lib/index.js";
+import { Button, highlightText } from "../../../shared/ui/index.js";
+import { getCreatureReferenceName, getReferenceItemKey, getSpellReferenceName, type ReferenceItem, type ReferenceTabId, type ReferenceTabPolicy } from "../model.js";
 import type { SpellRecord } from "../../../entities/spell/index.js";
 import type { RulesReferenceModalCompositionSlots } from "./rulesReferenceModalComposition.ts";
 
@@ -22,16 +21,6 @@ const renderRulesReferenceContent =
 
 export interface ReferenceTabView extends ReferenceTabPolicy {
 	meta?: (item: ReferenceItem) => string;
-}
-
-export interface RulesReferenceBestiaryControls {
-	sourceFilter: string;
-	sourceOptions: string[];
-	onlyFavorites: boolean;
-	sortOrder: ReferenceBestiarySortOrder;
-	onSourceFilterChange: (source: string) => void;
-	onOnlyFavoritesChange: () => void;
-	onSortChange: () => void;
 }
 
 export interface RulesReferenceModalViewProps
@@ -50,7 +39,6 @@ export interface RulesReferenceModalViewProps
 	selectedItem: ReferenceItem | null;
 	selectedMeta: string;
 	canInsertReference: boolean;
-	bestiaryControls: RulesReferenceBestiaryControls;
 	listRef: React.RefObject<ReactList>;
 	renderReferenceItem: (index: number) => ReactNode;
 	onNavigateHistory: (direction: -1 | 1) => void;
@@ -58,6 +46,7 @@ export interface RulesReferenceModalViewProps
 	onToggleDetailedSearch: () => void;
 	onSelectTab: (tabId: ReferenceTabId) => void;
 	onEmbeddedSelection: (tabId: ReferenceTabId, name: string) => void;
+	onSelectBestiary: ((monster: BestiaryMonster) => void) | null;
 	onSelectSpell: ((spell: SpellRecord) => void) | null;
 	onInsertReference: (tabId: ReferenceTabId, item: ReferenceItem) => void;
 }
@@ -134,48 +123,17 @@ function EmbeddedSpellReference({ query, isDetailedSearch, activeSelectedName, o
 	);
 }
 
-function BestiaryReferenceFilters({
-	sourceFilter,
-	sourceOptions,
-	onlyFavorites,
-	sortOrder,
-	onSourceFilterChange,
-	onOnlyFavoritesChange,
-	onSortChange,
-}: RulesReferenceBestiaryControls) {
+function EmbeddedBestiaryReference({ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectBestiary, BestiaryBrowser }: Pick<RulesReferenceModalViewProps, "query" | "isDetailedSearch" | "activeSelectedName" | "onEmbeddedSelection" | "onSelectBestiary" | "BestiaryBrowser">) {
 	return (
-		<div className="RulesReferenceModalContent__filters">
-			<Select
-				className="RulesReferenceModalContent__source_filter"
-				value={sourceFilter}
-				onChange={(event) => onSourceFilterChange(String(event.target.value))}
-			>
-				<option value="all">{lang.t("All sources")}</option>
-				{sourceOptions.map((source) => (
-					<option key={source} value={source}>
-						{source === "CUSTOM"
-							? lang.t("Custom creatures")
-							: formatSourceLabel(source.replace(/^bestiary-/i, ""))}
-					</option>
-				))}
-			</Select>
-			<Button
-				variant={onlyFavorites ? "primary" : "ghost"}
-				icon="star"
-				onClick={onOnlyFavoritesChange}
-				title={lang.t("Only favorites")}
+		<div className="RulesReferenceModalContent__bestiaryBrowser">
+			<BestiaryBrowser
+				hideSearchInput
+				initialSearch={query}
+				initialDetailedSearch={isDetailedSearch}
+				initialSelectedName={activeSelectedName}
+				onActiveMonsterChange={(monster) => onEmbeddedSelection("bestiary", getCreatureReferenceName(monster))}
+				onSelectMonster={onSelectBestiary}
 			/>
-			<Button
-				className={classNames("RulesReferenceModalContent__sort_btn", {
-					is_active: sortOrder !== "none",
-				})}
-				variant="ghost"
-				onClick={onSortChange}
-				title={lang.t("Sort by CR (Challenge Rating)")}
-			>
-				<span>CR</span>
-				<Icon name={`sort-${sortOrder}`} />
-			</Button>
 		</div>
 	);
 }
@@ -187,13 +145,10 @@ function ReferenceSidebar({ activeTab, isDetailedSearch, isLoading, normalizedQu
 	return <ReactList key={`${activeTab.id}:${normalizedQuery}:${searchMode}`} ref={listRef} itemRenderer={renderReferenceItem} length={filteredItems.length} type="uniform" />;
 }
 
-function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "bestiaryControls" | "listRef" | "renderReferenceItem" | "onInsertReference" | "MonsterStatBlock">) {
+function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "listRef" | "renderReferenceItem" | "onInsertReference" | "MonsterStatBlock">) {
 	return (
 		<div className="RulesReferenceModalContent__main">
 			<div className="RulesReferenceModalContent__sidebar">
-				{props.activeTab.id === "bestiary" && (
-					<BestiaryReferenceFilters {...props.bestiaryControls} />
-				)}
 				<div className="RulesReferenceModalContent__list">
 					<ReferenceSidebar {...props} />
 				</div>
@@ -204,15 +159,17 @@ function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "acti
 }
 
 export default function RulesReferenceModalView(props: RulesReferenceModalViewProps) {
-	const { activeTab, tabs, query, isDetailedSearch, activeSelectedName, tabsWithSearchMatches, canNavigateBack, canNavigateForward, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, bestiaryControls, listRef, renderReferenceItem, onNavigateHistory, onQueryChange, onToggleDetailedSearch, onSelectTab, onEmbeddedSelection, onSelectSpell, onInsertReference, MonsterStatBlock, SpellsBrowser } = props;
+	const { activeTab, tabs, query, isDetailedSearch, activeSelectedName, tabsWithSearchMatches, canNavigateBack, canNavigateForward, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onNavigateHistory, onQueryChange, onToggleDetailedSearch, onSelectTab, onEmbeddedSelection, onSelectBestiary, onSelectSpell, onInsertReference, BestiaryBrowser, MonsterStatBlock, SpellsBrowser } = props;
 	return (
 		<div className="RulesReferenceModalContent RulesReferenceModalContent__withTabs">
 			<ReferenceSearch {...{ query, isDetailedSearch, canNavigateBack, canNavigateForward, onNavigateHistory, onQueryChange, onToggleDetailedSearch }} />
 			<ReferenceTabs tabs={tabs} activeTab={activeTab} tabsWithSearchMatches={tabsWithSearchMatches} onSelectTab={onSelectTab} />
-			{activeTab.id === "spells" ? (
+			{activeTab.id === "bestiary" ? (
+				<EmbeddedBestiaryReference {...{ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectBestiary, BestiaryBrowser }} />
+			) : activeTab.id === "spells" ? (
 				<EmbeddedSpellReference {...{ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell, SpellsBrowser }} />
 			) : (
-				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, bestiaryControls, listRef, renderReferenceItem, onInsertReference, MonsterStatBlock }} />
+				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onInsertReference, MonsterStatBlock }} />
 			)}
 		</div>
 	);

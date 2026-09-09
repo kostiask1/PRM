@@ -5,6 +5,8 @@ import { backupApi } from "./features/backup/index.js";
 import { DiceRequestRuntimeProvider } from "./features/dice/index.js";
 import { AiAttachmentAlertRuntimeProvider } from "./features/ai/ui/index.js";
 import MainContent from "./app/routing/MainContent.tsx";
+import AiAssistantRuntimeHost from "./app/ui/AiAssistantRuntimeHost.tsx";
+import BestiaryBrowserRuntimeHost from "./app/ui/BestiaryBrowserRuntimeHost.tsx";
 import CampaignEntityCreationRuntimeHost from "./app/ui/CampaignEntityCreationRuntimeHost.tsx";
 import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
 import ImageGalleryRuntimeHost from "./app/ui/ImageGalleryRuntimeHost.tsx";
@@ -37,6 +39,7 @@ import {
 	RulesReferenceModalHost,
 	RulesReferenceModalRuntimeProvider,
 } from "./widgets/rules-reference-modal/index.js";
+import { EncounterBestiary } from "./pages/encounter/index.js";
 import {
 	MonsterStatBlock,
 	MonsterStatBlockRuntimeProvider,
@@ -156,6 +159,8 @@ export default function App() {
 						runtime={campaignEntityModalRuntime}
 						campaignSlug={activeCampaignSlug}
 					>
+						<AiAssistantRuntimeHost>
+						<BestiaryBrowserRuntimeHost>
 						<HistoryFocusRuntimeHost />
 						<button
 							type="button"
@@ -216,9 +221,12 @@ export default function App() {
 						<DiceCalculatorHost />
 						<MentionPickerModalHost />
 						<RulesReferenceModalHost
+							BestiaryBrowser={EncounterBestiary}
 							MonsterStatBlock={MonsterStatBlock}
 							SpellsBrowser={SpellsBrowser}
 						/>
+						</BestiaryBrowserRuntimeHost>
+						</AiAssistantRuntimeHost>
 					</CampaignEntityModalProvider>
 						</div>
 						</EditableFieldEntityLinkProvider>

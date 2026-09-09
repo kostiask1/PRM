@@ -272,7 +272,6 @@ import {
 } from "../src/widgets/spells-browser/model.js";
 import {
 	REFERENCE_TAB_POLICIES,
-	applyReferenceBestiaryFilters,
 	applyLoadedReferenceSelection,
 	applyReferenceTabOnlySelection,
 	applyReferenceSelectionReconciliationPlan,
@@ -285,8 +284,6 @@ import {
 	getCreatureReferenceMatchRank,
 	getCreatureReferenceName,
 	getInitialTabId,
-	getNextReferenceBestiarySortOrder,
-	getReferenceBestiarySourceOptions,
 	getReferenceHistoryAvailability,
 	getReferenceInitialNavigationPlan,
 	getReferenceInlineTag,
@@ -2035,7 +2032,7 @@ function getRequiredSourceMatch(source, pattern, message = String(pattern)) {
 }
 
 async function getEncounterPageCompositionSource() {
-	const [displayProjectionSource, controllerSource, participantEditingSource, workflowsSource, contentSource] = await Promise.all([
+	const [displayProjectionSource, controllerSource, participantEditingSource, workflowsSource, bestiarySource, contentSource] = await Promise.all([
 		fs.readFile(
 			"src/pages/encounter/model/useEncounterPageDisplayProjection.ts",
 			"utf8",
@@ -2053,11 +2050,15 @@ async function getEncounterPageCompositionSource() {
 			"utf8",
 		),
 		fs.readFile(
+			"src/pages/encounter/ui/components/EncounterBestiary.tsx",
+			"utf8",
+		),
+		fs.readFile(
 			"src/pages/encounter/ui/components/EncounterPageContent.tsx",
 			"utf8",
 		),
 	]);
-	return `${displayProjectionSource}\n${controllerSource}\n${participantEditingSource}\n${workflowsSource}\n${contentSource}`;
+	return `${displayProjectionSource}\n${controllerSource}\n${participantEditingSource}\n${workflowsSource}\n${bestiarySource}\n${contentSource}`;
 }
 
 async function getEncounterPrivateComponentSources(componentName) {
@@ -2223,6 +2224,7 @@ function assertReferenceOwnerComposition(source, owner, beforeToken) {
 		),
 		["MonsterStatBlock", "SpellsBrowser"],
 	);
+	assert.match(rulesBinding, /\bBestiaryBrowser(?:\s*:|,)/);
 	assert.match(
 		editorBinding,
 		new RegExp(`\\bRulesReferenceContent: ${owner}RulesReferenceContent,`),
@@ -2943,8 +2945,8 @@ await run(
 		assert.deepEqual(bestiaryConsumers, [
 			"src/app/ui/BestiaryBrowserRuntimeHost.tsx",
 			"src/pages/encounter/ui/components/BestiaryAiDraftModal.tsx",
+			"src/pages/encounter/ui/components/EncounterBestiary.tsx",
 			"src/pages/encounter/ui/components/EncounterBestiaryAiModals.tsx",
-			"src/pages/encounter/ui/components/EncounterPageContent.tsx",
 			"src/pages/encounter/ui/components/MonsterAiEditModal.tsx",
 		]);
 
@@ -7313,6 +7315,10 @@ await run(
 			runtimeEntrySource,
 			typeEntrySource,
 		} = await getEncounterPrivateComponentSources("EncounterBestiaryOverlay");
+		const bestiarySource = await fs.readFile(
+			"src/pages/encounter/ui/components/EncounterBestiary.tsx",
+			"utf8",
+		);
 
 		assert.match(
 			encounterSource,
@@ -7335,16 +7341,24 @@ await run(
 				"onClose={() => view.setShowBestiary(false)}",
 				"onAdd={view.handleAddMonster}",
 				"renderBestiary={(onAdd) => (",
+				"<EncounterBestiary",
+				"onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}",
+				"<EncounterCharacterOverlays",
+			],
+			"Encounter raw Bestiary composition and workflow ownership",
+		);
+		assertSourceTokensInOrder(
+			bestiarySource,
+			[
+				"export function EncounterBestiary",
 				"<Bestiary",
 				"BestiaryAiModals={EncounterBestiaryAiModals}",
 				"AiAssistantPanel={AiAssistantPanel}",
 				"MonsterStatBlock={MonsterStatBlock}",
 				"ResponseModal={EncounterAiResponseModal}",
 				"MonsterEditorModal={EncounterMonsterEditorModal}",
-				"onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}",
-				"<EncounterCharacterOverlays",
 			],
-			"Encounter raw Bestiary composition and workflow ownership",
+			"Encounter shared Bestiary composition",
 		);
 		assertSourceTokensInOrder(
 			overlaySource,
@@ -9064,6 +9078,7 @@ await run(
 			appSource,
 			mainContentSource,
 			encounterSource,
+			encounterBestiarySource,
 			rulesContentSource,
 			rulesViewSource,
 			rulesHostSource,
@@ -9080,6 +9095,10 @@ await run(
 			fs.readFile("src/App.tsx", "utf8"),
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
 			getEncounterPageCompositionSource(),
+			fs.readFile(
+				"src/pages/encounter/ui/components/EncounterBestiary.tsx",
+				"utf8",
+			),
 			fs.readFile(
 				"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
 				"utf8",
@@ -9134,6 +9153,7 @@ await run(
 			/export\s*\{[^}]*\bdefault as RulesReferenceModalContent\b/,
 		);
 		assertPublicTypeSurface(rulesTypeEntrySource, [
+			"RulesReferenceBestiaryBrowserSlotProps",
 			"RulesReferenceModalCompositionSlots",
 			"RulesReferenceModalContentComponent",
 			"RulesReferenceModalContentProps",
@@ -9162,6 +9182,18 @@ await run(
 		);
 		assertExportedInterfaceFragments(
 			rulesCompositionSource,
+			"RulesReferenceBestiaryBrowserSlotProps",
+			[
+				"hideSearchInput?: boolean;",
+				"initialSearch?: string;",
+				"initialDetailedSearch?: boolean;",
+				"initialSelectedName?: string;",
+				"onActiveMonsterChange?: ((monster: BestiaryMonster) => void) | null;",
+				"onSelectMonster?: ((monster: BestiaryMonster) => void) | null;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			rulesCompositionSource,
 			"RulesReferenceMonsterStatBlockSlotProps",
 			[
 				"monster: BestiaryMonster;",
@@ -9185,7 +9217,7 @@ await run(
 		);
 		assert.match(
 			rulesCompositionSource,
-			/export interface RulesReferenceModalCompositionSlots \{\s*MonsterStatBlock: ComponentType<RulesReferenceMonsterStatBlockSlotProps>;\s*SpellsBrowser: ComponentType<RulesReferenceSpellsBrowserSlotProps>;\s*\}/,
+			/export interface RulesReferenceModalCompositionSlots \{\s*BestiaryBrowser: ComponentType<RulesReferenceBestiaryBrowserSlotProps>;\s*MonsterStatBlock: ComponentType<RulesReferenceMonsterStatBlockSlotProps>;\s*SpellsBrowser: ComponentType<RulesReferenceSpellsBrowserSlotProps>;\s*\}/,
 		);
 		assert.match(
 			`${rulesCompositionSource}\n${rulesContentSource}`,
@@ -9218,7 +9250,7 @@ await run(
 
 		assert.match(
 			rulesContentSource,
-			/export function createRulesReferenceModalContentComponent\(\{\s*MonsterStatBlock,\s*SpellsBrowser,\s*\}: RulesReferenceModalCompositionSlots\): RulesReferenceModalContentComponent \{/,
+			/export function createRulesReferenceModalContentComponent\(\{\s*BestiaryBrowser,\s*MonsterStatBlock,\s*SpellsBrowser,\s*\}: RulesReferenceModalCompositionSlots\): RulesReferenceModalContentComponent \{/,
 		);
 		const configuredRulesContentTag = getRequiredSourceMatch(
 			rulesContentSource,
@@ -9227,6 +9259,10 @@ await run(
 		assert.match(
 			configuredRulesContentTag,
 			/<RulesReferenceModalContent\s*\{\.\.\.props\}/,
+		);
+		assert.match(
+			configuredRulesContentTag,
+			/\bBestiaryBrowser=\{BestiaryBrowser\}/,
 		);
 		assert.match(
 			configuredRulesContentTag,
@@ -9260,7 +9296,6 @@ await run(
 			"selectedItem",
 			"selectedMeta",
 			"canInsertReference",
-			"bestiaryControls",
 			"listRef",
 			"renderReferenceItem",
 			"onNavigateHistory",
@@ -9268,20 +9303,25 @@ await run(
 			"onToggleDetailedSearch",
 			"onSelectTab",
 			"onEmbeddedSelection",
+			"onSelectBestiary",
 			"onSelectSpell",
 			"onInsertReference",
+			"BestiaryBrowser",
 			"MonsterStatBlock",
 			"SpellsBrowser",
 		]);
 		assert.match(viewTag, /\bcanInsertReference=\{Boolean\(onSelectReference\)\}/);
-		assert.match(viewTag, /\bbestiaryControls=\{\{/);
+		assert.match(
+			viewTag,
+			/\bonSelectBestiary=\{getEnabledHandler\(onSelectReference, selectBestiaryReference\)\}/,
+		);
 		assert.match(
 			viewTag,
 			/\bonSelectSpell=\{getEnabledHandler\(onSelectReference, selectSpellReference\)\}/,
 		);
 		assert.match(
 			rulesViewSource,
-			/activeTab\.id === "bestiary"[\s\S]*?<BestiaryReferenceFilters \{\.\.\.props\.bestiaryControls\} \/>/,
+			/activeTab\.id === "bestiary"[\s\S]*?<EmbeddedBestiaryReference/,
 		);
 
 		const searchSource = getRequiredSourceSlice(
@@ -9374,7 +9414,7 @@ await run(
 		assert.match(spellsTag, /\brenderOptions=\{\{\}\}/);
 		assert.match(
 			rulesViewSource,
-			/\{activeTab\.id === "spells" \? \(\s*<EmbeddedSpellReference[\s\S]*?\) : \(\s*<StandardReferenceLayout/,
+			/\{activeTab\.id === "bestiary" \? \(\s*<EmbeddedBestiaryReference[\s\S]*?activeTab\.id === "spells" \? \(\s*<EmbeddedSpellReference[\s\S]*?\) : \(\s*<StandardReferenceLayout/,
 		);
 
 		assert.match(
@@ -9383,7 +9423,7 @@ await run(
 		);
 		assert.match(
 			rulesHostSource,
-			/export default function RulesReferenceModalHost\(\{\s*MonsterStatBlock,\s*SpellsBrowser,\s*\}: RulesReferenceModalHostProps\)/,
+			/export default function RulesReferenceModalHost\(\{\s*BestiaryBrowser,\s*MonsterStatBlock,\s*SpellsBrowser,\s*\}: RulesReferenceModalHostProps\)/,
 		);
 		const hostContentTag = getRequiredSourceMatch(
 			rulesHostSource,
@@ -9393,6 +9433,7 @@ await run(
 			"initialTab",
 			"initialName",
 			"forceTab",
+			"BestiaryBrowser",
 			"MonsterStatBlock",
 			"SpellsBrowser",
 		]);
@@ -9464,6 +9505,7 @@ await run(
 			/<RulesReferenceModalHost(?=\s|>)[\s\S]*?\/>/,
 		);
 		assert.deepEqual(readSourceJsxPropNames(appHostTag), [
+			"BestiaryBrowser",
 			"MonsterStatBlock",
 			"SpellsBrowser",
 		]);
@@ -9475,15 +9517,12 @@ await run(
 			"function EmptyState",
 		);
 		assertReferenceOwnerComposition(
-			encounterSource,
+			encounterBestiarySource,
 			"Encounter",
-			"export default function EncounterPageContent",
+			"export function EncounterBestiary",
 		);
 
-		assert.match(
-			encounterSource,
-			/\bMonsterEditorModal=\{EncounterMonsterEditorModal\}/,
-		);
+		assert.match(encounterBestiarySource, /\bMonsterEditorModal=\{EncounterMonsterEditorModal\}/);
 		const directEncounterEditorTag = getRequiredSourceMatch(
 			encounterSource,
 			/<EncounterMonsterEditorModal(?=\s|>)[\s\S]*?\/>/,
@@ -10947,11 +10986,15 @@ await run(
 await run(
 	"Phase 232 consolidates Encounter page orchestration behind private controller and content",
 	async () => {
-		const [pageSource, controllerSource, contentSource, pageEntry, pageTypes] =
+		const [pageSource, controllerSource, bestiarySource, contentSource, pageEntry, pageTypes] =
 			await Promise.all([
 				fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
 				fs.readFile(
 					"src/pages/encounter/model/useEncounterPageController.ts",
+					"utf8",
+				),
+				fs.readFile(
+					"src/pages/encounter/ui/components/EncounterBestiary.tsx",
 					"utf8",
 				),
 				fs.readFile(
@@ -11007,11 +11050,18 @@ await run(
 			/app\/model|shared\/model|<EncounterHeader|<EncounterBestiaryOverlay/,
 		);
 		assertSourceTokensInOrder(
-			contentSource,
+			bestiarySource,
 			[
 				"const EncounterRulesReferenceContent =",
 				"const EncounterMonsterEditorModal = createMonsterEditorModalComponent({",
 				"const EncounterAiResponseModal = createAiResponseModalComponent({",
+				"export function EncounterBestiary",
+			],
+			"Encounter private Bestiary composition",
+		);
+		assertSourceTokensInOrder(
+			contentSource,
+			[
 				"export default function EncounterPageContent({ controller }: Props) {",
 				"<EncounterHeader",
 				"<EncounterParticipantList",
@@ -17625,7 +17675,7 @@ await run(
 		);
 		assert.match(
 			hostSource,
-			/\[MonsterStatBlock, SpellsBrowser, isOpen, navigationRequest, openModal\]/,
+			/\[BestiaryBrowser, MonsterStatBlock, SpellsBrowser, isOpen, navigationRequest, openModal\]/,
 		);
 		assertSourceTokensInOrder(
 			`${appRuntimeSource}\n${appSource}`,
@@ -51356,61 +51406,6 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 			"Ghoul",
 		],
 	);
-	const bestiaryItems = [
-		{ name: "Молодий дракон", source: "XMM", cr: "7" },
-		{ name: "Щур", source: "MM", cr: "1/8" },
-		{ name: "Мавка", source: "CUSTOM", cr: { cr: "3" } },
-		{ name: "Вовк", source: "MM", cr: "1/4" },
-	];
-	assert.deepEqual(
-		getReferenceBestiarySourceOptions(bestiaryItems),
-		["CUSTOM", "MM", "XMM"],
-	);
-	assert.deepEqual(
-		applyReferenceBestiaryFilters(bestiaryItems, {
-			sourceFilter: "mm",
-			onlyFavorites: false,
-			favorites: [],
-			sortOrder: "none",
-		}).map((item) => item.name),
-		["Щур", "Вовк"],
-	);
-	assert.deepEqual(
-		applyReferenceBestiaryFilters(bestiaryItems, {
-			sourceFilter: "all",
-			onlyFavorites: true,
-			favorites: [{ name: " мавка ", source: "custom" }],
-			sortOrder: "none",
-		}).map((item) => item.name),
-		["Мавка"],
-	);
-	assert.deepEqual(
-		applyReferenceBestiaryFilters(bestiaryItems, {
-			sourceFilter: "all",
-			onlyFavorites: false,
-			favorites: [],
-			sortOrder: "desc",
-		}).map((item) => item.name),
-		["Молодий дракон", "Мавка", "Вовк", "Щур"],
-	);
-	assert.deepEqual(
-		applyReferenceBestiaryFilters(bestiaryItems, {
-			sourceFilter: "all",
-			onlyFavorites: false,
-			favorites: [],
-			sortOrder: "asc",
-		}).map((item) => item.name),
-		["Щур", "Вовк", "Мавка", "Молодий дракон"],
-	);
-	assert.deepEqual(bestiaryItems.map((item) => item.name), [
-		"Молодий дракон",
-		"Щур",
-		"Мавка",
-		"Вовк",
-	]);
-	assert.equal(getNextReferenceBestiarySortOrder("none"), "desc");
-	assert.equal(getNextReferenceBestiarySortOrder("desc"), "asc");
-	assert.equal(getNextReferenceBestiarySortOrder("asc"), "none");
 });
 
 await run("rules reference modal plans preserve keyboard and tab navigation", () => {
@@ -53462,7 +53457,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(rulesReferenceSource, /Boolean\(initialName\)/);
 	assert.doesNotMatch(rulesReferenceSource, /setNavigationHistory/);
 	assert.match(rulesReferenceSource, /onActiveSpellChange/);
-	assert.doesNotMatch(rulesReferenceSource, /onActiveMonsterChange/);
+	assert.match(rulesReferenceSource, /onActiveMonsterChange/);
 	assert.match(rulesReferenceSource, /getCreatureReferenceName/);
 	assert.match(rulesReferenceSource, /itemMatchesSelectedName/);
 	assert.match(

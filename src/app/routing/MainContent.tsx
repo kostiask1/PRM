@@ -1,6 +1,6 @@
 import { CampaignPage } from "../../pages/campaign/index.js";
 import { SessionPage } from "../../pages/session/index.js";
-import { EncounterPage } from "../../pages/encounter/index.js";
+import { EncounterBestiary, EncounterPage } from "../../pages/encounter/index.js";
 import ProjectGuide from "./ProjectGuide";
 import { AiAssistantPanel } from "../../widgets/ai-assistant/index.js";
 import { createAiResponseModalComponent } from "../../widgets/ai-response-modal/index.js";
@@ -27,6 +27,7 @@ import type { CampaignRecord } from "../../entities/campaign/index.js";
 
 const MainContentRulesReferenceContent =
 	createRulesReferenceModalContentComponent({
+		BestiaryBrowser: EncounterBestiary,
 		MonsterStatBlock,
 		SpellsBrowser,
 	});

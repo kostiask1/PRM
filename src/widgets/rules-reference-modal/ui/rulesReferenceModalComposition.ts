@@ -35,7 +35,17 @@ export interface RulesReferenceSpellsBrowserSlotProps {
 	renderOptions?: RichContentRenderOptions;
 }
 
+export interface RulesReferenceBestiaryBrowserSlotProps {
+	hideSearchInput?: boolean;
+	initialSearch?: string;
+	initialDetailedSearch?: boolean;
+	initialSelectedName?: string;
+	onActiveMonsterChange?: ((monster: BestiaryMonster) => void) | null;
+	onSelectMonster?: ((monster: BestiaryMonster) => void) | null;
+}
+
 export interface RulesReferenceModalCompositionSlots {
+	BestiaryBrowser: ComponentType<RulesReferenceBestiaryBrowserSlotProps>;
 	MonsterStatBlock: ComponentType<RulesReferenceMonsterStatBlockSlotProps>;
 	SpellsBrowser: ComponentType<RulesReferenceSpellsBrowserSlotProps>;
 }

@@ -17,6 +17,7 @@ export type {
 	RulesReferenceModalContentComponent,
 	RulesReferenceModalContentProps,
 	RulesReferenceModalHostProps,
+	RulesReferenceBestiaryBrowserSlotProps,
 	RulesReferenceMonsterStatBlockSlotProps,
 	RulesReferenceSpellsBrowserSlotProps,
 } from "./ui/rulesReferenceModalComposition.ts";

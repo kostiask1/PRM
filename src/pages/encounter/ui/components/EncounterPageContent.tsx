@@ -1,16 +1,3 @@
-import {
-	BestiaryBrowser as Bestiary,
-} from "../../../../widgets/bestiary-browser/index.js";
-import { createAiResponseModalComponent } from "../../../../widgets/ai-response-modal/index.js";
-import { AiAssistantPanel } from "../../../../widgets/ai-assistant/index.js";
-import { createMonsterEditorModalComponent } from "../../../../widgets/monster-editor-modal/index.js";
-import { MonsterStatBlock } from "../../../../widgets/monster-stat-block/index.js";
-import { SpellsBrowser } from "../../../../widgets/spells-browser/index.js";
-import { createRulesReferenceModalContentComponent } from "../../../../widgets/rules-reference-modal/index.js";
-import {
-	CharacterCard,
-	LocationCard,
-} from "../../../../widgets/campaign-entity-card/index.js";
 import type { BestiaryMonster } from "../../../../entities/bestiary/index.js";
 import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
@@ -22,6 +9,11 @@ import { lang } from "../../../../shared/lib/index.js";
 import type { EncounterViewParticipant } from "../../model/contracts.ts";
 import type { useEncounterPageController } from "../../model/useEncounterPageController.ts";
 import EncounterBestiaryAiModals from "./EncounterBestiaryAiModals.tsx";
+import {
+	EncounterAiResponseModal,
+	EncounterBestiary,
+	EncounterMonsterEditorModal,
+} from "./EncounterBestiary.tsx";
 import EncounterBestiaryOverlay from "./EncounterBestiaryOverlay.tsx";
 import EncounterCharacterOverlays from "./EncounterCharacterOverlays.tsx";
 import EncounterDetail from "./EncounterDetail.tsx";
@@ -30,21 +22,6 @@ import EncounterMonsterActionModals from "./EncounterMonsterActionModals.tsx";
 import EncounterMonsterRow from "./EncounterMonsterRow.tsx";
 import EncounterNotification from "./EncounterNotification.tsx";
 import EncounterParticipantList from "./EncounterParticipantList.tsx";
-
-const EncounterRulesReferenceContent =
-	createRulesReferenceModalContentComponent({
-		MonsterStatBlock,
-		SpellsBrowser,
-	});
-const EncounterMonsterEditorModal = createMonsterEditorModalComponent({
-	RulesReferenceContent: EncounterRulesReferenceContent,
-});
-const EncounterAiResponseModal = createAiResponseModalComponent({
-	CharacterCard,
-	LocationCard,
-	MonsterStatBlock,
-	MonsterEditorModal: EncounterMonsterEditorModal,
-});
 
 interface Props {
 	controller: ReturnType<typeof useEncounterPageController>;
@@ -156,12 +133,7 @@ export default function EncounterPageContent({ controller }: Props) {
 				onClose={() => view.setShowBestiary(false)}
 				onAdd={view.handleAddMonster}
 				renderBestiary={(onAdd) => (
-					<Bestiary
-						BestiaryAiModals={EncounterBestiaryAiModals}
-						AiAssistantPanel={AiAssistantPanel}
-						MonsterStatBlock={MonsterStatBlock}
-						ResponseModal={EncounterAiResponseModal}
-						MonsterEditorModal={EncounterMonsterEditorModal}
+					<EncounterBestiary
 						onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}
 					/>
 				)}

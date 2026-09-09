@@ -21,6 +21,7 @@ function openRulesReferenceModalContent({
 	initialTab = "conditions",
 	initialName = "",
 	forceTab = false,
+	BestiaryBrowser,
 	MonsterStatBlock,
 	SpellsBrowser,
 	openModal,
@@ -34,6 +35,7 @@ function openRulesReferenceModalContent({
 				initialTab={initialTab}
 				initialName={initialName}
 				forceTab={forceTab}
+				BestiaryBrowser={BestiaryBrowser}
 				MonsterStatBlock={MonsterStatBlock}
 				SpellsBrowser={SpellsBrowser}
 			/>
@@ -42,6 +44,7 @@ function openRulesReferenceModalContent({
 }
 
 export default function RulesReferenceModalHost({
+	BestiaryBrowser,
 	MonsterStatBlock,
 	SpellsBrowser,
 }: RulesReferenceModalHostProps) {
@@ -63,11 +66,12 @@ export default function RulesReferenceModalHost({
 			initialTab: plan.initialTab as ReferenceTabId,
 			initialName: plan.initialName,
 			forceTab: plan.forceTab,
+			BestiaryBrowser,
 			MonsterStatBlock,
 			SpellsBrowser,
 			openModal,
 		});
-	}, [MonsterStatBlock, SpellsBrowser, isOpen, navigationRequest, openModal]);
+	}, [BestiaryBrowser, MonsterStatBlock, SpellsBrowser, isOpen, navigationRequest, openModal]);
 
 	return null;
 }
