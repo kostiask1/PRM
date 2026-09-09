@@ -169,7 +169,7 @@ export function create5eToolsUpdater({
 	function getRemoteTokenUrl(monster) {
 		const source = String(monster?.source || "").trim();
 		const fileName = getTokenFileName(monster);
-		return `https://raw.githubusercontent.com/${config.imageOwner}/${config.imageRepo}/${config.imageRef}/bestiary/${encodeURIComponent(source)}/${encodeURIComponent(fileName)}`;
+		return `https://raw.githubusercontent.com/${config.imageOwner}/${config.imageRepo}/${config.imageRef}/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(fileName)}`;
 	}
 
 	async function appendMonstersFromJsonEntry(dir, entry, monsters) {

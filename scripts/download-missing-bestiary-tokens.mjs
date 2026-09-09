@@ -17,7 +17,7 @@ function printHelp() {
 	console.log(`Usage: node scripts/download-missing-bestiary-tokens.mjs [--verbose]
 
 Downloads locally missing monster tokens from:
-  https://github.com/${IMAGE_OWNER}/${IMAGE_REPO}/tree/${IMAGE_REF}/bestiary/{source}
+  https://github.com/${IMAGE_OWNER}/${IMAGE_REPO}/tree/${IMAGE_REF}/bestiary/tokens/{source}
 
 Existing token files are preserved. Monsters without a remote token are reported
 as missing and do not cause the command to fail.`);

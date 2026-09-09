@@ -63,7 +63,7 @@ Downloads spell and bestiary JSON from:
   https://github.com/${owner}/${repo}/blob/${ref}/data/senses.json
   https://github.com/${owner}/${repo}/blob/${ref}/data/generated/gendata-nav-adventure-book-index.json
 Downloads missing new bestiary tokens from:
-  https://github.com/${imageOwner}/${imageRepo}/tree/${imageRef}/bestiary/{source}
+  https://github.com/${imageOwner}/${imageRepo}/tree/${imageRef}/bestiary/tokens/{source}
 
 Excluded files: fluff, foundry/foundy, template.
 After download, materializes bestiary _copy entries and rebuilds all.json files.`;

@@ -57214,7 +57214,7 @@ await run(
 		assert.match(helpText, /owner\/repo\/tree\/branch\/data\/spells/);
 		assert.match(
 			helpText,
-			/image-owner\/image-repo\/tree\/image-ref\/bestiary/,
+			/image-owner\/image-repo\/tree\/image-ref\/bestiary\/tokens/,
 		);
 
 		assert.equal(updaterPolicies.isJsonFile("MONSTER.JSON"), true);
@@ -57499,11 +57499,11 @@ await run(
 		const missingApiUrl =
 			"https://api.github.com/repos/test-owner/test-repo/contents/data/missing?ref=feature%2Ftest";
 		const downloadedTokenUrl =
-			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/XPHB/%D0%9D%D0%BE%D0%B2%D0%B8%D0%B9.webp";
+			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/XPHB/%D0%9D%D0%BE%D0%B2%D0%B8%D0%B9.webp";
 		const missingTokenUrl =
-			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/MM/Missing.webp";
+			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/MM/Missing.webp";
 		const failedTokenUrl =
-			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/MM/Failed.webp";
+			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/MM/Failed.webp";
 		const responses = new Map([
 			[
 				demoApiUrl,
@@ -57959,7 +57959,7 @@ await run(
 					}),
 				],
 				[
-					"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/XPHB/%D0%9D%D0%BE%D0%B2%D0%B8%D0%B9.webp",
+					"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/XPHB/%D0%9D%D0%BE%D0%B2%D0%B8%D0%B9.webp",
 					createUpdaterResponse({
 						binaryValue: Buffer.from("new-token", "utf8"),
 					}),
