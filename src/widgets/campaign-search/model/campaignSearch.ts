@@ -1,6 +1,7 @@
 import {
 	makeDomId,
 	mapWithConcurrency,
+	rankSearchResultsByName,
 } from "../../../shared/lib/index.js";
 
 export const CAMPAIGN_SEARCH_FILTERS = ["notes", "scenes", "npc", "locations"] as const;
@@ -307,25 +308,23 @@ export function filterCampaignSearchResults(
 	limit = CAMPAIGN_SEARCH_RESULT_LIMIT,
 ): CampaignSearchResult[] {
 	const normalizedQuery = normalizeCampaignSearchText(query);
-	if (!Number.isFinite(limit) || limit < 0) {
-		return index
-			.filter((item) => activeFilters.has(item.filter))
-			.filter(
-				(item) =>
-					!normalizedQuery || item.searchText.includes(normalizedQuery),
-			)
-			.slice(0, limit);
-	}
 	const cappedLimit = Math.trunc(limit);
-	if (cappedLimit === 0) return [];
-	const results: CampaignSearchResult[] = [];
-	for (const item of index) {
-		if (!activeFilters.has(item.filter)) continue;
-		if (normalizedQuery && !item.searchText.includes(normalizedQuery)) continue;
-		results.push(item);
-		if (results.length >= cappedLimit) break;
+	if (Number.isFinite(limit) && cappedLimit === 0) return [];
+	const matches = index
+		.filter((item) => activeFilters.has(item.filter))
+		.filter(
+			(item) =>
+				!normalizedQuery || item.searchText.includes(normalizedQuery),
+		);
+	const ranked = rankSearchResultsByName(
+		matches,
+		normalizedQuery,
+		(item) => item.title,
+	);
+	if (!Number.isFinite(limit) || limit < 0) {
+		return ranked.slice(0, limit);
 	}
-	return results;
+	return ranked.slice(0, cappedLimit);
 }
 
 export function toggleCampaignSearchFilter(active: ReadonlySet<CampaignSearchFilter>, filter: CampaignSearchFilter): Set<CampaignSearchFilter> {

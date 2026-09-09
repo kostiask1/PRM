@@ -32,7 +32,11 @@ import {
 } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 
-import { idsEqual, lang } from "../src/shared/lib/index.js";
+import {
+	idsEqual,
+	lang,
+	rankSearchResultsByName,
+} from "../src/shared/lib/index.js";
 import { isJsonObject, isJsonString } from "../src/shared/lib/index.js";
 import { mapWithConcurrency } from "../src/shared/lib/index.js";
 import { isAbortError } from "../src/shared/api/index.ts";
@@ -266,6 +270,7 @@ import {
 } from "../src/widgets/spells-browser/model.js";
 import {
 	REFERENCE_TAB_POLICIES,
+	applyReferenceBestiaryFilters,
 	applyLoadedReferenceSelection,
 	applyReferenceTabOnlySelection,
 	applyReferenceSelectionReconciliationPlan,
@@ -273,10 +278,13 @@ import {
 	createReferenceSelection,
 	executeReferenceInitialNavigationPlan,
 	executeReferenceTabSelectionPlan,
+	filterReferenceItems,
 	findSelectedReferenceItem,
 	getCreatureReferenceMatchRank,
 	getCreatureReferenceName,
 	getInitialTabId,
+	getNextReferenceBestiarySortOrder,
+	getReferenceBestiarySourceOptions,
 	getReferenceHistoryAvailability,
 	getReferenceInitialNavigationPlan,
 	getReferenceInlineTag,
@@ -904,6 +912,7 @@ import {
 	updateMonsterSpellcastingScalar,
 } from "../src/features/edit-monster/model/monsterSpellcasting.ts";
 import {
+	filterAndGroupParserActions,
 	getParserActionInitialValues,
 	getParserActionValidationIssue,
 	normalizeParserActions,
@@ -9248,6 +9257,7 @@ await run(
 			"selectedItem",
 			"selectedMeta",
 			"canInsertReference",
+			"bestiaryControls",
 			"listRef",
 			"renderReferenceItem",
 			"onNavigateHistory",
@@ -9261,9 +9271,14 @@ await run(
 			"SpellsBrowser",
 		]);
 		assert.match(viewTag, /\bcanInsertReference=\{Boolean\(onSelectReference\)\}/);
+		assert.match(viewTag, /\bbestiaryControls=\{\{/);
 		assert.match(
 			viewTag,
 			/\bonSelectSpell=\{getEnabledHandler\(onSelectReference, selectSpellReference\)\}/,
+		);
+		assert.match(
+			rulesViewSource,
+			/activeTab\.id === "bestiary"[\s\S]*?<BestiaryReferenceFilters \{\.\.\.props\.bestiaryControls\} \/>/,
 		);
 
 		const searchSource = getRequiredSourceSlice(
@@ -20219,6 +20234,79 @@ await run(
 );
 
 await run(
+	"frontend search ranking prioritizes names before secondary matches",
+	() => {
+		const results = [
+			{ id: "secondary-far", name: "Dragon" },
+			{ id: "contains", name: "Wildfire" },
+			{ id: "missing", name: null },
+			{ id: "word-prefix", name: "Wall of Fire" },
+			{ id: "secondary-close", name: "Firs" },
+			{ id: "prefix", name: "Fireball" },
+			{ id: "exact", name: "  FIRE  " },
+		];
+		const ranked = rankSearchResultsByName(
+			results,
+			"  fire ",
+			(item) => item.name,
+		);
+
+		assert.deepEqual(
+			ranked.map((item) => item.id),
+			[
+				"exact",
+				"prefix",
+				"word-prefix",
+				"contains",
+				"secondary-close",
+				"secondary-far",
+				"missing",
+			],
+		);
+		assert.deepEqual(results.map((item) => item.id), [
+			"secondary-far",
+			"contains",
+			"missing",
+			"word-prefix",
+			"secondary-close",
+			"prefix",
+			"exact",
+		]);
+
+		let emptyQueryNameReads = 0;
+		const unchanged = rankSearchResultsByName(results, "   ", (item) => {
+			emptyQueryNameReads += 1;
+			return item.name;
+		});
+		assert.notEqual(unchanged, results);
+		assert.deepEqual(unchanged, results);
+		assert.equal(emptyQueryNameReads, 0);
+
+		const ukrainian = [
+			{ name: "Виверна" },
+			{ name: "Псевдракон" },
+			{ name: "Червоний дракон" },
+			{ name: "Драконячий дух" },
+			{ name: "Дракон" },
+		];
+		assert.deepEqual(
+			rankSearchResultsByName(
+				ukrainian,
+				"ДРАКОН",
+				(item) => item.name,
+			).map((item) => item.name),
+			[
+				"Дракон",
+				"Драконячий дух",
+				"Червоний дракон",
+				"Псевдракон",
+				"Виверна",
+			],
+		);
+	},
+);
+
+await run(
 	"shared search ranking preserves lazy mutation tiers and malformed boundaries",
 	() => {
 		assert.deepEqual(Object.keys(searchResults), ["sortByNameQuery"]);
@@ -21757,6 +21845,17 @@ await run("editor presentation preserves mention grouping and cursor mapping", (
 		{ id: 3, type: "locations", name: "Срібна гавань" },
 	];
 	assert.deepEqual(filterMentionEntities(entities, "коваль"), [entities[0]]);
+	const relevanceEntities = [
+		{ id: "secondary", name: "Dragoon", firstName: "Dragon" },
+		{ id: "contains", name: "Pseudodragon" },
+		{ id: "word", name: "Ancient Dragon" },
+		{ id: "prefix", name: "Dragonsoul" },
+		{ id: "exact", name: "Dragon" },
+	];
+	assert.deepEqual(
+		filterMentionEntities(relevanceEntities, "dragon").map((entity) => entity.id),
+		["exact", "prefix", "word", "contains", "secondary"],
+	);
 	assert.deepEqual(
 		groupMentionEntities(entities).map((group) => [group.key, group.items.length]),
 		[
@@ -27102,6 +27201,18 @@ await run("campaign page presentation narrows routes, sessions, and card notes",
 		),
 		[{ name: "Фінал", fileName: "session-3.json" }],
 	);
+	assert.deepEqual(
+		filterCampaignSessions(
+			[
+				{ name: "Псевдодракон", fileName: "contains.json" },
+				{ name: "Давній дракон", fileName: "word.json" },
+				{ name: "Драконячий храм", fileName: "prefix.json" },
+				{ name: "Дракон", fileName: "exact.json" },
+			],
+			"дракон",
+		).map((session) => session.fileName),
+		["exact.json", "prefix.json", "word.json", "contains.json"],
+	);
 	assert.equal(hasCampaignNoteContent([{ title: "", text: "  " }]), false);
 	assert.equal(hasCampaignNoteContent([{ title: "Нотатка" }]), true);
 	assert.deepEqual(
@@ -30891,6 +31002,18 @@ await run("parser action catalog normalizes, validates, and renders every workfl
 			),
 		),
 		false,
+	);
+	const parserSearchBase = actions[0];
+	const parserSearchGroups = filterAndGroupParserActions([
+		{ ...parserSearchBase, type: "secondary", label: "Firs", description: "fire" },
+		{ ...parserSearchBase, type: "contains", label: "Wildfire", description: "fire" },
+		{ ...parserSearchBase, type: "word", label: "Wall of Fire", description: "fire" },
+		{ ...parserSearchBase, type: "prefix", label: "Fireball", description: "fire" },
+		{ ...parserSearchBase, type: "exact", label: "Fire", description: "fire" },
+	], "fire", (value) => value);
+	assert.deepEqual(
+		Array.from(parserSearchGroups.values()).flat().map((action) => action.type),
+		["exact", "prefix", "word", "contains", "secondary"],
 	);
 
 	const damage = actions.find((action) => action.type === "damage");
@@ -47834,6 +47957,25 @@ await run("spells browser policies preserve references, filters, sorting, and se
 		}, (spell, query) => JSON.stringify(spell).toLowerCase().includes(query)),
 		[spells[0]],
 	);
+	const relevanceSpells = [
+		{ name: "Firs", source: "PHB", entries: ["fire"] },
+		{ name: "Wildfire", source: "PHB", entries: ["fire"] },
+		{ name: "Wall of Fire", source: "PHB", entries: ["fire"] },
+		{ name: "Fireball", source: "PHB", entries: ["fire"] },
+		{ name: "Fire", source: "PHB", entries: ["fire"] },
+	];
+	assert.deepEqual(
+		filterSpells(relevanceSpells, {
+			search: "fire",
+			detailedSearch: true,
+			selectedLevel: "all",
+			selectedClass: "all",
+			selectedSchool: "all",
+			selectedSources: ["PHB"],
+			sourceFilter: "all",
+		}, () => true).map((spell) => spell.name),
+		["Fire", "Fireball", "Wall of Fire", "Wildfire", "Firs"],
+	);
 	assert.equal(getValidSourceFilter("XPHB", ["PHB"]), "all");
 	assert.deepEqual(getSettingsIgnoreSources({ ignoreSourcesList: ["DMG", 4, "MM"] }), ["DMG", "MM"]);
 	assert.deepEqual(normalizeSpellList([spells[0], null, { source: "PHB" }]), [spells[0]]);
@@ -49625,6 +49767,26 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 		["detailed", dragon, filterSearch],
 		["detailed", favoriteBear, filterSearch],
 	]);
+	const relevanceMonsters = [
+		{ name: "Dragoon", source: "MM" },
+		{ name: "Pseudodragon", source: "MM" },
+		{ name: "Ancient Dragon", source: "MM" },
+		{ name: "Dragonsoul", source: "MM" },
+		{ name: "Dragon", source: "MM" },
+	];
+	assert.deepEqual(
+		filterBestiaryMonsters(relevanceMonsters, {
+			selectedSources: ["MM"],
+			sourceFilter: "all",
+			onlyFavorites: false,
+			favorites: [],
+			search: "dragon",
+			isDetailedSearch: true,
+			matchesDetailedSearch: () => true,
+			matchesSimpleSearch: () => false,
+		}).map((monster) => monster.name),
+		["Dragon", "Dragonsoul", "Ancient Dragon", "Pseudodragon", "Dragoon"],
+	);
 	assert.deepEqual(filterInput, [goblin, dragon, favoriteBear]);
 	const nulNameMonster = {
 		name: "Hydra\u0000",
@@ -51129,6 +51291,77 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 	const diseasePolicy = REFERENCE_TAB_POLICIES.find((tab) => tab.id === "diseases");
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка", entries: ["лихоманка"] }, "лихоманка", true), true);
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка" }, "гаряч", false), true);
+	assert.deepEqual(
+		filterReferenceItems(diseasePolicy, [
+			{ name: "Ghoul", type: "undead" },
+			{ name: "PseudoUndead", type: "undead" },
+			{ name: "Lesser Undead Fever", type: "undead" },
+			{ name: "Undead Plague", type: "undead" },
+			{ name: "Undead", type: "undead" },
+		], "undead", false).map((item) => item.name),
+		[
+			"Undead",
+			"Undead Plague",
+			"Lesser Undead Fever",
+			"PseudoUndead",
+			"Ghoul",
+		],
+	);
+	const bestiaryItems = [
+		{ name: "Молодий дракон", source: "XMM", cr: "7" },
+		{ name: "Щур", source: "MM", cr: "1/8" },
+		{ name: "Мавка", source: "CUSTOM", cr: { cr: "3" } },
+		{ name: "Вовк", source: "MM", cr: "1/4" },
+	];
+	assert.deepEqual(
+		getReferenceBestiarySourceOptions(bestiaryItems),
+		["CUSTOM", "MM", "XMM"],
+	);
+	assert.deepEqual(
+		applyReferenceBestiaryFilters(bestiaryItems, {
+			sourceFilter: "mm",
+			onlyFavorites: false,
+			favorites: [],
+			sortOrder: "none",
+		}).map((item) => item.name),
+		["Щур", "Вовк"],
+	);
+	assert.deepEqual(
+		applyReferenceBestiaryFilters(bestiaryItems, {
+			sourceFilter: "all",
+			onlyFavorites: true,
+			favorites: [{ name: " мавка ", source: "custom" }],
+			sortOrder: "none",
+		}).map((item) => item.name),
+		["Мавка"],
+	);
+	assert.deepEqual(
+		applyReferenceBestiaryFilters(bestiaryItems, {
+			sourceFilter: "all",
+			onlyFavorites: false,
+			favorites: [],
+			sortOrder: "desc",
+		}).map((item) => item.name),
+		["Молодий дракон", "Мавка", "Вовк", "Щур"],
+	);
+	assert.deepEqual(
+		applyReferenceBestiaryFilters(bestiaryItems, {
+			sourceFilter: "all",
+			onlyFavorites: false,
+			favorites: [],
+			sortOrder: "asc",
+		}).map((item) => item.name),
+		["Щур", "Вовк", "Мавка", "Молодий дракон"],
+	);
+	assert.deepEqual(bestiaryItems.map((item) => item.name), [
+		"Молодий дракон",
+		"Щур",
+		"Мавка",
+		"Вовк",
+	]);
+	assert.equal(getNextReferenceBestiarySortOrder("none"), "desc");
+	assert.equal(getNextReferenceBestiarySortOrder("desc"), "asc");
+	assert.equal(getNextReferenceBestiarySortOrder("asc"), "none");
 });
 
 await run("rules reference modal plans preserve keyboard and tab navigation", () => {
@@ -51745,6 +51978,22 @@ await run("campaign search policies index campaign and session content", async (
 	assert.equal(index.some((item) => item.title === "Стара брама" && item.filter === "locations"), true);
 	assert.equal(index.some((item) => item.title === "Зустріч" && item.target.hash === "session-scene-scene1"), true);
 	assert.equal(filterCampaignSearchResults(index, "пароль", new Set(CAMPAIGN_SEARCH_FILTERS)).length, 4);
+	const relevanceResults = [
+		{ id: "secondary", filter: "notes", title: "Dragoon", searchText: "dragoon dragon", target: { campaignSlug: "test" } },
+		{ id: "contains", filter: "notes", title: "Pseudodragon", searchText: "pseudodragon", target: { campaignSlug: "test" } },
+		{ id: "word", filter: "notes", title: "Ancient Dragon", searchText: "ancient dragon", target: { campaignSlug: "test" } },
+		{ id: "prefix", filter: "notes", title: "Dragonsoul", searchText: "dragonsoul", target: { campaignSlug: "test" } },
+		{ id: "exact", filter: "notes", title: "Dragon", searchText: "dragon", target: { campaignSlug: "test" } },
+	];
+	assert.deepEqual(
+		filterCampaignSearchResults(
+			relevanceResults,
+			"dragon",
+			new Set(["notes"]),
+			3,
+		).map((item) => item.id),
+		["exact", "prefix", "word"],
+	);
 	assert.deepEqual(getCampaignSearchHighlightTerms("а ліс  ліс брама"), ["ліс", "брама"]);
 	assert.equal(campaignSearchValueToText({ name: "видиме", _private: "ні", imageUrl: "ні" }), "видиме");
 	assert.match(buildCampaignSearchSnippet(`${"початок ".repeat(20)}ключ далі`, "ключ"), /^\.\.\./);
@@ -69381,6 +69630,22 @@ await run("image gallery loaders normalize metadata and official token paths", a
 		category: "",
 		subcategory: "",
 	});
+	scopedResponse = {
+		images: [
+			{ name: "Dragoon.png", url: "/secondary.png", locationLabel: "dragon" },
+			{ name: "Pseudodragon.png", url: "/contains.png" },
+			{ name: "Dragon.png", displayName: "Dragon", url: "/exact.png" },
+		],
+	};
+	assert.deepEqual(
+		(await loadGalleryImages({
+			...scopedOptions,
+			activeSearchQuery: "dragon",
+			normalizedSearchQuery: "dragon",
+			search: "dragon",
+		})).map((image) => image.url),
+		["/exact.png", "/contains.png", "/secondary.png"],
+	);
 	scopedResponse = null;
 	assert.deepEqual(await loadGalleryImages(scopedOptions), []);
 	scopedResponse = { images: "invalid" };

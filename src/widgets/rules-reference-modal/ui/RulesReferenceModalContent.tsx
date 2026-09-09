@@ -4,6 +4,7 @@ import type ReactList from "react-list";
 import { isAbortError } from "../../../shared/api/index.ts";
 import {
 	bestiaryApi,
+	type BestiaryFavorite,
 	type BestiaryMonster,
 } from "../../../entities/bestiary/index.js";
 import { spellApi, type SpellRecord } from "../../../entities/spell/index.js";
@@ -17,10 +18,12 @@ import {
 } from "../../../entities/reference/index.js";
 import {
 	REFERENCE_TAB_POLICIES,
+	applyReferenceBestiaryFilters,
 	applyReferenceTabOnlySelection,
 	applyReferenceSelectionReconciliationPlan,
 	combineBestiaryLists,
 	createReferenceSelection,
+	filterReferenceItems,
 	findSelectedReferenceItem,
 	getInitialTabId,
 	executeReferenceInitialNavigationPlan,
@@ -28,15 +31,17 @@ import {
 	getReferenceInitialNavigationPlan,
 	getReferenceNavigationRequestPlan,
 	getReferenceHistoryAvailability,
+	getNextReferenceBestiarySortOrder,
 	getReferenceKeyboardPlan,
 	getReferenceItemKey,
 	getReferenceScrollPlan,
 	getReferenceSelectionName,
 	getReferenceSelectionReconciliationPlan,
+	getReferenceBestiarySourceOptions,
 	getReferenceTabSelectionPlan,
 	isReferenceTabId,
-	itemMatchesQuery,
 	type ReferenceItem,
+	type ReferenceBestiarySortOrder,
 	type ReferenceTabId,
 	type ReferenceTabPolicy,
 } from "../model.js";
@@ -47,6 +52,7 @@ import {
 	useReferenceTabLoadRuntime,
 	useReferenceTabLoading,
 } from "./useReferenceTabLoading.ts";
+import { useReferenceBestiaryFavorites } from "./useReferenceBestiaryFavorites.ts";
 import type {
 	RulesReferenceModalCompositionSlots,
 	RulesReferenceModalContentComponent,
@@ -185,6 +191,12 @@ export default function RulesReferenceModalContent({
 	const [activeTabId, setActiveTabId] = useState(getInitialTabId(initialTab));
 	const [query, setQuery] = useState("");
 	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
+	const [bestiarySourceFilter, setBestiarySourceFilter] = useState("all");
+	const [bestiaryOnlyFavorites, setBestiaryOnlyFavorites] = useState(false);
+	const [bestiarySortOrder, setBestiarySortOrder] =
+		useState<ReferenceBestiarySortOrder>("none");
+	const [bestiaryFavorites, setBestiaryFavorites] =
+		useState<BestiaryFavorite[]>([]);
 	const [itemsByTab, setItemsByTab] = useState<Partial<Record<ReferenceTabId, UiReferenceItem[]>>>({});
 	const [selectedByTab, setSelectedByTab] = useState<Partial<Record<ReferenceTabId, string>>>({});
 	const [loadingByTab, setLoadingByTab] = useState<Partial<Record<ReferenceTabId, boolean>>>({});
@@ -322,16 +334,45 @@ export default function RulesReferenceModalContent({
 		runtime: referenceTabLoadRuntime,
 		tabById: TAB_BY_ID,
 	});
+	useReferenceBestiaryFavorites({
+		isActive: activeTab.id === "bestiary",
+		reportError,
+		setFavorites: setBestiaryFavorites,
+	});
 
 	const filteredItemsByTab = useMemo(() => {
 		return REFERENCE_TABS.reduce<Partial<Record<ReferenceTabId, UiReferenceItem[]>>>((result, tab) => {
 			const items = itemsByTab[tab.id] || EMPTY_ITEMS;
-			result[tab.id] = items.filter((item) =>
-				itemMatchesQuery(tab, item, normalizedQuery, isDetailedSearch, tab.meta?.(item)),
+			const searchMatches = filterReferenceItems(
+				tab,
+				items,
+				normalizedQuery,
+				isDetailedSearch,
+				(item) => tab.meta?.(item),
 			);
+			result[tab.id] = tab.id === "bestiary"
+				? applyReferenceBestiaryFilters(searchMatches, {
+					sourceFilter: bestiarySourceFilter,
+					onlyFavorites: bestiaryOnlyFavorites,
+					favorites: bestiaryFavorites,
+					sortOrder: bestiarySortOrder,
+				})
+				: searchMatches;
 			return result;
 		}, {});
-	}, [itemsByTab, normalizedQuery, isDetailedSearch]);
+	}, [
+		bestiaryFavorites,
+		bestiaryOnlyFavorites,
+		bestiarySortOrder,
+		bestiarySourceFilter,
+		itemsByTab,
+		normalizedQuery,
+		isDetailedSearch,
+	]);
+	const bestiarySourceOptions = useMemo(
+		() => getReferenceBestiarySourceOptions(itemsByTab.bestiary || EMPTY_ITEMS),
+		[itemsByTab.bestiary],
+	);
 
 	const filteredItems = filteredItemsByTab[activeTab.id] || EMPTY_ITEMS;
 	const tabsWithSearchMatches = useMemo<Set<ReferenceTabId>>(() => {
@@ -509,6 +550,15 @@ export default function RulesReferenceModalContent({
 			selectedItem={selectedItem}
 			selectedMeta={selectedMeta}
 			canInsertReference={Boolean(onSelectReference)}
+			bestiaryControls={{
+				sourceFilter: bestiarySourceFilter,
+				sourceOptions: bestiarySourceOptions,
+				onlyFavorites: bestiaryOnlyFavorites,
+				sortOrder: bestiarySortOrder,
+				onSourceFilterChange: setBestiarySourceFilter,
+				onOnlyFavoritesChange: () => setBestiaryOnlyFavorites((value) => !value),
+				onSortChange: () => setBestiarySortOrder(getNextReferenceBestiarySortOrder),
+			}}
 			listRef={listRef}
 			renderReferenceItem={renderReferenceItem}
 			onNavigateHistory={navigateHistory}

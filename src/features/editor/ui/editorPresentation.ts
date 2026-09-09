@@ -1,4 +1,5 @@
 import type { MentionSelectionResult } from "../model/mentionPicker.ts";
+import { rankSearchResultsByName } from "../../../shared/lib/index.js";
 
 export interface EditorMentionEntity extends Record<string, unknown> {
 	id?: string | number;
@@ -51,7 +52,7 @@ export function filterMentionEntities(
 ): EditorMentionEntity[] {
 	const normalizedQuery = query.trim().toLowerCase();
 	if (!normalizedQuery) return entities;
-	return entities.filter((entity) => {
+	const filtered = entities.filter((entity) => {
 		const name = String(entity.name || "").toLowerCase();
 		const firstName = String(entity.firstName || "").toLowerCase();
 		const lastName = String(entity.lastName || "").toLowerCase();
@@ -59,6 +60,11 @@ export function filterMentionEntities(
 			(value) => value.includes(normalizedQuery),
 		);
 	});
+	return rankSearchResultsByName(
+		filtered,
+		normalizedQuery,
+		(entity) => entity.name,
+	);
 }
 
 export function groupMentionEntities(

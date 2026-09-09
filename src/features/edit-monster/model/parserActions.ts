@@ -1,3 +1,5 @@
+import { rankSearchResultsByName } from "../../../shared/lib/index.js";
+
 export const PARSER_ACTION_INTERACTIONS = [
 	"direct",
 	"form",
@@ -77,6 +79,7 @@ export interface ParserActionReferenceSelection {
 }
 
 export type ParserActionValues = Record<string, string>;
+export type ParserActionTranslate = (value: string) => string;
 
 export interface ParserActionValidationIssue {
 	field: ParserActionFieldDefinition;
@@ -219,6 +222,32 @@ function getInitialSelectValue(field: ParserActionFieldDefinition): string {
 		return field.defaultValue;
 	}
 	return field.options[0]?.value || "";
+}
+
+export function filterAndGroupParserActions(
+	actions: ParserActionDefinition[],
+	query: string,
+	translate: ParserActionTranslate,
+): Map<string, ParserActionDefinition[]> {
+	const normalizedQuery = query.trim().toLowerCase();
+	const matchingActions = actions.filter((action) => {
+		const searchableText = [action.label, action.description, action.group]
+			.map((value) => translate(value).toLowerCase())
+			.join(" ");
+		return !normalizedQuery || searchableText.includes(normalizedQuery);
+	});
+	const rankedActions = rankSearchResultsByName(
+		matchingActions,
+		normalizedQuery,
+		(action) => translate(action.label),
+	);
+	const groups = new Map<string, ParserActionDefinition[]>();
+	for (const action of rankedActions) {
+		const current = groups.get(action.group) || [];
+		current.push(action);
+		groups.set(action.group, current);
+	}
+	return groups;
 }
 
 export function getParserActionInitialValues(

@@ -2,6 +2,7 @@ import type {
 	BestiaryFavorite,
 	BestiaryMonster,
 } from "../../../entities/bestiary/index.js";
+import { rankSearchResultsByName } from "../../../shared/lib/index.js";
 
 export type BestiarySortOrder = "none" | "desc" | "asc";
 
@@ -204,7 +205,14 @@ export function filterBestiaryMonsters(
 	options: BestiaryFilterOptions,
 ): BestiaryMonster[] {
 	const filter = compileBestiaryFilter(options);
-	return monsters.filter((monster) => matchesBestiaryMonster(monster, filter));
+	const filtered = monsters.filter((monster) =>
+		matchesBestiaryMonster(monster, filter),
+	);
+	return rankSearchResultsByName(
+		filtered,
+		options.search,
+		(monster) => monster.name,
+	);
 }
 
 export function getNextBestiarySortOrder(

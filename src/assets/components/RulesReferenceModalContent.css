@@ -116,6 +116,19 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--space-1);
+	align-items: center;
+	padding: 0 var(--space-1);
+}
+
+.RulesReferenceModalContent__source_filter {
+	flex: 1 1 180px;
+	min-width: 0;
+}
+
+.RulesReferenceModalContent__sort_btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
 }
 
 .RulesReferenceModalContent__list {

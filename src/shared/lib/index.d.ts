@@ -139,5 +139,9 @@ export function downloadBlob(blob: Blob, filename: string): void;
 export function downloadJsonFile(data: unknown, filename: string): void;
 export function formatBytes(bytes: number): string;
 export function objectMatchesSearch(value: unknown, searchQuery?: unknown): boolean;
+export {
+	rankSearchResultsByName,
+	type SearchResultNameSelector,
+} from "./searchRanking.ts";
 export function makeDomId(...parts: unknown[]): string;
 export function scrollToHashTarget(hash?: string): boolean;

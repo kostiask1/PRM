@@ -7,6 +7,7 @@ export { formatBytes } from "./formatBytes.js";
 export { isJsonObject, isJsonString } from "./json.js";
 export { lang } from "./localization.js";
 export { makeDomId, scrollToHashTarget } from "./domNavigation.js";
+export { rankSearchResultsByName } from "./searchRanking.ts";
 export {
 	buildNavigationUrl,
 	parseUrl,

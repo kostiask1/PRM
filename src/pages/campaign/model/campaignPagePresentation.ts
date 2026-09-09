@@ -5,6 +5,7 @@ import type {
 	LocationData,
 } from "../../../entities/campaign/index.js";
 import type { SessionRecord } from "../../../entities/session/index.js";
+import { rankSearchResultsByName } from "../../../shared/lib/index.js";
 import type {
 	CampaignPageCampaign,
 	CampaignPageEntity,
@@ -386,11 +387,16 @@ export function filterCampaignSessions(
 	query: string,
 ): CampaignSessionItem[] {
 	const normalizedQuery = query.trim().toLowerCase();
-	return (Array.isArray(sessions) ? sessions : []).filter(
+	const filtered = (Array.isArray(sessions) ? sessions : []).filter(
 		(session): session is CampaignSessionItem =>
 			typeof session.fileName === "string" &&
 			session.fileName.length > 0 &&
 			(!normalizedQuery || session.name.toLowerCase().includes(normalizedQuery)),
+	);
+	return rankSearchResultsByName(
+		filtered,
+		normalizedQuery,
+		(session) => session.name,
 	);
 }
 

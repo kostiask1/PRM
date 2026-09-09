@@ -1,6 +1,7 @@
 import type { SpellRecord } from "../../../entities/spell/index.js";
 import { normalizeSourceCode } from "../../../entities/reference/model.js";
 import type { CampaignSourceSettings } from "../../../entities/reference/model.js";
+import { rankSearchResultsByName } from "../../../shared/lib/index.js";
 
 export const SPELL_SCHOOL_NAMES = {
 	A: "Abjuration",
@@ -157,7 +158,7 @@ export function filterSpells(
 	const selectedSourceSet = new Set(filters.selectedSources.map(normalizeSourceCode));
 	const normalizedSourceFilter = normalizeSourceCode(filters.sourceFilter);
 	const normalizedSearch = filters.search.trim().toLowerCase();
-	return spells.filter((spell) => [
+	const filtered = spells.filter((spell) => [
 		selectedSourceSet.has(normalizeSourceCode(spell.source)),
 		matchesSourceFilter(spell, filters.sourceFilter, normalizedSourceFilter),
 		matchesLevelFilter(spell, filters.selectedLevel),
@@ -165,6 +166,11 @@ export function filterSpells(
 		matchesSchoolFilter(spell, filters.selectedSchool),
 		matchesSearchFilter(spell, normalizedSearch, filters.detailedSearch, detailedMatcher),
 	].every(Boolean));
+	return rankSearchResultsByName(
+		filtered,
+		normalizedSearch,
+		(spell) => spell.name,
+	);
 }
 
 function matchesSourceFilter(spell: SpellRecord, sourceFilter: string, normalizedSourceFilter: string): boolean {

@@ -9,6 +9,7 @@ import type {
 	ImageGalleryContentScope,
 } from "./contracts.ts";
 import { getGalleryFolderSubcategory } from "./imageGalleryPresentation.ts";
+import { rankSearchResultsByName } from "../../../shared/lib/index.js";
 
 type GalleryLoadingApi = Pick<
 	typeof imageApi,
@@ -312,13 +313,21 @@ export async function loadGalleryImages(
 	const requiresSearch = Boolean(
 		options.normalizedSearchQuery || options.isScopedContent,
 	);
-	if (!requiresSearch) return loadLocalGalleryImages(options);
-	if (options.contentScope === "databaseTokens") {
-		return loadDatabaseTokenImages(
+	let images: GalleryImage[];
+	if (!requiresSearch) {
+		images = await loadLocalGalleryImages(options);
+	} else if (options.contentScope === "databaseTokens") {
+		images = await loadDatabaseTokenImages(
 			options.api,
 			options.search,
 			options.ignoreSourcesList,
 		);
+	} else {
+		images = await loadScopedGalleryImages(options);
 	}
-	return loadScopedGalleryImages(options);
+	return rankSearchResultsByName(
+		images,
+		options.activeSearchQuery,
+		(image) => image.displayName || image.name,
+	);
 }

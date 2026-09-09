@@ -1,4 +1,7 @@
-import { objectMatchesSearch } from "../../../shared/lib/index.js";
+import {
+	objectMatchesSearch,
+	rankSearchResultsByName,
+} from "../../../shared/lib/index.js";
 
 export const REFERENCE_TAB_IDS = [
 	"conditions",
@@ -23,6 +26,20 @@ export interface ReferenceTabPolicy {
 	label: string;
 	emptyLabel: string;
 	searchFields: string[];
+}
+
+export type ReferenceBestiarySortOrder = "none" | "desc" | "asc";
+
+export interface ReferenceBestiaryFavorite {
+	name?: unknown;
+	source?: unknown;
+}
+
+export interface ReferenceBestiaryFilterOptions {
+	sourceFilter: string;
+	onlyFavorites: boolean;
+	favorites: ReferenceBestiaryFavorite[];
+	sortOrder: ReferenceBestiarySortOrder;
 }
 
 export interface ReferenceSelection<TItem extends ReferenceItem = ReferenceItem> {
@@ -574,6 +591,128 @@ export function itemMatchesQuery(
 	const values = [...policy.searchFields.map((field) => item[field]), metaValue].filter(Boolean);
 	return (isDetailedSearch && objectMatchesSearch(item, normalizedQuery)) ||
 		values.some((value) => String(value).toLowerCase().includes(normalizedQuery));
+}
+
+export function filterReferenceItems(
+	policy: ReferenceTabPolicy,
+	items: ReferenceItem[],
+	normalizedQuery: string,
+	isDetailedSearch: boolean,
+	getMetaValue: (item: ReferenceItem) => unknown = () => "",
+): ReferenceItem[] {
+	const filtered = items.filter((item) =>
+		itemMatchesQuery(
+			policy,
+			item,
+			normalizedQuery,
+			isDetailedSearch,
+			getMetaValue(item),
+		),
+	);
+	return rankSearchResultsByName(
+		filtered,
+		normalizedQuery,
+		(item) => item.name,
+	);
+}
+
+function normalizeBestiaryReferenceSource(value: unknown): string {
+	return String(value ?? "").trim().toUpperCase();
+}
+
+function getBestiaryReferenceIdentityKey(
+	item: ReferenceBestiaryFavorite,
+): string | null {
+	const name = String(item.name ?? "").trim().toLowerCase();
+	if (!name) return null;
+	return JSON.stringify([
+		name,
+		normalizeBestiaryReferenceSource(item.source),
+	]);
+}
+
+function createBestiaryReferenceFavoriteSet(
+	favorites: ReferenceBestiaryFavorite[],
+): ReadonlySet<string> {
+	return new Set(
+		favorites
+			.map(getBestiaryReferenceIdentityKey)
+			.filter((key): key is string => key !== null),
+	);
+}
+
+function getBestiaryReferenceCr(item: ReferenceItem): unknown {
+	const value = item.cr;
+	return value && typeof value === "object" && !Array.isArray(value)
+		? (value as Record<string, unknown>).cr
+		: value;
+}
+
+function parseBestiaryReferenceCr(item: ReferenceItem): number {
+	const text = String(getBestiaryReferenceCr(item) ?? "0");
+	if (text.includes("/")) {
+		const [numerator = "0", denominator = "0"] = text.split("/");
+		const denominatorValue = Number(denominator);
+		return denominatorValue ? Number(numerator) / denominatorValue : 0;
+	}
+	return Number.parseFloat(text) || 0;
+}
+
+function compareBestiaryReferenceCr(
+	left: ReferenceItem,
+	right: ReferenceItem,
+	direction: number,
+): number {
+	const difference = parseBestiaryReferenceCr(left) - parseBestiaryReferenceCr(right);
+	return difference
+		? difference * direction
+		: String(left.name || "").localeCompare(String(right.name || ""));
+}
+
+export function getReferenceBestiarySourceOptions(
+	items: ReferenceItem[],
+): string[] {
+	return [...new Set(
+		items
+			.map((item) => normalizeBestiaryReferenceSource(item.source))
+			.filter(Boolean),
+	)].sort((left, right) => left.localeCompare(right));
+}
+
+export function getNextReferenceBestiarySortOrder(
+	current: ReferenceBestiarySortOrder,
+): ReferenceBestiarySortOrder {
+	if (current === "none") return "desc";
+	if (current === "desc") return "asc";
+	return "none";
+}
+
+export function applyReferenceBestiaryFilters(
+	items: ReferenceItem[],
+	options: ReferenceBestiaryFilterOptions,
+): ReferenceItem[] {
+	const normalizedSourceFilter = normalizeBestiaryReferenceSource(
+		options.sourceFilter,
+	);
+	const favoriteKeys = options.onlyFavorites
+		? createBestiaryReferenceFavoriteSet(options.favorites)
+		: null;
+	const filtered = items.filter((item) => {
+		if (
+			normalizedSourceFilter !== "ALL" &&
+			normalizeBestiaryReferenceSource(item.source) !== normalizedSourceFilter
+		) {
+			return false;
+		}
+		if (!favoriteKeys) return true;
+		const identity = getBestiaryReferenceIdentityKey(item);
+		return identity !== null && favoriteKeys.has(identity);
+	});
+	if (options.sortOrder === "none") return filtered;
+	const direction = options.sortOrder === "desc" ? -1 : 1;
+	return filtered.sort((left, right) =>
+		compareBestiaryReferenceCr(left, right, direction),
+	);
 }
 
 export function createReferenceSelection<TItem extends ReferenceItem>(

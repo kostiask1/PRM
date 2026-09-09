@@ -11,6 +11,7 @@ import { lang } from "../../../shared/lib/index.js";
 import { Button, Select, TextInput } from "../../../shared/ui/index.js";
 import { parserActionsApi } from "../api/parserActionsApi.ts";
 import {
+	filterAndGroupParserActions,
 	getParserActionInitialValues,
 	getParserActionValidationIssue,
 	normalizeParserActions,
@@ -274,19 +275,10 @@ function ActionCatalog({
 	onSelect: (action: ParserActionDefinition) => void;
 }) {
 	const normalizedQuery = query.trim().toLowerCase();
-	const groups = useMemo(() => {
-		const result = new Map<string, ParserActionDefinition[]>();
-		for (const action of actions) {
-			const searchableText = [action.label, action.description, action.group]
-				.map((value) => lang.t(value).toLowerCase())
-				.join(" ");
-			if (normalizedQuery && !searchableText.includes(normalizedQuery)) continue;
-			const current = result.get(action.group) || [];
-			current.push(action);
-			result.set(action.group, current);
-		}
-		return result;
-	}, [actions, normalizedQuery]);
+	const groups = useMemo(
+		() => filterAndGroupParserActions(actions, normalizedQuery, lang.t),
+		[actions, normalizedQuery],
+	);
 
 	return (
 		<div className="MonsterParserActionDialog__catalog">
