@@ -464,6 +464,7 @@ import {
 	getEncounterNavigationAction,
 	getEncounterParticipantSelectionPlan,
 	getEncounterRenamePlan,
+	getSelectedEncounterParticipant,
 	getEncounterSessionEncounters,
 	getEncounterUpdatePlan,
 	getAvailableEncounterCharacters,
@@ -45753,6 +45754,27 @@ await run("encounter model orchestration preserves load, import, dice, and drop 
 	assert.equal(loadedPlan.kind, "loaded");
 	assert.equal(loadedPlan.encounter, zeroEncounter);
 	assert.equal(loadedPlan.selectedInstance, zeroEncounter.monsters[0]);
+	const secondMonster = { instanceId: "monster-1", name: "Маг" };
+	const reloadedEncounter = {
+		...zeroEncounter,
+		monsters: [zeroEncounter.monsters[0], secondMonster],
+	};
+	assert.equal(
+		getSelectedEncounterParticipant(
+			reloadedEncounter,
+			secondMonster.instanceId,
+			loadedPlan.selectedInstance?.instanceId,
+		),
+		secondMonster,
+	);
+	assert.equal(
+		getSelectedEncounterParticipant(
+			reloadedEncounter,
+			"removed-monster",
+			loadedPlan.selectedInstance?.instanceId,
+		),
+		zeroEncounter.monsters[0],
+	);
 	const loadCalls = [];
 	executeEncounterLoadPlan(loadedPlan, {
 		onRetry: (...args) => loadCalls.push(["retry", ...args]),

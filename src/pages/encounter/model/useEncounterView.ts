@@ -206,7 +206,13 @@ export default function useEncounterView(): EncounterViewModel {
 						},
 						onLoaded: (found, selected) => {
 							setEncounter(found);
-							setSelectedInstance(selected);
+							setSelectedInstance((current) =>
+								getSelectedEncounterParticipant(
+									found,
+									current?.instanceId,
+									selected?.instanceId,
+								),
+							);
 						},
 					},
 				);
