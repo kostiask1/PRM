@@ -20,7 +20,8 @@
     "bestiary:materialize-copies": "node scripts/materialize-bestiary-copies.mjs",
     "database:bundle": "node scripts/build-database-bundles.mjs",
     "database:bundle:compact": "node scripts/build-database-bundles.mjs --delete-sources",
-    "database:update": "node scripts/update-5etools-data.mjs"
+    "database:update": "node scripts/update-5etools-data.mjs",
+    "database:download-tokens": "node scripts/download-missing-bestiary-tokens.mjs"
   },
   "keywords": [
     "dnd",

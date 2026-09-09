@@ -188,19 +188,17 @@ export function create5eToolsUpdater({
 		return monsters;
 	}
 
-	async function collectCurrentBestiaryMonsterKeys() {
+	async function collectCurrentBestiaryMonsters() {
 		const allPath = path.join(config.bestiaryDir, "all.json");
 		if (await exists(allPath)) {
-			return new Set(
-				collectMonstersFromBestiaryData(await readJson(allPath)).map(
-					normalizeMonsterKey,
-				),
-			);
+			return collectMonstersFromBestiaryData(await readJson(allPath));
 		}
+		return collectMonstersFromJsonFiles(config.bestiaryDir);
+	}
+
+	async function collectCurrentBestiaryMonsterKeys() {
 		return new Set(
-			(await collectMonstersFromJsonFiles(config.bestiaryDir)).map(
-				normalizeMonsterKey,
-			),
+			(await collectCurrentBestiaryMonsters()).map(normalizeMonsterKey),
 		);
 	}
 
@@ -493,6 +491,7 @@ export function create5eToolsUpdater({
 
 	return Object.freeze({
 		cleanupTemp,
+		collectCurrentBestiaryMonsters,
 		collectCurrentBestiaryMonsterKeys,
 		collectMonstersFromJsonFiles,
 		copyJsonFiles,

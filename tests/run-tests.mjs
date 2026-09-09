@@ -57639,12 +57639,20 @@ await run(
 				"utf8",
 			);
 			assert.deepEqual(
+				await updater.collectCurrentBestiaryMonsters(),
+				[{ name: "Aggregate", source: "MM" }],
+			);
+			assert.deepEqual(
 				[
 					...(await updater.collectCurrentBestiaryMonsterKeys()),
 				],
 				["aggregate|MM"],
 			);
 			await fs.rm(path.join(config.bestiaryDir, "all.json"));
+			assert.deepEqual(
+				await updater.collectCurrentBestiaryMonsters(),
+				[{ name: "Other", source: "MM" }],
+			);
 			assert.deepEqual(
 				[
 					...(await updater.collectCurrentBestiaryMonsterKeys()),
