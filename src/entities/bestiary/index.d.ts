@@ -6,6 +6,10 @@ export {
 	type LegendaryGroup,
 } from "./api/bestiaryApi.ts";
 export { default as MonsterStatBlockModel } from "./model/MonsterStatBlockModel.ts";
+export {
+	getBestiaryTokenName,
+	getBestiaryTokenSource,
+} from "./model/bestiaryToken.ts";
 export type {
 	MonsterData,
 	MonsterLegendaryGroupReference,

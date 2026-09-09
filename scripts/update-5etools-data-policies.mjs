@@ -63,7 +63,7 @@ Downloads spell and bestiary JSON from:
   https://github.com/${owner}/${repo}/blob/${ref}/data/senses.json
   https://github.com/${owner}/${repo}/blob/${ref}/data/generated/gendata-nav-adventure-book-index.json
 Downloads missing new bestiary tokens from:
-  https://github.com/${imageOwner}/${imageRepo}/tree/${imageRef}/bestiary/tokens/{source}
+  https://github.com/${imageOwner}/${imageRepo}/tree/${imageRef}/bestiary/tokens
 
 Excluded files: fluff, foundry/foundy, template.
 After download, materializes bestiary _copy entries and rebuilds all.json files.`;
@@ -134,8 +134,33 @@ export function isSafeTokenFileName(fileName) {
 	return !/[. ]$/.test(fileName);
 }
 
+function removeLatinDiacritics(value) {
+	let isLatinBase = false;
+	let result = "";
+	for (const character of value.normalize("NFD")) {
+		if (/[\u0300-\u036f]/.test(character)) {
+			if (!isLatinBase) result += character;
+			continue;
+		}
+		result += character;
+		isLatinBase = /\p{Script=Latin}/u.test(character);
+	}
+	return result.normalize("NFC");
+}
+
+function normalizeTokenName(value) {
+	return removeLatinDiacritics(
+		String(value || "")
+			.trim()
+			.replace(/Æ/g, "AE")
+			.replace(/æ/g, "ae"),
+	)
+		.replace(/"/g, "")
+		.trim();
+}
+
 export function getTokenFileName(monster) {
-	const name = String(monster?.name || "").trim();
+	const name = normalizeTokenName(monster?.name);
 	return name ? `${name}.webp` : "";
 }
 

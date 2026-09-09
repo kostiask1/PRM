@@ -1,4 +1,9 @@
-﻿const ALIGNMENT_MAP = {
+﻿import {
+	getBestiaryTokenName,
+	getBestiaryTokenSource,
+} from "./bestiaryToken.ts";
+
+const ALIGNMENT_MAP = {
 	L: "Lawful",
 	C: "Chaotic",
 	G: "Good",
@@ -256,15 +261,15 @@ export default class MonsterStatBlockModel {
 	}
 
 	get encodedImageName() {
-		return encodeURIComponent(this.effectiveName);
+		return encodeURIComponent(getBestiaryTokenName(this.effectiveName));
 	}
 
 	get localTokenSrc() {
-		return `/api/bestiary/tokens/${encodeURIComponent(this.monster.source || "")}/${this.encodedImageName}.webp`;
+		return `/api/bestiary/tokens/${encodeURIComponent(getBestiaryTokenSource(this.monster.source))}/${this.encodedImageName}.webp`;
 	}
 
 	get externalTokenSrc() {
-		return `https://5e.tools/img/bestiary/tokens/${encodeURIComponent(this.monster.source || "")}/${this.encodedImageName}.webp`;
+		return `https://5e.tools/img/bestiary/tokens/${encodeURIComponent(getBestiaryTokenSource(this.monster.source))}/${this.encodedImageName}.webp`;
 	}
 
 	get hp() {

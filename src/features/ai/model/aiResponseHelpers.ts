@@ -3,6 +3,10 @@ import type {
 	AiHistoryEntry,
 	AiHistoryResource,
 } from "../api/aiApi.ts";
+import {
+	getBestiaryTokenName,
+	getBestiaryTokenSource,
+} from "../../../entities/bestiary/index.js";
 import { getDiffResourceState as getBaseDiffResourceState } from "./aiDiff.ts";
 
 type Translate = (value: string) => string;
@@ -125,8 +129,10 @@ function getMonsterTokenName(
 }
 
 function buildMonsterTokenImageUrl(source: string, name: string): string {
-	return source && name
-		? `/api/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(name)}.webp`
+	const tokenSource = getBestiaryTokenSource(source);
+	const tokenName = getBestiaryTokenName(name);
+	return tokenSource && tokenName
+		? `/api/bestiary/tokens/${encodeURIComponent(tokenSource)}/${encodeURIComponent(tokenName)}.webp`
 		: "";
 }
 

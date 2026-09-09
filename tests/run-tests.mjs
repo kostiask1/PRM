@@ -74,6 +74,8 @@ import { reduceWorkflowState } from "../src/shared/model/workflowReducer.ts";
 import { reduceNavigationState } from "../src/shared/model/navigationStateReducer.ts";
 import { reduceSettingsAndSyncState } from "../src/shared/model/settingsSyncReducer.ts";
 import {
+	getBestiaryTokenName,
+	getBestiaryTokenSource,
 	matchesMonsterSearch,
 	getMonsterTypeString,
 } from "../src/entities/bestiary/index.js";
@@ -40408,6 +40410,14 @@ await run("AI response helpers manage custom monster draft resources", () => {
 		encodedToken.changes.resources[0].after.imageUrl,
 		"/api/bestiary/tokens/M%20M/Dire%20Wolf.webp",
 	);
+	const normalizedToken = addSourceMonsterImageToDraft(explicitTokenEntry, {
+		name: 'Iarno "Glasstaff" Albrek',
+		source: "PABTSO",
+	});
+	assert.equal(
+		normalizedToken.changes.resources[0].after.imageUrl,
+		"/api/bestiary/tokens/PaBTSO/Iarno%20Glasstaff%20Albrek.webp",
+	);
 	const existingTokenEntry = {
 		id: "existing-token",
 		changes: {
@@ -46684,6 +46694,20 @@ await run("MonsterStatBlockModel formats combat data", () => {
 	assert.equal(model.hp.val, 15);
 	assert.match(model.localTokenSrc, /\/api\/bestiary\/tokens\/MM\/Orc\.webp$/);
 
+	const normalizedTokenModel = new MonsterStatBlockModel({
+		name: 'Iarno "Glasstaff" Albrek',
+		source: "PABTSO",
+	});
+	assert.equal(
+		normalizedTokenModel.localTokenSrc,
+		"/api/bestiary/tokens/PaBTSO/Iarno%20Glasstaff%20Albrek.webp",
+	);
+	assert.equal(
+		new MonsterStatBlockModel({ name: "Môrgæn", source: "AI" })
+			.externalTokenSrc,
+		"https://5e.tools/img/bestiary/tokens/AI/Morgaen.webp",
+	);
+
 	const chooserModel = new MonsterStatBlockModel({
 		type: {
 			type: { choose: ["celestial", "fey", "fiend"] },
@@ -47963,6 +47987,9 @@ await run("spells browser policies preserve references, filters, sorting, and se
 	assert.equal(getSpellItemKey(spells[0]), "PHB:Вогняна куля");
 	assert.deepEqual(getSpellClassOptions(spells), ["Cleric", "Wizard"]);
 	assert.deepEqual(getSpellSchoolOptions(spells), ["A", "E", "V"]);
+	const unsortedSpells = sortSpells(spells, "none");
+	assert.deepEqual(unsortedSpells, spells);
+	assert.notStrictEqual(unsortedSpells, spells);
 	assert.deepEqual(sortSpells(spells, "asc").map((spell) => spell.name), ["Світло", "Щит", "Вогняна куля"]);
 	assert.equal(getNextSpellSortOrder("none"), "desc");
 	assert.equal(getNextSpellSortOrder("desc"), "asc");
@@ -56799,6 +56826,37 @@ await run(
 	},
 );
 
+await run("database bundles stay alphabetically sorted by name and source", async () => {
+	const compareByNameAndSource = (left, right) =>
+		String(left?.name || "").localeCompare(String(right?.name || "")) ||
+		String(left?.source || "").localeCompare(String(right?.source || ""));
+	for (const relativePath of [
+		path.join("database", "bestiary", "all.json"),
+		path.join("database", "spells", "all.json"),
+	]) {
+		const entries = JSON.parse(
+			await fs.readFile(path.join(process.cwd(), relativePath), "utf8"),
+		);
+		assert.equal(Array.isArray(entries), true);
+		for (let index = 1; index < entries.length; index += 1) {
+			assert.equal(
+				compareByNameAndSource(entries[index - 1], entries[index]) <= 0,
+				true,
+				`${relativePath} is not sorted at index ${index}`,
+			);
+		}
+	}
+
+	const builderSource = await fs.readFile(
+		path.join(process.cwd(), "scripts", "build-database-bundles.mjs"),
+		"utf8",
+	);
+	assert.equal(
+		(builderSource.match(/\.sort\(sortByNameAndSource\)/g) || []).length,
+		2,
+	);
+});
+
 await run(
 	"database bundle spell-class policy preserves lookup and collection order",
 	() => {
@@ -57324,6 +57382,20 @@ await run(
 			updaterPolicies.getTokenFileName({ name: "  Герой  " }),
 			"Герой.webp",
 		);
+		assert.equal(
+			updaterPolicies.getTokenFileName({
+				name: 'Iarno "Glasstaff" Albrek',
+			}),
+			"Iarno Glasstaff Albrek.webp",
+		);
+		assert.equal(
+			updaterPolicies.getTokenFileName({ name: "Môrgæn" }),
+			"Morgaen.webp",
+		);
+		assert.equal(
+			updaterPolicies.getTokenFileName({ name: "Україна" }),
+			"Україна.webp",
+		);
 		assert.equal(updaterPolicies.getTokenFileName(null), "");
 		for (const unsafe of ["", "bad/name.webp", "bad?.webp", "bad."]) {
 			assert.equal(updaterPolicies.isSafeTokenFileName(unsafe), false);
@@ -57332,6 +57404,12 @@ await run(
 			updaterPolicies.isSafeTokenFileName("Україна.webp"),
 			true,
 		);
+		assert.equal(getBestiaryTokenName("Deep Rothé"), "Deep Rothe");
+		assert.equal(getBestiaryTokenName('"The Demogorgon"'), "The Demogorgon");
+		assert.equal(getBestiaryTokenName("Україна"), "Україна");
+		assert.equal(getBestiaryTokenSource(" pabtso "), "PaBTSO");
+		assert.equal(getBestiaryTokenSource("tftyp"), "TftYP");
+		assert.equal(getBestiaryTokenSource("UNKNOWN"), "UNKNOWN");
 
 		assert.equal(updaterPolicies.conditionKey(null), "|");
 		assert.equal(
@@ -57498,13 +57576,31 @@ await run(
 			"https://api.github.com/repos/test-owner/test-repo/contents/data/demo?ref=feature%2Ftest";
 		const missingApiUrl =
 			"https://api.github.com/repos/test-owner/test-repo/contents/data/missing?ref=feature%2Ftest";
+		const tokenSourcesApiUrl =
+			"https://api.github.com/repos/test-image-owner/test-image-repo/contents/bestiary/tokens?ref=image-main";
 		const downloadedTokenUrl =
 			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/XPHB/%D0%9D%D0%BE%D0%B2%D0%B8%D0%B9.webp";
+		const quotedTokenUrl =
+			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/IMR/Iarno%20Glasstaff%20Albrek.webp";
+		const accentedTokenUrl =
+			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/AI/Morgaen.webp";
 		const missingTokenUrl =
 			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/MM/Missing.webp";
 		const failedTokenUrl =
 			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/tokens/MM/Failed.webp";
 		const responses = new Map([
+			[
+				tokenSourcesApiUrl,
+				createUpdaterResponse({
+					jsonValue: [
+						{ type: "dir", name: "AI" },
+						{ type: "dir", name: "IMR" },
+						{ type: "dir", name: "MM" },
+						{ type: "dir", name: "PaBTSO" },
+						{ type: "dir", name: "XPHB" },
+					],
+				}),
+			],
 			[
 				demoApiUrl,
 				createUpdaterResponse({
@@ -57555,6 +57651,18 @@ await run(
 				downloadedTokenUrl,
 				createUpdaterResponse({
 					binaryValue: Buffer.from("token", "utf8"),
+				}),
+			],
+			[
+				quotedTokenUrl,
+				createUpdaterResponse({
+					binaryValue: Buffer.from("quoted-token", "utf8"),
+				}),
+			],
+			[
+				accentedTokenUrl,
+				createUpdaterResponse({
+					binaryValue: Buffer.from("accented-token", "utf8"),
 				}),
 			],
 			[
@@ -57662,7 +57770,7 @@ await run(
 
 			const existingTokenPath = path.join(
 				config.bestiaryTokensDir,
-				"MM",
+				"PaBTSO",
 				"Existing.webp",
 			);
 			await fs.mkdir(path.dirname(existingTokenPath), {
@@ -57672,14 +57780,21 @@ await run(
 			const tokenResult =
 				await updater.downloadMissingNewBestiaryTokens([
 					{ name: "Bad/Name", source: "MM" },
-					{ name: "Existing", source: "MM" },
+					{ name: "Existing", source: "PABTSO" },
 					{ name: "Новий", source: "XPHB" },
+					{
+						name: 'Iarno "Glasstaff" Albrek',
+						source: "IMR",
+					},
+					{ name: "Môrgæn", source: "AI" },
 					{ name: "Missing", source: "MM" },
 					{ name: "Failed", source: "MM" },
+					{ name: "No Remote Source", source: "AU" },
 				]);
 			assert.deepEqual(tokenResult, {
-				downloaded: 1,
-				missing: 2,
+				existing: 1,
+				downloaded: 3,
+				missing: 3,
 				skipped: 1,
 			});
 			assert.equal(
@@ -57694,9 +57809,37 @@ await run(
 				"token",
 			);
 			assert.equal(
+				await fs.readFile(
+					path.join(
+						config.bestiaryTokensDir,
+						"IMR",
+						"Iarno Glasstaff Albrek.webp",
+					),
+					"utf8",
+				),
+				"quoted-token",
+			);
+			assert.equal(
+				await fs.readFile(
+					path.join(
+						config.bestiaryTokensDir,
+						"AI",
+						"Morgaen.webp",
+					),
+					"utf8",
+				),
+				"accented-token",
+			);
+			assert.equal(
+				fetchEvents.filter((url) => url === tokenSourcesApiUrl).length,
+				1,
+			);
+			assert.equal(
 				fetchEvents.includes(downloadedTokenUrl),
 				true,
 			);
+			assert.equal(fetchEvents.includes(quotedTokenUrl), true);
+			assert.equal(fetchEvents.includes(accentedTokenUrl), true);
 			assert.equal(fetchEvents.includes(missingTokenUrl), true);
 			assert.equal(fetchEvents.includes(failedTokenUrl), true);
 			assert.equal(
@@ -57874,7 +58017,15 @@ await run(
 				"https://api.github.com/repos/test-owner/test-repo/contents/data/bestiary?ref=main";
 			const spellsListUrl =
 				"https://api.github.com/repos/test-owner/test-repo/contents/data/spells?ref=main";
+			const tokenSourcesListUrl =
+				"https://api.github.com/repos/test-image-owner/test-image-repo/contents/bestiary/tokens?ref=image-main";
 			const responseMap = new Map([
+				[
+					tokenSourcesListUrl,
+					createUpdaterResponse({
+						jsonValue: [{ type: "dir", name: "XPHB" }],
+					}),
+				],
 				[
 					bestiaryListUrl,
 					createUpdaterResponse({
@@ -58100,7 +58251,7 @@ await run(
 				assert.equal(
 					logs.some((message) =>
 						message.includes(
-							"New monsters: 1; tokens downloaded: 1",
+							"New monsters: 1; existing tokens: 0; tokens downloaded: 1",
 						),
 					),
 					true,

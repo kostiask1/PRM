@@ -17,7 +17,7 @@ function printHelp() {
 	console.log(`Usage: node scripts/download-missing-bestiary-tokens.mjs [--verbose]
 
 Downloads locally missing monster tokens from:
-  https://github.com/${IMAGE_OWNER}/${IMAGE_REPO}/tree/${IMAGE_REF}/bestiary/tokens/{source}
+  https://github.com/${IMAGE_OWNER}/${IMAGE_REPO}/tree/${IMAGE_REF}/bestiary/tokens
 
 Existing token files are preserved. Monsters without a remote token are reported
 as missing and do not cause the command to fail.`);
@@ -48,11 +48,9 @@ async function run() {
 		await updater.collectCurrentBestiaryMonsters(),
 	);
 	const result = await updater.downloadMissingNewBestiaryTokens(monsters);
-	const existing =
-		monsters.length - result.downloaded - result.missing - result.skipped;
 
 	console.log(
-		`Done: checked ${monsters.length} monsters; existing tokens: ${existing}; downloaded: ${result.downloaded}; missing remotely or failed: ${result.missing}; skipped: ${result.skipped}.`,
+		`Done: checked ${monsters.length} monsters; existing tokens: ${result.existing}; downloaded: ${result.downloaded}; missing remotely or failed: ${result.missing}; skipped: ${result.skipped}.`,
 	);
 }
 

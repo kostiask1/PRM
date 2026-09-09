@@ -23,7 +23,7 @@ function requireRemoteFileUrl(remotePath, file) {
 }
 
 function createTokenResult() {
-	return { downloaded: 0, missing: 0, skipped: 0 };
+	return { existing: 0, downloaded: 0, missing: 0, skipped: 0 };
 }
 
 function getUpdateTempPaths(path, config) {
@@ -158,17 +158,68 @@ export function create5eToolsUpdater({
 		return JSON.parse(await fs.readFile(filePath, "utf8"));
 	}
 
-	function getTokenFilePath(monster) {
+	function normalizeTokenSource(source) {
+		return String(source || "").trim().toUpperCase();
+	}
+
+	function getRemoteTokenSourcesUrl() {
+		const url = new URL(
+			`https://api.github.com/repos/${config.imageOwner}/${config.imageRepo}/contents/bestiary/tokens`,
+		);
+		url.searchParams.set("ref", config.imageRef);
+		return url.toString();
+	}
+
+	function collectTokenSourceDirectories(entries) {
+		const sources = new Map();
+		for (const entry of entries) {
+			const isDirectory =
+				entry?.type === "dir" || entry?.isDirectory?.() === true;
+			if (!isDirectory) continue;
+			const source = String(entry.name || "").trim();
+			const key = normalizeTokenSource(source);
+			if (key) sources.set(key, source);
+		}
+		return sources;
+	}
+
+	async function listRemoteTokenSources() {
+		const url = getRemoteTokenSourcesUrl();
+		const entries = await fetchJson(url);
+		if (!Array.isArray(entries)) {
+			throw new Error(
+				"Unexpected GitHub contents response for bestiary/tokens",
+			);
+		}
+		return collectTokenSourceDirectories(entries);
+	}
+
+	async function listLocalTokenSources() {
+		if (!(await exists(config.bestiaryTokensDir))) return new Map();
+		const entries = await fs.readdir(config.bestiaryTokensDir, {
+			withFileTypes: true,
+		});
+		return collectTokenSourceDirectories(entries);
+	}
+
+	function resolveTokenSource(monster, remoteSources, localSources) {
+		const source = String(monster?.source || "").trim();
+		const key = normalizeTokenSource(source);
+		return {
+			local: remoteSources.get(key) || localSources.get(key) || source,
+			remote: remoteSources.get(key) || "",
+		};
+	}
+
+	function getTokenFilePath(source, fileName) {
 		return path.join(
 			config.bestiaryTokensDir,
-			String(monster?.source || "").trim(),
-			getTokenFileName(monster),
+			source,
+			fileName,
 		);
 	}
 
-	function getRemoteTokenUrl(monster) {
-		const source = String(monster?.source || "").trim();
-		const fileName = getTokenFileName(monster);
+	function getRemoteTokenUrl(source, fileName) {
 		return `https://raw.githubusercontent.com/${config.imageOwner}/${config.imageRepo}/${config.imageRef}/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(fileName)}`;
 	}
 
@@ -212,12 +263,13 @@ export function create5eToolsUpdater({
 	async function attemptTokenDownload(
 		result,
 		monster,
+		remoteSource,
 		fileName,
 		targetPath,
 	) {
 		try {
 			const content = await fetchBinaryIfExists(
-				getRemoteTokenUrl(monster),
+				getRemoteTokenUrl(remoteSource, fileName),
 			);
 			if (!content) {
 				recordMissingToken(result, monster, fileName);
@@ -264,21 +316,54 @@ export function create5eToolsUpdater({
 		}
 	}
 
-	async function processMonsterToken(result, monster) {
+	async function processMonsterToken(
+		result,
+		monster,
+		remoteSources,
+		localSources,
+	) {
 		const fileName = getTokenFileName(monster);
 		if (!isSafeTokenFileName(fileName)) {
 			recordUnsafeToken(result, monster);
 			return;
 		}
-		const targetPath = getTokenFilePath(monster);
-		if (await exists(targetPath)) return;
-		await attemptTokenDownload(result, monster, fileName, targetPath);
+		const source = resolveTokenSource(
+			monster,
+			remoteSources,
+			localSources,
+		);
+		const targetPath = getTokenFilePath(source.local, fileName);
+		if (await exists(targetPath)) {
+			result.existing += 1;
+			return;
+		}
+		if (!source.remote) {
+			recordMissingToken(result, monster, fileName);
+			return;
+		}
+		await attemptTokenDownload(
+			result,
+			monster,
+			source.remote,
+			fileName,
+			targetPath,
+		);
 	}
 
 	async function downloadMissingNewBestiaryTokens(newMonsters = []) {
 		const result = createTokenResult();
+		if (newMonsters.length === 0) return result;
+		const [remoteSources, localSources] = await Promise.all([
+			listRemoteTokenSources(),
+			listLocalTokenSources(),
+		]);
 		for (const monster of newMonsters) {
-			await processMonsterToken(result, monster);
+			await processMonsterToken(
+				result,
+				monster,
+				remoteSources,
+				localSources,
+			);
 		}
 		return result;
 	}
@@ -459,7 +544,7 @@ export function create5eToolsUpdater({
 
 	function logCompletion(sourcesCount, newMonsters, tokenResult) {
 		consoleRef.log(
-			`Done: 5etools data updated. Wrote ${sourcesCount} sources. New monsters: ${newMonsters.length}; tokens downloaded: ${tokenResult.downloaded}; missing: ${tokenResult.missing}; skipped: ${tokenResult.skipped}.`,
+			`Done: 5etools data updated. Wrote ${sourcesCount} sources. New monsters: ${newMonsters.length}; existing tokens: ${tokenResult.existing}; tokens downloaded: ${tokenResult.downloaded}; missing: ${tokenResult.missing}; skipped: ${tokenResult.skipped}.`,
 		);
 	}
 
