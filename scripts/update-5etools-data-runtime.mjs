@@ -289,9 +289,7 @@ export function create5eToolsUpdater({
 
 	function recordMissingToken(result, monster, fileName) {
 		result.missing += 1;
-		if (config.isVerbose) {
-			consoleRef.log(`missing token ${monster.source}/${fileName}`);
-		}
+		consoleRef.warn(`missing token ${monster.source}/${fileName}`);
 	}
 
 	function recordFailedToken(result, monster, fileName, error) {

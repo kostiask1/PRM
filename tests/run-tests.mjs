@@ -57844,6 +57844,20 @@ await run(
 			assert.equal(fetchEvents.includes(failedTokenUrl), true);
 			assert.equal(
 				warnings.some((message) =>
+					message.includes("missing token MM/Missing.webp"),
+				),
+				true,
+			);
+			assert.equal(
+				warnings.some((message) =>
+					message.includes(
+						"missing token AU/No Remote Source.webp",
+					),
+				),
+				true,
+			);
+			assert.equal(
+				warnings.some((message) =>
 					message.includes("unsafe local filename"),
 				),
 				true,
