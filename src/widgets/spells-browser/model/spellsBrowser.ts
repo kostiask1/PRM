@@ -94,7 +94,10 @@ export function normalizeSpellList(value: unknown): SpellRecord[] {
 }
 
 export function normalizeCampaignSourceSettings(value: unknown): CampaignSourceSettings | null {
-	return isRecord(value) ? { ignoreSourcesList: normalizeStringList(value.ignoreSourcesList) } : null;
+	if (!isRecord(value)) return null;
+	return Array.isArray(value.ignoreSourcesList)
+		? { ignoreSourcesList: normalizeStringList(value.ignoreSourcesList) }
+		: {};
 }
 
 export function getSpellItemKey(spell: SpellRecord): string {

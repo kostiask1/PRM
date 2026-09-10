@@ -16,7 +16,6 @@ import {
 	Switch,
 } from "../../../shared/ui/index.js";
 import ColorThemeSwitcher from "./ColorThemeSwitcher.tsx";
-import CampaignScopeOptions from "./CampaignScopeOptions.tsx";
 import type { SettingsModalCompositionSlots } from "./settingsModalComposition.ts";
 
 export interface SettingsGeneralViewProps {
@@ -176,7 +175,14 @@ function SettingsSourcesGroup({
 					<option value={GLOBAL_SETTINGS_SCOPE}>
 						{lang.t("Global source settings")}
 					</option>
-					<CampaignScopeOptions campaigns={campaigns} />
+					{campaigns.length === 0 && (
+						<option value="">{lang.t("No campaigns")}</option>
+					)}
+					{campaigns.map((campaign) => (
+						<option key={campaign.slug} value={campaign.slug}>
+							{campaign.name}
+						</option>
+					))}
 				</Select>
 				<div className="SettingsModal__sourceRow">
 					<MultiSelect
@@ -267,7 +273,14 @@ function SettingsAiGroup({
 					onChange={(event) => onScopeChange(event.target.value)}
 				>
 					<option value={GLOBAL_SETTINGS_SCOPE}>{lang.t("Global base prompt")}</option>
-					<CampaignScopeOptions campaigns={campaigns} />
+					{campaigns.length === 0 && (
+						<option value="">{lang.t("No campaigns")}</option>
+					)}
+					{campaigns.map((campaign) => (
+						<option key={campaign.slug} value={campaign.slug}>
+							{campaign.name}
+						</option>
+					))}
 				</Select>
 				<EditableField
 					type="textarea"

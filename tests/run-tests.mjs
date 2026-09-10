@@ -183,6 +183,7 @@ import {
 } from "../src/shared/lib/index.js";
 import {
 	extractContentTokens,
+	getCampaignIgnoreSourcesList,
 	preprocessTags,
 } from "../src/entities/reference/model.js";
 import {
@@ -265,6 +266,7 @@ import {
 	getSpellListItemPresentation,
 	getSpellSchoolOptions,
 	getValidSourceFilter,
+	normalizeCampaignSourceSettings,
 	normalizeSpellList,
 	parseSpellReferenceKey,
 	sortSpells,
@@ -10679,6 +10681,14 @@ await run(
 			assert.doesNotMatch(
 				settingsViewSource,
 				/from "\.\.\/\.\.\/editor\//,
+			);
+			assert.doesNotMatch(settingsViewSource, /CampaignScopeOptions/);
+			assert.equal(
+				settingsViewSource.match(
+					/\{campaigns\.map\(\(campaign\) => \(/g,
+				)?.length,
+				2,
+				"both Settings scope selectors must pass campaign options directly to Select",
 			);
 			assert.match(
 				settingsContentSource,
@@ -48077,6 +48087,18 @@ await run("spells browser policies preserve references, filters, sorting, and se
 	);
 	assert.equal(getValidSourceFilter("XPHB", ["PHB"]), "all");
 	assert.deepEqual(getSettingsIgnoreSources({ ignoreSourcesList: ["DMG", 4, "MM"] }), ["DMG", "MM"]);
+	assert.deepEqual(normalizeCampaignSourceSettings({}), {});
+	assert.deepEqual(
+		getCampaignIgnoreSourcesList(
+			normalizeCampaignSourceSettings({}),
+			["PHB", "XPHB"],
+		),
+		["PHB", "XPHB"],
+	);
+	assert.deepEqual(
+		normalizeCampaignSourceSettings({ ignoreSourcesList: ["PHB", 4, "MM"] }),
+		{ ignoreSourcesList: ["PHB", "MM"] },
+	);
 	assert.deepEqual(normalizeSpellList([spells[0], null, { source: "PHB" }]), [spells[0]]);
 	assert.deepEqual(getInitialSpellSelection([spells[2]], spells, "Світло|XPHB", null), { spell: spells[1], changed: true });
 	assert.deepEqual(
