@@ -11,6 +11,7 @@ export type CampaignIgnoreSourcesMap = Record<string, string[]>;
 
 export interface SettingsCampaign extends CampaignRecord {
 	ignoreSourcesList?: unknown;
+	simplifiedNotes?: unknown;
 }
 
 export interface PromptSettingsPayload extends Record<string, unknown> {
@@ -29,6 +30,12 @@ export interface SelectedPromptSettings {
 export interface SelectedSourceSettings {
 	isGlobalScope: boolean;
 	ignoreSourcesList: string[];
+}
+
+export interface SelectedSimplifiedNotesSettings {
+	isGlobalScope: boolean;
+	isInherited: boolean;
+	enabled: boolean;
 }
 
 interface UnknownRecord {
@@ -143,6 +150,37 @@ export function resolveSelectedSourceSettings(options: {
 			: options.campaignIgnoreSourcesLists[options.scope] ||
 				options.ignoreSourcesList,
 	};
+}
+
+export function resolveSelectedSimplifiedNotesSettings(options: {
+	scope: string;
+	simplifiedNotes: boolean;
+	campaigns: SettingsCampaign[];
+}): SelectedSimplifiedNotesSettings {
+	const isGlobalScope = options.scope === GLOBAL_SETTINGS_SCOPE;
+	const campaign = options.campaigns.find(
+		(candidate) => candidate.slug === options.scope,
+	);
+	const hasCampaignOverride =
+		!isGlobalScope && typeof campaign?.simplifiedNotes === "boolean";
+	return {
+		isGlobalScope,
+		isInherited: !isGlobalScope && !hasCampaignOverride,
+		enabled: hasCampaignOverride
+			? campaign.simplifiedNotes as boolean
+			: Boolean(options.simplifiedNotes),
+	};
+}
+
+export function setCampaignSimplifiedNotesSetting(
+	campaigns: SettingsCampaign[],
+	scope: string,
+	value: boolean,
+): SettingsCampaign[] {
+	return campaigns.map((campaign) => {
+		if (campaign.slug !== scope) return campaign;
+		return { ...campaign, simplifiedNotes: value };
+	});
 }
 
 export function setCampaignIgnoreSourcesForScope(

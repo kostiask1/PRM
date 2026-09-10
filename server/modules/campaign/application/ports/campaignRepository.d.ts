@@ -6,6 +6,7 @@ export interface CampaignRecord extends Record<string, unknown> {
 	name: string;
 	order?: number;
 	ignoreSourcesList?: string[];
+	simplifiedNotes?: boolean;
 }
 
 export interface CampaignRepository {

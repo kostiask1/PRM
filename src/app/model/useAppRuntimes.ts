@@ -37,6 +37,16 @@ import {
 } from "./appStore.ts";
 import { type CampaignCompletionRecord } from "./useCampaignCompletionToggle.ts";
 
+function resolveSimplifiedNotesEnabled(
+	campaign: unknown,
+	globalValue: boolean,
+): boolean {
+	if (!campaign || typeof campaign !== "object") return globalValue;
+	const campaignValue = (campaign as { simplifiedNotes?: unknown })
+		.simplifiedNotes;
+	return typeof campaignValue === "boolean" ? campaignValue : globalValue;
+}
+
 export function useAppRuntimes() {
 	const dispatch = useAppDispatch();
 	const modalState = useAppSelector((store) => store.modal);
@@ -60,6 +70,10 @@ export function useAppRuntimes() {
 	);
 	const spellsBrowserActiveCampaign = useAppSelector(
 		(store) => store.active.campaign,
+	);
+	const effectiveSimplifiedNotesEnabled = resolveSimplifiedNotesEnabled(
+		spellsBrowserActiveCampaign,
+		simplifiedNotesEnabled,
 	);
 	const spellsBrowserGlobalIgnoreSourcesList = useAppSelector(
 		(store) => store.ui.ignoreSourcesList,
@@ -242,7 +256,7 @@ export function useAppRuntimes() {
 		activeCampaignSlug,
 		currentLanguage,
 		currentTheme,
-		simplifiedNotesEnabled,
+		simplifiedNotesEnabled: effectiveSimplifiedNotesEnabled,
 		syncEvent,
 		rulesReferenceRuntime,
 		aiAttachmentAlertRuntime,

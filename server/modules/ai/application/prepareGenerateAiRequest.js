@@ -78,6 +78,24 @@ function encounterTargetAllowsParsing(
 	return requestedGeneration || requestedCreatureEditing;
 }
 
+function getSimplifiedNotesSetting(settings, campaign) {
+	if (
+		campaign &&
+		typeof campaign === "object" &&
+		typeof campaign.simplifiedNotes === "boolean"
+	) {
+		return campaign.simplifiedNotes;
+	}
+	return Boolean(settings.simplifiedNotes);
+}
+
+async function readRequestCampaign(readCampaign, requestPath) {
+	if (typeof readCampaign !== "function") return null;
+	const campaignSlug = requestPath?.campaign;
+	if (!campaignSlug || campaignSlug === "bestiary") return null;
+	return readCampaign(campaignSlug);
+}
+
 function enableWhenParsing(shouldParseAIResponse, requestedValue) {
 	if (!shouldParseAIResponse) return false;
 	return Boolean(requestedValue);
@@ -162,6 +180,7 @@ function createPreparedResult({
 	requestPath,
 	responseLanguage,
 	settings,
+	campaign,
 	parsingPolicy,
 }) {
 	return {
@@ -176,7 +195,7 @@ function createPreparedResult({
 			parsingPolicy.shouldParseAIResponse,
 			requestPath,
 		),
-		simplifiedNotesEnabled: Boolean(settings.simplifiedNotes),
+		simplifiedNotesEnabled: getSimplifiedNotesSetting(settings, campaign),
 		autoApplyAiChanges: settings.autoApplyAiChanges !== false,
 		globalBasePrompt: asText(settings.aiBasePrompt),
 		imagePromptBasePrompt: getImagePromptBasePrompt(
@@ -195,6 +214,7 @@ async function prepareGenerateAiRequest({
 	payload = {},
 	apiKeyConfigured,
 	readSettings,
+	readCampaign,
 }) {
 	const responseLanguage = getResponseLanguage(payload);
 	const preflightError = getPreflightError(
@@ -206,11 +226,13 @@ async function prepareGenerateAiRequest({
 	const requestPath = getGenerateRequestPath(payload);
 	const parsingPolicy = getParsingPolicy(payload, requestPath);
 	const settings = asSettingsRecord(await readSettings());
+	const campaign = await readRequestCampaign(readCampaign, requestPath);
 	return createPreparedResult({
 		payload,
 		requestPath,
 		responseLanguage,
 		settings,
+		campaign,
 		parsingPolicy,
 	});
 }

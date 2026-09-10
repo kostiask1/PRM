@@ -61,6 +61,9 @@ function createCampaignCommands(
 					patch.ignoreSourcesList,
 				);
 			}
+			if (Object.prototype.hasOwnProperty.call(patch, "simplifiedNotes")) {
+				updated.simplifiedNotes = Boolean(patch.simplifiedNotes);
+			}
 			return repository.write(nextSlug, updated);
 		},
 

@@ -19,6 +19,10 @@ import ColorThemeSwitcher from "./ColorThemeSwitcher.tsx";
 import type { SettingsModalCompositionSlots } from "./settingsModalComposition.ts";
 
 export interface SettingsGeneralViewProps {
+	campaigns: SettingsCampaign[];
+	selectedScope: string;
+	isInherited: boolean;
+	status: SettingsSaveStatus;
 	currentTheme: Theme;
 	currentLanguage: string;
 	availableLanguages: string[];
@@ -26,6 +30,7 @@ export interface SettingsGeneralViewProps {
 	useSearchDebounce: boolean;
 	onThemeToggle: () => void;
 	onLanguageChange: (language: string) => void;
+	onScopeChange: (scope: string) => void;
 	onSimplifiedNotesChange: (enabled: boolean) => void;
 	onUseSearchDebounceChange: (enabled: boolean) => void;
 }
@@ -68,6 +73,10 @@ export interface SettingsModalViewProps {
 type SettingsAiGroupProps = SettingsAiViewProps & SettingsModalCompositionSlots;
 
 function SettingsGeneralGroup({
+	campaigns,
+	selectedScope,
+	isInherited,
+	status,
 	currentTheme,
 	currentLanguage,
 	availableLanguages,
@@ -75,6 +84,7 @@ function SettingsGeneralGroup({
 	useSearchDebounce,
 	onThemeToggle,
 	onLanguageChange,
+	onScopeChange,
 	onSimplifiedNotesChange,
 	onUseSearchDebounceChange,
 }: SettingsGeneralViewProps) {
@@ -110,14 +120,48 @@ function SettingsGeneralGroup({
 				</Select>
 			</div>
 
-			<Switch
-				checked={simplifiedNotesEnabled}
-				onChange={onSimplifiedNotesChange}
-				label={lang.t("Simplified notes mode")}
-				description={lang.t(
-					"Use plain text notes without title and markdown preview",
-				)}
-			/>
+			<div className="SettingsModal__preference">
+				<div className="SettingsModal__preferenceHeader">
+					<label className="SettingsModal__field SettingsModal__preferenceScope">
+						<span className="SettingsModal__label">
+							{lang.t("Note settings for")}
+						</span>
+						<Select
+							value={selectedScope}
+							onChange={(event) => onScopeChange(event.target.value)}
+						>
+							<option value={GLOBAL_SETTINGS_SCOPE}>
+								{lang.t("Global note settings")}
+							</option>
+							{campaigns.length === 0 && (
+								<option value="">{lang.t("No campaigns")}</option>
+							)}
+							{campaigns.map((campaign) => (
+								<option key={campaign.slug} value={campaign.slug}>
+									{campaign.name}
+								</option>
+							))}
+						</Select>
+					</label>
+					{status === "saving" && (
+						<span className="SettingsModal__saveStatus" role="status">
+							{lang.t("Saving...")}
+						</span>
+					)}
+				</div>
+				<Switch
+					checked={simplifiedNotesEnabled}
+					onChange={onSimplifiedNotesChange}
+					label={lang.t("Simplified notes mode")}
+					description={
+						isInherited
+							? lang.t("Uses the global simplified notes setting.")
+							: lang.t(
+									"Use plain text notes without title and markdown preview",
+								)
+					}
+				/>
+			</div>
 			<Switch
 				checked={useSearchDebounce}
 				onChange={onUseSearchDebounceChange}

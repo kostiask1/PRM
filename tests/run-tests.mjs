@@ -172,9 +172,11 @@ import {
 	normalizeSavedPromptSettings,
 	normalizeSettingsCampaigns,
 	resolveSelectedPromptSettings,
+	resolveSelectedSimplifiedNotesSettings,
 	resolveSelectedSourceSettings,
 	resolveSettingsScope,
 	setCampaignIgnoreSourcesForScope,
+	setCampaignSimplifiedNotesSetting,
 	setSettingsPromptForScope,
 } from "../src/features/settings/model/settingsModal.ts";
 import {
@@ -10688,8 +10690,8 @@ await run(
 				settingsViewSource.match(
 					/\{campaigns\.map\(\(campaign\) => \(/g,
 				)?.length,
-				2,
-				"both Settings scope selectors must pass campaign options directly to Select",
+				3,
+				"all Settings scope selectors must pass campaign options directly to Select",
 			);
 			assert.match(
 				settingsContentSource,
@@ -14733,6 +14735,10 @@ await run(
 		assert.match(
 			settingsContentSource,
 			/useSettingsModalController\(onCancel, runtime\)/,
+		);
+		assert.match(
+			settingsControllerSource,
+			/simplifiedNotesEnabled:\s*simplifiedNotesSelection\.enabled/,
 		);
 		assert.doesNotMatch(
 			themeSwitcherSource,
@@ -33437,6 +33443,7 @@ await run("AI request resolution preserves the complete routing decision matrix"
 
 await run("AI generation preparation resolves settings without HTTP or files", async () => {
 	let settingsReads = 0;
+	let campaignReads = 0;
 	const prepared = await prepareGenerateAiRequest({
 		payload: {
 			type: "scene",
@@ -33458,8 +33465,14 @@ await run("AI generation preparation resolves settings without HTTP or files", a
 				campaignAiBasePrompts: { demo: "Campaign" },
 			};
 		},
+		readCampaign: async (slug) => {
+			campaignReads += 1;
+			assert.equal(slug, "demo");
+			return { simplifiedNotes: false };
+		},
 	});
 	assert.equal(settingsReads, 1);
+	assert.equal(campaignReads, 1);
 	assert.equal(prepared.responseLanguage, "uk");
 	assert.equal(prepared.entityTargetScope, "mixed");
 	assert.equal(prepared.encounterGenerationEnabled, true);
@@ -33467,6 +33480,7 @@ await run("AI generation preparation resolves settings without HTTP or files", a
 	assert.equal(prepared.locationGenerationEnabled, false);
 	assert.equal(prepared.autoApplyAiChanges, false);
 	assert.equal(prepared.campaignBasePrompt, "Campaign");
+	assert.equal(prepared.simplifiedNotesEnabled, false);
 
 	assert.deepEqual(
 		await prepareGenerateAiRequest({
@@ -37671,6 +37685,7 @@ await run("Campaign commands own lifecycle rename references and ordering", asyn
 			createdAt: "changed",
 			name: "Renamed",
 			ignoreSourcesList: ["phb", "PHB", "xge"],
+			simplifiedNotes: true,
 		},
 	});
 	assert.equal(updated.id, "campaign-stable-id");
@@ -37678,6 +37693,7 @@ await run("Campaign commands own lifecycle rename references and ordering", asyn
 	assert.equal(updated.slug, "renamed");
 	assert.equal(updated.imageUrl, "/renamed/maps/a.png");
 	assert.deepEqual(updated.ignoreSourcesList, ["PHB", "XGE"]);
+	assert.equal(updated.simplifiedNotes, true);
 	assert.deepEqual(renames, [["demo", "renamed"]]);
 	assert.deepEqual(await commands.getImageStatus({ slug: "renamed" }), {
 		hasImages: true,
@@ -65304,6 +65320,35 @@ await run("settings modal model normalizes scopes, sources, and prompt saves", (
 		}),
 		{ isGlobalScope: false, ignoreSourcesList: ["PHB"] },
 	);
+	assert.deepEqual(
+		resolveSelectedSimplifiedNotesSettings({
+			scope: "curse-of-strahd",
+			simplifiedNotes: false,
+			campaigns: [
+				{ slug: "curse-of-strahd", name: "Страд", simplifiedNotes: true },
+			],
+		}),
+		{ isGlobalScope: false, isInherited: false, enabled: true },
+	);
+	assert.deepEqual(
+		resolveSelectedSimplifiedNotesSettings({
+			scope: "curse-of-strahd",
+			simplifiedNotes: true,
+			campaigns: [{ slug: "curse-of-strahd", name: "Страд" }],
+		}),
+		{ isGlobalScope: false, isInherited: true, enabled: true },
+	);
+	const noteCampaigns = [
+		{ slug: "curse-of-strahd", name: "Страд" },
+		{ slug: "other", name: "Інша" },
+	];
+	const overriddenNoteCampaigns = setCampaignSimplifiedNotesSetting(
+		noteCampaigns,
+		"curse-of-strahd",
+		false,
+	);
+	assert.equal(overriddenNoteCampaigns[0].simplifiedNotes, false);
+	assert.equal(overriddenNoteCampaigns[1], noteCampaigns[1]);
 	assert.deepEqual(
 		setCampaignIgnoreSourcesForScope(
 			{ existing: ["MM"] },

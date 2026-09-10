@@ -19,9 +19,11 @@ import {
 	normalizeSavedPromptSettings,
 	normalizeSettingsCampaigns,
 	resolveSelectedPromptSettings,
+	resolveSelectedSimplifiedNotesSettings,
 	resolveSelectedSourceSettings,
 	resolveSettingsScope,
 	setCampaignIgnoreSourcesForScope,
+	setCampaignSimplifiedNotesSetting,
 	setSettingsPromptForScope,
 	type CampaignIgnoreSourcesMap,
 	type SettingsPromptMap,
@@ -102,6 +104,11 @@ interface SourceSaveRequest {
 	ignoreSourcesList: string[];
 }
 
+interface SimplifiedNotesSaveRequest {
+	scope: string;
+	enabled: boolean;
+}
+
 export function useSettingsModalController(
 	onCancel: () => void,
 	runtime: SettingsModalRuntime,
@@ -147,6 +154,13 @@ export function useSettingsModalController(
 	const [selectedSourceScope, setSelectedSourceScope] = useState(
 		activeCampaignSlug || GLOBAL_SETTINGS_SCOPE,
 	);
+	const [selectedNotesScope, setSelectedNotesScope] = useState(
+		activeCampaignSlug || GLOBAL_SETTINGS_SCOPE,
+	);
+	const [notesStatus, setNotesStatus] = useState<SettingsSaveStatus>("idle");
+	const [pendingSimplifiedNotes, setPendingSimplifiedNotes] = useState<
+		Record<string, boolean>
+	>({});
 	const [promptStatus, setPromptStatus] =
 		useState<SettingsSaveStatus>("idle");
 	const [sourceStatus, setSourceStatus] =
@@ -214,6 +228,12 @@ export function useSettingsModalController(
 		activeCampaignSlug,
 		campaigns,
 	});
+	useSettingsScopeRecovery({
+		selectedScope: selectedNotesScope,
+		setSelectedScope: setSelectedNotesScope,
+		activeCampaignSlug,
+		campaigns,
+	});
 
 	const promptSelection = resolveSelectedPromptSettings({
 		scope: selectedPromptScope,
@@ -226,6 +246,23 @@ export function useSettingsModalController(
 		scope: selectedSourceScope,
 		ignoreSourcesList,
 		campaignIgnoreSourcesLists,
+	});
+	const simplifiedNotesCampaigns = useMemo(
+		() =>
+			campaigns.map((campaign) =>
+				Object.hasOwn(pendingSimplifiedNotes, campaign.slug)
+					? {
+							...campaign,
+							simplifiedNotes: pendingSimplifiedNotes[campaign.slug],
+						}
+					: campaign,
+			),
+		[campaigns, pendingSimplifiedNotes],
+	);
+	const simplifiedNotesSelection = resolveSelectedSimplifiedNotesSettings({
+		scope: selectedNotesScope,
+		simplifiedNotes: simplifiedNotesEnabled,
+		campaigns: simplifiedNotesCampaigns,
 	});
 	const selectedSources = useMemo(
 		() =>
@@ -251,10 +288,6 @@ export function useSettingsModalController(
 	const handleLanguageChange = (language: string) => {
 		runtime.setLanguage(language);
 		patchSettings({ language });
-	};
-	const handleSimplifiedNotesChange = (enabled: boolean) => {
-		runtime.patchUiSettings({ simplifiedNotes: enabled });
-		patchSettings({ simplifiedNotes: enabled });
 	};
 	const handleAutoApplyAiChangesChange = (enabled: boolean) => {
 		runtime.patchUiSettings({ autoApplyAiChanges: enabled });
@@ -326,6 +359,91 @@ export function useSettingsModalController(
 			}
 		},
 	});
+	const scheduleSimplifiedNotesSave =
+		useQueuedAutosave<SimplifiedNotesSaveRequest>({
+			onSave: async ({ scope, enabled }, isLatest) => {
+				if (isLatest() && isMountedRef.current) setNotesStatus("saving");
+				try {
+					if (scope === GLOBAL_SETTINGS_SCOPE) {
+						const saved = await settingsApi.updateSettings({
+							simplifiedNotes: enabled,
+						});
+						if (!saved) throw new Error("Settings response is empty");
+						if (isLatest()) {
+							runtime.patchUiSettings({
+								simplifiedNotes: Boolean(saved.simplifiedNotes),
+							});
+						}
+					} else {
+						await campaignApi.updateCampaign(scope, {
+							simplifiedNotes: enabled,
+						});
+						const nextCampaigns = await campaignApi.listCampaigns();
+						if (isLatest()) {
+							runtime.setCampaigns(
+								normalizeSettingsCampaigns(nextCampaigns),
+							);
+						}
+						if (isMountedRef.current) {
+							setPendingSimplifiedNotes((current) => {
+								const next = { ...current };
+								delete next[scope];
+								return next;
+							});
+						}
+					}
+				} catch (error) {
+					console.error("Failed to save simplified notes setting", error);
+					if (isLatest() && isMountedRef.current) {
+						setNotification(
+							lang.t("Failed to save simplified notes setting"),
+						);
+					}
+					if (scope !== GLOBAL_SETTINGS_SCOPE) {
+						if (isMountedRef.current) {
+							setPendingSimplifiedNotes((current) => {
+								const next = { ...current };
+								delete next[scope];
+								return next;
+							});
+						}
+						try {
+							const currentCampaigns = await campaignApi.listCampaigns();
+							if (isLatest()) {
+								runtime.setCampaigns(
+									normalizeSettingsCampaigns(currentCampaigns),
+								);
+							}
+						} catch (reloadError) {
+							console.error("Failed to reload campaigns", reloadError);
+						}
+					}
+				} finally {
+					if (isLatest() && isMountedRef.current) setNotesStatus("idle");
+				}
+			},
+		});
+	const handleSimplifiedNotesChange = (enabled: boolean) => {
+		if (simplifiedNotesSelection.isGlobalScope) {
+			runtime.patchUiSettings({ simplifiedNotes: enabled });
+		} else {
+			setPendingSimplifiedNotes((current) => ({
+				...current,
+				[selectedNotesScope]: enabled,
+			}));
+			runtime.setCampaigns(
+				setCampaignSimplifiedNotesSetting(
+					campaigns,
+					selectedNotesScope,
+					enabled,
+				),
+			);
+		}
+		scheduleSimplifiedNotesSave(
+			{ scope: selectedNotesScope, enabled },
+			true,
+		);
+	};
 	const handleSelectedBasePromptChange = (value: string) => {
 		const nextAiBasePrompt = promptSelection.isGlobalScope
 			? value
@@ -416,13 +534,18 @@ export function useSettingsModalController(
 		onNotificationClose: () => setNotification(null),
 		onCancel,
 		general: {
+			campaigns,
+			selectedScope: selectedNotesScope,
+			isInherited: simplifiedNotesSelection.isInherited,
+			status: notesStatus,
 			currentTheme,
 			currentLanguage,
 			availableLanguages,
-			simplifiedNotesEnabled,
+			simplifiedNotesEnabled: simplifiedNotesSelection.enabled,
 			useSearchDebounce,
 			onThemeToggle: handleThemeToggle,
 			onLanguageChange: handleLanguageChange,
+			onScopeChange: setSelectedNotesScope,
 			onSimplifiedNotesChange: handleSimplifiedNotesChange,
 			onUseSearchDebounceChange: handleUseSearchDebounceChange,
 		},

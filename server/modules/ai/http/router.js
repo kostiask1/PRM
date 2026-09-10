@@ -124,7 +124,11 @@ const generateCampaignContent = createGenerateCampaignContent({
 	campaignFlow: campaignAiFlow,
 });
 const generateAiRequest = createGenerateAiRequest({
-	prepareRequest: prepareGenerateAiRequest,
+	prepareRequest: (input) =>
+		prepareGenerateAiRequest({
+			...input,
+			readCampaign: (slug) => storage.readCampaign(slug),
+		}),
 	generateCustomMonster,
 	generateBestiaryImagePrompt,
 	generateCampaignContent,
