@@ -13375,7 +13375,6 @@ await run(
 			[
 				"import {",
 				"useCallback,",
-				"useEffect,",
 				"useMemo,",
 				"useState,",
 				"type MutableRefObject,",
@@ -49967,6 +49966,19 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 			matchesSimpleSearch: () => true,
 		}),
 		[],
+	);
+	assert.deepEqual(
+		filterBestiaryMonsters([goblin, dragon], {
+			selectedSources: ["CUSTOM"],
+			sourceFilter: "MM",
+			onlyFavorites: false,
+			favorites: [],
+			search: "",
+			isDetailedSearch: false,
+			matchesDetailedSearch: () => false,
+			matchesSimpleSearch: () => true,
+		}),
+		[goblin],
 	);
 	assert.deepEqual(
 		filterBestiaryMonsters([goblin, dragon], {

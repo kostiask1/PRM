@@ -117,8 +117,12 @@ export function sortBestiaryMonsters(
 function matchesSelectedSource(
 	monster: BestiaryMonster,
 	selectedSources: ReadonlySet<string>,
+	sourceFilter: string | null,
 ): boolean {
-	return selectedSources.has(normalizeMonsterSource(monster.source));
+	return (
+		sourceFilter !== null ||
+		selectedSources.has(normalizeMonsterSource(monster.source))
+	);
 }
 
 function matchesBestiarySourceFilter(
@@ -194,7 +198,9 @@ function matchesBestiaryMonster(
 	monster: BestiaryMonster,
 	filter: CompiledBestiaryFilter,
 ): boolean {
-	if (!matchesSelectedSource(monster, filter.selectedSources)) return false;
+	if (!matchesSelectedSource(monster, filter.selectedSources, filter.sourceFilter)) {
+		return false;
+	}
 	if (!matchesBestiarySourceFilter(monster, filter.sourceFilter)) return false;
 	if (!matchesBestiaryFavoriteFilter(monster, filter.favorites)) return false;
 	return filter.searchMatcher(monster, filter.search);

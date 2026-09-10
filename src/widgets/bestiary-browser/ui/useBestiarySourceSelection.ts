@@ -1,6 +1,5 @@
 import {
 	useCallback,
-	useEffect,
 	useMemo,
 	useState,
 	type MutableRefObject,
@@ -9,7 +8,6 @@ import {
 	getCampaignIgnoreSourcesList,
 	getIgnoreSourcesListFromSelectedSources,
 	getSelectedSourcesFromIgnoreList,
-	normalizeSourceCode,
 	type CampaignSourceSettings,
 } from "../../../entities/reference/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
@@ -75,14 +73,6 @@ export function useBestiarySourceSelection({
 		if (isCustomSource(sourceFilter)) return translate("Custom creatures");
 		return formatSourceLabel(sourceFilter.replace(/^bestiary-/i, ""));
 	}, [sourceFilter, translate]);
-
-	useEffect(() => {
-		if (sourceFilter === "all") return;
-		const selectedSourceSet = new Set(selectedSources.map(normalizeSourceCode));
-		if (!selectedSourceSet.has(normalizeSourceCode(sourceFilter))) {
-			setSourceFilter("all");
-		}
-	}, [selectedSources, sourceFilter]);
 
 	const saveSelectedSources = useCallback(
 		async (nextSelectedSources: string[]) => {
