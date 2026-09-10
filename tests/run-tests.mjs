@@ -46269,12 +46269,21 @@ await run("session page policies preserve keyboard, sync, and presentation behav
 		getSessionEncounterLinks(
 			[
 				{ id: 1, encounterId: "battle" },
-				{ id: 2, encounterId: "battle" },
+				{ id: 2, encounterId: "negotiation" },
+				{ id: 3, encounterId: "battle" },
 			],
-			[{ id: "battle", name: "Засідка" }],
+			[
+				{ id: "unlinked", name: "Без сцени" },
+				{ id: "negotiation", name: "Перемовини" },
+				{ id: "battle", name: "Засідка" },
+			],
 			"Без назви",
 		),
-		[{ id: "battle", name: "Засідка", sceneNumber: 1 }],
+		[
+			{ id: "battle", name: "Засідка", sceneNumber: 1 },
+			{ id: "negotiation", name: "Перемовини", sceneNumber: 2 },
+			{ id: "unlinked", name: "Без сцени", sceneNumber: null },
+		],
 	);
 	assert.deepEqual(
 		getSessionScopeImportCopy("locations", (value) => value),

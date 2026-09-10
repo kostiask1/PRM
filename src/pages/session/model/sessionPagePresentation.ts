@@ -181,11 +181,17 @@ export function getSessionEncounterLinks(
 	untitledLabel: string,
 ): SessionEncounterLink[] {
 	const sceneNumbers = getEncounterSceneNumbers(scenes);
-	return encounters.map((encounter) => ({
-		id: encounter.id,
-		name: encounter.name || untitledLabel,
-		sceneNumber: sceneNumbers.get(String(encounter.id)) ?? null,
-	}));
+	return encounters
+		.map((encounter) => ({
+			id: encounter.id,
+			name: encounter.name || untitledLabel,
+			sceneNumber: sceneNumbers.get(String(encounter.id)) ?? null,
+		}))
+		.sort((left, right) => {
+			if (left.sceneNumber == null) return right.sceneNumber == null ? 0 : 1;
+			if (right.sceneNumber == null) return -1;
+			return left.sceneNumber - right.sceneNumber;
+		});
 }
 
 function getEncounterSceneNumbers(
