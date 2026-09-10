@@ -229,6 +229,7 @@ export default function Sidebar({
 		void openModal({
 			title: lang.t("Settings"),
 			type: "confirm",
+			className: "SettingsModal__modal",
 			showFooter: false,
 			children: (
 				<SidebarSettingsModalContent

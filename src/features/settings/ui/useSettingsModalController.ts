@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import { bestiaryApi } from "../../../entities/bestiary/index.js";
 import { spellApi } from "../../../entities/spell/index.js";
@@ -47,6 +47,59 @@ function useSettingsScopeRecovery(options: {
 		);
 		if (nextScope !== selectedScope) setSelectedScope(nextScope);
 	}, [activeCampaignSlug, campaigns, selectedScope, setSelectedScope]);
+}
+
+interface QueuedAutosaveOptions<T> {
+	delay?: number;
+	onSave: (value: T, isLatest: () => boolean) => Promise<void>;
+}
+
+function useQueuedAutosave<T>({
+	delay = 500,
+	onSave,
+}: QueuedAutosaveOptions<T>) {
+	const onSaveRef = useRef(onSave);
+	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const pendingRef = useRef<{ value: T; version: number } | null>(null);
+	const queueRef = useRef<Promise<void>>(Promise.resolve());
+	const versionRef = useRef(0);
+	onSaveRef.current = onSave;
+
+	const flush = useCallback(() => {
+		if (timerRef.current) clearTimeout(timerRef.current);
+		timerRef.current = null;
+		const pending = pendingRef.current;
+		pendingRef.current = null;
+		if (!pending) return;
+
+		queueRef.current = queueRef.current
+			.catch(() => undefined)
+			.then(() =>
+				onSaveRef.current(
+					pending.value,
+					() => pending.version === versionRef.current,
+				),
+			);
+	}, []);
+
+	const schedule = useCallback(
+		(value: T, immediate = false) => {
+			versionRef.current += 1;
+			pendingRef.current = { value, version: versionRef.current };
+			if (timerRef.current) clearTimeout(timerRef.current);
+			if (immediate) flush();
+			else timerRef.current = setTimeout(flush, delay);
+		},
+		[delay, flush],
+	);
+
+	useEffect(() => flush, [flush]);
+	return schedule;
+}
+
+interface SourceSaveRequest {
+	scope: string;
+	ignoreSourcesList: string[];
 }
 
 export function useSettingsModalController(
@@ -99,6 +152,14 @@ export function useSettingsModalController(
 	const [sourceStatus, setSourceStatus] =
 		useState<SettingsSaveStatus>("idle");
 	const [notification, setNotification] = useState<string | null>(null);
+	const isMountedRef = useRef(true);
+
+	useEffect(() => {
+		isMountedRef.current = true;
+		return () => {
+			isMountedRef.current = false;
+		};
+	}, []);
 
 	useEffect(() => setAiBasePrompt(storedAiBasePrompt), [storedAiBasePrompt]);
 	useEffect(
@@ -203,23 +264,111 @@ export function useSettingsModalController(
 		runtime.patchUiSettings({ useSearchDebounce: enabled });
 		patchSettings({ useSearchDebounce: enabled });
 	};
+	const schedulePromptSave = useQueuedAutosave({
+		onSave: async (payload: ReturnType<typeof buildPromptSettingsPayload>, isLatest) => {
+			if (isLatest() && isMountedRef.current) setPromptStatus("saving");
+			try {
+				const saved = await settingsApi.updateSettings(payload);
+				if (!saved) throw new Error("Settings response is empty");
+				if (!isLatest()) return;
+				const nextUiSettings = normalizeSavedPromptSettings(saved);
+				runtime.patchUiSettings(nextUiSettings);
+				if (!isMountedRef.current) return;
+				setAiBasePrompt(nextUiSettings.aiBasePrompt);
+				setImagePromptBasePrompt(nextUiSettings.imagePromptBasePrompt);
+				setCampaignAiBasePrompts(nextUiSettings.campaignAiBasePrompts);
+				setCampaignImagePromptBasePrompts(
+					nextUiSettings.campaignImagePromptBasePrompts,
+				);
+			} catch (error) {
+				console.error("Failed to save AI base prompts", error);
+				if (isLatest() && isMountedRef.current) {
+					setNotification(lang.t("Failed to save prompts"));
+				}
+			} finally {
+				if (isLatest() && isMountedRef.current) setPromptStatus("idle");
+			}
+		},
+	});
+	const scheduleSourceSave = useQueuedAutosave<SourceSaveRequest>({
+		onSave: async ({ scope, ignoreSourcesList: nextIgnoreSourcesList }, isLatest) => {
+			if (isLatest() && isMountedRef.current) setSourceStatus("saving");
+			try {
+				if (scope === GLOBAL_SETTINGS_SCOPE) {
+					const saved = await settingsApi.updateSettings({
+						ignoreSourcesList: nextIgnoreSourcesList,
+					});
+					if (!saved) throw new Error("Settings response is empty");
+					if (!isLatest()) return;
+					const savedIgnoreSourcesList = normalizeSavedIgnoreSources(saved);
+					runtime.patchUiSettings({
+						ignoreSourcesList: savedIgnoreSourcesList,
+					});
+					if (isMountedRef.current) {
+						setIgnoreSourcesList(savedIgnoreSourcesList);
+					}
+				} else {
+					await campaignApi.updateCampaign(scope, {
+						ignoreSourcesList: nextIgnoreSourcesList,
+					});
+					const nextCampaigns = await campaignApi.listCampaigns();
+					if (isLatest()) {
+						runtime.setCampaigns(normalizeSettingsCampaigns(nextCampaigns));
+					}
+				}
+			} catch (error) {
+				console.error("Failed to save source settings", error);
+				if (isLatest() && isMountedRef.current) {
+					setNotification(lang.t("Failed to save source settings"));
+				}
+			} finally {
+				if (isLatest() && isMountedRef.current) setSourceStatus("idle");
+			}
+		},
+	});
 	const handleSelectedBasePromptChange = (value: string) => {
-		if (promptSelection.isGlobalScope) setAiBasePrompt(value);
-		else {
-			setCampaignAiBasePrompts((current) =>
-				setSettingsPromptForScope(current, selectedPromptScope, value),
-			);
-		}
-		setPromptStatus("idle");
+		const nextAiBasePrompt = promptSelection.isGlobalScope
+			? value
+			: aiBasePrompt;
+		const nextCampaignAiBasePrompts = promptSelection.isGlobalScope
+			? campaignAiBasePrompts
+			: setSettingsPromptForScope(
+					campaignAiBasePrompts,
+					selectedPromptScope,
+					value,
+				);
+		setAiBasePrompt(nextAiBasePrompt);
+		setCampaignAiBasePrompts(nextCampaignAiBasePrompts);
+		const payload = buildPromptSettingsPayload({
+			aiBasePrompt: nextAiBasePrompt,
+			imagePromptBasePrompt,
+			campaignAiBasePrompts: nextCampaignAiBasePrompts,
+			campaignImagePromptBasePrompts,
+		});
+		runtime.patchUiSettings(payload);
+		schedulePromptSave(payload);
 	};
 	const handleSelectedImagePromptChange = (value: string) => {
-		if (promptSelection.isGlobalScope) setImagePromptBasePrompt(value);
-		else {
-			setCampaignImagePromptBasePrompts((current) =>
-				setSettingsPromptForScope(current, selectedPromptScope, value),
-			);
-		}
-		setPromptStatus("idle");
+		const nextImagePromptBasePrompt = promptSelection.isGlobalScope
+			? value
+			: imagePromptBasePrompt;
+		const nextCampaignImagePromptBasePrompts = promptSelection.isGlobalScope
+			? campaignImagePromptBasePrompts
+			: setSettingsPromptForScope(
+					campaignImagePromptBasePrompts,
+					selectedPromptScope,
+					value,
+				);
+		setImagePromptBasePrompt(nextImagePromptBasePrompt);
+		setCampaignImagePromptBasePrompts(nextCampaignImagePromptBasePrompts);
+		const payload = buildPromptSettingsPayload({
+			aiBasePrompt,
+			imagePromptBasePrompt: nextImagePromptBasePrompt,
+			campaignAiBasePrompts,
+			campaignImagePromptBasePrompts: nextCampaignImagePromptBasePrompts,
+		});
+		runtime.patchUiSettings(payload);
+		schedulePromptSave(payload);
 	};
 	const handleSelectedSourcesChange = (nextSelectedSources: string[]) => {
 		const nextIgnoreSourcesList = getIgnoreSourcesListFromSelectedSources(
@@ -228,81 +377,38 @@ export function useSettingsModalController(
 		);
 		if (sourceSelection.isGlobalScope) {
 			setIgnoreSourcesList(nextIgnoreSourcesList);
+			runtime.patchUiSettings({ ignoreSourcesList: nextIgnoreSourcesList });
 		} else {
-			setCampaignIgnoreSourcesLists((current) =>
+			setCampaignIgnoreSourcesLists(
 				setCampaignIgnoreSourcesForScope(
-					current,
+					campaignIgnoreSourcesLists,
 					selectedSourceScope,
 					nextIgnoreSourcesList,
 				),
 			);
 		}
-		setSourceStatus("idle");
+		scheduleSourceSave({
+			scope: selectedSourceScope,
+			ignoreSourcesList: nextIgnoreSourcesList,
+		});
 	};
-	const handleCopyGlobalSourcesToCampaign = () => {
+	const handleUseGlobalSources = () => {
 		if (sourceSelection.isGlobalScope || !selectedSourceScope) return;
-		setCampaignIgnoreSourcesLists((current) =>
+		const nextIgnoreSourcesList = normalizeIgnoreSourcesList(ignoreSourcesList);
+		setCampaignIgnoreSourcesLists(
 			setCampaignIgnoreSourcesForScope(
-				current,
+				campaignIgnoreSourcesLists,
 				selectedSourceScope,
-				normalizeIgnoreSourcesList(ignoreSourcesList),
+				nextIgnoreSourcesList,
 			),
 		);
-		setSourceStatus("idle");
-	};
-	const handleSavePrompts = async () => {
-		const payload = buildPromptSettingsPayload({
-			aiBasePrompt,
-			imagePromptBasePrompt,
-			campaignAiBasePrompts,
-			campaignImagePromptBasePrompts,
-		});
-		setPromptStatus("saving");
-		try {
-			const saved = await settingsApi.updateSettings(payload);
-			if (!saved) throw new Error("Settings response is empty");
-			const nextUiSettings = normalizeSavedPromptSettings(saved);
-			runtime.patchUiSettings(nextUiSettings);
-			setAiBasePrompt(nextUiSettings.aiBasePrompt);
-			setImagePromptBasePrompt(nextUiSettings.imagePromptBasePrompt);
-			setCampaignAiBasePrompts(nextUiSettings.campaignAiBasePrompts);
-			setCampaignImagePromptBasePrompts(
-				nextUiSettings.campaignImagePromptBasePrompts,
-			);
-			setPromptStatus("idle");
-			setNotification(lang.t("Prompts saved"));
-		} catch (error) {
-			console.error("Failed to save AI base prompts", error);
-			setPromptStatus("idle");
-			setNotification(lang.t("Failed to save prompts"));
-		}
-	};
-	const handleSaveSources = async () => {
-		setSourceStatus("saving");
-		try {
-			if (sourceSelection.isGlobalScope) {
-				const saved = await settingsApi.updateSettings({ ignoreSourcesList });
-				if (!saved) throw new Error("Settings response is empty");
-				const savedIgnoreSourcesList = normalizeSavedIgnoreSources(saved);
-				runtime.patchUiSettings({
-					ignoreSourcesList: savedIgnoreSourcesList,
-				});
-				setIgnoreSourcesList(savedIgnoreSourcesList);
-			} else if (selectedSourceScope) {
-				await campaignApi.updateCampaign(selectedSourceScope, {
-					ignoreSourcesList:
-						campaignIgnoreSourcesLists[selectedSourceScope] || [],
-				});
-				const nextCampaigns = await campaignApi.listCampaigns();
-				runtime.setCampaigns(normalizeSettingsCampaigns(nextCampaigns));
-			}
-			setSourceStatus("idle");
-			setNotification(lang.t("Source settings saved"));
-		} catch (error) {
-			console.error("Failed to save source settings", error);
-			setSourceStatus("idle");
-			setNotification(lang.t("Failed to save source settings"));
-		}
+		scheduleSourceSave(
+			{
+				scope: selectedSourceScope,
+				ignoreSourcesList: nextIgnoreSourcesList,
+			},
+			true,
+		);
 	};
 
 	return {
@@ -329,8 +435,7 @@ export function useSettingsModalController(
 			selectedSources,
 			onScopeChange: setSelectedSourceScope,
 			onSelectedSourcesChange: handleSelectedSourcesChange,
-			onCopyGlobal: handleCopyGlobalSourcesToCampaign,
-			onSave: handleSaveSources,
+			onUseGlobal: handleUseGlobalSources,
 		},
 		ai: {
 			campaigns,
@@ -344,7 +449,6 @@ export function useSettingsModalController(
 			onAutoApplyAiChangesChange: handleAutoApplyAiChangesChange,
 			onBasePromptChange: handleSelectedBasePromptChange,
 			onImagePromptChange: handleSelectedImagePromptChange,
-			onSave: handleSavePrompts,
 		},
 	};
 }

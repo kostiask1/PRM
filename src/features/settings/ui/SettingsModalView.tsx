@@ -39,8 +39,7 @@ export interface SettingsSourcesViewProps {
 	selectedSources: string[];
 	onScopeChange: (scope: string) => void;
 	onSelectedSourcesChange: (sources: string[]) => void;
-	onCopyGlobal: () => void;
-	onSave: () => void;
+	onUseGlobal: () => void;
 }
 
 export interface SettingsAiViewProps {
@@ -55,7 +54,6 @@ export interface SettingsAiViewProps {
 	onAutoApplyAiChangesChange: (enabled: boolean) => void;
 	onBasePromptChange: (value: string) => void;
 	onImagePromptChange: (value: string) => void;
-	onSave: () => void;
 }
 
 export interface SettingsModalViewProps {
@@ -141,12 +139,11 @@ function SettingsSourcesGroup({
 	selectedSources,
 	onScopeChange,
 	onSelectedSourcesChange,
-	onCopyGlobal,
-	onSave,
+	onUseGlobal,
 }: SettingsSourcesViewProps) {
 	return (
 		<div className="SettingsModal__group SettingsModal__section">
-			<div className="SettingsModal__promptHeader">
+			<div className="SettingsModal__sectionHeader">
 				<div>
 					<div className="SettingsModal__label">
 						{lang.t("Content sources")}
@@ -157,13 +154,11 @@ function SettingsSourcesGroup({
 						)}
 					</div>
 				</div>
-				<Button
-					variant="primary"
-					onClick={onSave}
-					disabled={status === "saving"}
-				>
-					{status === "saving" ? lang.t("Saving...") : lang.t("Save sources")}
-				</Button>
+				{status === "saving" && (
+					<span className="SettingsModal__saveStatus" role="status">
+						{lang.t("Saving...")}
+					</span>
+				)}
 			</div>
 
 			<div className="SettingsModal__field">
@@ -210,9 +205,9 @@ function SettingsSourcesGroup({
 							<Button
 								variant="ghost"
 								size={Button.SIZES.SMALL}
-								onClick={onCopyGlobal}
+								onClick={onUseGlobal}
 							>
-								{lang.t("Copy global settings")}
+								{lang.t("Use global sources")}
 							</Button>
 						</div>
 					)}
@@ -234,13 +229,17 @@ function SettingsAiGroup({
 	onAutoApplyAiChangesChange,
 	onBasePromptChange,
 	onImagePromptChange,
-	onSave,
 	EditableField,
 }: SettingsAiGroupProps) {
 	return (
 		<div className="SettingsModal__group SettingsModal__section SettingsModal__section_ai">
 			<div className="SettingsModal__sectionHeader">
 				<h3>{lang.t("AI settings")}</h3>
+				{status === "saving" && (
+					<span className="SettingsModal__saveStatus" role="status">
+						{lang.t("Saving...")}
+					</span>
+				)}
 			</div>
 			<Switch
 				checked={autoApplyAiChanges}
@@ -250,29 +249,17 @@ function SettingsAiGroup({
 					"When disabled, parsed AI responses are saved as drafts for review before applying.",
 				)}
 			/>
-			<div className="SettingsModal__promptHeader">
-				<div>
-					<div className="SettingsModal__label">{lang.t("AI base prompt")}</div>
-					<div className="SettingsModal__hint">
-						{lang.t("These instructions are added to every future AI request.")}
-					</div>
-				</div>
-				<Button
-					variant="primary"
-					onClick={onSave}
-					disabled={status === "saving"}
-				>
-					{status === "saving" ? lang.t("Saving...") : lang.t("Save prompts")}
-				</Button>
-			</div>
-
 			<label className="SettingsModal__field">
-				<span className="SettingsModal__label">{lang.t("AI base prompt")}</span>
+				<span className="SettingsModal__label">
+					{lang.t("Prompt settings for")}
+				</span>
 				<Select
 					value={selectedScope}
 					onChange={(event) => onScopeChange(event.target.value)}
 				>
-					<option value={GLOBAL_SETTINGS_SCOPE}>{lang.t("Global base prompt")}</option>
+					<option value={GLOBAL_SETTINGS_SCOPE}>
+						{lang.t("Global prompt settings")}
+					</option>
 					{campaigns.length === 0 && (
 						<option value="">{lang.t("No campaigns")}</option>
 					)}
@@ -282,50 +269,61 @@ function SettingsAiGroup({
 						</option>
 					))}
 				</Select>
-				<EditableField
-					type="textarea"
-					className="SettingsModal__promptField"
-					value={basePrompt}
-					onChange={(event) => onBasePromptChange(event.target.value)}
-					placeholder={
-						isGlobalScope
-							? lang.t(
-									"Example: Keep answers concise, prefer dark fantasy tone, avoid comic relief...",
-								)
-							: lang.t(
-									"Example: This campaign is grounded, political, and low magic...",
-								)
-					}
-					disabled={!isGlobalScope && !selectedScope}
-				/>
 			</label>
 
-			<label className="SettingsModal__field">
-				<span className="SettingsModal__label">
-					{lang.t("Image prompt base style")}
-				</span>
-				<div className="SettingsModal__hint">
-					{isGlobalScope
-						? lang.t(
-								"These style instructions are added to every image prompt generation request.",
-							)
-						: lang.t("Used instead of the global image style for this campaign.")}
-				</div>
-				<EditableField
-					type="textarea"
-					className="SettingsModal__promptField"
-					value={imagePrompt}
-					onChange={(event) => onImagePromptChange(event.target.value)}
-					placeholder={
-						isGlobalScope
-							? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
-							: lang.t(
-									"Example: gothic oil painting, muted colors, candlelight, worn parchment textures...",
+			<div className="SettingsModal__promptGrid">
+				<label className="SettingsModal__field">
+					<span className="SettingsModal__label">{lang.t("AI base prompt")}</span>
+					<div className="SettingsModal__hint">
+						{isGlobalScope
+							? lang.t("These instructions are added to every future AI request.")
+							: lang.t("Used instead of the global AI prompt for this campaign.")}
+					</div>
+					<EditableField
+						type="textarea"
+						className="SettingsModal__promptField"
+						value={basePrompt}
+						onChange={(event) => onBasePromptChange(event.target.value)}
+						placeholder={
+							isGlobalScope
+								? lang.t(
+										"Example: Keep answers concise, prefer dark fantasy tone, avoid comic relief...",
+									)
+								: lang.t(
+										"Example: This campaign is grounded, political, and low magic...",
+									)
+						}
+						disabled={!isGlobalScope && !selectedScope}
+					/>
+				</label>
+
+				<label className="SettingsModal__field">
+					<span className="SettingsModal__label">
+						{lang.t("Image prompt base style")}
+					</span>
+					<div className="SettingsModal__hint">
+						{isGlobalScope
+							? lang.t(
+									"These style instructions are added to every image prompt generation request.",
 								)
-					}
-					disabled={!isGlobalScope && !selectedScope}
-				/>
-			</label>
+							: lang.t("Used instead of the global image style for this campaign.")}
+					</div>
+					<EditableField
+						type="textarea"
+						className="SettingsModal__promptField"
+						value={imagePrompt}
+						onChange={(event) => onImagePromptChange(event.target.value)}
+						placeholder={
+							isGlobalScope
+								? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
+								: lang.t(
+										"Example: gothic oil painting, muted colors, candlelight, worn parchment textures...",
+									)
+						}
+						disabled={!isGlobalScope && !selectedScope}
+					/>
+				</label>
+			</div>
 		</div>
 	);
 }

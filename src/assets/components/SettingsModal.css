@@ -4,6 +4,10 @@
 	gap: var(--space-4);
 }
 
+.SettingsModal__modal {
+	width: min(92vw, 1040px);
+}
+
 .SettingsModal__group {
 	display: flex;
 	flex-direction: column;
@@ -70,6 +74,21 @@
 	min-height: 120px;
 }
 
+.SettingsModal__promptGrid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--space-4);
+}
+
+.SettingsModal__promptGrid .SettingsModal__hint {
+	min-height: 2.4em;
+}
+
+.SettingsModal__saveStatus {
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
 .SettingsModal__sourceSelect {
 	flex: 1 1 320px;
 	width: 100%;
@@ -88,6 +107,21 @@
 	flex: 0 0 auto;
 }
 
+@media (max-width: 767px) {
+	.SettingsModal__modal {
+		width: 100%;
+	}
+
+	.SettingsModal__promptGrid {
+		grid-template-columns: 1fr;
+		gap: var(--space-3);
+	}
+
+	.SettingsModal__promptGrid .SettingsModal__hint {
+		min-height: 0;
+	}
+}
+
 @media (max-width: 640px) {
 	.SettingsModal__sourceRow {
 		align-items: stretch;
@@ -97,13 +131,6 @@
 	.SettingsModal__inlineActions .Button {
 		width: 100%;
 	}
-}
-
-.SettingsModal__promptHeader {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: var(--space-3);
 }
 
 .SettingsModal__actions {
