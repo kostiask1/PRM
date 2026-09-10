@@ -51446,8 +51446,8 @@ await run("rules reference modal plans preserve keyboard and tab navigation", ()
 		getReferenceTabSelectionPlan("bestiary", "", { name: "Мавка", source: "CUSTOM" }),
 		{
 			tabId: "bestiary",
-			navigationName: "Мавка|CUSTOM",
-			pendingNavigationTabId: null,
+			navigationName: null,
+			pendingNavigationTabId: "bestiary",
 		},
 	);
 	assert.deepEqual(
@@ -51568,6 +51568,11 @@ await run("rules reference modal orchestration plans preserve request, load, and
 	assert.equal(
 		applyLoadedReferenceSelection(selectedSpells, "spells", [{ name: "Щит", source: "PHB" }]),
 		selectedSpells,
+	);
+	const selectedBestiary = {};
+	assert.equal(
+		applyLoadedReferenceSelection(selectedBestiary, "bestiary", [{ name: "Мавка", source: "CUSTOM" }]),
+		selectedBestiary,
 	);
 	assert.deepEqual(
 		applyLoadedReferenceSelection({}, "conditions", loadedConditions),
@@ -51884,16 +51889,16 @@ await run("rules reference modal plans reconcile selections and consume scroll r
 	const wolf = { name: "Вовк", source: "MM" };
 	const mavka = { name: "Мавка", source: "CUSTOM" };
 	const reconciliationInput = {
-		tabId: "bestiary",
+		tabId: "conditions",
 		hasLoaded: true,
 		isLoading: false,
 		activeItems: [],
 		filteredItems: [wolf, mavka],
-		selectedName: "Невідомий|MM",
+		selectedName: "Невідомий",
 	};
 	assert.deepEqual(
 		getReferenceSelectionReconciliationPlan(reconciliationInput),
-		{ type: "select", tabId: "bestiary", name: "Вовк|MM" },
+		{ type: "select", tabId: "conditions", name: "Вовк" },
 	);
 	assert.equal(
 		getReferenceSelectionReconciliationPlan({
@@ -51912,6 +51917,13 @@ await run("rules reference modal plans reconcile selections and consume scroll r
 	assert.equal(
 		getReferenceSelectionReconciliationPlan({
 			...reconciliationInput,
+			tabId: "bestiary",
+		}),
+		null,
+	);
+	assert.equal(
+		getReferenceSelectionReconciliationPlan({
+			...reconciliationInput,
 			tabId: "spells",
 		}),
 		null,
@@ -51920,7 +51932,7 @@ await run("rules reference modal plans reconcile selections and consume scroll r
 		getReferenceSelectionReconciliationPlan({
 			...reconciliationInput,
 			activeItems: [wolf],
-			selectedName: "Вовк|MM",
+			selectedName: "Вовк",
 		}),
 		null,
 	);
@@ -51936,7 +51948,7 @@ await run("rules reference modal plans reconcile selections and consume scroll r
 		...reconciliationInput,
 		filteredItems: [],
 	});
-	assert.deepEqual(clearPlan, { type: "clear", tabId: "bestiary" });
+	assert.deepEqual(clearPlan, { type: "clear", tabId: "conditions" });
 	const emptySelections = { conditions: "" };
 	assert.equal(
 		applyReferenceSelectionReconciliationPlan(emptySelections, clearPlan),
@@ -51947,7 +51959,7 @@ await run("rules reference modal plans reconcile selections and consume scroll r
 			{ bestiary: "Старий вибір|MM", conditions: "Отруєний" },
 			clearPlan,
 		),
-		{ bestiary: "", conditions: "Отруєний" },
+		{ bestiary: "Старий вибір|MM", conditions: "" },
 	);
 	const selectPlan = getReferenceSelectionReconciliationPlan(reconciliationInput);
 	assert.deepEqual(
@@ -51955,7 +51967,7 @@ await run("rules reference modal plans reconcile selections and consume scroll r
 			{ conditions: "Отруєний" },
 			selectPlan,
 		),
-		{ conditions: "Отруєний", bestiary: "Вовк|MM" },
+		{ conditions: "Вовк" },
 	);
 
 	const dragons = [
@@ -51963,21 +51975,21 @@ await run("rules reference modal plans reconcile selections and consume scroll r
 		{ name: "Дракон", source: "MM" },
 	];
 	const scrollInput = {
-		tabId: "bestiary",
+		tabId: "conditions",
 		hasLoaded: true,
 		isLoading: false,
 		shouldScroll: true,
 		filteredItems: dragons,
-		selectedName: "Дракон|MM",
+		selectedName: "Дракон",
 	};
-	assert.deepEqual(getReferenceScrollPlan(scrollInput), { scrollIndex: 1 });
+	assert.deepEqual(getReferenceScrollPlan(scrollInput), { scrollIndex: 0 });
 	assert.deepEqual(
-		getReferenceScrollPlan({ ...scrollInput, selectedName: "Дракон|XMM" }),
-		{ scrollIndex: 0 },
-	);
-	assert.deepEqual(
-		getReferenceScrollPlan({ ...scrollInput, selectedName: "Мавка|CUSTOM" }),
+		getReferenceScrollPlan({ ...scrollInput, selectedName: "Мавка" }),
 		{ scrollIndex: -1 },
+	);
+	assert.equal(
+		getReferenceScrollPlan({ ...scrollInput, tabId: "bestiary" }),
+		null,
 	);
 	for (const override of [
 		{ hasLoaded: false },

@@ -242,6 +242,10 @@ function preferSelectedReferenceName(selectedName: string, firstItemName: string
 	return selectedName || firstItemName;
 }
 
+function usesOwnedReferenceSelection(tabId: ReferenceTabId): boolean {
+	return tabId === "spells" || tabId === "bestiary";
+}
+
 const TAB_NAVIGATION_NAME_POLICIES: Record<ReferenceTabId, (selectedName: string, firstItemName: string) => string> = {
 	conditions: preferSelectedReferenceName,
 	diseases: preferSelectedReferenceName,
@@ -249,7 +253,7 @@ const TAB_NAVIGATION_NAME_POLICIES: Record<ReferenceTabId, (selectedName: string
 	skills: preferSelectedReferenceName,
 	variantrules: preferSelectedReferenceName,
 	spells: (selectedName) => selectedName,
-	bestiary: preferSelectedReferenceName,
+	bestiary: (selectedName) => selectedName,
 };
 
 function getReferenceItemOrEmpty(item: ReferenceItem | null | undefined): ReferenceItem {
@@ -283,7 +287,7 @@ export function getReferenceSelectionReconciliationPlan(
 	const blockers = [
 		!input.hasLoaded,
 		input.isLoading,
-		input.tabId === "spells",
+		usesOwnedReferenceSelection(input.tabId),
 		input.activeItems.some((item) => itemMatchesSelectedName(input.tabId, item, input.selectedName)),
 	];
 	if (blockers.includes(true)) return null;
@@ -314,6 +318,7 @@ export function getReferenceScrollPlan(input: ReferenceScrollInput): ReferenceSc
 	const blockers = [
 		!input.hasLoaded,
 		input.isLoading,
+		usesOwnedReferenceSelection(input.tabId),
 		!input.selectedName,
 		!input.shouldScroll,
 	];
@@ -444,7 +449,7 @@ export function applyLoadedReferenceSelection(
 	tabId: ReferenceTabId,
 	items: ReferenceItem[],
 ): ReferenceSelectionsByTab {
-	const blockers = [Boolean(selectedByTab[tabId]), tabId === "spells"];
+	const blockers = [Boolean(selectedByTab[tabId]), usesOwnedReferenceSelection(tabId)];
 	if (blockers.includes(true)) return selectedByTab;
 	return {
 		...selectedByTab,
