@@ -113,6 +113,7 @@ export {
 	type ContextListConfig,
 } from "./model/contextConfig.ts";
 export {
+	createAiContextSessionsLoader,
 	createInitialAiContextConfig,
 	mergeLoadedAiSessionData,
 	useAiContextData,

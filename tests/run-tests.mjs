@@ -525,6 +525,7 @@ import {
 	buildSceneImageTarget,
 	createAiHistoryWorkflow,
 	createAiHistoryCommandService,
+	createAiContextSessionsLoader,
 	createTransientAiHistoryEntry,
 	createInitialAiContextConfig,
 	ensureContextListItems,
@@ -42153,6 +42154,59 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		included: true,
 		items: { "npc-1": false, "npc-2": false },
 	});
+	let emptySessionListCalls = 0;
+	let releaseEmptySessionList;
+	const emptySessionListLoader = createAiContextSessionsLoader(
+		async () => {
+			emptySessionListCalls += 1;
+			await new Promise((resolve) => {
+				releaseEmptySessionList = resolve;
+			});
+			return [];
+		},
+		() => {},
+	);
+	const firstEmptySessionList = emptySessionListLoader("empty-campaign");
+	const concurrentEmptySessionList = emptySessionListLoader("empty-campaign");
+	assert.strictEqual(concurrentEmptySessionList, firstEmptySessionList);
+	releaseEmptySessionList();
+	const loadedEmptySessionList = await firstEmptySessionList;
+	assert.deepEqual(loadedEmptySessionList, []);
+	assert.strictEqual(
+		await emptySessionListLoader("empty-campaign"),
+		loadedEmptySessionList,
+	);
+	assert.equal(emptySessionListCalls, 1);
+
+	const invalidSessionListLoader = createAiContextSessionsLoader(
+		async () => null,
+		() => {},
+	);
+	const normalizedInvalidSessionList = await invalidSessionListLoader("invalid");
+	assert.deepEqual(normalizedInvalidSessionList, []);
+	assert.strictEqual(
+		await invalidSessionListLoader("invalid"),
+		normalizedInvalidSessionList,
+	);
+
+	let failedSessionListCalls = 0;
+	const sessionListErrors = [];
+	const retryingSessionListLoader = createAiContextSessionsLoader(
+		async () => {
+			failedSessionListCalls += 1;
+			if (failedSessionListCalls === 1) throw new Error("temporary failure");
+			return [{ fileName: "session.json" }];
+		},
+		(message, error) => sessionListErrors.push([message, error.message]),
+	);
+	assert.deepEqual(await retryingSessionListLoader("retry-campaign"), []);
+	assert.deepEqual(await retryingSessionListLoader("retry-campaign"), [
+		{ fileName: "session.json" },
+	]);
+	assert.equal(failedSessionListCalls, 2);
+	assert.deepEqual(sessionListErrors, [
+		["Failed to load sessions", "temporary failure"],
+	]);
 	const initialSessionContext = createInitialAiContextConfig("session-1");
 	assert.equal(initialSessionContext.sessions["session-1"].included, true);
 	assert.equal(initialSessionContext.sessions["session-1"].result_text, true);

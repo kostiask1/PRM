@@ -114,6 +114,7 @@ export {
 	getSceneImageTargetEncounter,
 } from "./model/imageTargets.ts";
 export {
+	createAiContextSessionsLoader,
 	createInitialAiContextConfig,
 	mergeLoadedAiSessionData,
 	useAiContextData,

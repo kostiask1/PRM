@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ensureContextListItems,
 	type ContextListConfig,
@@ -66,6 +66,38 @@ export interface UseAiContextDataOptions {
 		fileName: string,
 	): Promise<AiContextSession | null>;
 	onLoadError?(message: string, error: unknown): void;
+}
+
+export function createAiContextSessionsLoader(
+	listSessions: UseAiContextDataOptions["listSessions"],
+	onLoadError: NonNullable<UseAiContextDataOptions["onLoadError"]>,
+) {
+	const loadedByCampaign = new Map<string, AiContextSession[]>();
+	const pendingByCampaign = new Map<string, Promise<AiContextSession[]>>();
+
+	return (campaignSlug: string): Promise<AiContextSession[]> => {
+		if (loadedByCampaign.has(campaignSlug)) {
+			return Promise.resolve(loadedByCampaign.get(campaignSlug) || []);
+		}
+		const pending = pendingByCampaign.get(campaignSlug);
+		if (pending) return pending;
+
+		const request = (async () => {
+			try {
+				const sessions = await listSessions(campaignSlug);
+				const normalized = Array.isArray(sessions) ? sessions : [];
+				loadedByCampaign.set(campaignSlug, normalized);
+				return normalized;
+			} catch (error) {
+				onLoadError("Failed to load sessions", error);
+				return [];
+			} finally {
+				pendingByCampaign.delete(campaignSlug);
+			}
+		})();
+		pendingByCampaign.set(campaignSlug, request);
+		return request;
+	};
 }
 
 export const createInitialAiContextConfig = (
@@ -255,20 +287,25 @@ export function useAiContextData({
 		createInitialAiContextConfig(sessionSlug),
 	);
 	const campaignEntitiesLoadedRef = useRef(false);
+	const activeCampaignSlugRef = useRef(campaignSlug);
+	activeCampaignSlugRef.current = campaignSlug;
+	const loadSessions = useMemo(
+		() => createAiContextSessionsLoader(listSessions, onLoadError),
+		[listSessions, onLoadError],
+	);
 
 	const ensureSessions = useCallback(async () => {
 		if (!campaignSlug) return [];
-		if (sessionsList.length > 0) return sessionsList;
-		try {
-			const sessions = await listSessions(campaignSlug);
-			const normalized = Array.isArray(sessions) ? sessions : [];
-			setSessionsList(normalized);
-			return normalized;
-		} catch (error) {
-			onLoadError("Failed to load sessions", error);
-			return [];
+		const sessions = await loadSessions(campaignSlug);
+		if (activeCampaignSlugRef.current === campaignSlug) {
+			setSessionsList((current) => current === sessions ? current : sessions);
 		}
-	}, [campaignSlug, listSessions, onLoadError, sessionsList]);
+		return sessions;
+	}, [campaignSlug, loadSessions]);
+
+	useEffect(() => {
+		setSessionsList([]);
+	}, [campaignSlug]);
 
 	const ensureCampaignEntities = useCallback(async () => {
 		if (!campaignSlug || isBestiary) {
