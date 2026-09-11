@@ -121,6 +121,7 @@
 
 .RulesReferenceModalContent__list .ListCard {
 	height: 61px;
+	margin-bottom: 6px;
 }
 
 .RulesReferenceModalContent__content {

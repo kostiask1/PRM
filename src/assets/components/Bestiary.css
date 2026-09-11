@@ -313,6 +313,7 @@
 
 .Bestiary .ListCard {
 	height: 65px;
+	margin-bottom: 6px;
 }
 
 .Bestiary__item_token {

@@ -93,6 +93,7 @@
 
 .Spells__list .ListCard {
 	height: 81px;
+	margin-bottom: 6px;
 }
 
 .Spells__item_source {

@@ -4,10 +4,6 @@
 	gap: inherit;
 }
 
-.DraggableList .ListCard {
-	margin-bottom: 0;
-}
-
 .DraggableList>div {
 	position: relative;
 	touch-action: pan-y;
