@@ -19,44 +19,44 @@ import ColorThemeSwitcher from "./ColorThemeSwitcher.tsx";
 import type { SettingsModalCompositionSlots } from "./settingsModalComposition.ts";
 
 export interface SettingsGeneralViewProps {
-	campaigns: SettingsCampaign[];
-	selectedScope: string;
-	isInherited: boolean;
-	status: SettingsSaveStatus;
 	currentTheme: Theme;
 	currentLanguage: string;
 	availableLanguages: string[];
-	simplifiedNotesEnabled: boolean;
+	autoApplyAiChanges: boolean;
 	useSearchDebounce: boolean;
 	onThemeToggle: () => void;
 	onLanguageChange: (language: string) => void;
-	onScopeChange: (scope: string) => void;
-	onSimplifiedNotesChange: (enabled: boolean) => void;
+	onAutoApplyAiChangesChange: (enabled: boolean) => void;
 	onUseSearchDebounceChange: (enabled: boolean) => void;
 }
 
-export interface SettingsSourcesViewProps {
+export interface SettingsScopeViewProps {
 	campaigns: SettingsCampaign[];
 	selectedScope: string;
+	onScopeChange: (scope: string) => void;
+}
+
+export interface SettingsNotesViewProps {
+	isInherited: boolean;
+	status: SettingsSaveStatus;
+	simplifiedNotesEnabled: boolean;
+	onSimplifiedNotesChange: (enabled: boolean) => void;
+}
+
+export interface SettingsSourcesViewProps {
 	isGlobalScope: boolean;
 	status: SettingsSaveStatus;
 	options: string[];
 	selectedSources: string[];
-	onScopeChange: (scope: string) => void;
 	onSelectedSourcesChange: (sources: string[]) => void;
 	onUseGlobal: () => void;
 }
 
 export interface SettingsAiViewProps {
-	campaigns: SettingsCampaign[];
-	selectedScope: string;
 	isGlobalScope: boolean;
 	status: SettingsSaveStatus;
-	autoApplyAiChanges: boolean;
 	basePrompt: string;
 	imagePrompt: string;
-	onScopeChange: (scope: string) => void;
-	onAutoApplyAiChangesChange: (enabled: boolean) => void;
 	onBasePromptChange: (value: string) => void;
 	onImagePromptChange: (value: string) => void;
 }
@@ -64,6 +64,8 @@ export interface SettingsAiViewProps {
 export interface SettingsModalViewProps {
 	notification: string | null;
 	general: SettingsGeneralViewProps;
+	scope: SettingsScopeViewProps;
+	notes: SettingsNotesViewProps;
 	sources: SettingsSourcesViewProps;
 	ai: SettingsAiViewProps;
 	onNotificationClose: () => void;
@@ -73,23 +75,21 @@ export interface SettingsModalViewProps {
 type SettingsAiGroupProps = SettingsAiViewProps & SettingsModalCompositionSlots;
 
 function SettingsGeneralGroup({
-	campaigns,
-	selectedScope,
-	isInherited,
-	status,
 	currentTheme,
 	currentLanguage,
 	availableLanguages,
-	simplifiedNotesEnabled,
+	autoApplyAiChanges,
 	useSearchDebounce,
 	onThemeToggle,
 	onLanguageChange,
-	onScopeChange,
-	onSimplifiedNotesChange,
+	onAutoApplyAiChangesChange,
 	onUseSearchDebounceChange,
 }: SettingsGeneralViewProps) {
 	return (
 		<div className="SettingsModal__group">
+			<div className="SettingsModal__sectionHeader">
+				<h3>{lang.t("General settings")}</h3>
+			</div>
 			<div className="SettingsModal__themeRow">
 				<div className="SettingsModal__themeInfo">
 					<div className="SettingsModal__label">{lang.t("Theme")}</div>
@@ -120,48 +120,6 @@ function SettingsGeneralGroup({
 				</Select>
 			</div>
 
-			<div className="SettingsModal__preference">
-				<div className="SettingsModal__preferenceHeader">
-					<label className="SettingsModal__field SettingsModal__preferenceScope">
-						<span className="SettingsModal__label">
-							{lang.t("Note settings for")}
-						</span>
-						<Select
-							value={selectedScope}
-							onChange={(event) => onScopeChange(event.target.value)}
-						>
-							<option value={GLOBAL_SETTINGS_SCOPE}>
-								{lang.t("Global note settings")}
-							</option>
-							{campaigns.length === 0 && (
-								<option value="">{lang.t("No campaigns")}</option>
-							)}
-							{campaigns.map((campaign) => (
-								<option key={campaign.slug} value={campaign.slug}>
-									{campaign.name}
-								</option>
-							))}
-						</Select>
-					</label>
-					{status === "saving" && (
-						<span className="SettingsModal__saveStatus" role="status">
-							{lang.t("Saving...")}
-						</span>
-					)}
-				</div>
-				<Switch
-					checked={simplifiedNotesEnabled}
-					onChange={onSimplifiedNotesChange}
-					label={lang.t("Simplified notes mode")}
-					description={
-						isInherited
-							? lang.t("Uses the global simplified notes setting.")
-							: lang.t(
-									"Use plain text notes without title and markdown preview",
-								)
-					}
-				/>
-			</div>
 			<Switch
 				checked={useSearchDebounce}
 				onChange={onUseSearchDebounceChange}
@@ -170,23 +128,28 @@ function SettingsGeneralGroup({
 					"When disabled, search results update immediately while typing.",
 				)}
 			/>
+			<Switch
+				checked={autoApplyAiChanges}
+				onChange={onAutoApplyAiChangesChange}
+				label={lang.t("Apply parsed AI changes automatically")}
+				description={lang.t(
+					"When disabled, parsed AI responses are saved as drafts for review before applying.",
+				)}
+			/>
 		</div>
 	);
 }
 
 function SettingsSourcesGroup({
-	campaigns,
-	selectedScope,
 	isGlobalScope,
 	status,
 	options,
 	selectedSources,
-	onScopeChange,
 	onSelectedSourcesChange,
 	onUseGlobal,
 }: SettingsSourcesViewProps) {
 	return (
-		<div className="SettingsModal__group SettingsModal__section">
+		<div className="SettingsModal__group SettingsModal__subsection">
 			<div className="SettingsModal__sectionHeader">
 				<div>
 					<div className="SettingsModal__label">
@@ -207,29 +170,12 @@ function SettingsSourcesGroup({
 
 			<div className="SettingsModal__field">
 				<span className="SettingsModal__label">{lang.t("Visible sources")}</span>
-				<Select
-					value={selectedScope}
-					onChange={(event) => onScopeChange(event.target.value)}
-				>
-					<option value={GLOBAL_SETTINGS_SCOPE}>
-						{lang.t("Global source settings")}
-					</option>
-					{campaigns.length === 0 && (
-						<option value="">{lang.t("No campaigns")}</option>
-					)}
-					{campaigns.map((campaign) => (
-						<option key={campaign.slug} value={campaign.slug}>
-							{campaign.name}
-						</option>
-					))}
-				</Select>
 				<div className="SettingsModal__sourceRow">
 					<MultiSelect
 						className="SettingsModal__sourceSelect"
 						value={selectedSources}
 						onChange={onSelectedSourcesChange}
 						optionClickMode="toggle"
-						disabled={!isGlobalScope && !selectedScope}
 						placeholder={lang.t("Sources")}
 						allSelectedLabel={lang.t("All sources")}
 						noneSelectedLabel={lang.t("No sources")}
@@ -244,7 +190,7 @@ function SettingsSourcesGroup({
 									: formatSourceLabel(source),
 						}))}
 					/>
-					{!isGlobalScope && selectedScope && (
+					{!isGlobalScope && (
 						<div className="SettingsModal__inlineActions">
 							<Button
 								variant="ghost"
@@ -262,21 +208,16 @@ function SettingsSourcesGroup({
 }
 
 function SettingsAiGroup({
-	campaigns,
-	selectedScope,
 	isGlobalScope,
 	status,
-	autoApplyAiChanges,
 	basePrompt,
 	imagePrompt,
-	onScopeChange,
-	onAutoApplyAiChangesChange,
 	onBasePromptChange,
 	onImagePromptChange,
 	EditableField,
 }: SettingsAiGroupProps) {
 	return (
-		<div className="SettingsModal__group SettingsModal__section SettingsModal__section_ai">
+		<div className="SettingsModal__group SettingsModal__subsection SettingsModal__section_ai">
 			<div className="SettingsModal__sectionHeader">
 				<h3>{lang.t("AI settings")}</h3>
 				{status === "saving" && (
@@ -285,36 +226,6 @@ function SettingsAiGroup({
 					</span>
 				)}
 			</div>
-			<Switch
-				checked={autoApplyAiChanges}
-				onChange={onAutoApplyAiChangesChange}
-				label={lang.t("Apply parsed AI changes automatically")}
-				description={lang.t(
-					"When disabled, parsed AI responses are saved as drafts for review before applying.",
-				)}
-			/>
-			<label className="SettingsModal__field">
-				<span className="SettingsModal__label">
-					{lang.t("Prompt settings for")}
-				</span>
-				<Select
-					value={selectedScope}
-					onChange={(event) => onScopeChange(event.target.value)}
-				>
-					<option value={GLOBAL_SETTINGS_SCOPE}>
-						{lang.t("Global prompt settings")}
-					</option>
-					{campaigns.length === 0 && (
-						<option value="">{lang.t("No campaigns")}</option>
-					)}
-					{campaigns.map((campaign) => (
-						<option key={campaign.slug} value={campaign.slug}>
-							{campaign.name}
-						</option>
-					))}
-				</Select>
-			</label>
-
 			<div className="SettingsModal__promptGrid">
 				<label className="SettingsModal__field">
 					<span className="SettingsModal__label">{lang.t("AI base prompt")}</span>
@@ -337,7 +248,7 @@ function SettingsAiGroup({
 										"Example: This campaign is grounded, political, and low magic...",
 									)
 						}
-						disabled={!isGlobalScope && !selectedScope}
+						disabled={false}
 					/>
 				</label>
 
@@ -364,7 +275,7 @@ function SettingsAiGroup({
 										"Example: gothic oil painting, muted colors, candlelight, worn parchment textures...",
 									)
 						}
-						disabled={!isGlobalScope && !selectedScope}
+						disabled={false}
 					/>
 				</label>
 			</div>
@@ -372,13 +283,71 @@ function SettingsAiGroup({
 	);
 }
 
+function SettingsScopedGroup({
+	scope,
+	notes,
+	sources,
+	ai,
+	EditableField,
+}: {
+	scope: SettingsScopeViewProps;
+	notes: SettingsNotesViewProps;
+	sources: SettingsSourcesViewProps;
+	ai: SettingsAiViewProps;
+} & SettingsModalCompositionSlots) {
+	return (
+		<div className="SettingsModal__group SettingsModal__section">
+			<div className="SettingsModal__sectionHeader">
+				<h3>{lang.t("Campaign settings")}</h3>
+			</div>
+			<label className="SettingsModal__field SettingsModal__scope">
+				<Select
+					value={scope.selectedScope}
+					onChange={(event) => scope.onScopeChange(event.target.value)}
+				>
+					<option value={GLOBAL_SETTINGS_SCOPE}>
+						{lang.t("Global settings")}
+					</option>
+					{scope.campaigns.length === 0 && (
+						<option value="">{lang.t("No campaigns")}</option>
+					)}
+					{scope.campaigns.map((campaign) => (
+						<option key={campaign.slug} value={campaign.slug}>
+							{campaign.name}
+						</option>
+					))}
+				</Select>
+			</label>
+
+			<div className="SettingsModal__group SettingsModal__subsection">
+				<Switch
+					checked={notes.simplifiedNotesEnabled}
+					onChange={notes.onSimplifiedNotesChange}
+					label={lang.t("Simplified notes mode")}
+					description={
+						notes.isInherited
+							? lang.t("Uses the global simplified notes setting.")
+							: lang.t(
+									"Use plain text notes without title and markdown preview",
+								)
+					}
+				/>
+			</div>
+
+			<SettingsSourcesGroup {...sources} />
+			<SettingsAiGroup {...ai} EditableField={EditableField} />
+		</div>
+	);
+}
+
 export default function SettingsModalView({
 	notification,
 	general,
+	scope,
+	notes,
 	sources,
 	ai,
 	onNotificationClose,
-	onCancel,
 	EditableField,
 }: SettingsModalViewProps & SettingsModalCompositionSlots) {
 	return (
@@ -387,13 +356,13 @@ export default function SettingsModalView({
 				<Notification message={notification} onClose={onNotificationClose} />
 			)}
 			<SettingsGeneralGroup {...general} />
-			<SettingsSourcesGroup {...sources} />
-			<SettingsAiGroup {...ai} EditableField={EditableField} />
-			<div className="SettingsModal__actions">
-				<Button variant="ghost" onClick={onCancel}>
-					{lang.t("Close")}
-				</Button>
-			</div>
+			<SettingsScopedGroup
+				scope={scope}
+				notes={notes}
+				sources={sources}
+				ai={ai}
+				EditableField={EditableField}
+			/>
 		</div>
 	);
 }

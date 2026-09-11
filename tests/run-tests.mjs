@@ -10688,10 +10688,10 @@ await run(
 			assert.doesNotMatch(settingsViewSource, /CampaignScopeOptions/);
 			assert.equal(
 				settingsViewSource.match(
-					/\{campaigns\.map\(\(campaign\) => \(/g,
+					/\{scope\.campaigns\.map\(\(campaign\) => \(/g,
 				)?.length,
-				3,
-				"all Settings scope selectors must pass campaign options directly to Select",
+				1,
+				"Settings must render one shared campaign scope selector",
 			);
 			assert.match(
 				settingsContentSource,
@@ -10701,9 +10701,11 @@ await run(
 				settingsViewSource,
 				[
 					"<SettingsGeneralGroup {...general} />",
-					"<SettingsSourcesGroup {...sources} />",
-					"<SettingsAiGroup {...ai} EditableField={EditableField} />",
-					'<div className="SettingsModal__actions">',
+					"<SettingsScopedGroup",
+					"scope={scope}",
+					"notes={notes}",
+					"sources={sources}",
+					"ai={ai}",
 				],
 				"settings modal groups",
 			);
@@ -14633,6 +14635,7 @@ await run(
 			settingsCompositionSource,
 			settingsTypeEntry,
 			settingsControllerSource,
+			settingsViewSource,
 			settingsContentSource,
 			themeSwitcherSource,
 			sidebarCompositionSource,
@@ -14646,6 +14649,10 @@ await run(
 			fs.readFile("src/features/settings/ui/index.d.ts", "utf8"),
 			fs.readFile(
 				"src/features/settings/ui/useSettingsModalController.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/settings/ui/SettingsModalView.tsx",
 				"utf8",
 			),
 			fs.readFile(
@@ -14739,6 +14746,22 @@ await run(
 		assert.match(
 			settingsControllerSource,
 			/simplifiedNotesEnabled:\s*simplifiedNotesSelection\.enabled/,
+		);
+		assert.match(
+			settingsControllerSource,
+			/const \[selectedScope, setSelectedScope\] = useState\(/,
+		);
+		assert.doesNotMatch(
+			settingsControllerSource,
+			/selected(?:Prompt|Source|Notes)Scope/,
+		);
+		assert.equal(
+			(settingsViewSource.match(/scope\.onScopeChange/g) || []).length,
+			1,
+		);
+		assert.doesNotMatch(
+			settingsViewSource,
+			/Note settings for|Prompt settings for|Global source settings/,
 		);
 		assert.doesNotMatch(
 			themeSwitcherSource,

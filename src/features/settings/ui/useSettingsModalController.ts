@@ -148,13 +148,7 @@ export function useSettingsModalController(
 	const [campaignIgnoreSourcesLists, setCampaignIgnoreSourcesLists] =
 		useState<CampaignIgnoreSourcesMap>({});
 	const [sourceOptions, setSourceOptions] = useState<string[]>([]);
-	const [selectedPromptScope, setSelectedPromptScope] = useState(
-		activeCampaignSlug || GLOBAL_SETTINGS_SCOPE,
-	);
-	const [selectedSourceScope, setSelectedSourceScope] = useState(
-		activeCampaignSlug || GLOBAL_SETTINGS_SCOPE,
-	);
-	const [selectedNotesScope, setSelectedNotesScope] = useState(
+	const [selectedScope, setSelectedScope] = useState(
 		activeCampaignSlug || GLOBAL_SETTINGS_SCOPE,
 	);
 	const [notesStatus, setNotesStatus] = useState<SettingsSaveStatus>("idle");
@@ -217,33 +211,21 @@ export function useSettingsModalController(
 	}, []);
 
 	useSettingsScopeRecovery({
-		selectedScope: selectedPromptScope,
-		setSelectedScope: setSelectedPromptScope,
-		activeCampaignSlug,
-		campaigns,
-	});
-	useSettingsScopeRecovery({
-		selectedScope: selectedSourceScope,
-		setSelectedScope: setSelectedSourceScope,
-		activeCampaignSlug,
-		campaigns,
-	});
-	useSettingsScopeRecovery({
-		selectedScope: selectedNotesScope,
-		setSelectedScope: setSelectedNotesScope,
+		selectedScope,
+		setSelectedScope,
 		activeCampaignSlug,
 		campaigns,
 	});
 
 	const promptSelection = resolveSelectedPromptSettings({
-		scope: selectedPromptScope,
+		scope: selectedScope,
 		aiBasePrompt,
 		imagePromptBasePrompt,
 		campaignAiBasePrompts,
 		campaignImagePromptBasePrompts,
 	});
 	const sourceSelection = resolveSelectedSourceSettings({
-		scope: selectedSourceScope,
+		scope: selectedScope,
 		ignoreSourcesList,
 		campaignIgnoreSourcesLists,
 	});
@@ -260,7 +242,7 @@ export function useSettingsModalController(
 		[campaigns, pendingSimplifiedNotes],
 	);
 	const simplifiedNotesSelection = resolveSelectedSimplifiedNotesSettings({
-		scope: selectedNotesScope,
+		scope: selectedScope,
 		simplifiedNotes: simplifiedNotesEnabled,
 		campaigns: simplifiedNotesCampaigns,
 	});
@@ -429,18 +411,18 @@ export function useSettingsModalController(
 		} else {
 			setPendingSimplifiedNotes((current) => ({
 				...current,
-				[selectedNotesScope]: enabled,
+				[selectedScope]: enabled,
 			}));
 			runtime.setCampaigns(
 				setCampaignSimplifiedNotesSetting(
 					campaigns,
-					selectedNotesScope,
+					selectedScope,
 					enabled,
 				),
 			);
 		}
 		scheduleSimplifiedNotesSave(
-			{ scope: selectedNotesScope, enabled },
+			{ scope: selectedScope, enabled },
 			true,
 		);
 	};
@@ -452,7 +434,7 @@ export function useSettingsModalController(
 			? campaignAiBasePrompts
 			: setSettingsPromptForScope(
 					campaignAiBasePrompts,
-					selectedPromptScope,
+					selectedScope,
 					value,
 				);
 		setAiBasePrompt(nextAiBasePrompt);
@@ -474,7 +456,7 @@ export function useSettingsModalController(
 			? campaignImagePromptBasePrompts
 			: setSettingsPromptForScope(
 					campaignImagePromptBasePrompts,
-					selectedPromptScope,
+					selectedScope,
 					value,
 				);
 		setImagePromptBasePrompt(nextImagePromptBasePrompt);
@@ -500,29 +482,29 @@ export function useSettingsModalController(
 			setCampaignIgnoreSourcesLists(
 				setCampaignIgnoreSourcesForScope(
 					campaignIgnoreSourcesLists,
-					selectedSourceScope,
+					selectedScope,
 					nextIgnoreSourcesList,
 				),
 			);
 		}
 		scheduleSourceSave({
-			scope: selectedSourceScope,
+			scope: selectedScope,
 			ignoreSourcesList: nextIgnoreSourcesList,
 		});
 	};
 	const handleUseGlobalSources = () => {
-		if (sourceSelection.isGlobalScope || !selectedSourceScope) return;
+		if (sourceSelection.isGlobalScope || !selectedScope) return;
 		const nextIgnoreSourcesList = normalizeIgnoreSourcesList(ignoreSourcesList);
 		setCampaignIgnoreSourcesLists(
 			setCampaignIgnoreSourcesForScope(
 				campaignIgnoreSourcesLists,
-				selectedSourceScope,
+				selectedScope,
 				nextIgnoreSourcesList,
 			),
 		);
 		scheduleSourceSave(
 			{
-				scope: selectedSourceScope,
+				scope: selectedScope,
 				ignoreSourcesList: nextIgnoreSourcesList,
 			},
 			true,
@@ -534,42 +516,40 @@ export function useSettingsModalController(
 		onNotificationClose: () => setNotification(null),
 		onCancel,
 		general: {
-			campaigns,
-			selectedScope: selectedNotesScope,
-			isInherited: simplifiedNotesSelection.isInherited,
-			status: notesStatus,
 			currentTheme,
 			currentLanguage,
 			availableLanguages,
-			simplifiedNotesEnabled: simplifiedNotesSelection.enabled,
+			autoApplyAiChanges,
 			useSearchDebounce,
 			onThemeToggle: handleThemeToggle,
 			onLanguageChange: handleLanguageChange,
-			onScopeChange: setSelectedNotesScope,
-			onSimplifiedNotesChange: handleSimplifiedNotesChange,
+			onAutoApplyAiChangesChange: handleAutoApplyAiChangesChange,
 			onUseSearchDebounceChange: handleUseSearchDebounceChange,
 		},
-		sources: {
+		scope: {
 			campaigns,
-			selectedScope: selectedSourceScope,
+			selectedScope,
+			onScopeChange: setSelectedScope,
+		},
+		notes: {
+			isInherited: simplifiedNotesSelection.isInherited,
+			status: notesStatus,
+			simplifiedNotesEnabled: simplifiedNotesSelection.enabled,
+			onSimplifiedNotesChange: handleSimplifiedNotesChange,
+		},
+		sources: {
 			isGlobalScope: sourceSelection.isGlobalScope,
 			status: sourceStatus,
 			options: sourceOptions,
 			selectedSources,
-			onScopeChange: setSelectedSourceScope,
 			onSelectedSourcesChange: handleSelectedSourcesChange,
 			onUseGlobal: handleUseGlobalSources,
 		},
 		ai: {
-			campaigns,
-			selectedScope: selectedPromptScope,
 			isGlobalScope: promptSelection.isGlobalScope,
 			status: promptStatus,
-			autoApplyAiChanges,
 			basePrompt: promptSelection.basePrompt,
 			imagePrompt: promptSelection.imagePrompt,
-			onScopeChange: setSelectedPromptScope,
-			onAutoApplyAiChangesChange: handleAutoApplyAiChangesChange,
 			onBasePromptChange: handleSelectedBasePromptChange,
 			onImagePromptChange: handleSelectedImagePromptChange,
 		},
