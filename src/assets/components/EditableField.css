@@ -91,6 +91,7 @@
 
 .MarkdownView p {
 	margin: 0;
+	white-space: inherit;
 }
 
 .MarkdownView ul {

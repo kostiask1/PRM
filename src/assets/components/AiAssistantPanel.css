@@ -657,7 +657,7 @@
 .AiAssistantPanel__preview_note_surface .EditableField.is_ai_changed_field {
 	border-color: color-mix(in srgb, var(--accent), transparent 35%);
 	background: color-mix(in srgb, var(--accent), transparent 88%);
-	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent), transparent 55%);
+	/* box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent), transparent 55%); */
 }
 
 .AiAssistantPanel__preview_card_surface .MonsterStatBlock .is_ai_changed_field {
@@ -672,7 +672,7 @@
 .AiAssistantPanel__preview_note_surface.is_before .EditableField.is_ai_changed_field {
 	border-color: color-mix(in srgb, #d1242f, transparent 45%);
 	background: color-mix(in srgb, #d1242f, transparent 90%);
-	box-shadow: 0 0 0 1px color-mix(in srgb, #d1242f, transparent 62%);
+	/* box-shadow: 0 0 0 1px color-mix(in srgb, #d1242f, transparent 62%); */
 }
 
 .AiAssistantPanel__preview_card_surface.is_before .MonsterStatBlock .is_ai_changed_field {
@@ -685,7 +685,7 @@
 .AiAssistantPanel__preview_note_surface.is_after .EditableField.is_ai_changed_field {
 	border-color: color-mix(in srgb, #2da44e, transparent 45%);
 	background: color-mix(in srgb, #2da44e, transparent 90%);
-	box-shadow: 0 0 0 1px color-mix(in srgb, #2da44e, transparent 62%);
+	/* box-shadow: 0 0 0 1px color-mix(in srgb, #2da44e, transparent 62%); */
 }
 
 .AiAssistantPanel__preview_card_surface.is_after .MonsterStatBlock .is_ai_changed_field {

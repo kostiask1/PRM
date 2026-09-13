@@ -1028,12 +1028,8 @@ export function normalizeEditableMarkdown(
 	type: EditableFieldType = "textarea",
 ): string {
 	const normalized = normalizeEditableText(value).replace(/\r\n?/g, "\n");
-	if (type !== "textarea") return normalized.replace(/\n+/g, " ").trim();
-	return normalized
-		.split("\n")
-		.map((line) => line.replace(/ +$/g, ""))
-		.join("\n")
-		.replace(/^\n+|\n+$/g, "");
+	if (type !== "textarea") return normalized.replace(/\n+/g, " ");
+	return normalized.replace(/^\n+|\n+$/g, "");
 }
 
 export type EditableShortcutAction =

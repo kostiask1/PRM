@@ -21965,7 +21965,17 @@ await run("editor presentation preserves mention grouping and cursor mapping", (
 		4,
 	);
 	assert.equal(isRangeInsideSquareBrackets("before [link] after", 9, 11), true);
-	assert.equal(normalizeEditableMarkdown("  one  \r\n two  ", "textarea"), "  one\n two");
+	assert.equal(
+		normalizeEditableMarkdown("  one  \r\n two  ", "textarea"),
+		"  one  \n two  ",
+	);
+	assert.equal(normalizeEditableMarkdown("альфа ", "textarea"), "альфа ");
+	assert.equal(normalizeEditableMarkdown("альфа  ", "textarea"), "альфа  ");
+	assert.equal(normalizeEditableMarkdown(" назва ", "text"), " назва ");
+	assert.equal(
+		normalizeEditableMarkdown("[Ірина]\u200B \u200Bслово", "textarea"),
+		"[Ірина] слово",
+	);
 });
 
 await run(
@@ -65687,6 +65697,10 @@ await run(
 		assert.equal(
 			editableFieldCss.includes(".EditableField__hotkeysTooltip"),
 			false,
+		);
+		assert.match(
+			editableFieldCss,
+			/\.MarkdownView p\s*\{[^}]*white-space:\s*inherit;?[^}]*\}/,
 		);
 		assert.doesNotMatch(mainContentCss, /\.ProjectGuide__/);
 		assert.match(projectGuideCss, /\.ProjectGuide__hotkeys/);
