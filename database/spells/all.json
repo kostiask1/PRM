@@ -164,6 +164,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -313,8 +315,12 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Paladin",
+      "Priest",
       "Ranger"
     ]
   },
@@ -362,7 +368,11 @@
     ],
     "classes": [
       "Artificer",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -468,6 +478,9 @@
     ],
     "classes": [
       "Artificer",
+      "Demon Hunter",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Wizard"
     ]
@@ -590,6 +603,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -656,7 +671,10 @@
     ],
     "classes": [
       "Bard",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Wizard"
     ]
@@ -757,7 +775,9 @@
     ],
     "classes": [
       "Bard",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -859,7 +879,9 @@
     ],
     "classes": [
       "Bard",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -1035,6 +1057,8 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -1203,6 +1227,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -1468,6 +1494,8 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -1600,7 +1628,65 @@
     "classes": [
       "Bard",
       "Druid",
+      "Mage",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Apotheosis",
+    "source": "WoW",
+    "level": 9,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You transform into a spectral, angelic form that grants you the following benefits.",
+      {
+        "type": "entries",
+        "name": "Angelic Wings",
+        "entries": [
+          "You have a {@variantrule Fly Speed|XPHB} of 90 feet."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Spectral Form",
+        "entries": [
+          "You have {@variantrule Resistance|XPHB} to Bludgeoning, Piercing, Radiant, and Slashing damage."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Holy Empowerment",
+        "entries": [
+          "Whenever you cast a spell using a spell slot that restores {@variantrule Hit Points|XPHB} to one or more creatures or deals Radiant damage, determine the spell's effects as if you had used a spell slot 2 levels higher than the spell slot you used to cast it (maximum of level 9)."
+        ]
+      }
+    ],
+    "classes": [
+      "Priest"
     ]
   },
   {
@@ -1685,6 +1771,7 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
     ]
   },
@@ -1769,6 +1856,8 @@
       "A portal is open on only one side (you choose which). Anything entering the open side of a portal exits from the open side of the other portal as if the two were adjacent to each other. As a {@variantrule Bonus Action|XPHB}, you can change the facing of the open sides."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -1856,7 +1945,46 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Arcane Pulse",
+    "source": "WoW",
+    "level": 0,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 10
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "round",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You create a pulse of arcane energy in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from yourself. Each creature of your choice within this area makes a Constitution saving throw. On a failed save, it takes {@damage 1d8} Force damage, and its {@variantrule Speed|XPHB} is reduced by 10 feet (to a minimum of 0 feet) until the end of your next turn."
+    ],
+    "classes": [
+      "Mage"
     ]
   },
   {
@@ -1899,6 +2027,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -2225,6 +2355,8 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -2314,13 +2446,13 @@
       {
         "type": "table",
         "caption": "Omens",
-        "colStyles": [
-          "col-4",
-          "col-8"
-        ],
         "colLabels": [
           "Omen",
           "For Results That Will Be..."
+        ],
+        "colStyles": [
+          "col-4",
+          "col-8"
         ],
         "rows": [
           [
@@ -2347,6 +2479,8 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -2386,6 +2520,8 @@
       "An aura of alacrity radiates from you in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} for the duration. While in the aura, you and your allies have {@variantrule Advantage|XPHB} on Dexterity saving throws. When an affected creature is subjected to an effect that allows it to make a Dexterity saving throw to take only half damage, it takes no damage if it succeeds on the save and only half damage if it fails. A creature with the {@condition Incapacitated|XPHB} condition doesn't gain any benefit from being in the aura."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -2466,7 +2602,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -2544,7 +2682,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -2623,8 +2763,10 @@
     ],
     "classes": [
       "Cleric",
+      "Death Knight",
       "Druid",
-      "Paladin"
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -2708,6 +2850,91 @@
     ]
   },
   {
+    "name": "Azure Strike",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "round",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You fire rays of arcane and frigid energy at up to two targets within range that are within 30 feet of each other. Make a ranged spell attack for each target. On a hit, the target takes {@damage 2d6} Force damage, and its {@variantrule Speed|XPHB} is reduced by 10 feet until the end of its next turn."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
+    ]
+  },
+  {
+    "name": "Azure Sweep",
+    "source": "WoW",
+    "level": 6,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "Pure magic sweeps out from you in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation}. Creatures of your choice in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} make a Constitution saving throw. On a failed save, a creature takes {@damage 7d8} Force damage, and its {@variantrule Speed|XPHB} is reduced by 20 feet for the duration. On a successful save, the target takes half as much damage only."
+    ],
+    "classes": [
+      "Evoker"
+    ]
+  },
+  {
     "name": "Backlash",
     "source": "FRHoF",
     "level": 4,
@@ -2749,6 +2976,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -2852,6 +3081,7 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Priest",
       "Warlock"
     ]
   },
@@ -2927,6 +3157,7 @@
       "The target hit by the attack roll takes an extra {@damage 5d10} Force damage from the attack. If the attack reduces the target to 50 {@variantrule Hit Points|XPHB} or fewer, the target must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the {@condition Incapacitated|XPHB} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied."
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -3033,7 +3264,11 @@
     ],
     "classes": [
       "Cleric",
+      "Death Knight",
+      "Evoker",
+      "Mage",
       "Paladin",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -3114,7 +3349,9 @@
       "You touch a willing creature. Until the spell ends, the target's skin assumes a bark-like appearance, and the target has an {@variantrule Armor Class|XPHB} of 17 if its AC is lower than that."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -3189,6 +3426,7 @@
     ],
     "classes": [
       "Druid",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -3268,7 +3506,8 @@
       "Choose any number of creatures within range. For the duration, each target has {@variantrule Advantage|XPHB} on Wisdom saving throws and {@variantrule Death Saving Throw|XPHB|Death Saving Throws} and regains the maximum number of {@variantrule Hit Points|XPHB} possible from any healing."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -3383,7 +3622,9 @@
       "You touch a willing Beast. For the duration, you can perceive through the Beast's senses as well as your own. When perceiving through the Beast's senses, you benefit from any special senses it has."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -3423,6 +3664,7 @@
     "classes": [
       "Bard",
       "Druid",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -3541,6 +3783,8 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -3708,6 +3952,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -3789,7 +4035,8 @@
       "Any creature in the wall's space makes a Dexterity saving throw, taking {@damage 6d10} Force damage on a failed save or half as much damage on a successful one. A creature also makes that save if it enters the wall's space or ends its turn there. A creature makes that save only once per turn."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -3830,6 +4077,8 @@
       "The blade can harmlessly pass through any barrier, including ones created by spells like {@spell Wall of Force|XPHB}."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -3954,6 +4203,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -4059,7 +4310,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -4152,6 +4405,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -4238,6 +4493,7 @@
       }
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -4335,6 +4591,9 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -4415,8 +4674,59 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Blistering Scales",
+    "source": "WoW",
+    "level": 3,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true,
+      "m": "a scale of a Dragon"
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "Choose a willing creature you can see within range. Five explosive scales form on the target, granting it a +1 bonus to AC for the duration. If a creature hits the target with a melee attack roll before the spell ends, a scale explodes, and the attacking creature takes {@damage 1d8} Fire damage. The spell ends early if the target has no explosive scales."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The number of explosive scales that form on the target increases by one for each spell slot level above 3."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -4493,6 +4803,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -4543,6 +4855,36 @@
     ]
   },
   {
+    "name": "Bonestorm",
+    "source": "WoW",
+    "level": 5,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 10
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You conjure a whirl of battering bone and gore around yourself. You regain {@dice 4d6} {@variantrule Hit Points|XPHB}, and each creature in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you makes a Constitution saving throw. A target takes {@damage 4d8} Necrotic damage on a failed save or half as much damage on a successful one."
+    ]
+  },
+  {
     "name": "Booming Blade",
     "source": "TCE",
     "level": 0,
@@ -4582,6 +4924,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -4627,6 +4971,8 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -4675,6 +5021,58 @@
     ],
     "classes": [
       "Paladin"
+    ]
+  },
+  {
+    "name": "Breath of Eons",
+    "source": "WoW",
+    "level": 4,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "You draw on the magic of the bronze dragonflight. For the duration, you gain the following benefits.",
+      {
+        "type": "entries",
+        "name": "Temporal Wounds",
+        "entries": [
+          "When you move within 5 feet of a creature, you can curse it until the start of your next turn. While a creature is cursed, the next time it takes damage, it takes an extra {@damage 1d10} Force damage, and the curse ends. A creature can be cursed this way only once per turn."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Wings",
+        "entries": [
+          "You sprout spectral wings from your back if you don't already have wings. You have a {@variantrule Fly Speed|XPHB} of 60 feet and can hover. In addition, your movement doesn't provoke {@action Opportunity Attack|XPHB|Opportunity Attacks}."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -4763,6 +5161,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -4814,6 +5214,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -5005,7 +5407,8 @@
     ],
     "classes": [
       "Bard",
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -5098,6 +5501,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -5369,8 +5774,49 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Chains of Ice",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You create chains of ice around a creature you can see within range. The target makes a Dexterity saving throw. On a failed save, the target takes {@damage 1d10} Cold damage, and its {@variantrule Speed|XPHB} is halved until the end of its next turn. On a successful save, the target takes half as much damage only."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d10} for each spell slot level above 1."
+        ]
+      }
     ]
   },
   {
@@ -5505,6 +5951,36 @@
     ]
   },
   {
+    "name": "Chaos Nova",
+    "source": "WoW",
+    "level": 4,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 20
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "Chaos energy bursts out in a 20-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you. Each creature of your choice in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} takes {@damage 2d6} Force damage and must succeed on a Wisdom saving throw or have the {@condition Stunned|XPHB} condition until the end of your next turn."
+    ]
+  },
+  {
     "name": "Charm Monster",
     "source": "XGE",
     "level": 4,
@@ -5601,6 +6077,8 @@
     "classes": [
       "Bard",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -5703,6 +6181,8 @@
     "classes": [
       "Bard",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -5789,6 +6269,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -5887,6 +6369,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -5984,6 +6468,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -6064,7 +6550,10 @@
     "classes": [
       "Artificer",
       "Cleric",
+      "Death Knight",
+      "Mage",
       "Paladin",
+      "Priest",
       "Wizard"
     ]
   },
@@ -6160,6 +6649,9 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -6239,6 +6731,7 @@
       "If the original creature dies after the clone finishes forming, the creature's soul transfers to the clone if the soul is free and willing to return. The clone is physically identical to the original and has the same personality, memories, and abilities, but none of the original's equipment. The creature's original remains, if any, become inert and can't be revived, since the creature's soul is elsewhere."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -6342,6 +6835,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -6445,8 +6940,40 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Collapsing Star",
+    "source": "WoW",
+    "level": 4,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You channel Void energy into a cataclysmic blast that fills a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} centered on a point you can see within range. Each creature of your choice within the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} makes a Constitution saving throw, taking {@damage 4d12} Force damage on a failed save or half as much damage on a successful one."
     ]
   },
   {
@@ -6533,8 +7060,49 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Combustion",
+    "source": "WoW",
+    "level": 6,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 5
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You engulf yourself in flames for the duration, shedding {@variantrule Bright Light|XPHB} in a 20-foot radius and {@variantrule Dim Light|XPHB} for an additional 10 feet. These flames grant you {@variantrule Immunity|XPHB} to Fire damage. While they last, you have {@variantrule Advantage|XPHB} on spell attack rolls.",
+      "At the end of each of your turns, each creature of your choice in a 5-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you takes {@damage 3d8} Fire damage."
+    ],
+    "classes": [
+      "Mage"
     ]
   },
   {
@@ -6703,7 +7271,9 @@
     "classes": [
       "Bard",
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -6783,7 +7353,8 @@
       "If you cast the spell more than once before finishing a {@variantrule Long Rest|XPHB}, there is a cumulative {@chance 25|||No answer!|Answer} chance for each casting after the first that you get no answer."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -6878,7 +7449,9 @@
       "For example, you could determine the location of a powerful monster in the area, the locations of bodies of water, and the locations of any towns."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -6957,6 +7530,7 @@
       "The spell ends if you make an attack roll against a creature other than the target, if you cast a spell on an enemy other than the target, if an ally of yours damages the target, or if you end your turn more than 30 feet away from the target."
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -7038,6 +7612,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -7212,6 +7788,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -7360,13 +7938,13 @@
       "Each creature in a 10-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} centered on a point you choose within range must succeed on a Wisdom saving throw, or that target can't take Bonus Actions or Reactions and must roll {@dice 1d10} at the start of each of its turns to determine its behavior for that turn, consulting the table below.",
       {
         "type": "table",
-        "colStyles": [
-          "col-2 text-center",
-          "col-10"
-        ],
         "colLabels": [
           "1d10",
           "Behavior for the Turn"
+        ],
+        "colStyles": [
+          "col-2 text-center",
+          "col-10"
         ],
         "rows": [
           [
@@ -7401,6 +7979,8 @@
     "classes": [
       "Bard",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -7513,7 +8093,9 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -7596,6 +8178,8 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -7716,7 +8300,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -7786,6 +8371,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -7889,6 +8475,7 @@
     ],
     "classes": [
       "Druid",
+      "Mage",
       "Wizard"
     ]
   },
@@ -8101,6 +8688,7 @@
     ],
     "classes": [
       "Druid",
+      "Mage",
       "Wizard"
     ]
   },
@@ -8174,6 +8762,8 @@
       "You brandish the weapon used to cast the spell and choose a point within range. Hundreds of similar spectral weapons (or ammunition appropriate to the weapon) fall in a volley and then disappear. Each creature of your choice that you can see in a 40-foot-radius, 20-foot-high {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} centered on that point makes a Dexterity saving throw. A creature takes {@damage 8d8} Force damage on a failed save or half as much damage on a successful one."
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -8285,8 +8875,87 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
+    ]
+  },
+  {
+    "name": "Consecration",
+    "source": "WoW",
+    "level": 2,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 15
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "You consecrate the area in a 15-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you. Creatures of your choice that start their turn in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} take {@damage 1d8} Radiant damage. The {@variantrule Emanation [Area of Effect]|XPHB|Emanation} is {@variantrule Difficult Terrain|XPHB} for Fiends and Undead."
+    ],
+    "classes": [
+      "Paladin"
+    ]
+  },
+  {
+    "name": "Consume Soul",
+    "source": "WoW",
+    "level": 1,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You drain the essence from a creature within range, which makes a Constitution saving throw. On a failed save, it takes {@damage 4d4} Force damage, and you gain {@variantrule Temporary Hit Points|XPHB} equal to half the Force damage dealt. On a successful save, it takes half as much damage only."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d4} for each spell slot level above 1."
+        ]
+      }
     ]
   },
   {
@@ -8361,6 +9030,7 @@
       "On a failed save, you take {@damage 6d6} Psychic damage and have the {@condition Incapacitated|XPHB} condition until you finish a {@variantrule Long Rest|XPHB}. A {@spell Greater Restoration|XPHB} spell cast on you ends this effect."
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -8484,7 +9154,8 @@
     ],
     "classes": [
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -8570,6 +9241,7 @@
       "The contingent spell takes effect only on you, even if it can normally target others. You can use only one Contingency spell at a time. If you cast this spell again, the effect of another Contingency spell on you ends. Also, Contingency ends on you if its material component is ever not on your person."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -8658,6 +9330,8 @@
       "Artificer",
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -8855,6 +9529,8 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -9048,13 +9724,13 @@
       {
         "type": "table",
         "caption": "Precipitation",
-        "colStyles": [
-          "col-2 text-center",
-          "col-10"
-        ],
         "colLabels": [
           "Stage",
           "Condition"
+        ],
+        "colStyles": [
+          "col-2 text-center",
+          "col-10"
         ],
         "rows": [
           [
@@ -9082,13 +9758,13 @@
       {
         "type": "table",
         "caption": "Temperature",
-        "colStyles": [
-          "col-2 text-center",
-          "col-10"
-        ],
         "colLabels": [
           "Stage",
           "Condition"
+        ],
+        "colStyles": [
+          "col-2 text-center",
+          "col-10"
         ],
         "rows": [
           [
@@ -9120,13 +9796,13 @@
       {
         "type": "table",
         "caption": "Wind",
-        "colStyles": [
-          "col-2 text-center",
-          "col-10"
-        ],
         "colLabels": [
           "Stage",
           "Condition"
+        ],
+        "colStyles": [
+          "col-2 text-center",
+          "col-10"
         ],
         "rows": [
           [
@@ -9155,6 +9831,8 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -9314,6 +9992,8 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -9393,6 +10073,8 @@
       "You attempt to interrupt a creature in the process of casting a spell. The creature makes a Constitution saving throw. On a failed save, the spell dissipates with no effect, and the action, {@variantrule Bonus Action|XPHB}, or {@variantrule Reaction|XPHB} used to cast it is wasted. If that spell was cast with a spell slot, the slot isn't expended."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -9512,7 +10194,9 @@
     "classes": [
       "Artificer",
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -9592,6 +10276,7 @@
       "Any magen you create with this spell obeys your commands without question."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -9716,7 +10401,8 @@
     ],
     "classes": [
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -9755,6 +10441,7 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
     ]
   },
@@ -9856,6 +10543,8 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -9976,13 +10665,13 @@
       {
         "type": "table",
         "caption": "Materials",
-        "colStyles": [
-          "col-6",
-          "col-6"
-        ],
         "colLabels": [
           "Material",
           "Duration"
+        ],
+        "colStyles": [
+          "col-6",
+          "col-6"
         ],
         "rows": [
           [
@@ -10019,6 +10708,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -10106,6 +10797,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -10233,6 +10926,7 @@
       "You radiate a magical aura in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation}. While in the aura, you and your allies each deal an extra {@damage 1d4} Radiant damage when hitting with a weapon or an {@variantrule Unarmed Strike|XPHB}."
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -10325,9 +11019,51 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Paladin",
+      "Priest",
       "Ranger"
+    ]
+  },
+  {
+    "name": "Curse of Agony",
+    "source": "WoW",
+    "level": 2,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You curse one creature within range with excruciating pain. The target makes a Constitution saving throw; the spell's damage starts at {@damage 1d4} Psychic damage. On a failed save, the target takes the spell's damage, and the spell's damage die increases: from {@dice 1d4} to {@dice 1d6}, {@dice 1d6} to {@dice 1d8}, {@dice 1d8} to {@dice 1d10}, or {@dice 1d10} to {@dice 1d12} (the maximum). On a successful save, the target takes the spell's damage, and the effect ends. The target repeats the save at the end of each of its turns."
+    ],
+    "classes": [
+      "Warlock"
     ]
   },
   {
@@ -10414,6 +11150,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -10592,6 +11330,8 @@
       "If any of this spell's area overlaps with an area of {@variantrule Bright Light|XPHB} or {@variantrule Dim Light|XPHB} created by a spell of level 2 or lower, that other spell is dispelled."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -10675,7 +11415,11 @@
     ],
     "classes": [
       "Artificer",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -10809,10 +11553,45 @@
     ],
     "classes": [
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
       "Paladin",
+      "Priest",
       "Ranger",
       "Sorcerer"
+    ]
+  },
+  {
+    "name": "Death and Decay",
+    "source": "WoW",
+    "level": 2,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "Corruption ripples out in a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} from a point on the ground you can see within range. Each creature in that area makes a Wisdom saving throw. On a failed save, a target takes {@damage 2d6} Necrotic damage and is cursed until the end of your next turn. If you deal damage to a cursed target with an attack roll, the target takes an extra {@damage 1d6} Necrotic damage. On a successful save, the target takes half as much damage only."
     ]
   },
   {
@@ -10854,8 +11633,40 @@
       "For the duration, an inky aura surrounds one creature you touch. The target has {@variantrule Advantage|XPHB} on {@variantrule Death Saving Throw|XPHB|Death Saving Throws}, and once per turn, when a creature within 5 feet of the target hits it with a melee attack roll, the attacker takes {@damage 2d4} Necrotic damage."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Death Grip",
+    "source": "WoW",
+    "level": 1,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You harness runic energies to bind a foe to you. One creature you can see within range must succeed on a Strength saving throw or be pulled straight toward you to the nearest unoccupied space within 5 feet of you."
     ]
   },
   {
@@ -10934,7 +11745,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -11039,6 +11852,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -11119,9 +11934,44 @@
       "Each time you cast this spell, you can create a new demiplane or connect the shadowy door to a demiplane you created with a previous casting of this spell. Additionally, if you know the nature and contents of a demiplane created by a casting of this spell by another creature, you can connect the shadowy door to that demiplane instead."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Demon Spikes",
+    "source": "WoW",
+    "level": 3,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You surge with fel power and sprout hard, jagged spikes. You gain a +2 bonus to AC for the duration, and when a creature within 5 feet of you hits you with a melee attack roll, it takes 10 Piercing damage."
     ]
   },
   {
@@ -11165,6 +12015,8 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -11231,6 +12083,7 @@
       "Destructive energy ripples outward from you in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation}. Each creature you choose in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} makes a Constitution saving throw. On a failed save, a target takes {@damage 5d6} Thunder damage and {@damage 5d6} Radiant or Necrotic damage (your choice) and has the {@condition Prone|XPHB} condition. On a successful save, a target takes half as much damage only."
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -11312,7 +12165,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -11401,8 +12256,14 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Paladin",
+      "Priest",
       "Ranger",
       "Sorcerer",
       "Warlock",
@@ -11491,8 +12352,12 @@
     ],
     "classes": [
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Paladin",
+      "Priest",
       "Ranger"
     ]
   },
@@ -11594,6 +12459,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -11632,6 +12499,8 @@
       "A nonmagical object that isn't being worn or carried also takes the damage if it's in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation}, and the object starts {@hazard burning|XPHB} if it's flammable."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -11708,6 +12577,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -11759,7 +12630,8 @@
     ],
     "classes": [
       "Bard",
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -11842,6 +12714,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -11937,6 +12811,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -12047,7 +12923,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -12143,8 +13021,14 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Paladin",
+      "Priest",
       "Ranger",
       "Sorcerer",
       "Warlock",
@@ -12188,6 +13072,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -12320,6 +13206,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -12384,6 +13272,7 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -12468,6 +13357,8 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -12543,6 +13434,44 @@
       "Until the spell ends, your attacks with weapons deal an extra {@damage 1d4} Radiant damage on a hit."
     ],
     "classes": [
+      "Death Knight",
+      "Paladin"
+    ]
+  },
+  {
+    "name": "Divine Shield",
+    "source": "WoW",
+    "level": 4,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "reaction",
+        "condition": "which you take when you take damage"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "round",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You have {@variantrule Immunity|XPHB} to all damage until the start of your next turn, including the triggering damage. For the duration, your {@variantrule Speed|XPHB} can't be reduced, any current reductions to your {@variantrule Speed|XPHB} are suspended, and no effect can move you against your will."
+    ],
+    "classes": [
       "Paladin"
     ]
   },
@@ -12585,6 +13514,7 @@
       }
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -12662,13 +13592,13 @@
       {
         "type": "table",
         "caption": "Divine Word Effects",
-        "colStyles": [
-          "col-2 text-center",
-          "col-10"
-        ],
         "colLabels": [
           "Hit Points",
           "Effect"
+        ],
+        "colStyles": [
+          "col-2 text-center",
+          "col-10"
         ],
         "rows": [
           [
@@ -12691,7 +13621,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -12794,7 +13725,10 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
       "Ranger",
       "Sorcerer"
     ]
@@ -12901,6 +13835,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -13007,6 +13943,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -13060,6 +13998,7 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Priest",
       "Warlock"
     ]
   },
@@ -13229,6 +14168,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -13315,6 +14256,7 @@
       "If another creature is holding or carrying the object, crushing the sapphire doesn't transport it, but instead you learn who that creature is and where that creature is currently located."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -13397,8 +14339,104 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Dream Breath",
+    "source": "WoW",
+    "level": 2,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "cone",
+      "distance": {
+        "type": "feet",
+        "amount": 15
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You exhale verdant healing magic. Each creature of your choice in a 15-foot {@variantrule Cone [Area of Effect]|XPHB|Cone} regains {@dice 2d6} {@variantrule Hit Points|XPHB}."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The healing increases by {@dice 2d6} for each spell slot level above 2."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
+    ]
+  },
+  {
+    "name": "Dream Flight",
+    "source": "WoW",
+    "level": 5,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "You draw on the magic of the green dragonflight. For the duration, you gain the following benefits.",
+      {
+        "type": "entries",
+        "name": "Healing Presence",
+        "entries": [
+          "When you move within 5 feet of a creature, you can restore {@dice 5d4} {@variantrule Hit Points|XPHB} to that creature. A creature can regain these {@variantrule Hit Points|XPHB} only once per turn."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Wings",
+        "entries": [
+          "You sprout spectral wings from your back if you don't already have wings. You have a {@variantrule Fly Speed|XPHB} of 60 feet and can hover. In addition, your movement doesn't provoke {@action Opportunity Attack|XPHB|Opportunity Attacks}."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -13683,8 +14721,14 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Paladin",
+      "Priest",
       "Ranger",
       "Sorcerer",
       "Warlock",
@@ -13947,7 +14991,43 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Evoker",
+      "Priest",
       "Sorcerer"
+    ]
+  },
+  {
+    "name": "Ebon Might",
+    "source": "WoW",
+    "level": 1,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 10
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "As you invoke the black dragonflight, draconic might erupts from you. Each creature of your choice in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you is empowered until the end of your next turn. While a creature is empowered, when it hits a target with an attack roll, the attack deals an extra {@damage 1d4} Force damage."
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -14174,7 +15254,10 @@
     ],
     "classes": [
       "Artificer",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Paladin",
       "Ranger"
     ]
@@ -14247,6 +15330,8 @@
     "classes": [
       "Artificer",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -14321,6 +15406,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -14360,7 +15447,101 @@
       "Arcane wards protect you against magic for the duration. You have {@variantrule Advantage|XPHB} on saving throws against spells and magical effects. Additionally, if you succeed on a saving throw against a spell or magical effect and would normally take half as much damage, you instead take no damage."
     ],
     "classes": [
+      "Mage",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Emberstorm",
+    "source": "WoW",
+    "level": 4,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "White-hot embers fill a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} centered on a point you choose within range. Each creature in the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} makes a Constitution saving throw, taking {@damage 6d8} Fire damage on a failed save or half as much damage on a successful one.",
+      "Creatures and flammable objects in the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} that aren't being worn or carried start {@hazard burning|XPHB}, taking {@damage 1d8} Fire damage at the start of each of their turns instead of the normal {@hazard burning|XPHB} damage."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d8} for each spell slot level above 4."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
+    ]
+  },
+  {
+    "name": "Emerald Blossom",
+    "source": "WoW",
+    "level": 3,
+    "school": "C",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "You conjure a spectral bulb that sprouts from the ground in an unoccupied space that you can see within range. The bulb lasts for the duration.",
+      "The bulb emits healing magic in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} at the end of each of your turns. Allies of your choice in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} regain 5 {@variantrule Hit Points|XPHB}. The bulb vanishes when it restores a total of 20 {@variantrule Hit Points|XPHB}."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The total {@variantrule Hit Points|XPHB} the bulb can restore increases by 5 for each spell slot level above 3."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -14489,6 +15670,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -14689,7 +15872,12 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
+      "Priest",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -14732,15 +15920,15 @@
       "You cause a creature or an object you can see within range to grow larger or smaller for the duration. Choose either a creature or an object that is neither worn nor carried. If the target is unwilling, it can make a Constitution saving throw. On a success, the spell has no effect.",
       "If the target is a creature, everything it is wearing and carrying changes size with it. Any item dropped by an affected creature returns to normal size at once.",
       {
-        "name": "Enlarge",
         "type": "entries",
+        "name": "Enlarge",
         "entries": [
           "The target's size doubles in all dimensions, and its weight is multiplied by eight. This growth increases its size by one category—from Medium to Large, for example. If there isn't enough room for the target to double its size, the creature or object attains the maximum possible size in the space available. Until the spell ends, the target also has advantage on Strength checks and Strength saving throws. The target's weapons also grow to match its new size. While these weapons are enlarged, the target's attacks with them deal {@damage 1d4} extra damage."
         ]
       },
       {
-        "name": "Reduce",
         "type": "entries",
+        "name": "Reduce",
         "entries": [
           "The target's size is halved in all dimensions, and its weight is reduced to one-eighth of normal. This reduction decreases its size by one category—from Medium to Small, for example. Until the spell ends, the target also has disadvantage on Strength checks and Strength saving throws. The target's weapons also shrink to match its new size. While these weapons are reduced, the target's attacks with them deal {@damage 1d4} less damage (this can't reduce the damage below 1)."
         ]
@@ -14809,6 +15997,8 @@
       "Artificer",
       "Bard",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -14905,6 +16095,8 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -14987,7 +16179,9 @@
       "Each creature (other than you) in the area when you cast the spell must succeed on a Strength saving throw or have the {@condition Restrained|XPHB} condition until the spell ends. A {@condition Restrained|XPHB} creature can take an action to make a Strength ({@skill Athletics|XPHB}) check against your spell save DC. On a success, it frees itself from the grasping plants and is no longer {@condition Restrained|XPHB} by them."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -15110,9 +16304,78 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Entropic Embrace",
+    "source": "WoW",
+    "level": 1,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "reaction",
+        "condition": "which you take when you make a D20 Test with Advantage or Disadvantage and roll the same number on both dice"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You are empowered by the essence of the Void for the duration, becoming swathed in shadow and taking on a dark-blue or purple appearance. While this effect lasts, you gain the following benefits.",
+      {
+        "type": "entries",
+        "name": "Preternatural Calm",
+        "entries": [
+          "You automatically succeed on Constitution saving throws to maintain {@status Concentration|XPHB}."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Shadow Shroud",
+        "entries": [
+          "You are shrouded in shadow, making your space {@variantrule Lightly Obscured|XPHB}."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Touch of the Void",
+        "entries": [
+          "Once on each of your turns, you can deal an extra {@damage 1d4} Necrotic damage to one creature when you deal damage to it, or you can restore an extra {@dice 1d4} {@variantrule Hit Points|XPHB} to one creature when you heal it."
+        ]
+      }
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The extra damage or healing from the Touch of the Void effect increases by {@dice 1d4} for each spell slot level above 1."
+        ]
+      }
+    ],
+    "classes": [
+      "Warlock"
     ]
   },
   {
@@ -15159,6 +16422,50 @@
       "Druid",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Eruption",
+    "source": "WoW",
+    "level": 2,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "The ground in a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} centered on a point within range erupts with flames. Each creature in the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} makes a Dexterity saving throw, taking {@damage 3d8} Fire damage on a failed save or half as much damage on a successful one.",
+      "The cracks turn the ground in the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} into {@variantrule Difficult Terrain|XPHB} until the end of your next turn, at which point they close."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d8} for each spell slot level above 2."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -15264,6 +16571,9 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -15350,6 +16660,7 @@
       "A {@condition Restrained|XPHB} creature can take an action to make a Strength ({@skill Athletics|XPHB}) check against your spell save DC, ending the condition on itself on a success."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -15430,9 +16741,93 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Explosive Trap",
+    "source": "WoW",
+    "level": 5,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "An {@condition Invisible|XPHB}, intangible trap appears on the ground at a point you choose within range. The first time a creature comes within 5 feet of the trap, the trap explodes in a fiery burst that fills a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} centered on the trap. The spell ends, and each creature within the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} makes a Dexterity saving throw. On a failed save, a creature takes {@damage 8d6} Fire damage and, if it is Huge or smaller, is pushed 20 feet straight away from the trap's location."
+    ],
+    "classes": [
+      "Hunter"
+    ]
+  },
+  {
+    "name": "Eye Beam",
+    "source": "WoW",
+    "level": 2,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "cone",
+      "distance": {
+        "type": "feet",
+        "amount": 15
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "You concentrate your magic into your eyes. When you cast the spell, and as a {@action Magic|XPHB} action on your subsequent turns for the duration, you can unleash a burst of fel magic. Each creature in a 15-foot {@variantrule Cone [Area of Effect]|XPHB|Cone} makes a Dexterity saving throw, taking {@damage 3d6} Force damage on a failed save or half as much damage on a successful one."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+        ]
+      }
     ]
   },
   {
@@ -15555,6 +16950,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -15631,6 +17028,7 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
     ]
   },
@@ -15806,6 +17204,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -15897,6 +17297,8 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -15983,6 +17385,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -16068,6 +17472,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -16195,7 +17601,84 @@
       "Bard",
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Fel Rush",
+    "source": "WoW",
+    "level": 1,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "Fiery fel magic surrounds you and grants you explosive speed. Until the end of your turn, your {@variantrule Speed|XPHB} increases by 30 feet, and your movement doesn't provoke {@action Opportunity Attack|XPHB|Opportunity Attacks}.",
+      "When you move within 5 feet of a creature or an object that isn't being worn or carried, it makes a Dexterity saving throw, taking {@damage 2d6} Fire damage on a failed save or half as much damage on a successful one. A creature or object can take this damage only once per turn."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Feral Prowl",
+    "source": "WoW",
+    "level": 2,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You shape-shift as if you had used {@classFeature Wild Shape|Druid|XPHB|2|XPHB}, but you don't expend a use of your {@classFeature Wild Shape|Druid|XPHB|2|XPHB}. You have the {@condition Invisible|XPHB} condition until the spell ends. The spell ends early immediately after you make an attack roll, deal damage, cast a spell, or revert to your natural form."
+    ],
+    "classes": [
+      "Druid"
     ]
   },
   {
@@ -16244,9 +17727,46 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Fiery Brand",
+    "source": "WoW",
+    "level": 2,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You magically place a fiery demonic symbol on a creature within range, which makes a Wisdom saving throw. On a failed save, the creature takes {@damage 3d10} Fire damage and is cursed. While it remains cursed, you have {@variantrule Resistance|XPHB} to all damage it deals. On a successful save, it takes half as much damage only.",
+      "A cursed creature repeats the save at the end of each of its turns, ending the spell on a success."
     ]
   },
   {
@@ -16359,6 +17879,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -16397,9 +17918,9 @@
       "Whenever the mount disappears, it leaves behind any objects it was wearing or carrying.",
       {
         "type": "inset",
+        "name": "Dragonnel Steeds",
         "source": "FTD",
         "page": 190,
-        "name": "Dragonnel Steeds",
         "entries": [
           "With the DM's permission, a paladin can summon a spirit in the form of a {@creature dragonnel|ftd} using the find greater steed spell, which appears in {@i Xanathar's Guide to Everything}."
         ]
@@ -16502,6 +18023,7 @@
       }
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -16592,7 +18114,8 @@
     "classes": [
       "Bard",
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -16665,7 +18188,10 @@
     ],
     "classes": [
       "Cleric",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Priest",
       "Ranger"
     ]
   },
@@ -16738,6 +18264,8 @@
       "A Humanoid killed by this spell rises at the start of your next turn as a {@creature Zombie|XMM} that follows your verbal orders."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -16821,6 +18349,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -16905,6 +18435,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -16980,6 +18512,8 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Evoker",
+      "Priest",
       "Sorcerer"
     ]
   },
@@ -17071,6 +18605,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -17297,6 +18833,7 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
       "Sorcerer"
     ]
   },
@@ -17385,7 +18922,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -17445,7 +18983,7 @@
     "name": "Flaming Sphere",
     "source": "XPHB",
     "level": 2,
-    "school": "C",
+    "school": "V",
     "time": [
       {
         "number": 1,
@@ -17490,6 +19028,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -17580,6 +19120,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -17630,8 +19172,52 @@
       }
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Flurry",
+    "source": "WoW",
+    "level": 3,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 120
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You hurl three shards of ice at one target within range or at several. Make a ranged spell attack for each shard. On a hit, the target takes {@damage 3d6} Cold damage. On a {@variantrule Critical Hit|XPHB}, the target has the {@condition Restrained|XPHB} condition until the end of your next turn."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "You create one additional shard of ice for each spell slot level above 3."
+        ]
+      }
+    ],
+    "classes": [
+      "Mage"
     ]
   },
   {
@@ -17731,6 +19317,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -17832,7 +19420,11 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -17924,7 +19516,8 @@
       "The spell's area can't overlap with the area of another Forbiddance spell. If you cast {@spell Forbiddance|XPHB} every day for 30 days in the same location, the spell lasts until it is dispelled, and the Material components are consumed on the last casting."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -18022,6 +19615,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -18105,6 +19699,7 @@
     "classes": [
       "Bard",
       "Druid",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -18238,6 +19833,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -18334,8 +19931,49 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Priest",
       "Ranger"
+    ]
+  },
+  {
+    "name": "Freezing Trap",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "An {@condition Invisible|XPHB}, intangible trap appears on the ground at a point you choose within range. The first time a creature comes within 5 feet of the trap, the trap explodes in a burst of frost, the spell ends, and the triggering creature makes a Constitution saving throw. On a failed save, the target has the {@condition Restrained|XPHB} condition for 1 minute. If the creature takes any damage, the {@condition Restrained|XPHB} condition from the trap ends."
+    ],
+    "classes": [
+      "Hunter"
     ]
   },
   {
@@ -18417,6 +20055,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -18463,7 +20103,51 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Frost Nova",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 15
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You unleash a burst of frost, creating a 15-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you. Each creature of your choice in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} makes a Constitution saving throw. On a failed save, a creature takes {@damage 2d6} Cold damage, and it has the {@condition Restrained|XPHB} condition until the end of your next turn. On a successful save, the creature takes half as much damage only."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+        ]
+      }
+    ],
+    "classes": [
+      "Mage"
     ]
   },
   {
@@ -18503,6 +20187,45 @@
       "Sorcerer",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Frostscythe",
+    "source": "WoW",
+    "level": 2,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "cone",
+      "distance": {
+        "type": "feet",
+        "amount": 20
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "Sweeping your weapon before you, you unleash a blast of icy cold. Each creature in a 20-foot {@variantrule Cone [Area of Effect]|XPHB|Cone} makes a Constitution saving throw. On a failed save, a creature takes {@damage 3d8} Cold damage, and its {@variantrule Speed|XPHB} is reduced by 10 feet for 1 minute. On a successful save, a creature takes half as much damage only."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d8} for each spell slot level above 2."
+        ]
+      }
     ]
   },
   {
@@ -18556,6 +20279,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -18619,6 +20343,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -18712,6 +20437,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -18810,6 +20537,9 @@
     ],
     "classes": [
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -18863,6 +20593,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -18968,8 +20700,11 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Death Knight",
       "Druid",
+      "Mage",
       "Paladin",
+      "Priest",
       "Wizard"
     ]
   },
@@ -19036,6 +20771,7 @@
       "s": true,
       "m": {
         "text": "2 Copper Pieces, which the spell consumes",
+        "cost": 2,
         "consume": true
       }
     },
@@ -19054,7 +20790,10 @@
     ],
     "classes": [
       "Cleric",
+      "Death Knight",
+      "Mage",
       "Paladin",
+      "Priest",
       "Wizard"
     ]
   },
@@ -19224,6 +20963,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -19402,6 +21142,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -19554,6 +21296,8 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -19629,7 +21373,9 @@
       "Uneaten berries disappear when the spell ends."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -19721,7 +21467,9 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -19773,6 +21521,8 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -19940,6 +21690,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -20020,6 +21772,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -20123,8 +21877,12 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Paladin",
+      "Priest",
       "Ranger"
     ]
   },
@@ -20164,6 +21922,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -20242,7 +22002,8 @@
       "Any enemy that moves to a space within 10 feet of the guardian for the first time on a turn or starts its turn there makes a Dexterity saving throw, taking 20 Radiant damage on a failed save or half as much damage on a successful one. The guardian vanishes when it has dealt a total of 60 damage."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -20478,6 +22239,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -20558,7 +22320,41 @@
     "classes": [
       "Artificer",
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
+    ]
+  },
+  {
+    "name": "Guided Prayer",
+    "source": "WoW",
+    "level": 3,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "reaction",
+        "condition": "which you take when you become Bloodied or take damage while you are Bloodied"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You regain {@variantrule Hit Points|XPHB} equal to {@dice 8d4} plus your spellcasting ability modifier. You have {@variantrule Advantage|XPHB} on the next attack roll you make before the end of your next turn."
+    ],
+    "classes": [
+      "Paladin"
     ]
   },
   {
@@ -20652,7 +22448,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -20757,9 +22554,10 @@
       }
     ],
     "range": {
-      "type": "point",
+      "type": "line",
       "distance": {
-        "type": "self"
+        "type": "feet",
+        "amount": 60
       }
     },
     "components": {
@@ -20784,7 +22582,11 @@
       "As a {@variantrule Bonus Action|XPHB} on your later turns, you can change the direction in which the {@variantrule Line [Area of Effect]|XPHB|Line} blasts from you."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -20875,6 +22677,8 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -21119,7 +22923,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -21204,8 +23009,49 @@
     "classes": [
       "Bard",
       "Druid",
+      "Mage",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Hand of Gul'dan",
+    "source": "WoW",
+    "level": 3,
+    "school": "C",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 120
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "A demonic meteor hurtles from you to a point you choose within range and then erupts. Each creature in a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} centered on that point makes a Dexterity saving throw, taking {@damage 2d8} Fire damage plus {@damage 2d8} Necrotic damage on a failed save or half as much damage on a successful one.",
+      "Demonic spirits resembling fel imps flit about the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} for the duration. A creature that enters the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} or ends its turn there makes a Dexterity saving throw, taking {@damage 1d8} Fire damage plus {@damage 1d8} Necrotic damage on a failed save or half as much damage on a successful one. A creature can be affected by this spell only once per turn."
+    ],
+    "classes": [
+      "Warlock"
     ]
   },
   {
@@ -21273,7 +23119,8 @@
       "You unleash virulent magic on a creature you can see within range. The target makes a Constitution saving throw. On a failed save, it takes {@damage 14d6} Necrotic damage, and its {@variantrule Hit Points|XPHB|Hit Point} maximum is reduced by an amount equal to the Necrotic damage it took. On a successful save, it takes half as much damage only. This spell can't reduce a target's {@variantrule Hit Points|XPHB|Hit Point} maximum below 1."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -21358,6 +23205,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -21447,7 +23296,8 @@
     ],
     "classes": [
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -21586,7 +23436,8 @@
     "classes": [
       "Bard",
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -21862,7 +23713,8 @@
     "classes": [
       "Bard",
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -21958,6 +23810,7 @@
     ],
     "classes": [
       "Bard",
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -22103,6 +23956,7 @@
       "You peer backward through the fabric of time. You see visions of events that occurred within range throughout the past 10 years, racing by at approximately 1 day per second. Throughout the spell's duration, you can freely slow down, pause, rewind, or fast-forward through these visions."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -22205,6 +24059,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -22313,6 +24169,9 @@
       "Bard",
       "Cleric",
       "Druid",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -22400,7 +24259,50 @@
       "For the duration, you emit an aura in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation}. While in the aura, creatures of your choice have {@variantrule Advantage|XPHB} on all saving throws, and other creatures have {@variantrule Disadvantage|XPHB} on attack rolls against them. In addition, when a Fiend or an Undead hits an affected creature with a melee attack roll, the attacker must succeed on a Constitution saving throw or have the {@condition Blinded|XPHB} condition until the end of its next turn."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
+    ]
+  },
+  {
+    "name": "Holy Nova",
+    "source": "WoW",
+    "level": 4,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "An explosion of holy light surrounds you in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation}, harming your enemies and healing your allies. Each creature of your choice in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} makes a Constitution saving throw, taking {@damage 5d6} Radiant damage on a failed save or half as much damage on a successful one. Each other creature in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} regains {@dice 3d6} {@variantrule Hit Points|XPHB}."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage and healing each increase by {@dice 1d6} for each spell slot level above 4."
+        ]
+      }
+    ],
+    "classes": [
+      "Priest"
     ]
   },
   {
@@ -22441,6 +24343,8 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -22721,6 +24625,8 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -22805,6 +24711,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -22896,6 +24804,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -22990,6 +24900,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -23071,6 +24983,7 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -23112,6 +25025,7 @@
       "A creature that takes a {@action Study|XPHB} action to examine the dragon can determine that it is an illusion with a successful Intelligence ({@skill Investigation|XPHB}) check against your spell save DC. If a creature discerns the illusion for what it is, the creature can see through the image and has {@variantrule Advantage|XPHB} on saving throws to end the {@condition Frightened|XPHB} condition it caused and to resist its exhalation."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -23243,6 +25157,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -23516,6 +25431,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -23602,6 +25518,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -23648,6 +25566,9 @@
     ],
     "classes": [
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -23708,6 +25629,45 @@
     "classes": [
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Infernal Strike",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 10
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You jump through the air without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks} and land in an unoccupied space within 30 feet. Each creature in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you makes a Dexterity saving throw. On a failed save, a creature takes {@damage 2d6} Fire damage and has {@variantrule Disadvantage|XPHB} on attack rolls against creatures other than you until the start of your next turn. On a successful save, it takes half as much damage only."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+        ]
+      }
     ]
   },
   {
@@ -23786,6 +25746,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -23872,7 +25834,42 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
+    ]
+  },
+  {
+    "name": "Innervate",
+    "source": "WoW",
+    "level": 5,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "A creature of your choice within range gains a level 4 spell slot. The spell slot vanishes after it is expended or the target finishes a {@variantrule Long Rest|XPHB}. It can use this spell slot to cast any spell it has prepared.",
+      "In addition, you regain one expended use of {@classFeature Wild Shape|Druid|XPHB|2|XPHB}."
+    ],
+    "classes": [
+      "Druid"
     ]
   },
   {
@@ -23976,6 +25973,8 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Evoker",
+      "Priest",
       "Sorcerer"
     ]
   },
@@ -24326,6 +26325,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -24362,7 +26363,7 @@
         "type": "timed",
         "duration": {
           "type": "minute",
-          "amount": 1
+          "amount": 10
         },
         "concentration": true
       }
@@ -24371,6 +26372,7 @@
       "You have {@variantrule Immunity|XPHB} to all damage until the spell ends."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -24457,6 +26459,8 @@
       "One willing creature you touch transforms into living metal. Until the spell ends, the target's {@condition Exhaustion|XPHB} level can't increase; the target has {@variantrule Resistance|XPHB} to Bludgeoning, Fire, Piercing, and Slashing damage; and it has {@variantrule Immunity|XPHB} to Poison damage and the {@condition Paralyzed|XPHB}, {@condition Petrified|XPHB}, and {@condition Poisoned|XPHB} conditions. If the target is {@condition Paralyzed|XPHB}, {@condition Petrified|XPHB}, or {@condition Poisoned|XPHB} when you cast the spell, those conditions immediately end for the target."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -24509,6 +26513,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -24549,6 +26554,7 @@
       "Of the many tactics employed by master magician and renowned adventurer Jim Darkmagic, the old glowing coin trick is a time-honored classic. When you cast the spell, you hurl the coin that is the spell's material component to any spot within range. The coin lights up as if under the effect of a {@spell light} spell. Each creature of your choice that you can see within 30 feet of the coin must succeed on a Wisdom saving throw or be distracted for the duration. While distracted, a creature has disadvantage on Wisdom ({@skill Perception}) checks and initiative rolls."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -24602,6 +26608,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -24692,7 +26699,11 @@
     ],
     "classes": [
       "Artificer",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -24742,6 +26753,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -24818,6 +26831,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -24867,8 +26882,84 @@
     ],
     "classes": [
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Lay Waste",
+    "source": "WoW",
+    "level": 7,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "line",
+      "distance": {
+        "type": "feet",
+        "amount": 120
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You draw a deep breath and spew molten cinders along a 120-foot-long, 10-foot-wide {@variantrule Line [Area of Effect]|XPHB|Line} originating from you in a direction you choose. Each creature in the {@variantrule Line [Area of Effect]|XPHB|Line} makes a Dexterity saving throw, taking {@damage 12d6} Fire damage on a failed save or half as much damage on a successful one.",
+      "You then teleport to an unoccupied space within 5 feet of the end of the {@variantrule Line [Area of Effect]|XPHB|Line}."
+    ],
+    "classes": [
+      "Evoker"
+    ]
+  },
+  {
+    "name": "Leeching Strike",
+    "source": "WoW",
+    "level": 3,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus",
+        "condition": "which you take immediately after hitting a target with a Melee weapon or an Unarmed Strike"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "The target hit by the strike takes an extra {@damage 3d8} Necrotic damage from the attack, and you regain {@dice 3d4} {@variantrule Hit Points|XPHB}."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d8}, and the {@variantrule Hit Points|XPHB} you regain increase by {@dice 1d4}, for each spell slot level above 3."
+        ]
+      }
     ]
   },
   {
@@ -24951,6 +27042,8 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -25034,6 +27127,7 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
     ]
   },
@@ -25119,6 +27213,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -25193,8 +27288,12 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Paladin",
+      "Priest",
       "Ranger"
     ]
   },
@@ -25282,6 +27381,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -25410,6 +27511,9 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -25504,6 +27608,8 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -25594,6 +27700,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -25630,6 +27738,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -25674,6 +27784,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -25748,7 +27860,71 @@
       "Artificer",
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Living Flame",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "Flickering flames hurtle toward a creature you choose within range. Choose one of these options:",
+      {
+        "type": "list",
+        "style": "list-hang-notitle",
+        "items": [
+          {
+            "type": "item",
+            "name": "Healing Flames",
+            "entries": [
+              "The target regains {@dice 2d6} {@variantrule Hit Points|XPHB}."
+            ]
+          },
+          {
+            "type": "item",
+            "name": "Searing Flames",
+            "entries": [
+              "Make a ranged attack roll against the target. On a hit, the target takes {@damage 2d8} Fire damage."
+            ]
+          }
+        ]
+      }
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "For every two spell slot levels above 1, you can choose an additional target (two targets with a level 3 or 4 slot, three targets with a level 5 or 6 slot, four targets with a level 7 or 8 slot, and five targets with a level 9 slot). You choose the flames' effect separately for each target."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -25819,7 +27995,9 @@
     ],
     "classes": [
       "Bard",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -25909,8 +28087,13 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Mage",
       "Paladin",
+      "Priest",
       "Ranger",
       "Wizard"
     ]
@@ -26001,8 +28184,13 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Mage",
       "Paladin",
+      "Priest",
       "Ranger",
       "Wizard"
     ]
@@ -26104,7 +28292,10 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Wizard"
     ]
@@ -26264,6 +28455,8 @@
       "You touch a willing creature who isn't wearing armor. Until the spell ends, the target's base AC becomes 13 plus its Dexterity modifier. The spell ends early if the target dons armor."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -26352,6 +28545,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -26482,7 +28677,10 @@
     ],
     "classes": [
       "Cleric",
+      "Death Knight",
+      "Mage",
       "Paladin",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -26576,6 +28774,7 @@
       "When the spell ends, the container is destroyed."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -26663,6 +28862,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -26756,6 +28957,7 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -26894,6 +29096,11 @@
     ],
     "classes": [
       "Artificer",
+      "Death Knight",
+      "Demon Hunter",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Paladin",
       "Ranger",
       "Sorcerer",
@@ -27048,6 +29255,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -27140,7 +29349,8 @@
     "classes": [
       "Bard",
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -27208,7 +29418,8 @@
       "A flood of healing energy flows from you into creatures around you. You restore up to 700 {@variantrule Hit Points|XPHB}, divided as you choose among any number of creatures that you can see within range. Creatures healed by this spell also have the {@condition Blinded|XPHB}, {@condition Deafened|XPHB}, and {@condition Poisoned|XPHB} conditions removed from them."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -27294,7 +29505,52 @@
     ],
     "classes": [
       "Bard",
-      "Cleric"
+      "Cleric",
+      "Priest"
+    ]
+  },
+  {
+    "name": "Mass Polymorph",
+    "source": "WoW",
+    "level": 9,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true,
+      "m": "a caterpillar cocoon"
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "hour",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "You attempt to transform any number of creatures in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you into identical Beasts. Each creature in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} must succeed on a Wisdom saving throw or shapeshift into a Beast form for the duration. A creature that isn't a Beast, a Giant, a Humanoid, or a Monstrosity automatically succeeds on its saving throw.",
+      "The new form can be any {@filter Beast|bestiary|type=beast|challenge rating=[&0]|miscellaneous=!swarm} you choose that has a {@variantrule Challenge Rating|XPHB} of 0 ({@creature Goat|XMM} is recommended). Each target's game statistics are replaced by the stat block of the chosen Beast, but the target retains its alignment, personality, creature type, {@variantrule Hit Points|XPHB}, and {@variantrule Hit Point Dice|XPHB}.",
+      "Each target gains a number of {@variantrule Temporary Hit Points|XPHB} equal to the {@variantrule Hit Points|XPHB} of the Beast form. The spell ends early on the target if it has no {@variantrule Temporary Hit Points|XPHB} left.",
+      "The targets are limited in the actions they can perform by the anatomy of their new form, and they can't speak or cast spells.",
+      "Each target's gear melds into the new form. The creature can't use or otherwise benefit from any of that equipment."
+    ],
+    "classes": [
+      "Mage"
     ]
   },
   {
@@ -27442,6 +29698,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -27569,6 +29827,7 @@
       "When the spell ends, the target reappears in the space it left or, if that space is occupied, in the nearest unoccupied space."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -27650,7 +29909,10 @@
     ],
     "classes": [
       "Cleric",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Priest",
       "Ranger"
     ]
   },
@@ -27739,6 +30001,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -27866,6 +30129,9 @@
       "Bard",
       "Cleric",
       "Druid",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -27992,8 +30258,75 @@
       "Artificer",
       "Bard",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Metamorphosis",
+    "source": "WoW",
+    "level": 3,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true,
+      "m": {
+        "text": "one soul fragment, which the spell consumes",
+        "consume": true
+      }
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "Uttering an incantation, you draw on fel or Void magic to transform yourself, taking on demonic features. You gain one of the following benefits of your choice until the spell ends:",
+      {
+        "type": "list",
+        "style": "list-hang-notitle",
+        "items": [
+          {
+            "type": "item",
+            "name": "Devourer",
+            "entries": [
+              "When you roll damage for a spell, weapon, or feature that deals Force damage, you can treat any 1 or 2 on a damage die as a 3."
+            ]
+          },
+          {
+            "type": "item",
+            "name": "Havoc",
+            "entries": [
+              "Whenever you hit a creature with an attack roll using a Melee weapon, the target takes an extra {@damage 1d6} Fire damage."
+            ]
+          },
+          {
+            "type": "item",
+            "name": "Vengeance",
+            "entries": [
+              "You have a +2 bonus to AC, and your {@variantrule Hit Points|XPHB|Hit Point} maximum and your current {@variantrule Hit Points|XPHB} increase by 5 for the spell's duration."
+            ]
+          }
+        ]
+      }
     ]
   },
   {
@@ -28064,6 +30397,8 @@
       "A nonmagical object that isn't being worn or carried also takes the damage if it's in the spell's area, and the object starts {@hazard burning|XPHB} if it's flammable."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -28186,6 +30521,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -28268,6 +30604,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -28366,6 +30704,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -28466,6 +30806,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -28552,6 +30894,7 @@
     "classes": [
       "Bard",
       "Druid",
+      "Mage",
       "Wizard"
     ]
   },
@@ -28636,6 +30979,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -28719,6 +31064,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -28786,6 +31132,8 @@
       "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -28894,6 +31242,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -28979,6 +31328,7 @@
       "You have a powerful sixth sense that guides you at just the right time. Turn the roll of your failed {@variantrule D20 Test|XPHB} into a 20, or turn the roll of the triggering attack roll into a 1."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -29085,6 +31435,52 @@
     ]
   },
   {
+    "name": "Moonfire",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "round",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "A beam of lunar light burns a creature you can see within range. The target makes a Dexterity saving throw. On a failed save, it takes {@damage 2d8} Radiant damage, sheds {@variantrule Dim Light|XPHB} in a 10-foot radius, and can't benefit from the {@condition Invisible|XPHB} condition until the end of its next turn. At the end of its next turn, it takes an extra {@damage 1d8} Radiant damage, and the spell ends. On a successful save, it takes half the initial damage only."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "Both the initial and the later damage increase by {@dice 1d8} for each spell slot level above 1."
+        ]
+      }
+    ],
+    "classes": [
+      "Druid"
+    ]
+  },
+  {
     "name": "Mordenkainen's Faithful Hound",
     "source": "PHB",
     "level": 4,
@@ -29166,6 +31562,7 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
     ]
   },
@@ -29208,6 +31605,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -29300,6 +31698,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -29424,6 +31823,7 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
     ]
   },
@@ -29515,6 +31915,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -29569,7 +31970,8 @@
     ],
     "classes": [
       "Bard",
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -29659,6 +32061,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -29775,6 +32179,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -29899,6 +32304,9 @@
     ],
     "classes": [
       "Bard",
+      "Demon Hunter",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Wizard"
     ]
@@ -30005,6 +32413,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -30098,6 +32507,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -30187,6 +32598,7 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
     ]
   },
@@ -30267,6 +32679,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -30347,7 +32760,9 @@
       "You radiate a concealing aura in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} for the duration. While in the aura, you and each creature you choose have a +10 bonus to Dexterity ({@skill Stealth|XPHB}) checks and leave no tracks."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -30428,6 +32843,7 @@
       "When the opening disappears, any creatures or objects still in the passage created by the spell are safely ejected to an unoccupied space nearest to the surface on which you cast the spell."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -30518,6 +32934,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -30618,6 +33036,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -30696,6 +33115,7 @@
       "For the duration, you or a creature you choose can ride the steed. The steed uses the {@creature Riding Horse|XMM} stat block, except it has a {@variantrule Speed|XPHB} of 100 feet and can travel 13 miles in an hour. When the spell ends, the steed gradually fades, giving the rider 1 minute to dismount. The spell ends early if the steed takes any damage."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -30773,7 +33193,8 @@
       "After the creature completes the task, or when the agreed-upon duration of service expires, the creature returns to its home plane after reporting back to you if possible. If you are unable to agree on a price for the creature's service, the creature immediately returns to its home plane."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -30886,6 +33307,8 @@
       "Bard",
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -30970,6 +33393,9 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -31070,7 +33496,9 @@
     ],
     "classes": [
       "Bard",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -31155,6 +33583,8 @@
     "classes": [
       "Artificer",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -31249,6 +33679,8 @@
     "classes": [
       "Bard",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -31284,7 +33716,8 @@
     ],
     "classes": [
       "Bard",
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -31353,7 +33786,8 @@
     ],
     "classes": [
       "Bard",
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -31423,6 +33857,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -31465,6 +33901,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -31576,6 +34014,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -31664,7 +34104,56 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
+    ]
+  },
+  {
+    "name": "Prayer of Mending",
+    "source": "WoW",
+    "level": 3,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "m": "a pinch of powdered silver"
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You place a holy ward on one willing creature in range. The next time that creature takes damage, the ward activates, and the creature regains {@variantrule Hit Points|XPHB} equal to {@dice 1d8} plus your spellcasting ability modifier. The ward then jumps to another ally of your choice within 30 feet of the warded creature, with the same effect. If no ally is in range, the spell ends, and it ends after the ward has healed five times."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The spell can heal one additional time for each spell slot level above 3."
+        ]
+      }
+    ],
+    "classes": [
+      "Priest"
     ]
   },
   {
@@ -31801,6 +34290,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -32002,13 +34493,13 @@
       {
         "type": "table",
         "caption": "Prismatic Rays",
-        "colStyles": [
-          "col-2 text-center",
-          "col-10"
-        ],
         "colLabels": [
           "1d8",
           "Ray"
+        ],
+        "colStyles": [
+          "col-2 text-center",
+          "col-10"
         ],
         "rows": [
           [
@@ -32048,6 +34539,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -32183,13 +34676,13 @@
       {
         "type": "table",
         "caption": "Prismatic Layers",
-        "colStyles": [
-          "col-2 text-center",
-          "col-10"
-        ],
         "colLabels": [
           "Order",
           "Effects"
+        ],
+        "colStyles": [
+          "col-2 text-center",
+          "col-10"
         ],
         "rows": [
           [
@@ -32225,6 +34718,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -32401,6 +34895,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -32494,6 +34989,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -32577,7 +35073,12 @@
     "classes": [
       "Artificer",
       "Cleric",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
+      "Priest",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -32671,8 +35172,11 @@
     ],
     "classes": [
       "Cleric",
+      "Death Knight",
       "Druid",
+      "Mage",
       "Paladin",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -32755,9 +35259,56 @@
     "classes": [
       "Artificer",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Paladin",
+      "Priest",
       "Ranger"
+    ]
+  },
+  {
+    "name": "Psychic Horror",
+    "source": "WoW",
+    "level": 4,
+    "school": "E",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true,
+      "m": "a drop of ink"
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "A creature within range is overwhelmed with mental visions of the Void and makes a Wisdom saving throw. On a failed save, the target takes {@damage 2d10} Psychic damage and has the {@condition Frightened|XPHB} condition for 1 minute. A {@condition Frightened|XPHB} creature also has the {@condition Stunned|XPHB} condition until the end of your next turn. At the end of each of its turns, the target repeats the save, ending the effect on itself on a success. On a successful save, the creature takes half as much damage only."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d10} for each spell slot level above 4."
+        ]
+      }
+    ],
+    "classes": [
+      "Priest"
     ]
   },
   {
@@ -32909,8 +35460,10 @@
     "classes": [
       "Artificer",
       "Cleric",
+      "Death Knight",
       "Druid",
-      "Paladin"
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -32962,6 +35515,56 @@
       "Bard",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Rain of Fire",
+    "source": "WoW",
+    "level": 3,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 120
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "Hellfire rains down in a 20-foot-radius, 40-foot-high {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} centered on a point within range. Until the spell ends, you can take a {@action Magic|XPHB} action on later turns to move the {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} up to 60 feet.",
+      "When the {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} appears, each creature in it makes a Dexterity saving throw, taking {@damage 3d8} Fire damage on a failed save or half as much damage on a successful one. A creature also makes this save when the spell's area moves into its space and when it enters the spell's area or ends its turn there. A creature makes this save only once per turn.",
+      "You have {@variantrule Advantage|XPHB} on spell attack rolls against a creature in the {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder}, and you deal an extra {@damage 1d6} Necrotic damage to the target if you hit."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The Fire damage increases by {@dice 1d8} for each spell slot level above 3."
+        ]
+      }
+    ],
+    "classes": [
+      "Warlock"
     ]
   },
   {
@@ -33047,7 +35650,9 @@
     "classes": [
       "Bard",
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -33129,6 +35734,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -33295,6 +35901,7 @@
       "On a failed save, the target has {@variantrule Disadvantage|XPHB} on Strength-based {@variantrule D20 Test|XPHB|D20 Tests} for the duration. During that time, it also subtracts {@dice 1d8} from all its damage rolls. The target repeats the save at the end of each of its turns, ending the spell on a success."
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -33377,6 +35984,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -33465,6 +36074,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -33615,6 +36226,45 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Druid",
+      "Priest"
+    ]
+  },
+  {
+    "name": "Regrowth",
+    "source": "WoW",
+    "level": 3,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 120
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "One creature you can see within range regains {@dice 3d8} {@variantrule Hit Points|XPHB}. For the duration, the target regains {@dice 1d8} {@variantrule Hit Points|XPHB} at the start of each of your turns. The spell ends early once it restores at least 24 {@variantrule Hit Points|XPHB}."
+    ],
+    "classes": [
       "Druid"
     ]
   },
@@ -33850,13 +36500,13 @@
       "You touch a dead Humanoid or a piece of one. If the creature has been dead no longer than 10 days, the spell forms a new body for it and calls the soul to enter that body. Roll {@dice 1d10} and consult the table below to determine the body's species, or the DM chooses another playable species.",
       {
         "type": "table",
-        "colStyles": [
-          "col-2 text-center",
-          "col-10"
-        ],
         "colLabels": [
           "1d10",
           "Species"
+        ],
+        "colStyles": [
+          "col-2 text-center",
+          "col-10"
         ],
         "rows": [
           [
@@ -33905,6 +36555,45 @@
     ],
     "classes": [
       "Druid"
+    ]
+  },
+  {
+    "name": "Remorseless Winter",
+    "source": "WoW",
+    "level": 3,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 30
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You drain the warmth from nearby creatures. Each creature of your choice in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you makes a Constitution saving throw, taking {@damage 6d6} Cold damage on a failed save or half as much damage on a successful one. Whether or not a creature succeeds on its saving throw, its {@variantrule Speed|XPHB} is reduced to 10 feet until the end of its next turn as clinging frost hinders its movement."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d6} for each spell slot level above 3."
+        ]
+      }
     ]
   },
   {
@@ -33974,9 +36663,45 @@
     ],
     "classes": [
       "Cleric",
+      "Death Knight",
+      "Mage",
       "Paladin",
+      "Priest",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Rescue",
+    "source": "WoW",
+    "level": 5,
+    "school": "C",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 120
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You teleport to an unoccupied space you can see within range. One willing creature within 60 feet of the space you left also teleports to an unoccupied space within 5 feet of your destination space."
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -34057,7 +36782,8 @@
     "classes": [
       "Artificer",
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -34142,7 +36868,8 @@
     ],
     "classes": [
       "Bard",
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -34228,6 +36955,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -34311,8 +37040,12 @@
     "classes": [
       "Artificer",
       "Cleric",
+      "Death Knight",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Paladin",
+      "Priest",
       "Ranger"
     ]
   },
@@ -34349,6 +37082,8 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -34395,6 +37130,42 @@
     "classes": [
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Roar of Ursoc",
+    "source": "WoW",
+    "level": 2,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "round",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You shape-shift as if you had used {@classFeature Wild Shape|Druid|XPHB|2|XPHB}, but you don't expend a use of your {@classFeature Wild Shape|Druid|XPHB|2|XPHB}. Until the start of your next turn, any creature that starts its turn within 5 feet of you has {@variantrule Disadvantage|XPHB} on attack rolls against any creature other than you."
+    ],
+    "classes": [
+      "Druid"
     ]
   },
   {
@@ -34476,7 +37247,47 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Rune Strike",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus",
+        "condition": "which you take immediately after hitting a target with a Melee weapon or an Unarmed Strike"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "The target takes an extra {@damage 2d8} Necrotic damage. The damage increases by {@dice 1d8} if the target is a Celestial."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d8} for each spell slot level above 1."
+        ]
+      }
     ]
   },
   {
@@ -34554,7 +37365,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -34636,7 +37448,8 @@
     ],
     "classes": [
       "Artificer",
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -34791,8 +37604,53 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Scourge Strike",
+    "source": "WoW",
+    "level": 1,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus",
+        "condition": "which you take immediately after hitting a target with a Melee weapon or an Unarmed Strike"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "The target takes an extra {@damage 2d6} Necrotic damage from the attack, and it must succeed on a Constitution saving throw or have the {@condition Poisoned|XPHB} condition until the spell ends. At the end of each of its turns, the {@condition Poisoned|XPHB} target repeats the save, ending the spell on itself on a success."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+        ]
+      }
     ]
   },
   {
@@ -34935,13 +37793,13 @@
       "You can see and hear a creature you choose that is on the same plane of existence as you. The target makes a Wisdom saving throw, which is modified (see the tables below) by how well you know the target and the sort of physical connection you have to it. The target doesn't know what it is making the save against, only that it feels uneasy.",
       {
         "type": "table",
-        "colStyles": [
-          "col-10",
-          "col-2 text-center"
-        ],
         "colLabels": [
           "Your Knowledge of the Target Is...",
           "Save Modifier"
+        ],
+        "colStyles": [
+          "col-10",
+          "col-2 text-center"
         ],
         "rows": [
           [
@@ -34960,13 +37818,13 @@
       },
       {
         "type": "table",
-        "colStyles": [
-          "col-10",
-          "col-2 text-center"
-        ],
         "colLabels": [
           "You Have the Target's...",
           "Save Modifier"
+        ],
+        "colStyles": [
+          "col-10",
+          "col-2 text-center"
         ],
         "rows": [
           [
@@ -34991,6 +37849,8 @@
       "Bard",
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -35085,6 +37945,7 @@
       }
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -35166,6 +38027,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -35252,6 +38115,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -35332,6 +38197,8 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -35418,7 +38285,45 @@
       "You can set a condition for the spell to end early. The condition can be anything you choose, but it must occur or be visible within 1 mile of the target. Examples include \"after 1,000 years\" or \"when the tarrasque awakens.\" This spell also ends if the target takes any damage."
     ],
     "classes": [
+      "Mage",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Serpent Sting",
+    "source": "WoW",
+    "level": 3,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus",
+        "condition": "which you take immediately after hitting a creature with a weapon"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "The target takes an extra {@damage 4d6} Poison damage from the attack, and the target has the {@condition Poisoned|XPHB} condition until the spell ends. At the end of each of its turns, the {@condition Poisoned|XPHB} target makes a Constitution saving throw. On a failed save, the creature takes {@damage 2d6} Poison damage. On a successful save, the spell ends."
+    ],
+    "classes": [
+      "Hunter"
     ]
   },
   {
@@ -35512,6 +38417,53 @@
     ],
     "classes": [
       "Warlock"
+    ]
+  },
+  {
+    "name": "Shadow Word: Pain",
+    "source": "WoW",
+    "level": 1,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "Speaking a word of Void power, you cause one creature in range to suffer agonizing pain. The target makes a Wisdom saving throw. On a failed save, the target takes Psychic damage equal to {@damage 1d10} plus your spellcasting ability modifier and is cursed for the duration. On a successful save, it takes half as much damage only.",
+      "Until the curse ends, the target takes {@damage 1d10} Psychic damage at the start of each of its turns. It repeats the save at the end of each of its turns, ending the curse on a success."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The spell's initial damage increases by {@damage 1d10} for each spell slot level above 1."
+        ]
+      }
+    ],
+    "classes": [
+      "Priest"
     ]
   },
   {
@@ -35657,6 +38609,7 @@
     ],
     "classes": [
       "Druid",
+      "Mage",
       "Wizard"
     ]
   },
@@ -35751,8 +38704,53 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Shattering Star",
+    "source": "WoW",
+    "level": 5,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 90
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You exhale a bolt of concentrated power at a creature within range. Make a ranged spell attack against the target. On a hit, the target takes {@damage 10d8} Force damage, and it takes a -2 penalty to AC until the start of your next turn as clinging frost makes the target's exterior brittle."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d8} for each spell slot level above 5."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -35829,6 +38827,8 @@
       "An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from {@spell Magic Missile|XPHB}."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -35912,7 +38912,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -36045,6 +39047,7 @@
       }
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -36124,6 +39127,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -36168,6 +39173,79 @@
       "Sorcerer",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Sigil of Chains",
+    "source": "WoW",
+    "level": 5,
+    "school": "C",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 90
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "round",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "A sigil appears at a point on the ground you can see within range, then erupts in a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere}. Each creature in the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} makes a Dexterity saving throw. On a failed save, a creature takes {@damage 5d6} Force damage, is pulled up to 10 feet straight toward the sigil, and has the {@condition Restrained|XPHB} condition until the end of your next turn. On a successful save, the creature takes half as much damage, and its {@variantrule Speed|XPHB} is reduced by 10 feet until the end of your next turn."
+    ]
+  },
+  {
+    "name": "Sigil of Flame",
+    "source": "WoW",
+    "level": 2,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 90
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You inscribe a sigil in the air that then appears on a creature you can see within range. The target makes a Constitution saving throw, taking {@damage 2d8} Fire damage on a failed save or half as much damage on a successful one. Whether or not the target fails its saving throw, it radiates heat in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from itself until the end of its next turn. At the start of the target's next turn, the target and each creature in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} must succeed on a Constitution saving throw or take {@damage 1d8} Fire damage."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage (both initial and later) increases by {@dice 1d8} for each spell slot level above 2."
+        ]
+      }
     ]
   },
   {
@@ -36249,6 +39327,9 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Demon Hunter",
+      "Hunter",
+      "Priest",
       "Ranger"
     ]
   },
@@ -36336,6 +39417,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -36373,6 +39456,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -36411,6 +39496,8 @@
       "You imbue one creature you touch with magical healing energy for the duration. Whenever the target casts a spell using a spell slot, the target can immediately roll a number of unexpended {@variantrule Hit Point Dice|XPHB} equal to the spell slot's level and regain {@variantrule Hit Points|XPHB} equal to the roll's total plus your spellcasting ability modifier; those dice are then expended."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -36500,6 +39587,7 @@
       "The simulacrum lasts until it drops to 0 {@variantrule Hit Points|XPHB}, at which point it reverts to snow and melts away. If you cast this spell again, any simulacrum you created with this spell is instantly destroyed."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -36677,6 +39765,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -36764,6 +39854,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -36853,6 +39945,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -37024,6 +40118,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -37069,6 +40165,7 @@
       }
     ],
     "classes": [
+      "Evoker",
       "Sorcerer"
     ]
   },
@@ -37143,6 +40240,46 @@
     "classes": [
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Soul Reap",
+    "source": "WoW",
+    "level": 3,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You cut a hole in the fabric of reality, sending a bolt of cosmic matter toward a creature in range. Make a ranged spell attack against the target, which gains no benefit from {@variantrule Cover|XPHB|Half Cover} or {@variantrule Cover|XPHB|Three-Quarters Cover}. On a hit, you deal {@damage 6d6} Force damage. If you roll a 6 on a {@dice d6} for this spell, you can roll another {@dice d6} and add it to the damage. When you cast this spell, the maximum number of these d6s you can add to the spell's damage equals your spellcasting ability modifier."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The damage increases by {@dice 1d6} for each spell slot level above 3."
+        ]
+      }
     ]
   },
   {
@@ -37221,7 +40358,8 @@
     "classes": [
       "Artificer",
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -37299,7 +40437,9 @@
     ],
     "classes": [
       "Bard",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger",
       "Warlock"
     ]
@@ -37385,6 +40525,8 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -37471,7 +40613,9 @@
     ],
     "classes": [
       "Bard",
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -37515,6 +40659,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -37572,15 +40718,15 @@
           "The number of secondary casters determines the spell's area of effect and duration, as shown in the table below. The spell ends early if any caster who participated in this casting contributes to another casting of Spellfire Storm as a Circle spell.",
           {
             "type": "table",
-            "colStyles": [
-              "col-2 text-center",
-              "col-8",
-              "col-2"
-            ],
             "colLabels": [
               "Secondary Casters",
               "Area of Effect",
               "Duration"
+            ],
+            "colStyles": [
+              "col-2 text-center",
+              "col-8",
+              "col-2"
             ],
             "rows": [
               [
@@ -37604,6 +40750,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -37696,6 +40844,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -37781,7 +40931,9 @@
       "The transformation of the ground is camouflaged to look natural. Any creature that can't see the area when the spell is cast must take a {@action Search|XPHB} action and succeed on a Wisdom ({@skill Perception|XPHB} or {@skill Survival|XPHB}) check against your spell save DC to recognize the terrain as hazardous before entering it."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -37882,7 +41034,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -37944,6 +41097,8 @@
     "classes": [
       "Artificer",
       "Cleric",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -38150,7 +41305,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -38276,7 +41432,48 @@
       }
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
+    ]
+  },
+  {
+    "name": "Starfall",
+    "source": "WoW",
+    "level": 4,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 120
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true,
+      "m": "a pinch of stardust"
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "round",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You call down falling stars on creatures in a 30-foot-radius, 40-foot-high {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} within range. Each creature in the {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} makes a Dexterity saving throw, taking {@damage 7d8} Radiant damage on a failed save or half as much damage on a successful one.",
+      "Until the start of your next turn, a creature that enters the {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} for the first time on a turn or ends its turn there takes Radiant damage equal to your {@class Druid|WoW} level. A creature takes this damage only once per turn."
+    ],
+    "classes": [
+      "Druid"
     ]
   },
   {
@@ -38397,6 +41594,9 @@
       "You then teleport to an unoccupied space you can see within 5 feet of one of the targets."
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Wizard"
     ]
@@ -38484,6 +41684,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -38559,6 +41761,8 @@
       "Artificer",
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -38650,7 +41854,11 @@
     ],
     "classes": [
       "Artificer",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -38925,6 +42133,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -39034,6 +42244,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -39142,7 +42353,9 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -39251,7 +42464,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -39359,6 +42574,7 @@
     ],
     "classes": [
       "Artificer",
+      "Mage",
       "Wizard"
     ]
   },
@@ -39399,7 +42615,7 @@
       }
     ],
     "entries": [
-      "You call forth the spirit of a primeval dinosaur. It manifests in an unoccupied space that you can see within range and uses the {@creature Dinosaur Spirit|AU} stat block. When you cast the spell, choose Ankylosaur, {@creature Triceratops|XMM}, or Tyrannosaur. The creature resembles a dinosaur of the chosen type, which determines certain details in its stat block. The creature disappears when it drops to 0 {@variantrule Hit Points|XPHB} or when the spell ends.",
+      "You call forth the spirit of a primeval dinosaur. It manifests in an unoccupied space that you can see within range and uses the {@creature Dinosaur Spirit|AU} stat block. When you cast the spell, choose Ankylosaur, Triceratops, or Tyrannosaur. The creature resembles a dinosaur of the chosen type, which determines certain details in its stat block. The creature disappears when it drops to 0 {@variantrule Hit Points|XPHB} or when the spell ends.",
       "The creature is an ally to you and your allies. In combat, the creature shares your {@variantrule Initiative|XPHB} count, but it takes its turn immediately after yours. It obeys your verbal commands (no action required by you). If you don't issue any, the creature takes the {@action Dodge|XPHB} action and uses its movement to avoid danger."
     ],
     "entriesHigherLevel": [
@@ -39520,6 +42736,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -39628,7 +42845,10 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Wizard"
     ]
@@ -39739,7 +42959,10 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Warlock",
       "Wizard"
@@ -39849,6 +43072,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -40058,7 +43282,9 @@
       }
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -40220,6 +43446,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -40310,6 +43537,9 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -40390,6 +43620,9 @@
     "classes": [
       "Cleric",
       "Druid",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -40473,6 +43706,8 @@
       "When you cast the spell and as a {@variantrule Bonus Action|XPHB} until it ends, you can make two attacks with a weapon that fires Arrows or Bolts, such as a Longbow or a Light Crossbow. The spell magically creates the ammunition needed for each attack. Each Arrow or Bolt created by the spell deals damage like a nonmagical piece of ammunition of its kind and disintegrates immediately after it hits or misses."
     ],
     "classes": [
+      "Demon Hunter",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -40508,6 +43743,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -40579,6 +43816,7 @@
     ],
     "classes": [
       "Druid",
+      "Mage",
       "Wizard"
     ]
   },
@@ -40782,6 +44020,8 @@
       "Bard",
       "Cleric",
       "Druid",
+      "Mage",
+      "Priest",
       "Wizard"
     ]
   },
@@ -40856,6 +44096,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -40895,10 +44137,11 @@
     ],
     "entries": [
       "You conjure a claw-footed cauldron filled with bubbling liquid. The cauldron appears in an unoccupied space on the ground within 5 feet of you and lasts for the duration. The cauldron can't be moved and disappears when the spell ends, along with the bubbling liquid inside it.",
-      "The liquid in the cauldron duplicates the properties of a Common or an Uncommon potion of your choice (such as a {@item Potion of Healing|XDMG}). As a {@variantrule Bonus Action|XPHB}, you or an ally can reach into the cauldron and withdraw one potion of that kind. The potion is contained in a vial that disappears when the potion is consumed. The cauldron can produce a number of these potions equal to your spellcasting ability modifier (minimum 1). When the last of these potions is withdrawn from the cauldron, the cauldron disappears, and the spell ends.",
+      "The liquid in the cauldron duplicates the properties of a {@filter Common or an Uncommon potion|items|type=potion|rarity=common;uncommon} of your choice (such as a {@item Potion of Healing|XDMG}). As a {@variantrule Bonus Action|XPHB}, you or an ally can reach into the cauldron and withdraw one potion of that kind. The potion is contained in a vial that disappears when the potion is consumed. The cauldron can produce a number of these potions equal to your spellcasting ability modifier (minimum 1). When the last of these potions is withdrawn from the cauldron, the cauldron disappears, and the spell ends.",
       "Potions obtained from the cauldron that aren't consumed disappear when you cast this spell again."
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -41044,6 +44287,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -41259,6 +44503,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -41338,6 +44584,7 @@
       "Until the spell ends, you and the target can instantly share words, images, sounds, and other sensory messages with each other through the link, and the target recognizes you as the creature it is communicating with. The spell enables a creature to understand the meaning of your words and any sensory messages you send to it."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -41515,19 +44762,19 @@
       {
         "type": "table",
         "caption": "Teleportation Outcome",
-        "colStyles": [
-          "col-4",
-          "col-2 text-center",
-          "col-2 text-center",
-          "col-2 text-center",
-          "col-2 text-center"
-        ],
         "colLabels": [
           "Familiarity",
           "Mishap",
           "Similar Area",
           "Off Target",
           "On Target"
+        ],
+        "colStyles": [
+          "col-4",
+          "col-2 text-center",
+          "col-2 text-center",
+          "col-2 text-center",
+          "col-2 text-center"
         ],
         "rows": [
           [
@@ -41623,6 +44870,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -41717,6 +44966,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -41895,6 +45146,7 @@
       "If you move more than 100 feet from the disk (typically because it can't move around an obstacle to follow you), the spell ends."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -42116,7 +45368,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -42199,6 +45452,46 @@
     "classes": [
       "Artificer",
       "Druid"
+    ]
+  },
+  {
+    "name": "Throw Glaive",
+    "source": "WoW",
+    "level": 1,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You create a demonic warglaive and hurl it at a creature or object in range. Make a ranged spell attack against the target. On a hit, the target takes {@damage 1d8} Slashing damage plus {@damage 1d8} Fire damage, and the glaive ricochets to a different target of your choice within 30 feet of the target. Make new attack and damage rolls against the new target."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The Fire damage increases by {@dice 1d8} for each spell slot level above 1. The glaive ricochets a maximum number of times equal to the level of the slot expended; a creature can be targeted only once by each casting of this spell."
+        ]
+      }
     ]
   },
   {
@@ -42327,6 +45620,8 @@
       "Artificer",
       "Bard",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -42408,6 +45703,7 @@
       }
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -42501,6 +45797,8 @@
     "classes": [
       "Bard",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -42540,6 +45838,41 @@
       "Druid",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Time Dilation",
+    "source": "WoW",
+    "level": 4,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "reaction",
+        "condition": "which you take in response to you or a creature you can see within 60 feet of you taking damage"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "The target reduces the damage taken by {@dice 4d8}. At the end of each of the target's turns, the target loses {@dice 1d8} {@variantrule Hit Points|XPHB} until it has lost a total of {@dice 4d8} {@variantrule Hit Points|XPHB} (roll these {@dice 4d8} separately from the damage reduction)."
+    ],
+    "classes": [
+      "Evoker"
     ]
   },
   {
@@ -42642,6 +45975,8 @@
       "This spell ends if one of the actions you use during this period, or any effects that you create during it, affects a creature other than you or an object being worn or carried by someone other than you. In addition, the spell ends if you move to a place more than 1,000 feet from the location where you cast it."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -42773,6 +46108,8 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -42854,9 +46191,59 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Tranquility",
+    "source": "WoW",
+    "level": 6,
+    "school": "A",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "emanation",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "Nature's power flows around you in a 60-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} for the duration. Creatures of your choice in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} have {@variantrule Resistance|XPHB} to Bludgeoning, Piercing, and Slashing damage. As a {@variantrule Bonus Action|XPHB}, you can cause each ally in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} to regain {@variantrule Hit Points|XPHB} equal to {@dice 2d8} plus your spellcasting ability modifier."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "Creatures regain {@dice 1d8} additional {@variantrule Hit Points|XPHB} for each spell slot level above 6."
+        ]
+      }
+    ],
+    "classes": [
+      "Druid"
     ]
   },
   {
@@ -42907,6 +46294,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -43044,6 +46432,78 @@
     ]
   },
   {
+    "name": "Tree of Life",
+    "source": "WoW",
+    "level": 8,
+    "school": "T",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        }
+      }
+    ],
+    "entries": [
+      "You shape-shift into a Tree of Life form that resembles a treant. In this form, you gain the following benefits.",
+      {
+        "type": "entries",
+        "name": "Tree Form",
+        "entries": [
+          "You become Large. Your {@variantrule Speed|XPHB} becomes 10 feet and can't be reduced, and {@variantrule Difficult Terrain|XPHB} doesn't cost you extra movement."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Bark Skin",
+        "entries": [
+          "You gain a +2 bonus to {@variantrule Armor Class|XPHB} and 10 {@variantrule Temporary Hit Points|XPHB}."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Condition Immunity",
+        "entries": [
+          "You gain {@variantrule Immunity|XPHB} to the {@condition Paralyzed|XPHB} and {@condition Restrained|XPHB} conditions. You can't be shape-shifted against your will."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Source of Life",
+        "entries": [
+          "When a spell you cast with a spell slot restores {@variantrule Hit Points|XPHB} to a creature, that creature regains an additional {@dice 1d8} {@variantrule Hit Points|XPHB} on the turn you cast the spell."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Spells Enhanced",
+        "entries": [
+          "The spell save DC of your {@class Druid|WoW} spells increases by 1, and you have {@variantrule Advantage|XPHB} on the attack rolls of {@class Druid|WoW} spells you cast."
+        ]
+      }
+    ],
+    "classes": [
+      "Druid"
+    ]
+  },
+  {
     "name": "Tree Stride",
     "source": "PHB",
     "level": 5,
@@ -43119,7 +46579,9 @@
       "You can use this transportation ability only once on each of your turns. You must end each turn outside a tree."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -43255,6 +46717,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -43338,7 +46801,8 @@
     ],
     "classes": [
       "Cleric",
-      "Druid"
+      "Druid",
+      "Priest"
     ]
   },
   {
@@ -43428,6 +46892,9 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Evoker",
+      "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -43518,6 +46985,8 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -43645,6 +47114,7 @@
     "classes": [
       "Artificer",
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -43731,8 +47201,96 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Warlock",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Upheaval",
+    "source": "WoW",
+    "level": 4,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 90
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "Fiery stones erupt, filling a 20-foot-radius, 10-foot tall {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} originating from a point on the ground you can see within range. Each creature in the {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} makes a Dexterity saving throw. On a failed save, a creature takes {@damage 1d12} Bludgeoning damage plus {@damage 3d8} Fire damage and is pushed vertically to the top of the cylinder, at which point the creature falls. On a successful save, a creature takes half as much damage only.",
+      "Smoldering stones turn the ground in the {@variantrule Cylinder [Area of Effect]|XPHB|Cylinder} into {@variantrule Difficult Terrain|XPHB} until the end of your next turn."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The Bludgeoning damage increases by {@dice 1d12} for each spell slot level above 4."
+        ]
+      }
+    ],
+    "classes": [
+      "Evoker"
+    ]
+  },
+  {
+    "name": "Vampiric Blood",
+    "source": "WoW",
+    "level": 1,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "self"
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "For the duration, your {@variantrule Hit Points|XPHB|Hit Point} maximum increases by 10. In addition, whenever you regain {@variantrule Hit Points|XPHB}, you regain an extra {@dice 1d6} {@variantrule Hit Points|XPHB}."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Using a Higher-Level Spell Slot",
+        "entries": [
+          "The additional healing increases by {@dice 1d6} for each spell slot level above 1."
+        ]
+      }
     ]
   },
   {
@@ -43829,6 +47387,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -43947,6 +47507,8 @@
     ],
     "classes": [
       "Bard",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -44038,8 +47600,62 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
+    ]
+  },
+  {
+    "name": "Void Eruption",
+    "source": "WoW",
+    "level": 5,
+    "school": "N",
+    "time": [
+      {
+        "number": 1,
+        "unit": "bonus"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 120
+      }
+    },
+    "components": {
+      "v": true
+    },
+    "duration": [
+      {
+        "type": "timed",
+        "duration": {
+          "type": "minute",
+          "amount": 1
+        },
+        "concentration": true
+      }
+    ],
+    "entries": [
+      "Shadowy Void energy erupts in a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} centered on a point you choose within range. Each creature in the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} makes a Constitution saving throw, taking {@damage 5d6} Necrotic damage on a failed save or half as much damage on a successful one. At the same time, you take on a form of Void that grants you the following benefits for the duration.",
+      {
+        "type": "entries",
+        "name": "Void Bolt",
+        "entries": [
+          "As a {@variantrule Bonus Action|XPHB} on your turn, you can hurl a bolt of Void energy at a creature within 60 feet of yourself. Make a ranged spell attack; on a hit, the target takes Necrotic damage equal to {@damage 2d6} plus your spellcasting ability modifier."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Void Stealth",
+        "entries": [
+          "While you are in an area of {@variantrule Dim Light|XPHB} or {@variantrule Darkness|XPHB}, you have the {@condition Invisible|XPHB} condition."
+        ]
+      }
+    ],
+    "classes": [
+      "Priest"
     ]
   },
   {
@@ -44083,6 +47699,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -44117,6 +47735,8 @@
       "You emit a terrible scream that can kill those who hear it. Choose up to ten creatures within range. Each target with 50 {@variantrule Hit Points|XPHB} or fewer dies. Targets with more than 50 {@variantrule Hit Points|XPHB} make a Constitution saving throw. On a failed save, a target takes {@damage 12d10} Psychic damage and has the {@condition Deafened|XPHB} condition for 1 hour. On a successful save, a target takes half as much damage only. A target is unaffected by the spell if it can't hear you."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -44224,6 +47844,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -44307,6 +47929,7 @@
       "Nothing can physically pass through the wall. It is immune to all damage and can't be dispelled by {@spell Dispel Magic|XPHB}. A {@spell Disintegrate|XPHB} spell destroys the wall instantly, however. The wall also extends into the Ethereal Plane and blocks ethereal travel through the wall."
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -44410,6 +48033,7 @@
       }
     ],
     "classes": [
+      "Mage",
       "Wizard"
     ]
   },
@@ -44599,6 +48223,8 @@
     "classes": [
       "Artificer",
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -44792,7 +48418,10 @@
     "classes": [
       "Bard",
       "Cleric",
+      "Death Knight",
+      "Mage",
       "Paladin",
+      "Priest",
       "Wizard"
     ]
   },
@@ -44879,7 +48508,9 @@
     ],
     "classes": [
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   },
   {
@@ -44971,6 +48602,8 @@
       "The spell can penetrate most barriers but is blocked by 1 foot of stone, 1 inch of common metal, a thin sheet of lead, or 3 feet of wood or dirt."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -45056,7 +48689,11 @@
     ],
     "classes": [
       "Artificer",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Mage",
       "Ranger",
       "Sorcerer",
       "Wizard"
@@ -45145,7 +48782,11 @@
     "classes": [
       "Artificer",
       "Cleric",
+      "Demon Hunter",
       "Druid",
+      "Evoker",
+      "Hunter",
+      "Priest",
       "Ranger",
       "Sorcerer"
     ]
@@ -45234,6 +48875,8 @@
       "{@condition Exhaustion|XPHB} levels gained from this spell are removed when the spell ends."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -45327,6 +48970,8 @@
     ],
     "classes": [
       "Artificer",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -45408,6 +49053,7 @@
       "A {@condition Frightened|XPHB} target makes a Wisdom saving throw at the end of each of its turns. On a failed save, it takes {@damage 5d10} Psychic damage. On a successful save, the spell ends on that target."
     ],
     "classes": [
+      "Mage",
       "Warlock",
       "Wizard"
     ]
@@ -45617,7 +49263,9 @@
       "The strong wind keeps fog, smoke, and other gases at bay. Small or smaller flying creatures or objects can't pass through the wall. Loose, lightweight materials brought into the wall fly upward. Arrows, bolts, and other ordinary projectiles launched at targets behind the wall are deflected upward and miss automatically. Boulders hurled by Giants or siege engines, and similar projectiles, are unaffected. Creatures in {@spell gaseous form|XPHB} can't pass through it."
     ],
     "classes": [
+      "Demon Hunter",
       "Druid",
+      "Hunter",
       "Ranger"
     ]
   },
@@ -45754,6 +49402,8 @@
       "The stress of casting Wish to produce any effect other than duplicating another spell weakens you. After enduring that stress, each time you cast a spell until you finish a {@variantrule Long Rest|XPHB}, you take {@damage 1d10} Necrotic damage per level of that spell. This damage can't be reduced or prevented in any way. In addition, your Strength score becomes 3 for {@dice 2d4} days. For each of those days that you spend resting and doing nothing more than light activity, your remaining recovery time decreases by 2 days. Finally, there is a {@chance 33|||Unable to cast again!|Able to cast again} chance that you are unable to cast {@spell Wish|XPHB} ever again if you suffer this stress."
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -45857,6 +49507,8 @@
       }
     ],
     "classes": [
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -45897,7 +49549,7 @@
     "entriesHigherLevel": [
       {
         "type": "entries",
-        "name": "At Higher Levels",
+        "name": "Using a Higher-Level Spell Slot",
         "entries": [
           "The damage increases by {@dice 1d6} for each spell slot level above 2. The number of {@variantrule Hit Point Dice|XPHB} that can be rolled and expended increases by one for each spell slot level above 2. You add your spellcasting modifier to the number of {@variantrule Hit Points|XPHB} regained by this spell only once, regardless of the number of {@variantrule Hit Point Dice|XPHB} rolled and expended."
         ]
@@ -45905,6 +49557,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -45952,6 +49606,8 @@
     ],
     "classes": [
       "Druid",
+      "Evoker",
+      "Mage",
       "Sorcerer",
       "Wizard"
     ]
@@ -46031,7 +49687,8 @@
       }
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
     ]
   },
   {
@@ -46099,7 +49756,51 @@
       "You must designate a location, such as a temple, as a sanctuary by casting this spell there."
     ],
     "classes": [
-      "Cleric"
+      "Cleric",
+      "Priest"
+    ]
+  },
+  {
+    "name": "Wrath",
+    "source": "WoW",
+    "level": 0,
+    "school": "V",
+    "time": [
+      {
+        "number": 1,
+        "unit": "action"
+      }
+    ],
+    "range": {
+      "type": "point",
+      "distance": {
+        "type": "feet",
+        "amount": 60
+      }
+    },
+    "components": {
+      "v": true,
+      "s": true
+    },
+    "duration": [
+      {
+        "type": "instant"
+      }
+    ],
+    "entries": [
+      "You hurl a ball of energy at a target within range. Make a ranged spell attack against the target. On a hit, the target takes {@damage 1d8} Lightning damage, and its {@variantrule Speed|XPHB} is reduced by 10 feet until the end of your next turn."
+    ],
+    "entriesHigherLevel": [
+      {
+        "type": "entries",
+        "name": "Cantrip Upgrade",
+        "entries": [
+          "The damage increases by {@dice 1d8} when you reach levels 5 ({@dice 2d8}), 11 ({@dice 3d8}), and 17 ({@dice 4d8})."
+        ]
+      }
+    ],
+    "classes": [
+      "Druid"
     ]
   },
   {
@@ -46250,6 +49951,7 @@
       }
     ],
     "classes": [
+      "Death Knight",
       "Paladin"
     ]
   },
@@ -46326,6 +50028,7 @@
     ],
     "classes": [
       "Bard",
+      "Mage",
       "Wizard"
     ]
   },
@@ -46485,7 +50188,9 @@
     "classes": [
       "Bard",
       "Cleric",
-      "Paladin"
+      "Death Knight",
+      "Paladin",
+      "Priest"
     ]
   }
 ]

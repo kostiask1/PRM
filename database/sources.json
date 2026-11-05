@@ -260,6 +260,10 @@
     "source": "HFFotM"
   },
   {
+    "name": "Heroes' Feast Legends of the Table",
+    "source": "HFLotT"
+  },
+  {
     "name": "Heroes' Feast: Saving the Children's Menu",
     "source": "HFStCM"
   },
@@ -444,6 +448,10 @@
     "source": "PotA"
   },
   {
+    "name": "Project_Lamordia",
+    "source": "PL"
+  },
+  {
     "name": "Puncheons and Flagons",
     "source": "PaF"
   },
@@ -464,6 +472,10 @@
     "source": "LRDT"
   },
   {
+    "name": "Red Wizards' Gambit",
+    "source": "RWG"
+  },
+  {
     "name": "Return to the Glory",
     "source": "RtG"
   },
@@ -482,6 +494,10 @@
   {
     "name": "Scions of Elemental Evil",
     "source": "ScoEE"
+  },
+  {
+    "name": "Shadows of Sithicus",
+    "source": "SoS"
   },
   {
     "name": "Sigil and the Outlands",
@@ -650,6 +666,14 @@
   {
     "name": "Wildemount: Unwelcome Spirits",
     "source": "US"
+  },
+  {
+    "name": "World of Warcraft",
+    "source": "WoW"
+  },
+  {
+    "name": "World of Warcraft: Icecrown Citadel",
+    "source": "ICC"
   },
   {
     "name": "X Marks the Spot",
