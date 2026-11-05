@@ -45,6 +45,7 @@
   - `assets.js` - static asset serving.
 - `database/` - bundled D&D reference data (`bestiary`, `spells`, conditions, skills, senses, etc.).
 - `data/` - local user data. Treat as user-owned runtime data, not source code.
+- [DATA_STRUCTURES.md](DATA_STRUCTURES.md) maps the persisted files, record shapes, and references under `data/`.
 - `tests/run-tests.mjs` - Node-based regression suite.
 - `scripts/` - local helper scripts for env, project run, encoding/performance checks, database update/bundling.
 
@@ -437,6 +438,8 @@
 - Use `apply_patch` for manual edits.
 - Do not revert user changes. Worktrees may be dirty.
 - Do not edit `data/` unless the user explicitly asks to change local runtime data.
+- Before generating or importing PRM content outside the app's integrated Gemini workflow, read [DATA_STRUCTURES.md](DATA_STRUCTURES.md). Follow its persisted shapes, identifiers, and asset paths when creating content for PRM, and check the relevant storage and UI contracts if a field is unclear.
+- Update [DATA_STRUCTURES.md](DATA_STRUCTURES.md) in the same change whenever a change affects a persisted shape, path, default or normalization rule, reference, or migration under `data/`. Ordinary edits to individual campaigns or other records do not require a documentation update unless they reveal a missing or inaccurate contract.
 - Do not edit generated `dist/` or `node_modules/`.
 - Do not propose running `npm run build`. The script exists, but project instruction says not to propose it.
 - If changing logic, remove code made obsolete by the change.
