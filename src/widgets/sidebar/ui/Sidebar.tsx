@@ -5,7 +5,6 @@ import {
 	useRef,
 	useState,
 	type ChangeEvent,
-	type PointerEvent,
 } from "react";
 
 import { campaignApi } from "../../../entities/campaign/index.js";
@@ -16,7 +15,7 @@ import {
 } from "../../../features/backup/index.js";
 import { ImageGallery } from "../../../features/images/index.js";
 import { downloadBlob, lang } from "../../../shared/lib/index.js";
-import { Button } from "../../../shared/ui/index.js";
+import { Button, Icon } from "../../../shared/ui/index.js";
 import {
 	buildSidebarCampaignOrder,
 	getSidebarCampaignSelection,
@@ -85,8 +84,6 @@ export default function Sidebar({
 		useState<SidebarCampaign[]>(campaigns);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isExportingBackup, setIsExportingBackup] = useState(false);
-	const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-	const [isSidebarPinnedOpen, setIsSidebarPinnedOpen] = useState(false);
 	const [isCompletedCampaignsCollapsed, setIsCompletedCampaignsCollapsed] =
 		useState(true);
 	const effectiveActiveSlug = activeCampaignId || activeNavigationSlug;
@@ -255,22 +252,6 @@ export default function Sidebar({
 		setIsGalleryOpen(true);
 	};
 
-	const canUseHoverSidebar = () =>
-		typeof window !== "undefined" &&
-		Boolean(
-			window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches,
-		);
-
-	const handleSidebarPointerEnter = (event: PointerEvent<HTMLElement>) => {
-		if (event.pointerType !== "mouse" || !canUseHoverSidebar()) return;
-		setIsSidebarHovered(true);
-	};
-
-	const handleSidebarPointerLeave = (event: PointerEvent<HTMLElement>) => {
-		if (event.pointerType !== "mouse") return;
-		setIsSidebarHovered(false);
-	};
-
 	const handleExport = async () => {
 		if (isExportingBackup) return;
 		setIsExportingBackup(true);
@@ -290,30 +271,16 @@ export default function Sidebar({
 		}
 	};
 
-	const isSidebarExpanded =
-		isSidebarHovered || isSidebarPinnedOpen || isMobileOpen;
-
 	return (
 		<>
 			<aside
-				className={getSidebarClassName(isSidebarExpanded, isMobileOpen)}
-				onPointerEnter={handleSidebarPointerEnter}
-				onPointerLeave={handleSidebarPointerLeave}
+				className={getSidebarClassName(true, isMobileOpen)}
 			>
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon={isSidebarPinnedOpen ? "back" : "menu"}
-					className="Sidebar__touchToggle"
-					onClick={() => setIsSidebarPinnedOpen((value) => !value)}
-					title={
-						isSidebarPinnedOpen
-							? lang.t("Collapse")
-							: lang.t("Open navigation")
-					}
-				/>
 				<div className="Sidebar__header">
-					<h1 className="Sidebar__title">D&amp;D Session Manager</h1>
+					<h1 className="Sidebar__title">
+						<span className="Sidebar__brandIcon"><Icon name="dice" size={20} /></span>
+						{lang.t("Session notebook")}
+					</h1>
 					<p className="Sidebar__description">
 						{lang.t(
 							"Campaigns, sessions, and planning in one local workspace.",

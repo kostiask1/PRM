@@ -15,7 +15,8 @@ export default function SceneCardMedia({
 	onImageChange,
 }: SceneCardMediaProps) {
 	return (
-		<div className="SessionSceneCard__imageSide">
+		<details className="SessionSceneCard__imageSide" open={Boolean(imageUrl)}>
+			<summary>{lang.t("Scene image")}</summary>
 			<ImageAssetField
 				imageUrl={imageUrl}
 				campaignSlug={campaignSlug}
@@ -31,6 +32,6 @@ export default function SceneCardMedia({
 				previewModalClassName="SessionSceneCard__imageModal"
 				previewContentClassName="SessionSceneCard__imageModalContent"
 			/>
-		</div>
+		</details>
 	);
 }

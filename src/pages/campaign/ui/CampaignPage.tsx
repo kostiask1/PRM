@@ -1,11 +1,13 @@
 import {
 	useCallback,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import {
 	Button,
 	Panel,
+	SectionTabs,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { ListCard } from "../../../shared/ui/index.js";
@@ -20,6 +22,7 @@ import {
 	LocationCard,
 } from "../../../widgets/campaign-entity-card/index.js";
 import CampaignHeader from "./components/CampaignHeader.tsx";
+import CampaignOverview, { type CampaignSection } from "./components/CampaignOverview.tsx";
 import CampaignDescriptionSection from "./components/CampaignDescriptionSection.tsx";
 import CampaignEntitySection from "./components/CampaignEntitySection.tsx";
 import CampaignNotesSection from "./components/CampaignNotesSection.tsx";
@@ -45,6 +48,7 @@ import {
 import type { CampaignPageCampaign } from "../model/contracts.ts";
 import {
 	filterCampaignSessions,
+	getCampaignHashTarget,
 	getCampaignEntityAiIgnoredUpdate,
 	getCampaignPageCampaign,
 	getCampaignSectionState,
@@ -56,6 +60,8 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const view = useCampaignView({ campaign });
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
+	const [activeSection, setActiveSection] = useState<CampaignSection>("overview");
+	const lastRevealedHash = useRef("");
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
@@ -96,6 +102,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		() => filterCampaignSessions(view.sessions, sessionSearch),
 		[view.sessions, sessionSearch],
 	);
+	const allSessions = useMemo(() => filterCampaignSessions(view.sessions, ""), [view.sessions]);
 
 	const canReorderSessions = sessionSearch.trim().length === 0;
 	const {
@@ -146,6 +153,13 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		onPersistReorder: view.persistEntitiesReorder,
 	});
 	const revealCampaignHistoryTarget = useCallback((hash: string) => {
+		if (hash !== lastRevealedHash.current) {
+			lastRevealedHash.current = hash;
+			const target = getCampaignHashTarget(hash);
+			if (target) setActiveSection(target);
+			else if (hash.includes("campaign-sessions")) setActiveSection("sessions");
+			else if (hash.includes("campaign-description")) setActiveSection("story");
+		}
 		if (
 			isDescriptionCollapsed &&
 			matchesHistoryTargetId(hash, "campaign", "description")
@@ -287,7 +301,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 				/>
 			}
 		>
-			<div className="ListCard__title">{session.name}</div>
+			<span className="CampaignView__sessionNumber">{String(view.sessions.findIndex((item) => item.fileName === session.fileName) + 1).padStart(2, "0")}</span>
+			<span className="CampaignView__sessionIdentity"><span className="ListCard__title">{session.name}</span>
+				<span className="ListCard__meta">{lang.t("Session")}</span>
+			</span>
 		</ListCard>
 	);
 	const onCloseGlobalSearch = () => setIsGlobalSearchOpen(false);
@@ -300,11 +317,27 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 			<CampaignHeader
 				view={view}
 				viewModel={viewModel}
+				onCreateSession={view.handleCreateSession}
 				onOpenSearch={() => setIsGlobalSearchOpen(true)}
 				onOpenPartialArchive={() => setIsPartialArchiveOpen(true)}
 			/>
 			<div className="Panel__body">
+				<SectionTabs<CampaignSection> label={lang.t("Campaign sections")} value={activeSection} onChange={setActiveSection} items={[
+					{ id: "overview", label: lang.t("Overview") },
+					{ id: "sessions", label: lang.t("Sessions"), count: view.sessions.length },
+					{ id: "characters", label: lang.t("Characters"), count: view.characters.length },
+					{ id: "npc", label: lang.t("NPC"), count: view.npcs.length },
+					{ id: "locations", label: lang.t("Locations/Factions"), count: view.locations.length },
+					{ id: "notes", label: lang.t("Notes") },
+					{ id: "story", label: lang.t("Campaign story") },
+				]} />
+				<div hidden={activeSection !== "overview"}>
+					<CampaignOverview sessions={allSessions} characters={view.characters} npcCount={view.npcs.length} locationCount={view.locations.length}
+						description={view.description} onSelectSection={setActiveSection} onCreateSession={view.handleCreateSession}
+						onOpenSession={(session) => navigateToSession(campaign.slug, session.fileName)} renderSessionCard={renderSessionCard} />
+				</div>
 				<div className="CampaignView__layout">
+					<div hidden={activeSection !== "sessions"}>
 					<CampaignSessionsSection
 						canReorderSessions={canReorderSessions}
 						filteredSessions={filteredSessions}
@@ -315,15 +348,19 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 						renderSessionCard={renderSessionCard}
 						sessionSearch={sessionSearch}
 					/>
+					</div>
 
 					<div className="CampaignView__contentPanel">
+						<div hidden={activeSection !== "story"}>
 						<CampaignDescriptionSection
 							hasData={hasDescriptionData}
 							isCollapsed={isDescriptionCollapsed}
 							onToggle={toggleCampaignDescription}
 							renderEditor={renderCampaignDescriptionEditor}
 						/>
+						</div>
 
+						<div hidden={activeSection !== "notes"}>
 						<CampaignNotesSection
 							campaign={campaign}
 							view={view}
@@ -335,7 +372,9 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							onBulkCollapse={handleBulkNotesCollapse}
 							onToggleIgnored={toggleCampaignNoteAiIgnored}
 						/>
+						</div>
 
+						<div hidden={activeSection !== "characters"}>
 						<CampaignEntitySection
 							historyFocusId={makeHistoryTargetId(
 								"campaign",
@@ -400,6 +439,8 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							)}
 						/>
 
+						</div>
+						<div hidden={activeSection !== "npc"}>
 						<CampaignEntitySection
 							historyFocusId={makeHistoryTargetId(
 								"campaign",
@@ -473,6 +514,8 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							)}
 						/>
 
+						</div>
+						<div hidden={activeSection !== "locations"}>
 						<CampaignEntitySection
 							historyFocusId={makeHistoryTargetId(
 								"campaign",
@@ -540,6 +583,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							)}
 						/>
 					</div>
+				</div>
 				</div>
 			</div>
 			{isGlobalSearchOpen && (

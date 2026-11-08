@@ -1,42 +1,15 @@
-.SessionScenesSection__actions {
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
-	gap: var(--space-2);
-}
-
-.SessionScenesSection__actions span {
-	white-space: nowrap;
-}
-
-@media (max-width: 767px) {
-	.SessionScenesSection__actions {
-		width: 100%;
-		flex-wrap: nowrap;
-		overflow-x: auto;
-		padding-bottom: var(--space-1);
-		scrollbar-width: thin;
-	}
-
-	.SessionScenesSection__actions .Button {
-		flex: 0 0 auto;
-		min-height: var(--control-h-sm);
-		font-size: 0.82rem;
-		padding-inline: var(--space-2);
-	}
-
-	.SessionScenesSection__mobileIconOnly {
-		width: 40px;
-		min-width: 40px;
-		padding-inline: 0 !important;
-	}
-
-	.SessionScenesSection__mobileIconOnly > span {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		white-space: nowrap;
-	}
-}
+.SessionWorkspace { display: grid; grid-template-columns: 224px minmax(0, 1fr) 280px; gap: var(--space-5); align-items: start; min-width: 0; }
+.SessionWorkspace__outline { display: grid; gap: var(--space-3); position: sticky; top: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); min-width: 0; }
+.SessionWorkspace__outline > header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.SessionWorkspace__outline h3 { font: 700 16px/24px var(--font-body); }
+.SessionWorkspace__outline .DraggableList { display: grid; gap: var(--space-3); }
+.SessionWorkspace__scene { display: grid; gap: var(--space-1); width: 100%; min-height: 92px; padding: var(--space-3); border: 0; border-radius: var(--radius-md); text-align: left; background: transparent; color: var(--text); }
+.SessionWorkspace__scene[aria-pressed="true"], .SessionWorkspace__scene:hover { background: var(--accent-soft); }
+.SessionWorkspace__scene[aria-pressed="true"] .WorkspaceEyebrow { color: var(--accent); }
+.SessionWorkspace__scene strong { font-size: 13px; line-height: 20px; font-weight: 600; display: -webkit-box; line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.SessionWorkspace__scene small { font-size: 12px; line-height: 19px; color: var(--muted); }
+.SessionWorkspace__editor { min-width: 0; }
+.SessionWorkspace__reference { display: grid; gap: var(--space-4); min-width: 0; }
+.SessionWorkspace__empty { display: grid; justify-items: start; gap: var(--space-4); padding: var(--space-7); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); }
+@media (max-width: 1400px) { .SessionWorkspace { grid-template-columns: 192px minmax(0, 1fr); } .SessionWorkspace__reference { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 767px) { .SessionWorkspace { grid-template-columns: minmax(0, 1fr); } .SessionWorkspace__outline { position: static; } .SessionWorkspace__reference { grid-column: 1; grid-template-columns: minmax(0, 1fr); } .SessionWorkspace__outline .DraggableList { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -3,7 +3,7 @@
 	top: var(--space-4);
 	right: var(--space-4);
 	background: var(--accent);
-	color: var(--text-bright);
+	color: var(--text-on-accent);
 	padding: var(--space-3) var(--space-6);
 	border-radius: var(--radius);
 	box-shadow: 0 4px 15px color-mix(in srgb, black, transparent 60%);

@@ -29,6 +29,7 @@ export {
 export { default as Tooltip, type TooltipProps } from "./Tooltip.tsx";
 export { UndoRedoButtons } from "./UndoRedoButtons.tsx";
 export { default as Panel, type PanelProps } from "./Panel.tsx";
+export { default as SectionTabs, type SectionTabsProps, type SectionTab } from "./SectionTabs.tsx";
 export { default as Switch, type SwitchProps } from "./Switch.tsx";
 export {
 	default as TextInput,

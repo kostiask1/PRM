@@ -10,6 +10,8 @@ import {
 import {
 	Button,
 	Panel,
+	SectionTabs,
+	Checkbox,
 	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
 import { useSimplifiedNotesEnabled } from "../../../features/notes/ui/index.js";
@@ -33,6 +35,7 @@ import {
 import "../../../assets/components/SessionView.css";
 import useSessionView from "../model/useSessionView.ts";
 import { useSessionHashNavigation } from "../model/useSessionHashNavigation.ts";
+import { useSessionSceneSelection } from "../model/useSessionSceneSelection.ts";
 import {
 	SessionViewModel,
 	type SessionDomainId,
@@ -173,6 +176,8 @@ function SessionView() {
 	const view = useSessionView();
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
+	const [activeSection, setActiveSection] = useState<"scenes" | "notes" | "entities" | "result">("scenes");
+	const lastRevealedHash = useRef("");
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
 	const session = view.session;
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
@@ -198,6 +203,7 @@ function SessionView() {
 		simplifiedNotes: simplifiedNotesEnabled,
 	});
 	const scenes = useMemo(() => getSessionViewList(viewModel.scenes), [viewModel]);
+	const { selectedScene, selectScene } = useSessionSceneSelection(scenes, sessionId);
 	const isSessionNotesCollapsed = getSessionSectionCollapsed(
 		hasSessionNotesData,
 		sessionData.isNotesCollapsed,
@@ -209,6 +215,13 @@ function SessionView() {
 	);
 	const { handleToggleSectionCollapse } = view;
 	const revealSessionHistoryTarget = useCallback((hash: string) => {
+		if (hash !== lastRevealedHash.current) {
+			lastRevealedHash.current = hash;
+			if (hash.includes("session-scene")) setActiveSection("scenes");
+			else if (hash.includes("session-note")) setActiveSection("notes");
+			else if (hash.includes("session-npc") || hash.includes("session-location")) setActiveSection("entities");
+			else if (hash.includes("session-result")) setActiveSection("result");
+		}
 		const sessionNote = sessionNotes.find((note) =>
 			matchesHistoryTargetId(hash, "session", "note", note.id),
 		);
@@ -494,7 +507,14 @@ function SessionView() {
 				/>
 
 				<div className="Panel__body">
+					<SectionTabs label={lang.t("Session sections")} value={activeSection} onChange={setActiveSection} items={[
+						{ id: "scenes", label: lang.t("Preparation") },
+						{ id: "notes", label: lang.t("Notes") },
+						{ id: "entities", label: lang.t("Characters") },
+						{ id: "result", label: lang.t("Summary") },
+					]} />
 					<div className="SessionView__todoList">
+						<div hidden={activeSection !== "notes"}>
 						<div
 							id={makeDomId("session", "notes")}
 							data-history-focus-id={makeHistoryTargetId("session", "notes")}
@@ -533,6 +553,8 @@ function SessionView() {
 							)}
 						/>
 						</div>
+						</div>
+						<div hidden={activeSection !== "entities"} className="SessionView__entities">
 						<SessionEntitySection
 							historyFocusId={makeHistoryTargetId(
 								"session",
@@ -674,11 +696,27 @@ function SessionView() {
 								</div>
 							)}
 						/>
+						</div>
+						<div hidden={activeSection !== "scenes"}>
 						<SessionScenesSection
 							scenes={scenes}
 							onBulkCollapse={handleBulkScenesCollapse}
 							onAddScene={view.addScene}
 							onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}
+							selectedScene={selectedScene}
+							onOpenScene={(scene) => { selectScene(scene); if (scene.collapsed) view.toggleSceneCollapse(scene.id); }}
+							reference={<>
+								<section className="SessionReferenceCard"><h3>{lang.t("In this session")}</h3>
+									<p className="WorkspaceEyebrow">{lang.t("Locations/Factions")}</p>
+									{view.sessionLocations.map((location) => <p key={location.id ?? location.slug}>{String(location.name || location.title || lang.t("Untitled"))}</p>)}
+									<p className="WorkspaceEyebrow">{lang.t("NPC")}</p>
+									{view.sessionNpcs.map((npc) => <p key={npc.id ?? npc.slug}>{String(npc.name || [npc.firstName, npc.lastName].filter(Boolean).join(" ") || lang.t("Untitled"))}</p>)}
+									<button type="button" className="WorkspaceTextLink" onClick={() => setActiveSection("entities")}>{lang.t("View all")} →</button>
+								</section>
+								<section className="SessionReferenceCard"><h3>{lang.t("Before the game")}</h3>
+									{view.checklistItems.map((item) => <Checkbox key={item.id} label={item.label} checked={Boolean(sessionData[`${item.id}_check`])} onChange={(checked) => view.updateData(`${item.id}_check`, checked, true)} />)}
+								</section>
+							</>}
 							renderScene={(scene) => (
 							<SessionSceneItem
 								scene={scene}
@@ -703,11 +741,14 @@ function SessionView() {
 								/>
 							)}
 						/>
+						</div>
 
+						<div hidden={activeSection !== "result"}>
 						<SessionResultSection
 							value={String(sessionData.result_text || "")}
 							onChange={(value) => view.updateData("result_text", value)}
 						/>
+						</div>
 					</div>
 				</div>
 

@@ -6,7 +6,7 @@
 }
 
 .MainContent {
-	padding: var(--space-3);
+	padding: 0;
 	min-width: 0;
 }
 
@@ -79,7 +79,7 @@
 
 @media (max-width: 1600px) {
 	.MainContent {
-		padding: var(--space-3);
+		padding: 0;
 	}
 }
 
@@ -108,11 +108,11 @@
 		justify-content: center;
 		width: var(--size-8);
 		height: var(--size-8);
-		border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
+		border: 0;
 		border-radius: var(--radius-md);
-		background: var(--panel);
+		background: transparent;
 		color: var(--text);
-		box-shadow: var(--shadow-sm);
+		box-shadow: none;
 		cursor: pointer;
 	}
 

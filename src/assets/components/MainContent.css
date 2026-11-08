@@ -1,5 +1,33 @@
 .MainContent {
 	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	height: 100dvh;
+	overflow: hidden;
+}
+
+.WorkspaceHeader { display: flex; align-items: center; gap: var(--space-3); flex: 0 0 72px; min-width: 0; padding: var(--space-6); background: var(--panel); }
+.WorkspaceHeader__breadcrumbs { display: flex; align-items: center; gap: var(--space-3); color: var(--muted); font-size: 12px; line-height: 19px; min-width: 0; }
+.WorkspaceHeader__current { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.WorkspaceHeader__storage { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.WorkspaceHeader__brand { display: none; }
+.WorkspaceEyebrow { font-size: 10px; line-height: 16px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.WorkspaceTextLink { border: 0; padding: 0; background: transparent; color: var(--accent); font-size: 12px; line-height: 19px; text-align: left; cursor: pointer; }
+.MainContent > .CampaignView, .MainContent > .SessionView { flex: 1; height: auto; border: 0; border-radius: 0; background: var(--bg); }
+.CampaignView > .Panel__header, .SessionView > .Panel__header { padding: var(--content-padding) var(--content-padding) 0; border: 0; background: transparent; }
+.CampaignView > .Panel__body, .SessionView > .Panel__body { padding: var(--space-6) var(--content-padding) var(--content-padding); }
+.CampaignHeader, .SessionHeader { min-width: 0; }
+.CampaignHeader h2, .SessionHeader h2 { font-size: 28px; line-height: 36px; font-weight: 600; overflow-wrap: anywhere; }
+
+@media (max-width: 767px) {
+ :root { --content-padding: 20px; }
+ .WorkspaceHeader { flex-basis: 64px; padding: var(--space-5); padding-left: 54px; }
+ .WorkspaceHeader__brand { display: block; font-weight: 700; font-size: 16px; }
+ .WorkspaceHeader__breadcrumbs, .WorkspaceHeader__storage { display: none; }
+ .CampaignView > .Panel__header, .SessionView > .Panel__header { flex-wrap: wrap; }
+ .CampaignView > .Panel__header { padding-top: var(--space-5); }
+ .CampaignHeader { width: 100%; }
+ .App__mobileNavButton { background: transparent; border-color: transparent; box-shadow: none; top: 16px; left: 16px; }
 }
 
 .MainContent__emptyState {

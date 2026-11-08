@@ -20,6 +20,7 @@ import CampaignPageRuntimeHost from "../ui/CampaignPageRuntimeHost.tsx";
 import CampaignSearchRuntimeHost from "../ui/CampaignSearchRuntimeHost.tsx";
 import EncounterPageRuntimeHost from "../ui/EncounterPageRuntimeHost.tsx";
 import SessionPageRuntimeHost from "../ui/SessionPageRuntimeHost.tsx";
+import WorkspaceHeader from "../ui/WorkspaceHeader.tsx";
 import { lang } from "../../shared/lib/index.js";
 import { classNames } from "../../shared/lib/index.js";
 import "../../assets/components/MainContent.css";
@@ -73,6 +74,7 @@ function MainContentLayout({
 	return (
 		<main className={classNames("MainContent", className)}>
 			<AiAssistantRuntimeHost>
+				<WorkspaceHeader />
 				<BestiaryBrowserRuntimeHost>
 					<CampaignSearchRuntimeHost>
 						<Outlet />

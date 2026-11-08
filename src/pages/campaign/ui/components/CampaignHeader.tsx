@@ -1,4 +1,4 @@
-import { Tooltip } from "../../../../shared/ui/index.js";
+import { Button, Tooltip } from "../../../../shared/ui/index.js";
 import "../../../../assets/components/CampaignHeader.css";
 import type { CampaignViewModel } from "../../../../entities/campaign/index.js";
 import { lang } from "../../../../shared/lib/index.js";
@@ -23,6 +23,7 @@ interface CampaignHeaderProps {
 	viewModel: CampaignViewModel;
 	onOpenSearch: () => void;
 	onOpenPartialArchive: () => void;
+	onCreateSession: () => void;
 }
 
 export default function CampaignHeader({
@@ -30,19 +31,20 @@ export default function CampaignHeader({
 	viewModel,
 	onOpenSearch,
 	onOpenPartialArchive,
+	onCreateSession,
 }: CampaignHeaderProps) {
 	return (
 		<div className="Panel__header">
 			<div className="CampaignHeader">
+				<p className="WorkspaceEyebrow">{lang.t("Campaign")} / DUNGEONS &amp; DRAGONS 5E</p>
 				<Tooltip content={lang.t("Click to rename")}>
 					<h2 className="editable_title" onClick={view.handleRename}>
 						{viewModel.name}
 					</h2>
 				</Tooltip>
-				<p className="muted">
-					{lang.t("Created")}: {viewModel.createdAtLabel}
-				</p>
 			</div>
+			<div className="CampaignHeader__actions">
+			<Button variant="primary" icon="plus" onClick={onCreateSession}>{lang.t("New session")}</Button>
 			<CampaignHeaderActions
 				canRedo={view.canRedo}
 				canUndo={view.canUndo}
@@ -56,6 +58,7 @@ export default function CampaignHeader({
 				redoTitle={view.redoLabel}
 				undoTitle={view.undoLabel}
 			/>
+			</div>
 		</div>
 	);
 }

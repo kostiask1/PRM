@@ -1,0 +1,821 @@
+{
+  "figwrightSnapshot": 9,
+  "nodeId": "4:108",
+  "capturedAt": "2026-11-07T10:12:04.632Z",
+  "context": {
+    "nodes": [
+      {
+        "id": "4:108",
+        "name": "Continue your story",
+        "type": "FRAME",
+        "x": 40,
+        "y": 196,
+        "width": 1120,
+        "height": 208,
+        "cornerRadius": 20,
+        "layout": {
+          "mode": "HORIZONTAL",
+          "paddingTop": 24,
+          "paddingRight": 24,
+          "paddingBottom": 24,
+          "paddingLeft": 24,
+          "itemSpacing": 24,
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "CENTER",
+          "layoutWrap": "NO_WRAP",
+          "strokesIncludedInLayout": true
+        },
+        "layoutSizingHorizontal": "FIXED",
+        "layoutSizingVertical": "FIXED",
+        "clipsContent": true,
+        "boundVariables": {
+          "itemSpacing": [
+            "VariableID:3:23"
+          ],
+          "paddingLeft": [
+            "VariableID:3:23"
+          ],
+          "paddingTop": [
+            "VariableID:3:23"
+          ],
+          "paddingRight": [
+            "VariableID:3:23"
+          ],
+          "paddingBottom": [
+            "VariableID:3:23"
+          ],
+          "topLeftRadius": [
+            "VariableID:3:29"
+          ],
+          "topRightRadius": [
+            "VariableID:3:29"
+          ],
+          "bottomLeftRadius": [
+            "VariableID:3:29"
+          ],
+          "bottomRightRadius": [
+            "VariableID:3:29"
+          ],
+          "fills": [
+            "VariableID:3:15"
+          ]
+        },
+        "fill": "fill_sjsvy3",
+        "children": [
+          {
+            "id": "4:109",
+            "name": "Campaign summary",
+            "type": "FRAME",
+            "x": 24,
+            "y": 24,
+            "width": 730,
+            "height": 160,
+            "fills": [],
+            "layout": {
+              "mode": "VERTICAL",
+              "paddingTop": 0,
+              "paddingRight": 0,
+              "paddingBottom": 0,
+              "paddingLeft": 0,
+              "itemSpacing": 8,
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "layoutWrap": "NO_WRAP",
+              "strokesIncludedInLayout": true
+            },
+            "layoutSizingHorizontal": "FIXED",
+            "layoutSizingVertical": "FIXED",
+            "clipsContent": true,
+            "boundVariables": {
+              "itemSpacing": [
+                "VariableID:3:19"
+              ]
+            },
+            "children": [
+              {
+                "id": "4:110",
+                "name": "ВАША ІСТОРІЯ ТРИВАЄ",
+                "type": "TEXT",
+                "x": 0,
+                "y": 0,
+                "width": 113,
+                "height": 16,
+                "layoutSizingHorizontal": "HUG",
+                "layoutSizingVertical": "HUG",
+                "characters": "ВАША ІСТОРІЯ ТРИВАЄ",
+                "styleIds": {
+                  "text": "S:ded653cfaf15ff5b01b32ab4fc8fcd0774d28d04"
+                },
+                "boundVariables": {
+                  "fills": [
+                    "VariableID:3:12"
+                  ]
+                },
+                "fill": "fill_s32zl0",
+                "textStyle": "text_4s618c"
+              },
+              {
+                "id": "4:111",
+                "name": "Таємниці чекають за наступним поворотом.",
+                "type": "TEXT",
+                "x": 0,
+                "y": 24,
+                "width": 426,
+                "height": 28,
+                "layoutSizingHorizontal": "HUG",
+                "layoutSizingVertical": "HUG",
+                "characters": "Таємниці чекають за наступним поворотом.",
+                "styleIds": {
+                  "text": "S:e211e8b3b8bd44bc17f8faa00a9af32689602580"
+                },
+                "boundVariables": {
+                  "fills": [
+                    "VariableID:3:9"
+                  ]
+                },
+                "fill": "fill_ems9so",
+                "textStyle": "text_1iwzq1n"
+              },
+              {
+                "id": "4:112",
+                "name": "Старі союзи дають тріщину. На півночі прок",
+                "type": "TEXT",
+                "x": 0,
+                "y": 60,
+                "width": 710,
+                "height": 46,
+                "layoutSizingHorizontal": "FIXED",
+                "layoutSizingVertical": "HUG",
+                "characters": "Старі союзи дають тріщину. На півночі прокидається давня сила.\nЗберіть героїв і напишіть наступний розділ.",
+                "textAutoResize": "HEIGHT",
+                "styleIds": {
+                  "text": "S:558e87cc1f8a64755f49c92c9217cc451d2ef4ae"
+                },
+                "boundVariables": {
+                  "fills": [
+                    "VariableID:3:10"
+                  ]
+                },
+                "fill": "fill_17fp45u",
+                "textStyle": "text_16w4vg8"
+              },
+              {
+                "id": "4:113",
+                "name": "Hero actions",
+                "type": "FRAME",
+                "x": 0,
+                "y": 114,
+                "width": 620,
+                "height": 40,
+                "fills": [],
+                "layout": {
+                  "mode": "HORIZONTAL",
+                  "paddingTop": 0,
+                  "paddingRight": 0,
+                  "paddingBottom": 0,
+                  "paddingLeft": 0,
+                  "itemSpacing": 12,
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "layoutWrap": "NO_WRAP",
+                  "strokesIncludedInLayout": true
+                },
+                "layoutSizingHorizontal": "FIXED",
+                "layoutSizingVertical": "FIXED",
+                "clipsContent": true,
+                "boundVariables": {
+                  "itemSpacing": [
+                    "VariableID:3:20"
+                  ]
+                },
+                "children": [
+                  {
+                    "id": "4:114",
+                    "name": "Button",
+                    "type": "INSTANCE",
+                    "x": 0,
+                    "y": 0,
+                    "width": 179,
+                    "height": 44,
+                    "cornerRadius": 8,
+                    "strokeWeight": 1,
+                    "strokeAlign": "INSIDE",
+                    "strokeCap": "ROUND",
+                    "layout": {
+                      "mode": "HORIZONTAL",
+                      "paddingTop": 12,
+                      "paddingRight": 12,
+                      "paddingBottom": 12,
+                      "paddingLeft": 12,
+                      "itemSpacing": 8,
+                      "primaryAxisAlignItems": "CENTER",
+                      "counterAxisAlignItems": "CENTER",
+                      "layoutWrap": "NO_WRAP"
+                    },
+                    "layoutSizingHorizontal": "HUG",
+                    "layoutSizingVertical": "HUG",
+                    "clipsContent": true,
+                    "boundVariables": {
+                      "itemSpacing": [
+                        "VariableID:15bb1c0f339146e931cf0dc15f89ed57dcbd907e/564:255"
+                      ],
+                      "paddingLeft": [
+                        "VariableID:fabe3eb617318c0a59ce59bbea8eebdf1fa7d14c/564:257"
+                      ],
+                      "paddingTop": [
+                        "VariableID:fabe3eb617318c0a59ce59bbea8eebdf1fa7d14c/564:257"
+                      ],
+                      "paddingRight": [
+                        "VariableID:fabe3eb617318c0a59ce59bbea8eebdf1fa7d14c/564:257"
+                      ],
+                      "paddingBottom": [
+                        "VariableID:fabe3eb617318c0a59ce59bbea8eebdf1fa7d14c/564:257"
+                      ],
+                      "topLeftRadius": [
+                        "VariableID:3:27"
+                      ],
+                      "topRightRadius": [
+                        "VariableID:3:27"
+                      ],
+                      "bottomLeftRadius": [
+                        "VariableID:3:27"
+                      ],
+                      "bottomRightRadius": [
+                        "VariableID:3:27"
+                      ],
+                      "strokeTopWeight": [
+                        "VariableID:394d05bc08ab0cf40ac4b4130446b8141106372e/564:267"
+                      ],
+                      "strokeBottomWeight": [
+                        "VariableID:394d05bc08ab0cf40ac4b4130446b8141106372e/564:267"
+                      ],
+                      "strokeLeftWeight": [
+                        "VariableID:394d05bc08ab0cf40ac4b4130446b8141106372e/564:267"
+                      ],
+                      "strokeRightWeight": [
+                        "VariableID:394d05bc08ab0cf40ac4b4130446b8141106372e/564:267"
+                      ],
+                      "fills": [
+                        "VariableID:3:12"
+                      ],
+                      "strokes": [
+                        "VariableID:9ea1a1e101e28fa521718235210f9dfc28258896/5613:439"
+                      ]
+                    },
+                    "componentProperties": {
+                      "Icon Start#4:192": {
+                        "type": "INSTANCE_SWAP",
+                        "value": "2:136"
+                      },
+                      "Has Icon Start#4:128": {
+                        "type": "BOOLEAN",
+                        "value": false
+                      },
+                      "Has Icon End#4:64": {
+                        "type": "BOOLEAN",
+                        "value": false
+                      },
+                      "Icon End#4:0": {
+                        "type": "INSTANCE_SWAP",
+                        "value": "2:134"
+                      },
+                      "Label#2:0": {
+                        "type": "TEXT",
+                        "value": "Відкрити останню сесію"
+                      },
+                      "Variant": {
+                        "type": "VARIANT",
+                        "value": "Primary"
+                      },
+                      "State": {
+                        "type": "VARIANT",
+                        "value": "Default"
+                      },
+                      "Size": {
+                        "type": "VARIANT",
+                        "value": "Medium"
+                      }
+                    },
+                    "mainComponentId": "2:184",
+                    "mainComponent": {
+                      "id": "2:184",
+                      "name": "Variant=Primary, State=Default, Size=Medium",
+                      "key": "c8d51d520980822780402227046ea3e450bbc6cd",
+                      "componentSetId": "2:183",
+                      "componentSetName": "Button"
+                    },
+                    "fill": "fill_s32zl0",
+                    "stroke": "stroke_v2oe2p",
+                    "children": [
+                      {
+                        "id": "I4:114;4185:3780",
+                        "name": "Star",
+                        "type": "INSTANCE",
+                        "visible": false,
+                        "x": 12,
+                        "y": 12,
+                        "width": 16,
+                        "height": 16,
+                        "layoutSizingHorizontal": "FIXED",
+                        "layoutSizingVertical": "FIXED",
+                        "clipsContent": true,
+                        "componentPropertyReferences": {
+                          "visible": "Has Icon Start#4:128",
+                          "mainComponent": "Icon Start#4:192"
+                        },
+                        "mainComponentId": "2:136",
+                        "mainComponent": {
+                          "id": "2:136",
+                          "name": "Star",
+                          "key": "79c33e11a9de95c5af93a64393c6116fd5054f39"
+                        },
+                        "fill": "fill_16zfsl5",
+                        "children": [
+                          {
+                            "id": "I4:114;4185:3780;68:16010",
+                            "name": "Icon",
+                            "type": "VECTOR",
+                            "x": 1.3333334922790527,
+                            "y": 1.3333334922790527,
+                            "width": 13.333333015441895,
+                            "height": 12.680000305175781,
+                            "fills": [],
+                            "strokeWeight": 1.600000023841858,
+                            "strokeAlign": "CENTER",
+                            "strokeCap": "ROUND",
+                            "strokeJoin": "ROUND",
+                            "constraints": {
+                              "horizontal": "SCALE",
+                              "vertical": "SCALE"
+                            },
+                            "boundVariables": {
+                              "strokes": [
+                                "VariableID:63e319623d69f8f12f6bc2eb9ef4462b52f4dc14/5613:418"
+                              ]
+                            },
+                            "stroke": "stroke_wj3ub7"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "I4:114;4185:3781",
+                        "name": "Button",
+                        "type": "TEXT",
+                        "x": 12,
+                        "y": 12,
+                        "width": 155,
+                        "height": 20,
+                        "layoutSizingHorizontal": "HUG",
+                        "layoutSizingVertical": "HUG",
+                        "characters": "Відкрити останню сесію",
+                        "boundVariables": {
+                          "fills": [
+                            "VariableID:3:14"
+                          ]
+                        },
+                        "componentPropertyReferences": {
+                          "characters": "Label#2:0"
+                        },
+                        "fill": "fill_nll9eq",
+                        "textStyle": "text_mhxh7n"
+                      },
+                      {
+                        "id": "I4:114;4185:3782",
+                        "name": "X",
+                        "type": "INSTANCE",
+                        "visible": false,
+                        "x": 71,
+                        "y": 12,
+                        "width": 16,
+                        "height": 16,
+                        "layoutSizingHorizontal": "FIXED",
+                        "layoutSizingVertical": "FIXED",
+                        "clipsContent": true,
+                        "componentPropertyReferences": {
+                          "visible": "Has Icon End#4:64",
+                          "mainComponent": "Icon End#4:0"
+                        },
+                        "mainComponentId": "2:134",
+                        "mainComponent": {
+                          "id": "2:134",
+                          "name": "X",
+                          "key": "093fa17e40b0a85bc10ba8232abc683d83218fa0"
+                        },
+                        "fill": "fill_16zfsl5",
+                        "children": [
+                          {
+                            "id": "I4:114;4185:3782;68:16114",
+                            "name": "Icon",
+                            "type": "VECTOR",
+                            "x": 4,
+                            "y": 4,
+                            "width": 8,
+                            "height": 8,
+                            "fills": [],
+                            "strokeWeight": 1.600000023841858,
+                            "strokeAlign": "CENTER",
+                            "strokeCap": "ROUND",
+                            "strokeJoin": "ROUND",
+                            "constraints": {
+                              "horizontal": "SCALE",
+                              "vertical": "SCALE"
+                            },
+                            "boundVariables": {
+                              "strokes": [
+                                "VariableID:63e319623d69f8f12f6bc2eb9ef4462b52f4dc14/5613:418"
+                              ]
+                            },
+                            "stroke": "stroke_wj3ub7"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "4:120",
+            "name": "Campaign journey / editable contour illustration",
+            "type": "FRAME",
+            "x": 778,
+            "y": 24,
+            "width": 280,
+            "height": 160,
+            "layoutSizingHorizontal": "FIXED",
+            "layoutSizingVertical": "FIXED",
+            "clipsContent": true,
+            "fill": "fill_16zfsl5",
+            "children": [
+              {
+                "id": "4:121",
+                "name": "Vector",
+                "type": "VECTOR",
+                "x": 10,
+                "y": 16.228862762451172,
+                "width": 267,
+                "height": 132.77113342285156,
+                "fills": [],
+                "strokeWeight": 1,
+                "strokeAlign": "CENTER",
+                "constraints": {
+                  "horizontal": "SCALE",
+                  "vertical": "SCALE"
+                },
+                "stroke": "stroke_7b1v4b"
+              },
+              {
+                "id": "4:122",
+                "name": "Vector",
+                "type": "VECTOR",
+                "x": 45,
+                "y": 43,
+                "width": 188,
+                "height": 64,
+                "fills": [],
+                "strokeWeight": 1.5,
+                "strokeAlign": "CENTER",
+                "dashPattern": [
+                  4,
+                  5
+                ],
+                "constraints": {
+                  "horizontal": "SCALE",
+                  "vertical": "SCALE"
+                },
+                "stroke": "stroke_imjq1y"
+              },
+              {
+                "id": "4:123",
+                "name": "Vector",
+                "type": "VECTOR",
+                "x": 40,
+                "y": 102,
+                "width": 10,
+                "height": 10,
+                "constraints": {
+                  "horizontal": "SCALE",
+                  "vertical": "SCALE"
+                },
+                "fill": "fill_s32zl0"
+              },
+              {
+                "id": "4:124",
+                "name": "Vector",
+                "type": "VECTOR",
+                "x": 105,
+                "y": 65,
+                "width": 10,
+                "height": 10,
+                "constraints": {
+                  "horizontal": "SCALE",
+                  "vertical": "SCALE"
+                },
+                "fill": "fill_s32zl0"
+              },
+              {
+                "id": "4:125",
+                "name": "Vector",
+                "type": "VECTOR",
+                "x": 169,
+                "y": 88,
+                "width": 14,
+                "height": 14,
+                "strokeWeight": 2,
+                "strokeAlign": "CENTER",
+                "constraints": {
+                  "horizontal": "SCALE",
+                  "vertical": "SCALE"
+                },
+                "fill": "fill_sjsvy3",
+                "stroke": "fill_s32zl0"
+              },
+              {
+                "id": "4:126",
+                "name": "Vector",
+                "type": "VECTOR",
+                "x": 228,
+                "y": 38,
+                "width": 10,
+                "height": 10,
+                "constraints": {
+                  "horizontal": "SCALE",
+                  "vertical": "SCALE"
+                },
+                "fill": "fill_tr96mm"
+              },
+              {
+                "id": "4:127",
+                "name": "Vector",
+                "type": "VECTOR",
+                "x": 161,
+                "y": 80,
+                "width": 30,
+                "height": 30,
+                "opacity": 0.25,
+                "fills": [],
+                "strokeWeight": 1,
+                "strokeAlign": "CENTER",
+                "constraints": {
+                  "horizontal": "SCALE",
+                  "vertical": "SCALE"
+                },
+                "stroke": "fill_s32zl0"
+              },
+              {
+                "id": "4:128",
+                "name": "Vector",
+                "type": "VECTOR",
+                "x": 249,
+                "y": 125,
+                "width": 8,
+                "height": 9,
+                "constraints": {
+                  "horizontal": "SCALE",
+                  "vertical": "SCALE"
+                },
+                "fill": "stroke_imjq1y"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "variables": {
+      "VariableID:3:23": {
+        "name": "PRM/space/24",
+        "type": "FLOAT",
+        "codeSyntax": {
+          "WEB": "var(--space-6)"
+        }
+      },
+      "VariableID:3:29": {
+        "name": "PRM/radius/lg",
+        "type": "FLOAT",
+        "codeSyntax": {
+          "WEB": "var(--radius-3xl)"
+        }
+      },
+      "VariableID:3:15": {
+        "name": "PRM/hero",
+        "type": "COLOR",
+        "codeSyntax": {
+          "WEB": "var(--hero)"
+        }
+      },
+      "VariableID:3:19": {
+        "name": "PRM/space/8",
+        "type": "FLOAT",
+        "codeSyntax": {
+          "WEB": "var(--space-2)"
+        }
+      },
+      "VariableID:3:12": {
+        "name": "PRM/accent",
+        "type": "COLOR",
+        "codeSyntax": {
+          "WEB": "var(--accent)"
+        }
+      },
+      "VariableID:3:9": {
+        "name": "PRM/text",
+        "type": "COLOR",
+        "codeSyntax": {
+          "WEB": "var(--text)"
+        }
+      },
+      "VariableID:3:10": {
+        "name": "PRM/muted",
+        "type": "COLOR",
+        "codeSyntax": {
+          "WEB": "var(--muted)"
+        }
+      },
+      "VariableID:3:20": {
+        "name": "PRM/space/12",
+        "type": "FLOAT",
+        "codeSyntax": {
+          "WEB": "var(--space-3)"
+        }
+      },
+      "VariableID:15bb1c0f339146e931cf0dc15f89ed57dcbd907e/564:255": {
+        "name": "Space/200",
+        "type": "FLOAT",
+        "codeSyntax": {
+          "WEB": "var(--sds-size-space-200)"
+        }
+      },
+      "VariableID:fabe3eb617318c0a59ce59bbea8eebdf1fa7d14c/564:257": {
+        "name": "Space/300",
+        "type": "FLOAT",
+        "codeSyntax": {
+          "WEB": "var(--sds-size-space-300)"
+        }
+      },
+      "VariableID:3:27": {
+        "name": "PRM/radius/sm",
+        "type": "FLOAT",
+        "codeSyntax": {
+          "WEB": "var(--radius-md)"
+        }
+      },
+      "VariableID:394d05bc08ab0cf40ac4b4130446b8141106372e/564:267": {
+        "name": "Stroke/Border",
+        "type": "FLOAT",
+        "codeSyntax": {
+          "WEB": "var(--sds-size-stroke-border)"
+        }
+      },
+      "VariableID:9ea1a1e101e28fa521718235210f9dfc28258896/5613:439": {
+        "name": "Border/Brand/Default",
+        "type": "COLOR",
+        "codeSyntax": {
+          "WEB": "var(--sds-color-border-brand-default)"
+        }
+      },
+      "VariableID:63e319623d69f8f12f6bc2eb9ef4462b52f4dc14/5613:418": {
+        "name": "Icon/Brand/On Brand",
+        "type": "COLOR",
+        "codeSyntax": {
+          "WEB": "var(--sds-color-icon-brand-on-brand)"
+        }
+      },
+      "VariableID:3:14": {
+        "name": "PRM/onAccent",
+        "type": "COLOR",
+        "codeSyntax": {
+          "WEB": "var(--text-on-accent)"
+        }
+      }
+    },
+    "globalVars": {
+      "styles": {
+        "fill_sjsvy3": [
+          {
+            "type": "SOLID",
+            "color": "#EAF0E8"
+          }
+        ],
+        "fill_s32zl0": [
+          {
+            "type": "SOLID",
+            "color": "#24745B"
+          }
+        ],
+        "text_4s618c": {
+          "fontFamily": "Manrope",
+          "fontStyle": "Bold",
+          "fontSize": 10,
+          "fontVariationSettings": {
+            "wght": 700
+          },
+          "lineHeight": {
+            "value": 16,
+            "unit": "PIXELS"
+          }
+        },
+        "fill_ems9so": [
+          {
+            "type": "SOLID",
+            "color": "#20332D"
+          }
+        ],
+        "text_1iwzq1n": {
+          "fontFamily": "IBM Plex Sans",
+          "fontStyle": "SemiBold",
+          "fontSize": 20,
+          "fontVariationSettings": {
+            "wdth": 100,
+            "wght": 600
+          },
+          "lineHeight": {
+            "value": 28,
+            "unit": "PIXELS"
+          }
+        },
+        "fill_17fp45u": [
+          {
+            "type": "SOLID",
+            "color": "#66766E"
+          }
+        ],
+        "text_16w4vg8": {
+          "fontFamily": "Manrope",
+          "fontStyle": "Regular",
+          "fontSize": 14,
+          "fontVariationSettings": {
+            "wght": 400
+          },
+          "lineHeight": {
+            "value": 23,
+            "unit": "PIXELS"
+          }
+        },
+        "stroke_v2oe2p": [
+          {
+            "type": "SOLID",
+            "color": "#2C2C2C"
+          }
+        ],
+        "fill_16zfsl5": [
+          {
+            "type": "SOLID",
+            "color": "#FFFFFF",
+            "visible": false
+          }
+        ],
+        "stroke_wj3ub7": [
+          {
+            "type": "SOLID",
+            "color": "#F5F5F5"
+          }
+        ],
+        "fill_nll9eq": [
+          {
+            "type": "SOLID",
+            "color": "#FFFFFF"
+          }
+        ],
+        "text_mhxh7n": {
+          "fontFamily": "Manrope",
+          "fontStyle": "SemiBold",
+          "fontSize": 13,
+          "fontVariationSettings": {
+            "wght": 600
+          },
+          "lineHeight": {
+            "value": 20,
+            "unit": "PIXELS"
+          }
+        },
+        "stroke_7b1v4b": [
+          {
+            "type": "SOLID",
+            "color": "#C4D3C0"
+          }
+        ],
+        "stroke_imjq1y": [
+          {
+            "type": "SOLID",
+            "color": "#6E8F78"
+          }
+        ],
+        "fill_tr96mm": [
+          {
+            "type": "SOLID",
+            "color": "#9B773B"
+          }
+        ]
+      }
+    },
+    "metrics": {
+      "nodeCount": 21,
+      "maxDepth": 6,
+      "styleCount": 15,
+      "tokenCount": 15,
+      "inlineSizeKb": 11.96,
+      "dedupedSizeKb": 10.11
+    }
+  }
+}
