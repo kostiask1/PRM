@@ -27,44 +27,44 @@ Full-library goal is active. Figwright MCP access works. Domain families, remain
 | ProjectGuide | src/app/routing/ProjectGuide.tsx:14 | pending-figma |  |
 | WorkspaceHeader | src/app/ui/WorkspaceHeader.tsx:4 | pending-figma |  |
 | MonsterAiActionModal | src/features/ai-edit-monster/ui/MonsterAiActionModal.tsx:20 | pending-figma |  |
-| AiApiKeyPanel | src/features/ai/ui/AiApiKeyPanel.tsx:18 | pending-figma |  |
-| AiAssistantShell | src/features/ai/ui/AiAssistantShell.tsx:22 | pending-figma |  |
-| AiAssistantToolbar | src/features/ai/ui/AiAssistantToolbar.tsx:47 | pending-figma |  |
-| AiAttachmentActions | src/features/ai/ui/AiAttachmentControls.tsx:46 | pending-figma |  |
-| AttachedImageList | src/features/ai/ui/AiAttachmentControls.tsx:91 | pending-figma |  |
-| AttachedFileList | src/features/ai/ui/AiAttachmentControls.tsx:127 | pending-figma |  |
-| AiAttachmentControls | src/features/ai/ui/AiAttachmentControls.tsx:168 | pending-figma |  |
-| CampaignEntityContext | src/features/ai/ui/AiContextSettingsModal.tsx:72 | pending-figma |  |
-| AiContextSettingsModal | src/features/ai/ui/AiContextSettingsModal.tsx:171 | pending-figma |  |
-| AiPromptComposer | src/features/ai/ui/AiPromptComposer.tsx:13 | pending-figma |  |
-| AiResponseHistoryRow | src/features/ai/ui/AiResponseHistory.tsx:42 | pending-figma |  |
-| AiResponseHistory | src/features/ai/ui/AiResponseHistory.tsx:101 | pending-figma |  |
-| AiModelPicker | src/features/ai/ui/AiToolbarControls.tsx:66 | pending-figma |  |
-| AiContextActions | src/features/ai/ui/AiToolbarControls.tsx:96 | pending-figma |  |
+| AiApiKeyPanel | src/features/ai/ui/AiApiKeyPanel.tsx:18 | verified-figma | 48:102211 |
+| AiAssistantShell | src/features/ai/ui/AiAssistantShell.tsx:22 | verified-figma | 53:120266 |
+| AiAssistantToolbar | src/features/ai/ui/AiAssistantToolbar.tsx:47 | verified-figma | 48:103928 |
+| AiAttachmentActions | src/features/ai/ui/AiAttachmentControls.tsx:46 | verified-figma | 48:104057 |
+| AttachedImageList | src/features/ai/ui/AiAttachmentControls.tsx:91 | verified-figma | 48:104512 |
+| AttachedFileList | src/features/ai/ui/AiAttachmentControls.tsx:127 | verified-figma | 48:104512 |
+| AiAttachmentControls | src/features/ai/ui/AiAttachmentControls.tsx:168 | verified-figma | 48:105118 |
+| CampaignEntityContext | src/features/ai/ui/AiContextSettingsModal.tsx:72 | verified-figma | 53:111705 |
+| AiContextSettingsModal | src/features/ai/ui/AiContextSettingsModal.tsx:171 | verified-figma | 53:113317 |
+| AiPromptComposer | src/features/ai/ui/AiPromptComposer.tsx:13 | verified-figma | 48:107029 |
+| AiResponseHistoryRow | src/features/ai/ui/AiResponseHistory.tsx:42 | verified-figma | 48:105301 |
+| AiResponseHistory | src/features/ai/ui/AiResponseHistory.tsx:101 | verified-figma | 48:106352 |
+| AiModelPicker | src/features/ai/ui/AiToolbarControls.tsx:66 | verified-figma | 48:102259 |
+| AiContextActions | src/features/ai/ui/AiToolbarControls.tsx:96 | verified-figma | 48:102350 |
 | CreateCampaignModalContent | src/features/campaign-create/ui/CreateCampaignModalContent.tsx:12 | pending-figma |  |
 | ClickToCopy | src/features/clipboard/ui/ClickToCopy.tsx:17 | verified-figma | 24:43048, 24:43065 |
 | DiceCalculator | src/features/dice/ui/DiceCalculator.tsx:52 | verified-figma | 20:41216, 20:36510, 20:38308, 20:40922 |
 | DiceProbabilityModalContent | src/features/dice/ui/DiceProbabilityModalContent.tsx:15 | verified-figma | 20:39344, 20:41217 |
 | RollDice | src/features/dice/ui/RollDice.tsx:14 | verified-figma | 20:36383 |
-| MonsterActionSections | src/features/edit-monster/ui/MonsterActionSections.tsx:39 | pending-figma |  |
-| MonsterExactDataSection | src/features/edit-monster/ui/MonsterExactDataSection.tsx:99 | pending-figma |  |
+| MonsterActionSections | src/features/edit-monster/ui/MonsterActionSections.tsx:39 | verified-figma | 69:181613 |
+| MonsterExactDataSection | src/features/edit-monster/ui/MonsterExactDataSection.tsx:99 | verified-figma | 69:182508, 69:179596 |
 | MonsterFieldEditModal | src/features/edit-monster/ui/MonsterFieldEditModal.tsx:119 | pending-figma |  |
 | MonsterFieldSections | src/features/edit-monster/ui/MonsterFieldSections.tsx:19 | pending-figma |  |
-| MonsterJsonValueInput | src/features/edit-monster/ui/MonsterJsonValueInput.tsx:20 | pending-figma |  |
-| MonsterLegendaryGroupEditor | src/features/edit-monster/ui/MonsterLegendaryGroupEditor.tsx:14 | pending-figma |  |
-| MonsterModifierSections | src/features/edit-monster/ui/MonsterModifierSections.tsx:52 | pending-figma |  |
+| MonsterJsonValueInput | src/features/edit-monster/ui/MonsterJsonValueInput.tsx:20 | verified-figma | 69:179596, 69:179359 |
+| MonsterLegendaryGroupEditor | src/features/edit-monster/ui/MonsterLegendaryGroupEditor.tsx:14 | verified-figma | 69:180234 |
+| MonsterModifierSections | src/features/edit-monster/ui/MonsterModifierSections.tsx:52 | verified-figma | 69:180071 |
 | ParserActionField | src/features/edit-monster/ui/MonsterParserActionDialog.tsx:66 | pending-figma |  |
 | ParserActionHeading | src/features/edit-monster/ui/MonsterParserActionDialog.tsx:130 | pending-figma |  |
 | ActionForm | src/features/edit-monster/ui/MonsterParserActionDialog.tsx:155 | pending-figma |  |
 | ReferenceAction | src/features/edit-monster/ui/MonsterParserActionDialog.tsx:219 | pending-figma |  |
 | ActionCatalog | src/features/edit-monster/ui/MonsterParserActionDialog.tsx:266 | pending-figma |  |
 | MonsterParserActionDialog | src/features/edit-monster/ui/MonsterParserActionDialog.tsx:333 | pending-figma |  |
-| SpellItemList | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:177 | pending-figma |  |
-| SpellcastingBucketEditor | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:419 | pending-figma |  |
-| LeveledSpellsEditor | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:507 | pending-figma |  |
-| HiddenFieldsEditor | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:641 | pending-figma |  |
-| SpellcastingBlockEditor | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:686 | pending-figma |  |
-| MonsterSpellcastingSections | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:891 | pending-figma |  |
+| SpellItemList | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:177 | verified-figma | 76:198509, 74:183483, 69:179596 |
+| SpellcastingBucketEditor | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:419 | verified-figma | 76:198510, 76:198509, 12:1465 |
+| LeveledSpellsEditor | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:507 | verified-figma | 76:198511, 76:198509, 12:1465 |
+| HiddenFieldsEditor | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:641 | verified-figma | 76:198512, 12:1497 |
+| SpellcastingBlockEditor | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:686 | verified-figma | 76:198513, 76:198515, 12:1689 |
+| MonsterSpellcastingSections | src/features/edit-monster/ui/MonsterSpellcastingSections.tsx:891 | verified-figma | 76:198514, 76:198513 |
 | SyntaxList | src/features/edit-monster/ui/MonsterTextParsingHelp.tsx:300 | pending-figma |  |
 | SyntaxRows | src/features/edit-monster/ui/MonsterTextParsingHelp.tsx:310 | pending-figma |  |
 | HelpSection | src/features/edit-monster/ui/MonsterTextParsingHelp.tsx:332 | pending-figma |  |
@@ -218,40 +218,40 @@ Full-library goal is active. Figwright MCP access works. Domain families, remain
 | TextInput | src/shared/ui/TextInput.tsx:8 | verified-figma | 12:1465 |
 | Tooltip | src/shared/ui/Tooltip.tsx:65 | verified-figma | 24:49280 |
 | AiAssistantPanelView | src/widgets/ai-assistant/ui/AiAssistantPanelView.tsx:23 | pending-figma |  |
-| SelectedImagePromptTarget | src/widgets/ai-assistant/ui/AiImagePromptDetails.tsx:35 | pending-figma |  |
-| AiImagePromptDetails | src/widgets/ai-assistant/ui/AiImagePromptDetails.tsx:57 | pending-figma |  |
-| ImagePromptContextChoice | src/widgets/ai-assistant/ui/AiImagePromptSelection.tsx:57 | pending-figma |  |
-| AiImagePromptSelection | src/widgets/ai-assistant/ui/AiImagePromptSelection.tsx:84 | pending-figma |  |
-| ImagePromptColumn | src/widgets/ai-assistant/ui/ImagePromptColumn.tsx:19 | pending-figma |  |
-| AiResponseSingleCardDiff | src/widgets/ai-response-modal/ui/AiResponseCardDiff.tsx:48 | pending-figma |  |
-| AiResponseChangedCardDiff | src/widgets/ai-response-modal/ui/AiResponseCardDiff.tsx:78 | pending-figma |  |
-| AiResponseEncounterMonsterChange | src/widgets/ai-response-modal/ui/AiResponseEncounterMonsterChange.tsx:14 | pending-figma |  |
-| AiResponseEncounterParticipantList | src/widgets/ai-response-modal/ui/AiResponseEncounterParticipantList.tsx:52 | pending-figma |  |
-| AiResponseSingleSnapshotFields | src/widgets/ai-response-modal/ui/AiResponseGenericDiff.tsx:23 | pending-figma |  |
-| AiResponseChangedField | src/widgets/ai-response-modal/ui/AiResponseGenericDiff.tsx:44 | pending-figma |  |
-| AiResponseGenericDiff | src/widgets/ai-response-modal/ui/AiResponseGenericDiff.tsx:70 | pending-figma |  |
-| AiResponseJsonDiffLine | src/widgets/ai-response-modal/ui/AiResponseJsonDiff.tsx:17 | pending-figma |  |
-| AiResponseJsonDiff | src/widgets/ai-response-modal/ui/AiResponseJsonDiff.tsx:43 | pending-figma |  |
+| SelectedImagePromptTarget | src/widgets/ai-assistant/ui/AiImagePromptDetails.tsx:35 | verified-figma | 53:113695 |
+| AiImagePromptDetails | src/widgets/ai-assistant/ui/AiImagePromptDetails.tsx:57 | verified-figma | 53:116255 |
+| ImagePromptContextChoice | src/widgets/ai-assistant/ui/AiImagePromptSelection.tsx:57 | verified-figma | 53:113945 |
+| AiImagePromptSelection | src/widgets/ai-assistant/ui/AiImagePromptSelection.tsx:84 | verified-figma | 53:114992 |
+| ImagePromptColumn | src/widgets/ai-assistant/ui/ImagePromptColumn.tsx:19 | verified-figma | 53:113600 |
+| AiResponseSingleCardDiff | src/widgets/ai-response-modal/ui/AiResponseCardDiff.tsx:48 | verified-figma | 60:142415 |
+| AiResponseChangedCardDiff | src/widgets/ai-response-modal/ui/AiResponseCardDiff.tsx:78 | verified-figma | 60:142415 |
+| AiResponseEncounterMonsterChange | src/widgets/ai-response-modal/ui/AiResponseEncounterMonsterChange.tsx:14 | verified-figma | 60:144190 |
+| AiResponseEncounterParticipantList | src/widgets/ai-response-modal/ui/AiResponseEncounterParticipantList.tsx:52 | verified-figma | 60:154678, 60:154249 |
+| AiResponseSingleSnapshotFields | src/widgets/ai-response-modal/ui/AiResponseGenericDiff.tsx:23 | verified-figma | 60:152567, 60:151749 |
+| AiResponseChangedField | src/widgets/ai-response-modal/ui/AiResponseGenericDiff.tsx:44 | verified-figma | 60:151982 |
+| AiResponseGenericDiff | src/widgets/ai-response-modal/ui/AiResponseGenericDiff.tsx:70 | verified-figma | 60:153880 |
+| AiResponseJsonDiffLine | src/widgets/ai-response-modal/ui/AiResponseJsonDiff.tsx:17 | verified-figma | 57:125712 |
+| AiResponseJsonDiff | src/widgets/ai-response-modal/ui/AiResponseJsonDiff.tsx:43 | verified-figma | 57:126211, 57:127598 |
 | AiResponseModal | src/widgets/ai-response-modal/ui/AiResponseModal.tsx:88 | pending-figma |  |
-| ResponseDetails | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:72 | pending-figma |  |
-| DraftResourceEditor | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:97 | pending-figma |  |
-| DraftEditor | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:142 | pending-figma |  |
-| DiffViewSwitch | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:173 | pending-figma |  |
-| ResponseDiff | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:197 | pending-figma |  |
-| AiResponseModalView | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:244 | pending-figma |  |
-| AiResponseSingleNoteDiff | src/widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx:54 | pending-figma |  |
-| AiResponseChangedNoteDiff | src/widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx:81 | pending-figma |  |
-| AiResponseNoteDiff | src/widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx:115 | pending-figma |  |
-| AiResponsePreviewResourceHeader | src/widgets/ai-response-modal/ui/AiResponsePreviewResourceHeader.tsx:9 | pending-figma |  |
-| AppliedState | src/widgets/ai-response-modal/ui/AiResponseResourceActions.tsx:16 | pending-figma |  |
-| UndoneState | src/widgets/ai-response-modal/ui/AiResponseResourceActions.tsx:24 | pending-figma |  |
+| ResponseDetails | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:72 | verified-figma | 53:125549 |
+| DraftResourceEditor | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:97 | verified-figma | 66:156042, 66:155491 |
+| DraftEditor | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:142 | verified-figma | 66:156349 |
+| DiffViewSwitch | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:173 | verified-figma | 53:125496 |
+| ResponseDiff | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:197 | verified-figma | 69:160474, 69:157573 |
+| AiResponseModalView | src/widgets/ai-response-modal/ui/AiResponseModalView.tsx:244 | verified-figma | 69:174718, 69:165011, 69:174719, 69:165010 |
+| AiResponseSingleNoteDiff | src/widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx:54 | verified-figma | 59:131325 |
+| AiResponseChangedNoteDiff | src/widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx:81 | verified-figma | 59:131325 |
+| AiResponseNoteDiff | src/widgets/ai-response-modal/ui/AiResponseNoteDiff.tsx:115 | verified-figma | 59:133002, 60:134079 |
+| AiResponsePreviewResourceHeader | src/widgets/ai-response-modal/ui/AiResponsePreviewResourceHeader.tsx:9 | verified-figma | 57:125647 |
+| AppliedState | src/widgets/ai-response-modal/ui/AiResponseResourceActions.tsx:16 | verified-figma | 53:125247 |
+| UndoneState | src/widgets/ai-response-modal/ui/AiResponseResourceActions.tsx:24 | verified-figma | 53:125247 |
 | BestiaryContent | src/widgets/bestiary-browser/ui/BestiaryContent.tsx:67 | pending-figma |  |
-| BestiaryDetail | src/widgets/bestiary-browser/ui/BestiaryDetail.tsx:25 | pending-figma |  |
-| BestiaryHeaderActions | src/widgets/bestiary-browser/ui/BestiaryHeaderActions.tsx:23 | pending-figma |  |
-| MonsterListItemContent | src/widgets/bestiary-browser/ui/BestiaryMonsterListItem.tsx:148 | pending-figma |  |
-| BestiaryMonsterListItem | src/widgets/bestiary-browser/ui/BestiaryMonsterListItem.tsx:208 | pending-figma |  |
-| BestiaryToolbar | src/widgets/bestiary-browser/ui/BestiaryToolbar.tsx:29 | pending-figma |  |
-| BestiaryVirtualizedList | src/widgets/bestiary-browser/ui/BestiaryVirtualizedList.tsx:19 | pending-figma |  |
+| BestiaryDetail | src/widgets/bestiary-browser/ui/BestiaryDetail.tsx:25 | verified-figma | 48:97924 |
+| BestiaryHeaderActions | src/widgets/bestiary-browser/ui/BestiaryHeaderActions.tsx:23 | verified-figma | 44:91146 |
+| MonsterListItemContent | src/widgets/bestiary-browser/ui/BestiaryMonsterListItem.tsx:148 | verified-figma | 46:91373 |
+| BestiaryMonsterListItem | src/widgets/bestiary-browser/ui/BestiaryMonsterListItem.tsx:208 | verified-figma | 46:91422 |
+| BestiaryToolbar | src/widgets/bestiary-browser/ui/BestiaryToolbar.tsx:29 | verified-figma | 48:96087 |
+| BestiaryVirtualizedList | src/widgets/bestiary-browser/ui/BestiaryVirtualizedList.tsx:19 | verified-figma | 46:95078 |
 | CampaignEntityCardNotes | src/widgets/campaign-entity-card/ui/CampaignEntityCardNotes.tsx:46 | verified-figma | 20:10514, 20:10515 |
 | CharacterIdentityFields | src/widgets/campaign-entity-card/ui/CharacterCard.tsx:54 | verified-figma | 20:11428, 20:11429, 20:11369 |
 | CharacterDetails | src/widgets/campaign-entity-card/ui/CharacterCard.tsx:74 | verified-figma | 20:11430, 20:11431 |
@@ -344,6 +344,17 @@ Full-library goal is active. Figwright MCP access works. Domain families, remain
 - Monster tokens: four additional source definitions and 45 native Figma definitions. Three bundled artwork assets, 280/160/140px contexts, image/upload/fallback branches and thirty state examples have paired dark reviews. Source policy fixtures execute 128 combinations and four URL-precedence cases. Audit: 93 text nodes, no collapsed visible text or replacement characters, all solid paints bound, 108 scalar bindings added, and no light-color leaks in dark reviews. The 0.2s image zoom and 0.15s replacement control were verified across nineteen exported frames. All eighteen shared button focus rings now stretch correctly in icon-only sizes. Both themes contain 70 semantic colors; stats and rich stat-block content remain pending.
 - Monster stat blocks: nine additional source definitions, three spell-line/link compositions and 63 native Figma definitions. Source execution produced 39 fixtures and 78 width-specific plans. Thirty-five fixture boards, ten assembled cards and two scroll views have paired dark copies. All 442 measured paragraphs and 215 rich-text definitions match their source plans; eight whole-creature text snapshots match after whitespace/list-marker normalization. The 633-text-node audit found no collapsed visible text, replacement characters or unbound solid paints. All 1,054 dark rich-text instances retain the expected semantic colors. Empty guards, special/legacy stats and all spell-use buckets are covered. Compatible data-swap menus are provided; runtime actions remain code.
 - The source audit now includes JSX inside map callbacks and tagless fragments: ten previously omitted definitions were added and four compositions were reclassified as native visuals. Existing gallery and tooltip mappings were preserved. The revised baseline is 291 native visual definitions and 129 compositions, including 38 runtime adapters and 91 visible compositions.
+- Bestiary browser parts: six additional source definitions, the row-actions composition and 94 native Figma definitions. Responsive toolbars, header menus, independent source filters, fixed-height rows, list states and detail callback modes reuse verified shared controls. Nine source-executed creature fixtures preserve numeric-zero/string-zero CR behavior. Compact rows explicitly hide portraits. Full browser compositions remain pending their AI and editor dependencies; runtime actions remain code.
+- AI controls and history: eleven additional source definitions, eight compositions and 107 native Figma definitions. Setup, model selection, context, responsive toolbars, image/file attachments, prompt composition and response history preserve source guards and loading behavior. The 107-definition audit checked 915 text nodes with no collapsed visible text, replacement characters or unbound solid paints. Four dark reviews cover 471 text nodes with no light-color leaks. Source policy fixtures, conditional metadata/token branches, whitespace keys, full-disabled lists and editable cloned text bindings are verified. Assistant chrome and composed dialogs remain pending; runtime behavior remains code.
+- AI dialogs and shell: eight additional source definitions, one composition and 114 native Figma definitions. Context inclusion/expansion, missing data, image selection/detail/context states, independent dialogs and notifications, responsive layout and loading locks preserve source contracts. The audit checked 1,814 text nodes with no collapsed visible text, replacement characters or unbound solid paints. Ten paired dark reviews cover 410 text nodes with no light-color leaks. Twenty-three snapshots and three source-timed animation exports were reviewed. Full assistant and response/diff compositions remain pending; runtime behavior remains code.
+- AI response parts: seven more source definitions, four compositions and 69 native Figma definitions. Request metadata, toolbar, resource actions, preview/JSON switch, headers and structured JSON diffs preserve draft/applied/undone/restoring branches. Source fixtures cover nine resources, twelve action states and 156 rendered lines. Native audits cover 948 text nodes; five dark reviews cover 602 text nodes, with no collapsed text, replacement characters, unbound solid paints or light-theme leaks. Ten screenshots were saved. Both themes contain 72 semantic colors. Typed card/note/encounter previews and full response dialogs remain pending.
+- AI note comparisons: three more source definitions and 64 native Figma definitions. Classic/simplified modes, new/deleted/invalid notes, responsive before/after comparisons, partial highlights, resolved resource actions and collapsed reviews reuse live NoteCard components. All 92 note instances match expected modes, content and highlight variants; 388 text nodes have no collapsed text, replacement characters or unbound solid paints. Six dark reviews cover 49 text nodes without light-color leaks. Twelve screenshots and sixteen executed source-policy cases are recorded. Shared instance-swap defaults were removed after variant merging; nested note instances remain editable and swappable. Both themes retain 72 semantic colors.
+- AI card comparisons: three more source definitions, one composition and 40 native Figma definitions. Live character/location/monster slots cover new, deleted, changed, unchanged and invalid snapshots. Independent encounter labels and optional supplied cards preserve empty branches. Source execution covers sixteen fixtures, sixty-four policy cases and sixteen optional-slot cases. The native audit checked 48 embedded cards, 172 projected values, 110 highlight containers and 2,132 text nodes without contract, encoding or paint-binding errors. Eight dark reviews check 717 text nodes and all 16,373 characters in 357 rich-text instances without color leaks. Sixteen snapshots and geometry checks are recorded. Composite instances hug their contents, including empty comparisons. Runtime behavior remains code.
+- Generic comparisons and encounter participant lists: four more source definitions and 98 native Figma definitions. Fifteen generic plans preserve primitive/object formatting, metadata exclusion, summary fallback, note-array delegation and 360px value viewports. Sixteen participant plans preserve duplicate identities, zero/string-zero metadata, serialized equality, missing/modified rows and source empty messages. Native checks cover 76 values, 48 participant instances and 468 text nodes; twelve dark reviews cover 132 text nodes without leaks or text errors. Twenty-four snapshots are saved. All 98 definitions were recovered and revalidated after a temporary connection loss. Source verifiers pass; runtime behavior remains code.
+- AI draft editors: two more source definitions and 34 native Figma definitions. Responsive before/after code fields, new/deleted/invalid/empty/whitespace/long values and focused/restoring states reuse EditableField and shared resource actions. Source execution verifies seven resources, three ordered/empty draft lists, sixteen diff policies and thirty-two modal-view policies. Native checks cover 34 values, four capped fields, four locked action groups, 28 inherited headings and 228 text nodes without contract, encoding or paint errors. Seven dark reviews cover 75 text nodes without leaks; fourteen snapshots are saved. Separate New/After properties preserve labels inside nested instances. ResponseDiff and full response/history dialogs remain pending.
+- Response comparisons and modal views: two more source definitions and 107 native Figma definitions. Twenty comparison states and thirty-two body/dialog pairs reuse live generic previews, structured JSON rows, draft editors, request details and shared modal controls. Seventeen viewports preserve desktop/mobile caps; creature dialogs demonstrate the source 2200px width. Source verification covers sixteen diff policies, thirty-two view policies and four empty-prompt/details cases. Native audits check 4,613 text nodes and eighteen JSON line instances without text, contract or paint errors. Eleven paired dark reviews preserve 9,793 characters, including eighty rich-text nodes, without light-color leaks or text changes. Twenty-two snapshots and two bottom-of-form views are saved. All assets fit section 26; the 26-section page remains compact and has no overlaps. Full response orchestration and injected editor compositions remain pending.
+- Monster editing fields: five more source definitions, the ModifierKeyInput composition and 92 native Figma definitions. JSON scalar/structured values, parse errors/recovery, modifier filtering and zero values, legendary groups, all five action categories and advanced raw fields preserve source policies. Source execution covers eleven JSON cases, four modifier plans, five legendary-group plans, six action plans and eight exact-data plans, including guarded adds, removals and deferred key commits. Native audits check sixty textarea values, twenty-two modifier rows, twelve legendary fields, twenty-eight action rows, eighty-four exact-field summaries and 738 text nodes without contract, encoding or paint errors. Nine dark review pairs preserve 3,949 characters without leaks or text changes. Eighteen snapshots are saved. Disclosure arrows were corrected and verified; all assets fit section 27 without overlaps. Full editor dialogs, spellcasting and parser/help remain pending.
+- Spellcasting editors: six more source definitions and the EditableMapKey composition. Source-executed fixtures preserve text versus structured entries, hidden flags, all six frequency buckets, zero slots/lower bounds, unknown select values, malformed rows and collapsed/advanced blocks. Shared controls, bound light/dark colors, complete source text and compact section placement are verified. Runtime callbacks and disclosure behavior remain code.
 
 ## Composition Figma coverage
 
@@ -365,18 +376,18 @@ Full-library goal is active. Figwright MCP access works. Domain families, remain
 | SessionPageRuntimeHost | runtime-adapter |  |
 | SidebarRuntimeHost | runtime-adapter |  |
 | AiAttachmentAlertRuntimeProvider | runtime-adapter |  |
-| ConfiguredAiAttachmentControls | pending-figma-composition |  |
+| ConfiguredAiAttachmentControls | verified-composition | 48:105118, 20:9344, 20:9783, 20:10026 |
 | AiHistoryResponseDialog | pending-figma-composition |  |
-| ConfiguredAiPromptComposer | pending-figma-composition |  |
-| AiGenerationToggleButton | pending-figma-composition |  |
-| AiImagePromptAction | pending-figma-composition |  |
-| AiEntityGenerationActions | pending-figma-composition |  |
-| AiResponseParsingAction | pending-figma-composition |  |
-| AiEncounterCreatureEditingAction | pending-figma-composition |  |
-| AiEncounterGenerationActions | pending-figma-composition |  |
+| ConfiguredAiPromptComposer | verified-composition | 48:107029, 12:2631 |
+| AiGenerationToggleButton | verified-composition | 48:103928, 12:1148, 12:1150 |
+| AiImagePromptAction | verified-composition | 48:103928, 12:1148, 12:1150 |
+| AiEntityGenerationActions | verified-composition | 48:103928, 12:1148, 12:1150 |
+| AiResponseParsingAction | verified-composition | 48:103928, 12:1148, 12:1150 |
+| AiEncounterCreatureEditingAction | verified-composition | 48:103928, 12:1148, 12:1150 |
+| AiEncounterGenerationActions | verified-composition | 48:103928, 12:1148, 12:1150 |
 | DiceRequestRuntimeProvider | runtime-adapter |  |
-| ModifierKeyInput | pending-figma-composition |  |
-| EditableMapKey | pending-figma-composition |  |
+| ModifierKeyInput | verified-composition | 69:180071, 12:1465 |
+| EditableMapKey | verified-composition | 76:198510, 76:198511, 12:1465 |
 | MarkdownChangePlugin | runtime-adapter |  |
 | EditorContentPlugin | runtime-adapter |  |
 | LexicalEditableFieldView | pending-figma-composition |  |
@@ -438,18 +449,18 @@ Full-library goal is active. Figwright MCP access works. Domain families, remain
 | UndoRedoButtons | pending-figma-composition |  |
 | AiAssistantPanel | pending-figma-composition |  |
 | AiAssistantRuntimeProvider | runtime-adapter |  |
-| AiImagePromptPickerModal | pending-figma-composition |  |
-| AiResponseCardDiff | pending-figma-composition |  |
+| AiImagePromptPickerModal | verified-composition | 53:117574 |
+| AiResponseCardDiff | verified-composition | 60:142415 |
 | ConfiguredAiResponseModal | pending-figma-composition |  |
-| ResponseToolbar | pending-figma-composition |  |
-| ApplyButton | pending-figma-composition |  |
-| UndoButton | pending-figma-composition |  |
-| AiResponseResourceActions | pending-figma-composition |  |
+| ResponseToolbar | verified-composition | 53:125455 |
+| ApplyButton | verified-composition | 53:125344 |
+| UndoButton | verified-composition | 53:125344 |
+| AiResponseResourceActions | verified-composition | 53:125344 |
 | BestiaryBrowser | pending-figma-composition |  |
 | BestiaryBrowserContent | pending-figma-composition |  |
 | BestiaryBrowserModals | pending-figma-composition |  |
 | BestiaryBrowserRuntimeProvider | runtime-adapter |  |
-| MonsterListItemActions | pending-figma-composition |  |
+| MonsterListItemActions | verified-composition | 45:91290 |
 | CampaignEntityCreationRuntimeProvider | runtime-adapter |  |
 | CampaignEntityModalCard | verified-composition | 24:44124, 24:44472, 24:44820, 24:45516, 24:46167, 24:46683 |
 | CampaignEntityModalContent | verified-composition | 24:44124, 24:44472, 24:44820, 24:45516, 24:46167, 24:46683 |
