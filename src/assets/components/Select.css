@@ -5,6 +5,8 @@
 }
 
 .Select__trigger {
+	width: 100%;
+	font-family: inherit;
 	background: var(--panel);
 	border: 1px solid var(--border);
 	color: var(--text);
@@ -98,6 +100,11 @@
 
 .Select__option:hover {
 	background: color-mix(in srgb, var(--text-bright), transparent 95%);
+	color: var(--text);
+}
+
+.Select__option.is_active {
+	background: color-mix(in srgb, var(--accent), transparent 90%);
 	color: var(--text);
 }
 

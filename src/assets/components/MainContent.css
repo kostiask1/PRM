@@ -20,7 +20,7 @@
 .CampaignHeader h2, .SessionHeader h2 { font-size: 28px; line-height: 36px; font-weight: 600; overflow-wrap: anywhere; }
 
 @media (max-width: 767px) {
- :root { --content-padding: 20px; }
+ :root { --content-padding: var(--space-5); }
  .WorkspaceHeader { flex-basis: 64px; padding: var(--space-5); padding-left: 54px; }
  .WorkspaceHeader__brand { display: block; font-weight: 700; font-size: 16px; }
  .WorkspaceHeader__breadcrumbs, .WorkspaceHeader__storage { display: none; }

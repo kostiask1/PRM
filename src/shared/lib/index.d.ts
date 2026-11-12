@@ -34,6 +34,8 @@ export function getNoteRenderKey(
 	fallback: string | number,
 ): string | number;
 
+export function getNoteListLabel(note: Pick<SharedNote, "title" | "text">): string;
+
 export function upsertNoteById<T extends SharedNote>(
 	notes: T[],
 	noteId: string | number,

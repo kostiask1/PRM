@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { SettingsCampaign } from "../model/settingsModal.ts";
 import type { Theme } from "../model/theme.ts";
 import {
@@ -73,6 +74,7 @@ export interface SettingsModalViewProps {
 }
 
 type SettingsAiGroupProps = SettingsAiViewProps & SettingsModalCompositionSlots;
+type SettingsSection = "general" | "campaign" | "ai";
 
 function SettingsGeneralGroup({
 	currentTheme,
@@ -105,6 +107,7 @@ function SettingsGeneralGroup({
 			<div className="SettingsModal__lang">
 				<label className="SettingsModal__label">{lang.t("Language")}</label>
 				<Select
+					aria-label={lang.t("Language")}
 					value={currentLanguage}
 					onChange={(event) => onLanguageChange(event.target.value)}
 				>
@@ -173,6 +176,7 @@ function SettingsSourcesGroup({
 				<div className="SettingsModal__sourceRow">
 					<MultiSelect
 						className="SettingsModal__sourceSelect"
+						ariaLabel={lang.t("Visible sources")}
 						value={selectedSources}
 						onChange={onSelectedSourcesChange}
 						optionClickMode="toggle"
@@ -218,21 +222,18 @@ function SettingsAiGroup({
 }: SettingsAiGroupProps) {
 	return (
 		<div className="SettingsModal__group SettingsModal__subsection SettingsModal__section_ai">
-			<div className="SettingsModal__sectionHeader">
-				<h3>{lang.t("AI settings")}</h3>
-				{status === "saving" && (
+			{status === "saving" && (
 					<span className="SettingsModal__saveStatus" role="status">
 						{lang.t("Saving...")}
 					</span>
-				)}
-			</div>
+			)}
 			<div className="SettingsModal__promptGrid">
 				<label className="SettingsModal__field">
 					<span className="SettingsModal__label">{lang.t("AI base prompt")}</span>
 					<div className="SettingsModal__hint">
 						{isGlobalScope
 							? lang.t("These instructions are added to every future AI request.")
-							: lang.t("Used instead of the global AI prompt for this campaign.")}
+							: lang.t("Added alongside the global AI prompt for this campaign. Leave empty to use only the global prompt.")}
 					</div>
 					<EditableField
 						type="textarea"
@@ -261,7 +262,9 @@ function SettingsAiGroup({
 							? lang.t(
 									"These style instructions are added to every image prompt generation request.",
 								)
-							: lang.t("Used instead of the global image style for this campaign.")}
+							: imagePrompt
+								? lang.t("This campaign uses its own image style instead of the global style.")
+								: lang.t("This campaign uses the global image style until you enter one here.")}
 					</div>
 					<EditableField
 						type="textarea"
@@ -284,12 +287,14 @@ function SettingsAiGroup({
 }
 
 function SettingsScopedGroup({
+	activeSection,
 	scope,
 	notes,
 	sources,
 	ai,
 	EditableField,
 }: {
+	activeSection: SettingsSection;
 	scope: SettingsScopeViewProps;
 	notes: SettingsNotesViewProps;
 	sources: SettingsSourcesViewProps;
@@ -298,10 +303,12 @@ function SettingsScopedGroup({
 	return (
 		<div className="SettingsModal__group SettingsModal__section">
 			<div className="SettingsModal__sectionHeader">
-				<h3>{lang.t("Campaign settings")}</h3>
+				<h3>{lang.t(activeSection === "ai" ? "AI settings" : "Campaign settings")}</h3>
 			</div>
 			<label className="SettingsModal__field SettingsModal__scope">
+				<span className="SettingsModal__label">{lang.t("Apply to")}</span>
 				<Select
+					aria-label={lang.t("Apply to")}
 					value={scope.selectedScope}
 					onChange={(event) => scope.onScopeChange(event.target.value)}
 				>
@@ -319,6 +326,7 @@ function SettingsScopedGroup({
 				</Select>
 			</label>
 
+			<div hidden={activeSection !== "campaign"}>
 			<div className="SettingsModal__group SettingsModal__subsection">
 				<Switch
 					checked={notes.simplifiedNotesEnabled}
@@ -335,7 +343,10 @@ function SettingsScopedGroup({
 			</div>
 
 			<SettingsSourcesGroup {...sources} />
+			</div>
+			<div hidden={activeSection !== "ai"}>
 			<SettingsAiGroup {...ai} EditableField={EditableField} />
+			</div>
 		</div>
 	);
 }
@@ -348,21 +359,46 @@ export default function SettingsModalView({
 	sources,
 	ai,
 	onNotificationClose,
+	onCancel,
 	EditableField,
 }: SettingsModalViewProps & SettingsModalCompositionSlots) {
+	const [activeSection, setActiveSection] = useState<SettingsSection>("general");
+	const sections: Array<{ id: SettingsSection; label: string }> = [
+		{ id: "general", label: "General" },
+		{ id: "campaign", label: "Campaign" },
+		{ id: "ai", label: "AI assistant" },
+	];
 	return (
 		<div className="SettingsModal">
 			{notification && (
 				<Notification message={notification} onClose={onNotificationClose} />
 			)}
-			<SettingsGeneralGroup {...general} />
+			<div className="SettingsModal__layout">
+				<nav className="SettingsModal__navigation" aria-label={lang.t("Settings")}>
+					{sections.map((section) => (
+						<Button key={section.id} variant={activeSection === section.id ? "primary" : "ghost"} onClick={() => setActiveSection(section.id)} aria-pressed={activeSection === section.id}>
+							{lang.t(section.label)}
+						</Button>
+					))}
+				</nav>
+				<div className="SettingsModal__content">
+			<div hidden={activeSection !== "general"}><SettingsGeneralGroup {...general} /></div>
+			<div hidden={activeSection === "general"}>
 			<SettingsScopedGroup
+				activeSection={activeSection}
 				scope={scope}
 				notes={notes}
 				sources={sources}
 				ai={ai}
 				EditableField={EditableField}
 			/>
+			</div>
+				</div>
+			</div>
+			<div className="SettingsModal__footer">
+				<span>{lang.t("Changes save automatically")}</span>
+				<Button variant="primary" onClick={onCancel}>{lang.t("Done")}</Button>
+			</div>
 		</div>
 	);
 }

@@ -26,7 +26,6 @@ function SidebarLink({
 }
 
 interface SidebarLinksProps {
-	onOpenSettings: () => void;
 	onOpenGallery: () => void;
 	onOpenBestiary: () => void;
 	onOpenSpells: () => void;
@@ -34,7 +33,6 @@ interface SidebarLinksProps {
 }
 
 export default function SidebarLinks({
-	onOpenSettings,
 	onOpenGallery,
 	onOpenBestiary,
 	onOpenSpells,
@@ -42,16 +40,7 @@ export default function SidebarLinks({
 }: SidebarLinksProps) {
 	return (
 		<div className="Sidebar__links">
-			<SidebarLink
-				icon="settings"
-				label={lang.t("Settings")}
-				onClick={onOpenSettings}
-			/>
-			<SidebarLink
-				icon="image"
-				label={lang.t("Gallery")}
-				onClick={onOpenGallery}
-			/>
+			<h2 className="Sidebar__sectionTitle">{lang.t("Library")}</h2>
 			<SidebarLink
 				icon="skull"
 				label={lang.t("Bestiary")}
@@ -66,6 +55,11 @@ export default function SidebarLinks({
 				icon="list"
 				label={lang.t("Rules Reference")}
 				onClick={onOpenRulesReference}
+			/>
+			<SidebarLink
+				icon="image"
+				label={lang.t("Gallery")}
+				onClick={onOpenGallery}
 			/>
 		</div>
 	);

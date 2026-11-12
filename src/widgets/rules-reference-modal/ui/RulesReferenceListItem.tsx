@@ -12,7 +12,7 @@ export interface RulesReferenceListItemProps {
 	meta?: string;
 	active: boolean;
 	onSelect: () => void;
-	onInsert: () => void;
+	onInsert?: () => void;
 }
 
 function getMonsterCr(monster: BestiaryMonster): unknown {

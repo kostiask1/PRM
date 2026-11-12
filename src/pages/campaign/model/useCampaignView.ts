@@ -8,6 +8,7 @@ import {
 import { campaignApi } from "../../../entities/campaign/index.js";
 import type {
 	CampaignPartialArchiveSection,
+	EntityTransferEndpoint,
 } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
 import type { SessionRecord } from "../../../entities/session/index.js";
@@ -146,8 +147,10 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	const {
 		clearSave: clearEntitySaveTimer,
 		flushSaves: flushEntitySaves,
+		hasFailedSave: hasFailedEntitySave,
 		isSaving: isEntitySaving,
 		scheduleSave: scheduleEntityUpdate,
+		waitForActiveSaves: waitForActiveEntitySaves,
 	} = useCampaignEntityPersistence({
 		campaignSlug: campaign.slug,
 		sanitizeEntity: sanitizeEntityForSave,
@@ -309,6 +312,21 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		await flushCampaignSave({ throwOnError: true });
 		await flushEntitySaves({ throwOnError: true });
 	}, [flushCampaignSave, flushEntitySaves]);
+	const transferCampaignEntity = useCallback(async (type: "npc" | "locations", entitySlug: string, target: EntityTransferEndpoint) => {
+		await waitForActiveEntitySaves();
+		const entity = (type === "npc" ? npcs : locations).find((item) => item.slug === entitySlug);
+		if (!entity || entity.id == null) throw new Error("Entity is required.");
+		if (hasFailedEntitySave(type, entity.id)) scheduleEntityUpdate(type, entity);
+		await beforeHistoryRestore();
+		if (hasFailedEntitySave(type, entity.id)) {
+			scheduleEntityUpdate(type, entity);
+			await flushEntitySaves({ throwOnError: true });
+		}
+		const result = await api.transferEntity(campaign.slug, type, { scope: "campaign", entitySlug }, target);
+		if (!result) throw new Error("Transfer returned no result.");
+		await Promise.all([loadNpcs(), loadLocations()]);
+		requestCampaignReload();
+	}, [beforeHistoryRestore, campaign.slug, flushEntitySaves, hasFailedEntitySave, loadNpcs, loadLocations, locations, npcs, requestCampaignReload, scheduleEntityUpdate, waitForActiveEntitySaves]);
 	const afterHistoryRestore = useCallback(async (
 		result?: HistoryMutationResult,
 	) => {
@@ -954,6 +972,7 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		handleLocationsReorder,
 		persistEntitiesReorder,
 		finishTrackedReorder,
+		transferCampaignEntity,
 		handleToggleCharacterCollapse,
 		handleCharacterChange,
 		handleCharacterNameBlur,

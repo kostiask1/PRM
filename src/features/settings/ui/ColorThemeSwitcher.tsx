@@ -30,7 +30,7 @@ export default function ColorThemeSwitcher({
 					: lang.t("Switch to light theme")
 			}
 		>
-			<button className="ColorThemeSwitcher" onClick={handleToggle}>
+			<button type="button" className="ColorThemeSwitcher" aria-label={currentTheme === THEMES.LIGHT ? lang.t("Switch to dark theme") : lang.t("Switch to light theme")} onClick={handleToggle}>
 				<Icon name={getThemeToggleIcon(currentTheme)} size={20} />
 			</button>
 		</Tooltip>

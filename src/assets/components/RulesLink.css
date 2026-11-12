@@ -21,33 +21,33 @@
 }
 
 .RulesLink__spell {
-	--rules-link-color: #4f7bd5;
+	--rules-link-color: var(--rules-spell);
 }
 
 .RulesLink__condition {
-	--rules-link-color: #b94f4f;
+	--rules-link-color: var(--rules-condition);
 }
 
 .RulesLink__status {
-	--rules-link-color: #8462c7;
+	--rules-link-color: var(--rules-status);
 }
 
 .RulesLink__disease {
-	--rules-link-color: #3f9a62;
+	--rules-link-color: var(--rules-disease);
 }
 
 .RulesLink__variantrule {
-	--rules-link-color: #b6782d;
+	--rules-link-color: var(--rules-variant);
 }
 
 .RulesLink__skill {
-	--rules-link-color: #2d91a5;
+	--rules-link-color: var(--rules-skill);
 }
 
 .RulesLink__sense {
-	--rules-link-color: #5f8f3a;
+	--rules-link-color: var(--rules-sense);
 }
 
 .RulesLink__creature {
-	--rules-link-color: #a85535;
+	--rules-link-color: var(--rules-creature);
 }

@@ -2,6 +2,7 @@ import {
 	type ReactNode,
 	useCallback,
 	useEffect,
+	useId,
 	useMemo,
 	useRef,
 	useState,
@@ -39,6 +40,7 @@ export interface MultiSelectProps<
 	onAllOptionClick?: (() => void) | null;
 	labelOverride?: ReactNode;
 	className?: string;
+	ariaLabel?: string;
 	placeholder?: ReactNode;
 	allSelectedLabel?: ReactNode;
 	noneSelectedLabel?: ReactNode;
@@ -61,6 +63,7 @@ export default function MultiSelect<
 	onAllOptionClick = null,
 	labelOverride = "",
 	className = "",
+	ariaLabel,
 	placeholder = "",
 	allSelectedLabel = "",
 	noneSelectedLabel = "",
@@ -75,6 +78,9 @@ export default function MultiSelect<
 	const containerRef = useRef<HTMLDivElement>(null);
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const activeOptionRef = useRef<HTMLButtonElement>(null);
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	const focusDropdownRef = useRef(false);
+	const dropdownId = useId();
 
 	const selection = useMemo(
 		() => getMultiSelectSelectionState(options, value),
@@ -112,6 +118,10 @@ export default function MultiSelect<
 	useEffect(() => {
 		if (!isOpen) return;
 		const frame = requestAnimationFrame(() => {
+			if (focusDropdownRef.current) {
+				focusDropdownRef.current = false;
+				dropdownRef.current?.querySelector<HTMLButtonElement>("button:not([disabled])")?.focus();
+			}
 			if (getMultiSelectActiveScrollTarget(activeValue) === "top") {
 				if (dropdownRef.current) dropdownRef.current.scrollTop = 0;
 				return;
@@ -157,6 +167,9 @@ export default function MultiSelect<
 		createPortal(
 			<MultiSelectDropdown
 				dropdownRef={dropdownRef}
+				dropdownId={dropdownId}
+				modalOwnerId={containerRef.current?.closest(".Modal__card")?.id || undefined}
+				onEscape={() => { setIsOpen(false); triggerRef.current?.focus(); }}
 				activeOptionRef={activeOptionRef}
 				dropdownStyle={dropdownStyle}
 				options={options}
@@ -189,6 +202,23 @@ export default function MultiSelect<
 				<button
 					type="button"
 					className="MultiSelect__trigger"
+					aria-label={ariaLabel ? `${ariaLabel}: ${typeof label === "string" ? label : ""}` : undefined}
+					ref={triggerRef}
+					disabled={disabled}
+					aria-expanded={isOpen && !disabled}
+					aria-controls={isOpen && !disabled ? dropdownId : undefined}
+					onKeyDown={(event) => {
+						if (event.key !== "Enter" && event.key !== " " && event.key !== "ArrowDown") return;
+						event.preventDefault();
+						event.stopPropagation();
+						if (!isOpen) {
+							focusDropdownRef.current = true;
+							updateDropdownPosition();
+							setIsOpen(true);
+						} else if (event.key === "ArrowDown") {
+							dropdownRef.current?.querySelector<HTMLButtonElement>("button:not([disabled])")?.focus();
+						} else setIsOpen(false);
+					}}
 					onClick={() => {
 						if (disabled) return;
 						if (!isOpen) updateDropdownPosition();

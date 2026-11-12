@@ -52,6 +52,7 @@ export interface SidebarProps {
 	activeCampaignId?: string | null;
 	isMobileOpen?: boolean;
 	onClose?: () => void;
+	onOpenDiceCalculator: () => void;
 	onSelectCampaign: (campaignSlug: string) => void;
 	onCreateCampaign: () => void;
 	onToggleCampaignStatus: (campaign: SidebarCampaign) => void;
@@ -62,6 +63,7 @@ export default function Sidebar({
 	activeCampaignId = "",
 	isMobileOpen = false,
 	onClose,
+	onOpenDiceCalculator,
 	onSelectCampaign,
 	onCreateCampaign,
 	onToggleCampaignStatus,
@@ -72,6 +74,7 @@ export default function Sidebar({
 		activeSessionFileName,
 		closeModal,
 		openModal,
+		publishHistoryRefresh,
 		reportError,
 		requestRulesReferenceNavigation,
 		setCampaigns,
@@ -101,6 +104,7 @@ export default function Sidebar({
 	const handleApplicationHistoryConflict = useCallback(async () => {
 		try {
 			await reloadApplicationCampaigns();
+			publishHistoryRefresh();
 		} finally {
 			reportError({
 				title: lang.t("History conflict"),
@@ -109,9 +113,12 @@ export default function Sidebar({
 				),
 			});
 		}
-	}, [reloadApplicationCampaigns, reportError]);
+	}, [publishHistoryRefresh, reloadApplicationCampaigns, reportError]);
 	const applicationHistory = usePersistentApplicationHistory({
-		onRestored: reloadApplicationCampaigns,
+		onRestored: async () => {
+			await reloadApplicationCampaigns();
+			publishHistoryRefresh();
+		},
 		onConflict: handleApplicationHistoryConflict,
 		onError: reportApplicationHistoryError,
 		syncVersion: syncEvent?.version,
@@ -278,45 +285,37 @@ export default function Sidebar({
 			>
 				<div className="Sidebar__header">
 					<h1 className="Sidebar__title">
-						<span className="Sidebar__brandIcon"><Icon name="dice" size={20} /></span>
+						<button
+							type="button"
+							className="Sidebar__brandIcon"
+							aria-label={lang.t("Dice calculator")}
+							onClick={onOpenDiceCalculator}
+						><Icon name="dice" size={20} /></button>
 						{lang.t("Session notebook")}
 					</h1>
-					<p className="Sidebar__description">
-						{lang.t(
-							"Campaigns, sessions, and planning in one local workspace.",
-						)}
-					</p>
-					<div className="Sidebar__historyActions">
+					<div className="Sidebar__historyActions" role="group" aria-label={lang.t("Application history")}>
+						<span className="Sidebar__historyScope">{lang.t("Application history")}</span>
 						<Button
 							variant="ghost"
 							size={Button.SIZES.SMALL}
 							icon="undo"
+							aria-label={`${lang.t("Application history")}: ${applicationHistory.undoLabel}`}
 							disabled={!applicationHistory.canUndo || applicationHistory.isRestoring}
 							onClick={() => void applicationHistory.handleUndo()}
-							title={applicationHistory.undoLabel}
+							title={`${lang.t("Application history")}: ${applicationHistory.undoLabel}`}
 						/>
 						<Button
 							variant="ghost"
 							size={Button.SIZES.SMALL}
 							icon="redo"
+							aria-label={`${lang.t("Application history")}: ${applicationHistory.redoLabel}`}
 							disabled={!applicationHistory.canRedo || applicationHistory.isRestoring}
 							onClick={() => void applicationHistory.handleRedo()}
-							title={applicationHistory.redoLabel}
+							title={`${lang.t("Application history")}: ${applicationHistory.redoLabel}`}
 						/>
 					</div>
 				</div>
 
-				<SidebarLinks
-					onOpenSettings={handleOpenSettings}
-					onOpenGallery={handleOpenGallery}
-					onOpenBestiary={() =>
-						handleOpenRulesReference("bestiary", { forceTab: true })
-					}
-					onOpenSpells={() =>
-						handleOpenRulesReference("spells", { forceTab: true })
-					}
-					onOpenRulesReference={() => handleOpenRulesReference()}
-				/>
 				<SidebarCampaignSection
 					groups={campaignGroups}
 					activeCampaignId={activeCampaignId || ""}
@@ -330,6 +329,16 @@ export default function Sidebar({
 					onReorder={handleCampaignGroupReorder}
 					onDrop={handleCampaignGroupDrop}
 				/>
+				<SidebarLinks
+					onOpenGallery={handleOpenGallery}
+					onOpenBestiary={() =>
+						handleOpenRulesReference("bestiary", { forceTab: true })
+					}
+					onOpenSpells={() =>
+						handleOpenRulesReference("spells", { forceTab: true })
+					}
+					onOpenRulesReference={() => handleOpenRulesReference()}
+				/>
 				<SidebarResources
 					onOpenPlayerQuestions={handleOpenPlayerQuestions}
 				/>
@@ -340,6 +349,14 @@ export default function Sidebar({
 					onExport={() => void handleExport()}
 					onImport={handleOpenImportDb}
 				/>
+				<button
+					type="button"
+					className="Sidebar__link Sidebar__settings"
+					onClick={handleOpenSettings}
+				>
+					<Icon name="settings" size={20} />
+					<span>{lang.t("Settings")}</span>
+				</button>
 			</aside>
 			<ImageGallery
 				isOpen={isGalleryOpen}

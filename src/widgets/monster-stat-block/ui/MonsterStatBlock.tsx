@@ -21,7 +21,6 @@ import {
 	getChangedFieldClass,
 	getMonsterContentArray,
 	getMonsterEntries,
-	getMonsterMutationKey,
 	getMonsterSpellcastingEntries,
 	groupMonsterSpellcastingEntriesByDisplayAs,
 	getMonsterTokenSources,
@@ -225,21 +224,6 @@ export default function MonsterStatBlock({
 		});
 	};
 
-	const handleReplaceToken = async () => {
-		setCustomTokenUrl("");
-		setHasImageError(false);
-		setIsReplacingToken(true);
-		if (onTokenImageChange) {
-			onTokenImageChange(monster, null);
-			return;
-		}
-		try {
-			await bestiaryApi.updateCustomBestiaryMonster(getMonsterMutationKey(monster, effectiveName), { imageUrl: null });
-		} catch (error) {
-			console.error("Failed to clear custom monster token", error);
-		}
-	};
-
 	const tokenSources = getMonsterTokenSources(monster, customTokenUrl, tokenImageOverrideUrl, model.localTokenSrc, model.externalTokenSrc);
 	const showTokenDropzone = shouldShowMonsterTokenDropzone({
 		allowTokenUpload,
@@ -256,7 +240,9 @@ export default function MonsterStatBlock({
 	);
 	const isGridLayout = layoutMode === "grid";
 	const renderSenses = () => {
-		const senses = Array.isArray(monster.senses) ? monster.senses : [monster.senses];
+		const senses = (Array.isArray(monster.senses) ? monster.senses : [monster.senses])
+			.filter((sense) => sense != null && (typeof sense !== "string" || sense.trim()));
+		if (!senses.length) return "—";
 		return senses.map((sense, index) => (
 			<span key={index}>
 				{typeof sense !== "string" || /\{@sense\s/i.test(sense)
@@ -269,11 +255,12 @@ export default function MonsterStatBlock({
 
 	return (
 		<div className={classNames("MonsterStatBlock", { MonsterStatBlock__grid: isGridLayout })}>
-			<div className="MonsterStatBlock__header">
+			<div className={classNames("MonsterStatBlock__header", { is_token_dropzone: showTokenDropzone })}>
 				<MonsterTokenSection
 					monster={monster}
 					sources={tokenSources}
 					showDropzone={showTokenDropzone}
+					isReplacingToken={isReplacingToken}
 					hasImageError={hasImageError}
 					allowTokenUpload={allowTokenUpload}
 					tokenUploadCampaignSlug={tokenUploadCampaignSlug}
@@ -281,7 +268,7 @@ export default function MonsterStatBlock({
 					dragPayload={getTokenDragPayload(tokenSources.externalSrc, String(monster.name ?? ""), effectiveName)}
 					onUpload={(result) => { void handleTokenUpload(result); }}
 					onCancelReplace={() => setIsReplacingToken(false)}
-					onReplace={() => { void handleReplaceToken(); }}
+					onReplace={() => setIsReplacingToken(true)}
 					onImageError={() => setHasImageError(true)}
 				/>
 				<MonsterHeaderDetails

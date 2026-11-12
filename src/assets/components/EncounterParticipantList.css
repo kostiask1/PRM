@@ -19,6 +19,12 @@
 	transition: border-radius .125s ease-in-out;
 }
 
+.EncounterParticipantList__title {
+	margin: 0;
+	color: var(--text);
+	font: 600 1rem/1.5 var(--font-heading);
+}
+
 .EncounterParticipantList .DraggableList > div:hover > .DraggableList__handle:hover {
 	border-radius: var(--radius-xxs);
 }

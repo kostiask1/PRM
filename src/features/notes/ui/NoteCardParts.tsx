@@ -53,6 +53,7 @@ export function NoteCardHeader({
 				/>
 			)}
 			<EditableField
+				aria-label={lang.t("Note title")}
 				data-history-field="title"
 				value={note.title || ""}
 				enableHistory={enableHistory}
@@ -68,6 +69,7 @@ export function NoteCardHeader({
 				<Button
 					variant="danger"
 					icon="trash"
+					aria-label={lang.t("Delete note")}
 					size={Button.SIZES.SMALL}
 					iconSize={14}
 					onClick={(event) => {
@@ -165,6 +167,7 @@ export function NoteCardBody({
 	return (
 		<div className="NoteCard__content">
 			<EditableField
+				aria-label={lang.t("Note text")}
 				data-history-field="text"
 				type="textarea"
 				value={note.text}

@@ -6,4 +6,8 @@
 .CampaignHeaderActions__menu .Button { justify-content: flex-start; }
 .CampaignHeaderActions .Button > span { display: none; }
 .CampaignHeaderActions__menu .Button > span { display: flex; }
+.CampaignHeaderActions__history { display: flex; align-items: center; gap: var(--space-1); }
+.CampaignHeaderActions__historyScope { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+.CampaignHeaderActions .CampaignHeaderActions__history .Button > span, .CampaignHeaderActions .CampaignHeaderActions__archive > span { display: inline; }
+@media (max-width: 1024px) { .CampaignHeaderActions__historyScope, .CampaignHeaderActions .CampaignHeaderActions__history .Button > span, .CampaignHeaderActions__archive { display: none !important; } }
 @media (max-width: 767px) { .CampaignHeaderActions .Button { min-height: 44px; } }

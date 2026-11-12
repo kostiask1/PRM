@@ -949,6 +949,7 @@ function mergeEncounterMonsterFromAi(
 	return {
 		...ensureEncounterMonsterId(next),
 		instanceId,
+		...(current.encounterConditions !== undefined ? { encounterConditions: current.encounterConditions } : {}),
 		...getLocalMonsterIdentity(current, next, options.localOverride),
 		currentHp,
 		hit_points: maxHp,

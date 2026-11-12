@@ -200,11 +200,11 @@ function TooltipEntries({
 		return <TooltipTextContent value={content} RollDice={RollDice} />;
 	}
 	if (Array.isArray(content)) {
-		return content.map((item, index) => (
-			<span key={index}>
+		return <div className="Tooltip__entries">{content.map((item, index) => (
+			<div key={index}>
 				<TooltipEntries content={item} RollDice={RollDice} />
-			</span>
-		));
+			</div>
+		))}</div>;
 	}
 	const record = asTooltipEntryRecord(content);
 	return record ? (
@@ -273,6 +273,7 @@ function RulesLink({
 	children,
 	name,
 	type = "spell",
+	previewOnly = false,
 	RollDice,
 }: RulesLinkInternalProps) {
 	const { navigate, reportError } = useRulesReferenceRuntime();
@@ -342,11 +343,13 @@ function RulesLink({
 	) : null;
 
 	return (
-		<Tooltip content={resolvedContent}>
+		<Tooltip content={resolvedContent} interactive={previewOnly}>
 			<span
-				className={classNames("RulesLink", type && `RulesLink__${type}`)}
-				onClick={handleClick}
+				className={previewOnly ? undefined : classNames("RulesLink", type && `RulesLink__${type}`)}
+				tabIndex={previewOnly ? 0 : undefined}
+				onClick={previewOnly ? undefined : handleClick}
 				onMouseEnter={handleMouseEnter}
+				onFocus={handleMouseEnter}
 			>
 				{children}
 			</span>

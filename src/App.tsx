@@ -65,6 +65,7 @@ import { useCampaignCompletionToggle } from "./app/model/useCampaignCompletionTo
 import { useMobileSidebar } from "./app/model/useMobileSidebar.ts";
 import { useAppRuntimes } from "./app/model/useAppRuntimes.ts";
 import { useAppModifierKey } from "./app/model/useAppModifierKey.ts";
+import { useDicePanelRequest } from "./app/model/useDicePanelRequest.ts";
 
 const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 	EntityLinkContext,
@@ -74,6 +75,7 @@ const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 }) satisfies EditableFieldEntityLinkRuntime;
 
 export default function App() {
+	const { request: dicePanelRequest, openDicePanel } = useDicePanelRequest();
 	const location = useLocation();
 	const routerNavigate = useNavigate();
 	const isCTRLPressed = useAppModifierKey();
@@ -187,6 +189,10 @@ export default function App() {
 							campaigns={campaigns}
 							activeCampaignId={activeCampaignSlug}
 							isMobileOpen={isMobileSidebarOpen}
+							onOpenDiceCalculator={() => {
+								setMobileSidebarOpen(false);
+								openDicePanel();
+							}}
 							onClose={() => setMobileSidebarOpen(false)}
 							onSelectCampaign={(slug) => {
 								setMobileSidebarOpen(false);
@@ -218,7 +224,7 @@ export default function App() {
 							/>
 						)}
 						<MessageBoxHost />
-						<DiceCalculatorHost />
+						<DiceCalculatorHost openRequest={dicePanelRequest} />
 						<MentionPickerModalHost />
 						<RulesReferenceModalHost
 							BestiaryBrowser={EncounterBestiary}

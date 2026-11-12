@@ -5,7 +5,7 @@
 }
 
 .AiAssistantPanel__response_overlay {
-	z-index: 1100;
+	z-index: 1400;
 }
 
 .AiAssistantPanel__response_overlay_wide .Modal__card {
@@ -34,7 +34,7 @@
 	background: var(--bg-2);
 	border: 1px solid var(--border);
 	color: var(--accent);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 4px 15px color-mix(in srgb, var(--shadow-ink), transparent 70%);
 	transition: all 0.2s ease;
 }
 
@@ -66,6 +66,55 @@
 	margin-bottom: var(--space-4);
 }
 
+.AiAssistantPanel__workspace {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	margin-bottom: var(--space-3);
+	padding: var(--space-4);
+	border-radius: var(--radius-sm);
+	background: var(--accent-soft);
+	color: var(--text);
+}
+
+.AiAssistantPanel__workspace_identity {
+	display: grid;
+	flex: 1;
+	min-width: 0;
+	gap: var(--space-1);
+}
+
+.AiAssistantPanel__workspace_identity strong {
+	overflow-wrap: anywhere;
+	font: 600 20px/28px var(--font-heading);
+}
+
+.AiAssistantPanel__workspace_identity > span,
+.AiAssistantPanel__workspace_summary,
+.AiAssistantPanel__image_prompt_explanation {
+	min-width: 0;
+	overflow-wrap: anywhere;
+	color: var(--muted);
+	font-size: 0.8rem;
+}
+
+.AiAssistantPanel__workspace_identity .AiAssistantPanel__workspace_label {
+	color: var(--accent);
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.AiAssistantPanel__workspace_summary {
+	display: grid;
+	gap: var(--space-1);
+	text-align: right;
+}
+
+@media (max-width: 767px) {
+	.AiAssistantPanel__workspace { flex-wrap: wrap; }
+	.AiAssistantPanel__workspace_summary { width: 100%; text-align: left; }
+}
+
 .AiAssistantPanel__modelPicker {
 	display: grid;
 	gap: var(--space-1);
@@ -95,7 +144,7 @@
 	gap: var(--space-1);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
-	padding-left: 10px;
+	padding-left: var(--space-2-5);
 	background: var(--panel-2);
 	transition: all 0.2s ease;
 	height: 38px;
@@ -171,7 +220,7 @@
 	border-radius: var(--radius-md);
 	padding: var(--space-4);
 	margin-top: var(--space-4);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 4px 12px color-mix(in srgb, var(--shadow-ink), transparent 80%);
 }
 
 .AiAssistantPanel__text_preview {
@@ -257,7 +306,7 @@
 
 .AiAssistantPanel__response_history_title {
 	display: grid;
-	gap: 2px;
+	gap: var(--space-0-5);
 }
 
 .AiAssistantPanel__response_history_title span {
@@ -268,7 +317,7 @@
 .AiAssistantPanel__response_history_list {
 	max-height: 340px;
 	overflow-y: auto;
-	padding-right: 2px;
+	padding-right: var(--space-0-5);
 }
 
 .AiAssistantPanel__history_card .ListCard__main {
@@ -286,7 +335,7 @@
 .AiAssistantPanel__history_meta {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-0-5);
 }
 
 .AiAssistantPanel__prompt_textarea_result {
@@ -350,7 +399,7 @@
 	display: grid;
 	grid-template-columns: minmax(110px, 0.28fr) 1fr;
 	gap: var(--space-2);
-	padding: 6px 0;
+	padding: var(--space-1-5) 0;
 	border-top: 1px solid color-mix(in srgb, var(--accent), transparent 80%);
 }
 
@@ -392,15 +441,6 @@
 	color: var(--muted);
 	font-weight: 600;
 	text-transform: none;
-}
-
-.AiAssistantPanel__diff_hint {
-	padding: var(--space-2) var(--space-3);
-	border-bottom: 1px solid var(--border);
-	background: color-mix(in srgb, var(--accent), transparent 92%);
-	color: var(--muted);
-	font-size: 0.82rem;
-	line-height: 1.4;
 }
 
 .AiAssistantPanel__diff_view_switch {
@@ -462,7 +502,7 @@
 }
 
 .AiAssistantPanel__preview_resource_state {
-	padding: 3px 8px;
+	padding: var(--space-0-75) var(--space-2);
 	border-radius: var(--radius-sm);
 	font-size: 0.75rem;
 	font-weight: 700;
@@ -505,6 +545,47 @@
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: var(--space-3);
+}
+
+.AiAssistantPanel__response_destination {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1) var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--panel-soft);
+	font-size: 0.8rem;
+	overflow-wrap: anywhere;
+}
+
+.AiAssistantPanel__response_destination strong { color: var(--muted); }
+
+.AiAssistantPanel__field_comparisons {
+	border-bottom: 1px solid var(--border);
+}
+
+.AiAssistantPanel__preview_field pre.AiAssistantPanel__compared_value {
+	min-height: var(--control-h);
+	background: var(--panel-soft);
+	border-color: var(--border);
+}
+
+.AiAssistantPanel__compared_change {
+	font-weight: 700;
+	border-radius: var(--radius-xxs);
+	box-decoration-break: clone;
+}
+
+.AiAssistantPanel__compared_change.is_removed {
+	background: var(--diff-removed-surface);
+	color: var(--diff-removed-text);
+	text-decoration: line-through;
+}
+
+.AiAssistantPanel__compared_change.is_added {
+	background: var(--diff-added-surface);
+	color: var(--diff-added-text);
 }
 
 .AiAssistantPanel__preview_card_columns {
@@ -579,7 +660,7 @@
 
 .AiAssistantPanel__encounter_item {
 	display: grid;
-	gap: 2px;
+	gap: var(--space-0-5);
 	padding: var(--space-2);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
 	border-radius: var(--radius-sm);
@@ -587,13 +668,13 @@
 }
 
 .AiAssistantPanel__encounter_item.is_added {
-	border-color: color-mix(in srgb, #2da44e, transparent 55%);
-	background: color-mix(in srgb, #2da44e, transparent 92%);
+	border-color: color-mix(in srgb, var(--diff-added-text), transparent 55%);
+	background: color-mix(in srgb, var(--diff-added-text), transparent 92%);
 }
 
 .AiAssistantPanel__encounter_item.is_removed {
-	border-color: color-mix(in srgb, #d1242f, transparent 55%);
-	background: color-mix(in srgb, #d1242f, transparent 92%);
+	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 55%);
+	background: color-mix(in srgb, var(--diff-removed-text), transparent 92%);
 }
 
 .AiAssistantPanel__encounter_item.is_modified {
@@ -627,16 +708,16 @@
 .AiAssistantPanel__preview_note_surface.is_added,
 .AiAssistantPanel__preview_resource_cards.is_added .AiAssistantPanel__preview_card_surface,
 .AiAssistantPanel__preview_resource_notes.is_added .AiAssistantPanel__preview_note_surface {
-	border-color: color-mix(in srgb, #2da44e, transparent 55%);
-	background: color-mix(in srgb, #2da44e, transparent 92%);
+	border-color: color-mix(in srgb, var(--diff-added-text), transparent 55%);
+	background: color-mix(in srgb, var(--diff-added-text), transparent 92%);
 }
 
 .AiAssistantPanel__preview_card_surface.is_removed,
 .AiAssistantPanel__preview_note_surface.is_removed,
 .AiAssistantPanel__preview_resource_cards.is_removed .AiAssistantPanel__preview_card_surface,
 .AiAssistantPanel__preview_resource_notes.is_removed .AiAssistantPanel__preview_note_surface {
-	border-color: color-mix(in srgb, #d1242f, transparent 55%);
-	background: color-mix(in srgb, #d1242f, transparent 92%);
+	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 55%);
+	background: color-mix(in srgb, var(--diff-removed-text), transparent 92%);
 }
 
 .AiAssistantPanel__preview_card_surface .CharacterCard,
@@ -657,7 +738,6 @@
 .AiAssistantPanel__preview_note_surface .EditableField.is_ai_changed_field {
 	border-color: color-mix(in srgb, var(--accent), transparent 35%);
 	background: color-mix(in srgb, var(--accent), transparent 88%);
-	/* box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent), transparent 55%); */
 }
 
 .AiAssistantPanel__preview_card_surface .MonsterStatBlock .is_ai_changed_field {
@@ -670,32 +750,30 @@
 
 .AiAssistantPanel__preview_card_surface.is_before .EditableField.is_ai_changed_field,
 .AiAssistantPanel__preview_note_surface.is_before .EditableField.is_ai_changed_field {
-	border-color: color-mix(in srgb, #d1242f, transparent 45%);
-	background: color-mix(in srgb, #d1242f, transparent 90%);
-	/* box-shadow: 0 0 0 1px color-mix(in srgb, #d1242f, transparent 62%); */
+	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 45%);
+	background: color-mix(in srgb, var(--diff-removed-text), transparent 90%);
 }
 
 .AiAssistantPanel__preview_card_surface.is_before .MonsterStatBlock .is_ai_changed_field {
-	border-color: color-mix(in srgb, #d1242f, transparent 45%);
-	background: color-mix(in srgb, #d1242f, transparent 90%);
-	box-shadow: 0 0 0 1px color-mix(in srgb, #d1242f, transparent 62%);
+	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 45%);
+	background: color-mix(in srgb, var(--diff-removed-text), transparent 90%);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--diff-removed-text), transparent 62%);
 }
 
 .AiAssistantPanel__preview_card_surface.is_after .EditableField.is_ai_changed_field,
 .AiAssistantPanel__preview_note_surface.is_after .EditableField.is_ai_changed_field {
-	border-color: color-mix(in srgb, #2da44e, transparent 45%);
-	background: color-mix(in srgb, #2da44e, transparent 90%);
-	/* box-shadow: 0 0 0 1px color-mix(in srgb, #2da44e, transparent 62%); */
+	border-color: color-mix(in srgb, var(--diff-added-text), transparent 45%);
+	background: color-mix(in srgb, var(--diff-added-text), transparent 90%);
 }
 
 .AiAssistantPanel__preview_card_surface.is_after .MonsterStatBlock .is_ai_changed_field {
-	border-color: color-mix(in srgb, #2da44e, transparent 45%);
-	background: color-mix(in srgb, #2da44e, transparent 90%);
-	box-shadow: 0 0 0 1px color-mix(in srgb, #2da44e, transparent 62%);
+	border-color: color-mix(in srgb, var(--diff-added-text), transparent 45%);
+	background: color-mix(in srgb, var(--diff-added-text), transparent 90%);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--diff-added-text), transparent 62%);
 }
 
 .MonsterStatBlock .is_ai_changed_field {
-	padding: 8px !important;
+	padding: var(--space-2) !important;
 }
 
 .AiAssistantPanel__preview_card_surface .EditableField.is_ai_changed_field textarea,
@@ -732,20 +810,6 @@
 	white-space: pre-wrap;
 	word-break: break-word;
 	overflow: auto;
-}
-
-.AiAssistantPanel__preview_field pre.is_added,
-.AiAssistantPanel__preview_resource.is_added .AiAssistantPanel__preview_field pre {
-	border-color: color-mix(in srgb, #2da44e, transparent 55%);
-	background: color-mix(in srgb, #2da44e, transparent 90%);
-	color: var(--text-bright);
-}
-
-.AiAssistantPanel__preview_field pre.is_removed,
-.AiAssistantPanel__preview_resource.is_removed .AiAssistantPanel__preview_field pre {
-	border-color: color-mix(in srgb, #d1242f, transparent 55%);
-	background: color-mix(in srgb, #d1242f, transparent 90%);
-	color: var(--text-bright);
 }
 
 .AiAssistantPanel__diff_file+.AiAssistantPanel__diff_file {
@@ -790,7 +854,7 @@
 }
 
 .AiAssistantPanel__diff_field_summary code {
-	padding: 2px 6px;
+	padding: var(--space-0-5) var(--space-1-5);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
 	background: var(--bg);
@@ -818,7 +882,7 @@
 	user-select: none;
 	color: var(--muted);
 	text-align: right;
-	padding: 1px 8px;
+	padding: var(--space-0-25) var(--space-2);
 	border-right: 1px solid color-mix(in srgb, var(--border), transparent 35%);
 }
 
@@ -832,7 +896,7 @@
 	display: block;
 	min-width: 0;
 	white-space: pre;
-	padding: 1px 10px;
+	padding: var(--space-0-25) var(--space-2-5);
 	background: transparent;
 	border: 0;
 	border-radius: 0;
@@ -840,22 +904,22 @@
 }
 
 .AiAssistantPanel__diff_line.is_added {
-	background: color-mix(in srgb, #2da44e, transparent 84%);
+	background: color-mix(in srgb, var(--diff-added-text), transparent 84%);
 	color: var(--text-bright);
 }
 
 .AiAssistantPanel__diff_line.is_added .AiAssistantPanel__diff_line_marker {
-	color: #2da44e;
+	color: var(--diff-added-text);
 	font-weight: 700;
 }
 
 .AiAssistantPanel__diff_line.is_removed {
-	background: color-mix(in srgb, #d1242f, transparent 84%);
+	background: color-mix(in srgb, var(--diff-removed-text), transparent 84%);
 	color: var(--text-bright);
 }
 
 .AiAssistantPanel__diff_line.is_removed .AiAssistantPanel__diff_line_marker {
-	color: #d1242f;
+	color: var(--diff-removed-text);
 	font-weight: 700;
 }
 
@@ -873,9 +937,9 @@
 .AiAssistantPanel__draft_error {
 	margin: 0 var(--space-3) var(--space-3);
 	padding: var(--space-2);
-	border: 1px solid color-mix(in srgb, #d1242f, transparent 45%);
+	border: 1px solid color-mix(in srgb, var(--diff-removed-text), transparent 45%);
 	border-radius: var(--radius-sm);
-	background: color-mix(in srgb, #d1242f, transparent 88%);
+	background: color-mix(in srgb, var(--diff-removed-text), transparent 88%);
 	color: var(--text-bright);
 }
 
@@ -1229,7 +1293,7 @@
 
 .AiAssistantPanel__image_prompt_columns {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 	gap: var(--space-4);
 }
 
@@ -1241,7 +1305,7 @@
 	padding: var(--space-3);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
-	background: var(--surface-2);
+	background: var(--panel-soft);
 }
 
 .AiAssistantPanel__image_prompt_context_choice div {
@@ -1474,6 +1538,11 @@
 	.AiAssistantPanel__preview_resource_actions,
 	.AiAssistantPanel__diff_view_switch {
 		flex-wrap: wrap;
+	}
+
+	.AiAssistantPanel__diff_view_switch .Button {
+		width: auto;
+		flex: 1 1 0;
 	}
 
 	.AiAssistantPanel__diff_lines,

@@ -22,6 +22,7 @@ export interface CreateLocationButtonProps {
 	buttonClassName?: string;
 	icon?: IconName;
 	onCreate?: ((payload: CampaignEntityRecord) => void | Promise<void>) | null;
+	onCreated?: (entity: CampaignEntityRecord) => void;
 }
 
 export default function CreateLocationButton({
@@ -32,6 +33,7 @@ export default function CreateLocationButton({
 	buttonClassName,
 	icon = "plus",
 	onCreate = null,
+	onCreated,
 }: CreateLocationButtonProps) {
 	const { notifyError, refreshEntities } = useCampaignEntityCreationRuntime();
 	const [isOpen, setIsOpen] = useState(false);
@@ -53,6 +55,7 @@ export default function CreateLocationButton({
 				entityType: "locations",
 				payload,
 				onCreate: onCreate ?? undefined,
+				onCreated,
 				onRefreshEntities: refreshEntities,
 			});
 			setIsOpen(false);

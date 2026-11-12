@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sessionApi } from "../../../entities/session/index.js";
 import type { SessionRecord } from "../../../entities/session/index.js";
 import type { SessionEditorSession } from "./sessionMutations.ts";
+import { createSessionSaveTracker } from "./sessionSaveTracker.ts";
 import {
 	executeSessionSave,
 	normalizeSessionSavePolicy,
@@ -32,6 +33,7 @@ export interface SessionPersistence {
 		options?: SessionSaveOptions,
 	) => Promise<SessionRecord | null>;
 	hasPendingSave: () => boolean;
+	waitForActiveSave: () => Promise<SessionRecord | null>;
 	isSaving: boolean;
 	scheduleSave: ScheduleSessionSave;
 }
@@ -46,6 +48,9 @@ export function useSessionPersistence({
 	const [isSaving, setIsSaving] = useState(false);
 	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const pendingSessionRef = useRef<SessionEditorSession | null>(null);
+	const saveTrackerRef = useRef<ReturnType<typeof createSessionSaveTracker> | null>(null);
+	if (!saveTrackerRef.current) saveTrackerRef.current = createSessionSaveTracker();
+	const saveTracker = saveTrackerRef.current;
 
 	const clearTimer = useCallback(() => {
 		if (!saveTimeoutRef.current) return;
@@ -67,18 +72,25 @@ export function useSessionPersistence({
 			if (!session) return null;
 			clearTimer();
 			pendingSessionRef.current = null;
-			return executeSessionSave({
+			const saveScope = `${campaignSlug}\0${sessionId}`;
+			const previousSave = saveTracker.last(saveScope);
+			const activeSave = (async () => {
+				const previousSaved = previousSave ? await previousSave.catch(() => null) : null;
+				return executeSessionSave({
 				campaignSlug,
-				sessionId,
+				sessionId: previousSaved?.fileName || sessionId,
 				session,
 				policy: normalizeSessionSavePolicy(options),
 				updateSession: sessionApi.updateSession,
 				setSaving: setIsSaving,
 				onSessionRenamed,
 				onSaveError,
-			});
+				});
+			})();
+			saveTracker.track(activeSave, saveScope);
+			return activeSave;
 		},
-		[campaignSlug, clearTimer, onSaveError, onSessionRenamed, sessionId],
+		[campaignSlug, clearTimer, onSaveError, onSessionRenamed, saveTracker, sessionId],
 	);
 
 	const flushPendingSave = useCallback(
@@ -114,6 +126,7 @@ export function useSessionPersistence({
 		() => Boolean(saveTimeoutRef.current || pendingSessionRef.current),
 		[],
 	);
+	const waitForActiveSave = useCallback(() => saveTracker.wait(`${campaignSlug}\0${sessionId}`), [campaignSlug, saveTracker, sessionId]);
 
 	useEffect(
 		() => () => {
@@ -126,6 +139,7 @@ export function useSessionPersistence({
 		discardPendingSave,
 		flushPendingSave,
 		hasPendingSave,
+		waitForActiveSave,
 		isSaving,
 		scheduleSave,
 	};

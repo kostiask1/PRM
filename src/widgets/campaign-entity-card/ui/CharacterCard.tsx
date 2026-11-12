@@ -56,15 +56,15 @@ function CharacterIdentityFields({ character, model, enableHistory, highlightFie
 	return (
 		<div className="CharacterCard__infoSide">
 			<div className="CharacterCard__grid">
-				<EditableField data-history-field="firstName" type="text" value={character.firstName} enableHistory={enableHistory} onChange={(event) => updateField("firstName", event.target.value)} onBlur={onNameBlur} placeholder={lang.t("First name")} className={fieldClass("firstName")} />
-				<EditableField data-history-field="lastName" type="text" value={character.lastName} enableHistory={enableHistory} onChange={(event) => updateField("lastName", event.target.value)} onBlur={onNameBlur} placeholder={lang.t("Last name")} className={fieldClass("lastName")} />
+				<div className="CharacterCard__identityField"><span>{lang.t("First name")}</span><EditableField aria-label={lang.t("First name")} data-history-field="firstName" type="text" value={character.firstName} enableHistory={enableHistory} onChange={(event) => updateField("firstName", event.target.value)} onBlur={onNameBlur} placeholder={lang.t("First name")} className={fieldClass("firstName")} /></div>
+				<div className="CharacterCard__identityField"><span>{lang.t("Last name")}</span><EditableField aria-label={lang.t("Last name")} data-history-field="lastName" type="text" value={character.lastName} enableHistory={enableHistory} onChange={(event) => updateField("lastName", event.target.value)} onBlur={onNameBlur} placeholder={lang.t("Last name")} className={fieldClass("lastName")} /></div>
 				<div className="CharacterCard__rowTrio">
-					<EditableField data-history-field="race" type="text" value={character.race} enableHistory={enableHistory} onChange={(event) => updateField("race", event.target.value)} placeholder={lang.t("Race")} className={fieldClass("race")} />
-					<EditableField data-history-field="class" type="text" value={character.class} enableHistory={enableHistory} onChange={(event) => updateField("class", event.target.value)} placeholder={lang.t("Class")} className={fieldClass("class")} />
-					<Select value={model.level} onChange={(event) => updateField("level", event.target.value)}>
+					<div className="CharacterCard__identityField"><span>{lang.t("Race")}</span><EditableField aria-label={lang.t("Race")} data-history-field="race" type="text" value={character.race} enableHistory={enableHistory} onChange={(event) => updateField("race", event.target.value)} placeholder={lang.t("Race")} className={fieldClass("race")} /></div>
+					<div className="CharacterCard__identityField"><span>{lang.t("Class")}</span><EditableField aria-label={lang.t("Class")} data-history-field="class" type="text" value={character.class} enableHistory={enableHistory} onChange={(event) => updateField("class", event.target.value)} placeholder={lang.t("Class")} className={fieldClass("class")} /></div>
+					<div className="CharacterCard__identityField"><span>{lang.t("Level")}</span><Select aria-label={lang.t("Level")} value={model.level} onChange={(event) => updateField("level", event.target.value)}>
 						<option value="">--</option>
 						{CharacterCardModel.getLevelOptions().map((level) => <option key={level} value={level}>{lang.t("Level {level}", { level })}</option>)}
-					</Select>
+					</Select></div>
 				</div>
 			</div>
 		</div>
@@ -76,10 +76,10 @@ function CharacterDetails({ character, model, enableHistory, highlightFields, up
 	return (
 		<>
 			<div className="CharacterCard__details">
-				<div className="CharacterCard__field"><label>{lang.t("Motivation")}</label><EditableField data-history-field="motivation" type="textarea" value={character.motivation} enableHistory={enableHistory} onChange={(event) => updateField("motivation", event.target.value)} placeholder={lang.t("What does the character want...")} className={fieldClass("motivation")} /></div>
-				<div className="CharacterCard__field"><label>{lang.t("Trait")}</label><EditableField data-history-field="trait" type="textarea" value={model.trait} enableHistory={enableHistory} onChange={(event) => updateField("trait", event.target.value)} placeholder={lang.t("Distinctive trait or habit...")} className={fieldClass("trait")} /></div>
+				<div className="CharacterCard__field"><label>{lang.t("Motivation")}</label><EditableField aria-label={lang.t("Motivation")} data-history-field="motivation" type="textarea" value={character.motivation} enableHistory={enableHistory} onChange={(event) => updateField("motivation", event.target.value)} placeholder={lang.t("What does the character want...")} className={fieldClass("motivation")} /></div>
+				<div className="CharacterCard__field"><label>{lang.t("Trait")}</label><EditableField aria-label={lang.t("Trait")} data-history-field="trait" type="textarea" value={model.trait} enableHistory={enableHistory} onChange={(event) => updateField("trait", event.target.value)} placeholder={lang.t("Distinctive trait or habit...")} className={fieldClass("trait")} /></div>
 			</div>
-			<div className="CharacterCard__field"><label>{lang.t("Description")}</label><EditableField data-history-field="description" type="textarea" value={model.description} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Character description...")} className={fieldClass("description")} /></div>
+			<div className="CharacterCard__field"><label>{lang.t("Description")}</label><EditableField aria-label={lang.t("Description")} data-history-field="description" type="textarea" value={model.description} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Character description...")} className={fieldClass("description")} /></div>
 		</>
 	);
 }
@@ -94,7 +94,7 @@ function CharacterCardHeader({ character, model, viewMode, canCollapseCard, isCo
 				{isCollapsed && <span className="CharacterCard__metaBrief">{renderMentionText(model.briefMeta)}</span>}
 			</div>
 			{headerActions && <div className="CharacterCard__actions" onClick={(event) => event.stopPropagation()}>{headerActions}</div>}
-			{showDeleteButton && <Button variant="danger" icon="trash" size={Button.SIZES.SMALL} iconSize={14} onClick={(event) => { event.stopPropagation(); onDelete?.(character.id); }} />}
+			{showDeleteButton && <Button aria-label={lang.t("Delete")} variant="danger" icon="trash" size={Button.SIZES.SMALL} iconSize={14} onClick={(event) => { event.stopPropagation(); onDelete?.(character.id); }} />}
 		</div>
 	);
 }
@@ -134,11 +134,11 @@ export default function CharacterCard({
 		<div data-history-focus-id={makeHistoryTargetId(historyScope, historyKind, character.id)} className={classNames("CharacterCard", { is_collapsed: presentation.isCollapsed, CharacterCard__modal: viewMode === "modal" })} onClick={!presentation.canCollapseCard ? undefined : () => presentation.isCollapsed && onToggleCollapse?.(character.id)}>
 			{showHeader && <CharacterCardHeader character={character} model={model} viewMode={viewMode} canCollapseCard={presentation.canCollapseCard} isCollapsed={presentation.isCollapsed} showDeleteButton={showDeleteButton} headerActions={headerActions} onToggleCollapse={onToggleCollapse} onDelete={onDelete} />}
 			{!presentation.isCollapsed && (
-				<div className="CharacterCard__body">
+				<div className={classNames("CharacterCard__body", { has_no_image: !character.imageUrl })}>
 					<div className="CharacterCard__imageSide"><ImageAssetField imageUrl={character.imageUrl} campaignSlug={campaignSlug} target={type === "npc" ? "npc" : "character"} showClearButton onImageChange={(url) => updateField("imageUrl", url)} imageAlt={lang.t("Portrait")} containerClassName="CharacterCard__portraitContainer" wrapperClassName={classNames("CharacterCard__portraitWrapper", "is_editable")} deleteButtonClassName="CharacterCard__imageDelete" previewTitle={model.fullName || lang.t("Portrait")} previewModalClassName="CharacterCard__imageModal" previewContentClassName="CharacterCard__imageModalContent" /></div>
 					<CharacterIdentityFields {...sectionProps} />
 					<CharacterDetails {...sectionProps} />
-					<CampaignEntityCardNotes classPrefix="CharacterCard" historyScope={historyScope} historyKind={historyKind} entityId={character.id} model={model} notesForRender={notesForRender} hasNotesData={presentation.hasNotesData} isNotesCollapsed={presentation.isNotesCollapsed} currentNotesCollapsed={Boolean(character.isNotesCollapsed)} campaignSlug={campaignSlug} enableHistory={enableHistory} label={lang.t("Character notes")} highlightFields={highlightFields} onChange={onChange} onReorderDrop={onReorderDrop} />
+					<CampaignEntityCardNotes classPrefix="CharacterCard" historyScope={historyScope} historyKind={historyKind} entityId={character.id} model={model} notesForRender={notesForRender} campaignSlug={campaignSlug} enableHistory={enableHistory} label={lang.t("Character notes")} highlightFields={highlightFields} onChange={onChange} onReorderDrop={onReorderDrop} />
 				</div>
 			)}
 		</div>

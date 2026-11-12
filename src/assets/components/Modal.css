@@ -6,7 +6,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	z-index: 1000;
+	z-index: 1300;
 	padding: var(--space-4);
 }
 
@@ -113,11 +113,15 @@
 
 	.Modal__card,
 	.Modal__card__custom,
-	.Modal__card__character,
+	.Modal__card__character {
+		width: 100%;
+		min-width: 0;
+		max-height: 100dvh;
+		border-radius: 0;
+	}
 
 	.Modal__header {
-		padding: 0 var(--space-3);
-		padding-left: calc(var(--size-8) + var(--space-5) + env(safe-area-inset-left));
+		padding: var(--space-2) var(--space-3);
 		gap: var(--space-3);
 	}
 

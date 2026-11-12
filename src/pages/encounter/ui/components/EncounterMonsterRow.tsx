@@ -1,6 +1,6 @@
 import { classNames, lang, makeDomId } from "../../../../shared/lib/index.js";
 import "../../../../assets/components/EncounterMonsterRow.css";
-import { Button, Tooltip } from "../../../../shared/ui/index.js";
+import { Button, Icon, Tooltip } from "../../../../shared/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
 import {
 	getEncounterCharacterDisplayName,
@@ -13,6 +13,8 @@ import type {
 	EncounterViewParticipant,
 } from "../../model/contracts.ts";
 import { makeHistoryTargetId } from "../../../../entities/history/index.js";
+import { MonsterStatBlockModel } from "../../../../entities/bestiary/index.js";
+import EncounterConditions from "./EncounterConditions.tsx";
 
 type EncounterMonsterRowView = Pick<
 	EncounterViewModel,
@@ -21,7 +23,10 @@ type EncounterMonsterRowView = Pick<
 	| "rollMonsterHp"
 	| "duplicateMonster"
 	| "removeMonster"
+	| "getMonsterImageOverride"
+	| "updateMonsterConditions"
 >;
+
 
 interface EncounterMonsterRowProps {
 	monster: EncounterViewParticipant;
@@ -32,6 +37,7 @@ interface EncounterMonsterRowProps {
 	onSelect: (monster: EncounterViewParticipant) => void;
 	onHpChange: (instanceId: string, value: string) => void;
 	onHpBlur: (monster: EncounterViewParticipant) => void;
+	onOpenConditionPicker: (instanceId: string) => void;
 	getParticipantInstanceId: (participant: EncounterViewParticipant) => string;
 }
 
@@ -56,7 +62,7 @@ function EncounterMonsterCombatStats({
 			<div className="EncounterMonsterRow__hp">
 				<EncounterCurrentHpInput {...{ monster, instanceId, hpDrafts, view, onHpChange, onHpBlur }} maxHp={rowStats.maxHp} />
 				<span className="muted">/</span>
-				<EncounterMaxHpInput {...{ instanceId, view }} maxHp={rowStats.maxHp} />
+				<EncounterMaxHpInput {...{ instanceId, view }} name={String(monster.name || "")} maxHp={rowStats.maxHp} />
 			</div>
 			<div className="EncounterMonsterRow__ac">{lang.t("AC")} {rowStats.ac}</div>
 		</>
@@ -67,6 +73,7 @@ function EncounterCurrentHpInput({ monster, instanceId, hpDrafts, view, onHpChan
 	return (
 		<input
 			data-history-field="currentHp"
+			aria-label={lang.t("Current HP: {name}", { name: String(monster.name || "") })}
 			type="text"
 			value={getEncounterHpInputDisplay(hpDrafts[instanceId], monster.currentHp)}
 			onChange={(event) => onHpChange(instanceId, event.target.value)}
@@ -80,10 +87,10 @@ function EncounterCurrentHpInput({ monster, instanceId, hpDrafts, view, onHpChan
 	);
 }
 
-function EncounterMaxHpInput({ instanceId, view, maxHp }: { instanceId: string; view: EncounterMonsterRowView; maxHp: string | number }) {
+function EncounterMaxHpInput({ instanceId, view, maxHp, name }: { instanceId: string; view: EncounterMonsterRowView; maxHp: string | number; name: string }) {
 	return (
 		<Tooltip content={lang.t("Max HP")}>
-			<input data-history-field="hit_points" type="number" value={maxHp} onChange={(event) => view.updateMonsterMaxHp(instanceId, event.target.value)} onClick={(event) => event.stopPropagation()} className="EncounterMonsterRow__maxHpInput" />
+			<input aria-label={lang.t("Max HP: {name}", { name })} data-history-field="hit_points" type="number" value={maxHp} onChange={(event) => view.updateMonsterMaxHp(instanceId, event.target.value)} onClick={(event) => event.stopPropagation()} className="EncounterMonsterRow__maxHpInput" />
 		</Tooltip>
 	);
 }
@@ -114,6 +121,7 @@ function EncounterMonsterRowActions({
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon="dice"
+					aria-label={lang.t("Roll HP by formula")}
 					className="EncounterMonsterRow__action"
 					onClick={(event) => {
 						event.stopPropagation();
@@ -127,6 +135,7 @@ function EncounterMonsterRowActions({
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon="plus"
+					aria-label={lang.t("Duplicate")}
 					className="EncounterMonsterRow__action"
 					onClick={(event) => {
 						event.stopPropagation();
@@ -139,6 +148,7 @@ function EncounterMonsterRowActions({
 				variant="danger"
 				size={Button.SIZES.SMALL}
 				icon="x"
+				aria-label={lang.t("Delete")}
 				className="EncounterMonsterRow__action"
 				onClick={(event) => {
 					event.stopPropagation();
@@ -159,6 +169,7 @@ export default function EncounterMonsterRow({
 	onSelect,
 	onHpChange,
 	onHpBlur,
+	onOpenConditionPicker,
 	getParticipantInstanceId,
 }: EncounterMonsterRowProps) {
 	const instanceId = getParticipantInstanceId(monster);
@@ -166,6 +177,14 @@ export default function EncounterMonsterRow({
 	const displayName = isCharacter
 		? getEncounterCharacterDisplayName(monster)
 		: String(monster.name);
+	const tokenModel = new MonsterStatBlockModel({
+		name: monster.name,
+		originalBestiaryName: monster.originalBestiaryName || undefined,
+		source: monster.source || undefined,
+	});
+	const imageUrl = typeof monster.imageUrl === "string" ? monster.imageUrl : "";
+	const tokenSrc = imageUrl || view.getMonsterImageOverride(monster) ||
+		(isCharacter ? "" : tokenModel.localTokenSrc);
 
 	return (
 		<div
@@ -183,8 +202,13 @@ export default function EncounterMonsterRow({
 			onClick={() => onSelect(monster)}
 		>
 			<div className="EncounterMonsterRow__content">
-				<div className="EncounterMonsterRow__name">
-					{renderMentionText(displayName)}
+				<div className="EncounterMonsterRow__identity">
+					{tokenSrc && <img key={tokenSrc} className="EncounterMonsterRow__token" src={tokenSrc} alt="" loading="lazy" draggable={false} onLoad={(event) => { event.currentTarget.hidden = false; }} onError={(event) => {
+						if (tokenSrc === tokenModel.localTokenSrc && event.currentTarget.src !== tokenModel.externalTokenSrc) event.currentTarget.src = tokenModel.externalTokenSrc;
+						else event.currentTarget.hidden = true;
+					}} />}
+					<span className={classNames("EncounterMonsterRow__tokenFallback", { is_empty: !tokenSrc })} aria-hidden="true"><Icon name={isCharacter ? "user" : "skull"} size={16} /></span>
+					<div className="EncounterMonsterRow__name">{renderMentionText(displayName)}</div>
 				</div>
 				<div className="EncounterMonsterRow__stats">
 					{isCharacter ? (
@@ -206,6 +230,7 @@ export default function EncounterMonsterRow({
 						view={view}
 					/>
 				</div>
+				<EncounterConditions monster={monster} instanceId={instanceId} view={view} onAdd={onOpenConditionPicker} />
 			</div>
 		</div>
 	);

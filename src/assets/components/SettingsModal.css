@@ -1,7 +1,41 @@
 .SettingsModal {
 	display: flex;
-	/* flex-direction: column; */
+	flex-direction: column;
 	gap: var(--space-4);
+}
+
+.SettingsModal__layout {
+	display: grid;
+	grid-template-columns: 184px minmax(0, 1fr);
+	align-items: start;
+	gap: var(--space-6);
+}
+
+.SettingsModal__navigation {
+	display: grid;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border-radius: var(--radius-sm);
+	background: var(--panel-soft);
+}
+
+.SettingsModal__navigation .Button {
+	width: 100%;
+}
+
+.SettingsModal__content {
+	min-width: 0;
+}
+
+.SettingsModal__footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: var(--space-3);
+	padding-top: var(--space-3);
+	border-top: 1px solid var(--border);
+	color: var(--muted);
+	font-size: 0.8rem;
 }
 
 .SettingsModal__modal {
@@ -15,8 +49,7 @@
 }
 
 .SettingsModal__section {
-	padding-top: var(--space-3);
-	border-top: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+	min-width: 0;
 }
 
 .SettingsModal__subsection {
@@ -59,7 +92,7 @@
 .SettingsModal__themeInfo {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-0-5);
 }
 
 .SettingsModal__lang {
@@ -80,12 +113,12 @@
 }
 
 .SettingsModal__scope {
-	width: min(100%, 420px);
+	width: 100%;
 }
 
 .SettingsModal__promptGrid {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: minmax(0, 1fr);
 	gap: var(--space-4);
 }
 
@@ -116,13 +149,10 @@
 	flex: 0 0 auto;
 }
 
-@media (max-width: 1024px) {
-	.SettingsModal {
-		flex-direction: column;
-	}
-}
-
 @media (max-width: 767px) {
+	.SettingsModal__layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+	.SettingsModal__navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.SettingsModal__navigation .Button { width: 100%; min-width: 0; white-space: normal; }
 	.SettingsModal__modal {
 		width: 100%;
 	}

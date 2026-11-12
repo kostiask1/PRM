@@ -475,6 +475,11 @@ interface GallerySelectionOptions extends GallerySelectionState {
 	type: GalleryItemType;
 }
 
+export function getGalleryImageSelectionKey(image: GalleryImage): string {
+	if (image.source === undefined && image.category === undefined && image.subcategory === undefined) return image.name;
+	return JSON.stringify([image.source ?? "", image.category ?? "", image.subcategory ?? "", image.name]);
+}
+
 function isGallerySelectionItemReadonly(
 	name: string,
 	type: GalleryItemType,
@@ -486,7 +491,7 @@ function isGallerySelectionItemReadonly(
 	return type === "sub"
 		? options.isReadonlySub(name)
 		: options.isReadonlyImage(
-				options.images.find((image) => image.name === name),
+				options.images.find((image) => getGalleryImageSelectionKey(image) === name),
 			);
 }
 
@@ -501,7 +506,7 @@ function getOrderedGallerySelectionItems(
 	return [
 		...options.allSubs.map((name) => ({ name, type: "sub" as const })),
 		...options.images.map((image) => ({
-			name: image.name,
+			name: getGalleryImageSelectionKey(image),
 			type: "image" as const,
 		})),
 	];
@@ -717,7 +722,7 @@ export function getGalleryDragPlan({
 		return null;
 	}
 	const selectionByType = { image: selectedFilenames, sub: selectedSubs };
-	const selected = selectionByType[type].has(name);
+	const selected = selectionByType[type].has(image ? getGalleryImageSelectionKey(image) : name);
 	const items = selected ? getMovableSelection() : [name];
 	return items.length > 0 ? { items, src: location } : null;
 }

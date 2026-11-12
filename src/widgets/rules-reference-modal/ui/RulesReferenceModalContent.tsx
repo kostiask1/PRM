@@ -165,6 +165,8 @@ export default function RulesReferenceModalContent({
 	initialName = "",
 	forceTab = false,
 	onSelectReference = null,
+	selectableTab,
+	selectionActionLabel,
 	BestiaryBrowser,
 	MonsterStatBlock,
 	SpellsBrowser,
@@ -484,6 +486,7 @@ export default function RulesReferenceModalContent({
 	);
 
 	const insertReference = (tabId: ReferenceTabId, item: UiReferenceItem) => {
+		if (selectableTab && tabId !== selectableTab) return;
 		const selection = createReferenceSelection(tabId, item);
 		if (selection && onSelectReference) onSelectReference(selection);
 	};
@@ -501,7 +504,7 @@ export default function RulesReferenceModalContent({
 				meta={getReferenceMeta(activeTab, item)}
 				active={selectedItem === item}
 				onSelect={() => selectItem(selectionName)}
-				onInsert={() => insertReference(activeTab.id, item)}
+				onInsert={selectableTab ? undefined : () => insertReference(activeTab.id, item)}
 			/>
 		);
 	};
@@ -521,7 +524,8 @@ export default function RulesReferenceModalContent({
 			filteredItems={filteredItems}
 			selectedItem={selectedItem}
 			selectedMeta={selectedMeta}
-			canInsertReference={Boolean(onSelectReference)}
+			canInsertReference={Boolean(onSelectReference) && (!selectableTab || activeTab.id === selectableTab)}
+			selectionActionLabel={selectionActionLabel}
 			listRef={listRef}
 			renderReferenceItem={renderReferenceItem}
 			onNavigateHistory={navigateHistory}
@@ -529,8 +533,8 @@ export default function RulesReferenceModalContent({
 			onToggleDetailedSearch={() => setIsDetailedSearch((value) => !value)}
 			onSelectTab={selectTab}
 			onEmbeddedSelection={recordEmbeddedReferenceSelection}
-			onSelectBestiary={getEnabledHandler(onSelectReference, selectBestiaryReference)}
-			onSelectSpell={getEnabledHandler(onSelectReference, selectSpellReference)}
+			onSelectBestiary={getEnabledHandler(onSelectReference && (!selectableTab || selectableTab === "bestiary"), selectBestiaryReference)}
+			onSelectSpell={getEnabledHandler(onSelectReference && (!selectableTab || selectableTab === "spells"), selectSpellReference)}
 			onInsertReference={insertReference}
 			BestiaryBrowser={BestiaryBrowser}
 			MonsterStatBlock={MonsterStatBlock}

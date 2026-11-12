@@ -15,6 +15,8 @@ const {
 const {
 	createFileCampaignRepository,
 } = require("../modules/campaign/infrastructure/fileCampaignRepository");
+const { createTransferCampaignEntity } = require("../modules/campaign/application/transferCampaignEntity");
+const { createFileEntityTransferRepository } = require("../modules/campaign/infrastructure/fileEntityTransferRepository");
 const {
 	validateCampaignCreate,
 	validateCampaignPatch,
@@ -35,7 +37,16 @@ const campaignEntityCommands = createCampaignEntityCommands(
 const campaignCommands = createCampaignCommands(
 	createFileCampaignRepository(storage),
 );
+const transferCampaignEntity = createTransferCampaignEntity(createFileEntityTransferRepository(storage));
 const validateEntityMoveBody = validateBody(validateEntityMove);
+
+router.post("/:slug/entities/:type/transfer", async (req, res, next) => {
+	try {
+		res.json(await transferCampaignEntity({ campaignSlug: req.params.slug, type: req.params.type, source: req.body?.source, target: req.body?.target }));
+	} catch (error) {
+		next(error);
+	}
+});
 
 function validateEntityMoveRequest(req, _res, next) {
 	if (CAMPAIGN_ENTITY_TYPES.includes(req.params.type)) {

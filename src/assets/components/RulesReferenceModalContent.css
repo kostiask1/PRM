@@ -8,18 +8,31 @@
 
 .RulesReferenceModalContent__tabs {
 	display: flex;
-	align-items: flex-end;
+	align-items: center;
 	gap: var(--space-1);
 	min-width: 0;
+	width: fit-content;
+	max-width: 100%;
+	padding: var(--space-1);
 	overflow-x: auto;
-	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+	border-radius: var(--radius-sm);
+	background: var(--panel-soft);
+	scrollbar-width: thin;
 }
 
 .RulesReferenceModalContent__search {
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
-	max-width: 520px;
+	width: 100%;
+}
+
+.RulesReferenceModalContent__panel {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
 }
 
 .RulesReferenceModalContent__search .Input {
@@ -50,14 +63,16 @@
 
 .RulesReferenceModalContent__tab {
 	flex: 0 0 auto;
-	border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
-	border-bottom: 0;
-	border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-	background: color-mix(in srgb, var(--bg), transparent 25%);
+	min-height: var(--control-h);
+	border: 1px solid transparent;
+	border-radius: var(--radius-md);
+	background: transparent;
 	color: var(--muted);
-	padding: var(--space-2) var(--space-3);
+	padding: 0 var(--space-3);
 	font: inherit;
-	font-weight: 700;
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
 	cursor: pointer;
 }
 
@@ -68,20 +83,27 @@
 
 .RulesReferenceModalContent__tab__active {
 	background: var(--panel);
-	color: var(--text);
-	border-color: var(--accent);
+	color: var(--accent);
+	border-color: var(--border);
+	box-shadow: var(--shadow-sm);
 }
 
 .RulesReferenceModalContent__tab__hasMatches {
-	color: var(--text);
-	border-color: var(--accent);
-	box-shadow: inset 0 3px 0 var(--accent);
+	text-decoration: underline;
+	text-decoration-color: var(--accent);
+	text-decoration-thickness: 2px;
+	text-underline-offset: 4px;
+}
+
+.RulesReferenceModalContent__tab:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
 }
 
 .RulesReferenceModalContent__main {
 	display: grid;
-	grid-template-columns: 360px minmax(0, 1fr);
-	gap: var(--space-1);
+	grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+	gap: var(--space-4);
 	min-height: 0;
 	flex: 1;
 }
@@ -182,10 +204,6 @@
 }
 
 @media (max-width: 1024px) {
-	.RulesReferenceModalContent__main {
-		grid-template-columns: 300px minmax(0, 1fr);
-	}
-
 	.RulesReferenceModalContent__search {
 		max-width: none;
 	}
@@ -194,10 +212,6 @@
 @media (max-width: 767px) {
 	.RulesReferenceModalContent {
 		gap: var(--space-2);
-	}
-
-	.RulesReferenceModalContent__tabs {
-		padding-bottom: var(--space-1);
 	}
 
 	.RulesReferenceModalContent__tab {

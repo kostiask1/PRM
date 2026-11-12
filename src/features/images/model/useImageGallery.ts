@@ -104,6 +104,7 @@ export default function useImageGallery({
 		handleCreateSub: mutations.handleCreateSub,
 		handleBulkDelete: mutations.handleBulkDelete,
 		handleMoveSelection: mutations.handleMoveSelection,
+		moveFeedback: mutations.moveFeedback,
 		handleFileUpload: mutations.handleFileUpload,
 		handleDrop: mutations.handleDrop,
 		handleItemClick: selection.handleItemClick,

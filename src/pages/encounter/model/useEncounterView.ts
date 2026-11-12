@@ -472,6 +472,22 @@ export default function useEncounterView(): EncounterViewModel {
 		[encounter, applyEncounterUpdate],
 	);
 
+	const updateMonsterConditions = useCallback(
+		(instanceId: string, conditions: string[]) => {
+			if (!encounter) return;
+			const updated = {
+				...encounter,
+				monsters: encounter.monsters.map((monster) =>
+					monster.instanceId === instanceId
+						? { ...monster, encounterConditions: conditions }
+						: monster,
+				),
+			};
+			applyEncounterUpdate(updated, { preferredId: instanceId });
+		},
+		[encounter, applyEncounterUpdate],
+	);
+
 	const updateMonsterImage = useCallback(
 		(instanceId: string, imageUrl: string | null) => {
 			if (!encounter) return;
@@ -750,6 +766,7 @@ export default function useEncounterView(): EncounterViewModel {
 		removeMonster,
 		updateMonsterHp,
 		updateMonsterMaxHp,
+		updateMonsterConditions,
 		updateMonsterImage,
 		updateMonsterFromAi,
 		duplicateMonster,

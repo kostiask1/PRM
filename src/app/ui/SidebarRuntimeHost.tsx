@@ -6,6 +6,7 @@ import {
 } from "../../widgets/sidebar/index.js";
 import {
 	alert,
+	dataSyncReceivedAction,
 	requestDiceRollAction,
 	requestRulesReferenceNavigationAction,
 	setCampaignsAction,
@@ -81,6 +82,9 @@ export default function SidebarRuntimeHost({
 		},
 		[dispatch],
 	);
+	const publishHistoryRefresh = useCallback<SidebarRuntime["publishHistoryRefresh"]>(() => {
+		dispatch(dataSyncReceivedAction({ resource: "history", campaignSlug: null }));
+	}, [dispatch]);
 	const setLanguage = useCallback<SidebarRuntime["setLanguage"]>(
 		(language) => {
 			dispatch(setLanguageAction(language));
@@ -103,6 +107,7 @@ export default function SidebarRuntimeHost({
 			currentLanguage,
 			currentTheme,
 			patchUiSettings,
+			publishHistoryRefresh,
 			rolledResult,
 			setCampaigns,
 			setLanguage,
@@ -133,6 +138,7 @@ export default function SidebarRuntimeHost({
 			currentTheme,
 			openModal,
 			patchUiSettings,
+			publishHistoryRefresh,
 			reportError,
 			requestDiceRoll,
 			requestRulesReferenceNavigation,

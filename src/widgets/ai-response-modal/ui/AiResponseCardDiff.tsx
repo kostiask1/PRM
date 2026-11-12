@@ -7,6 +7,7 @@ import {
 	type CardHighlightFields,
 	type PreviewResource,
 } from "../model/aiResponseModal.ts";
+import { AiResponseFieldComparison, AiResponseSingleSnapshotComparison } from "./AiResponseFieldComparison.tsx";
 
 type RenderEntityCard = (
 	resource: PreviewResource,
@@ -55,6 +56,8 @@ function AiResponseSingleCardDiff({
 }) {
 	const snapshot = isNew ? resource.after : resource.before;
 	return (
+		<>
+		<AiResponseSingleSnapshotComparison before={resource.before} after={resource.after} />
 		<div className="AiAssistantPanel__preview_card_stack">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">
@@ -72,6 +75,7 @@ function AiResponseSingleCardDiff({
 				</div>
 			</div>
 		</div>
+		</>
 	);
 }
 
@@ -82,6 +86,8 @@ function AiResponseChangedCardDiff({
 }: AiResponseCardDiffProps) {
 	const highlightFields = buildCardHighlightFields(resource);
 	return (
+		<>
+		<AiResponseFieldComparison before={resource.before} after={resource.after} />
 		<div className="AiAssistantPanel__preview_card_columns">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">{lang.t("Before")}</div>
@@ -106,6 +112,7 @@ function AiResponseChangedCardDiff({
 				</div>
 			</div>
 		</div>
+		</>
 	);
 }
 

@@ -377,6 +377,7 @@ import {
 import {
 	createEmptyNote as createModelEmptyNote,
 	getNoteRenderKey,
+	getNoteListLabel,
 	getNotesForRender,
 	isNoteEmpty,
 	isVirtualNoteId,
@@ -483,12 +484,10 @@ import {
 } from "../src/pages/session/model/sessionEntityModel.ts";
 import {
 	executeSessionRenamePlan,
-	getSceneNotesWithCollapsedState,
 	getSessionEncounterLinks,
 	getSessionKeyboardAction,
 	getSessionPageData,
 	getSessionRenamePlan,
-	getSessionSceneNotesPresentation,
 	getSessionScopeImportCopy,
 	getSessionScopeImportPresentation,
 	getSessionSyncAction,
@@ -695,6 +694,7 @@ import {
 	getGalleryGridDropPlan,
 	getGalleryGridDropTarget,
 	getGalleryDragPlan,
+	getGalleryImageSelectionKey,
 	getGalleryDropPlan,
 	getGalleryKeyboardPlan,
 	getGallerySelectionPlan,
@@ -4005,24 +4005,15 @@ await run(
 			genericDiffSource,
 			[
 				'import type { ReactNode } from "react";',
-				'import { lang } from "../../../shared/lib/index.js";',
+				'import { AiResponseSingleSnapshotComparison, AiResponseValueComparison } from "./AiResponseFieldComparison.tsx";',
 				"function AiResponseSingleSnapshotFields({",
-				"const snapshot = resource.before === null ? resource.after : resource.before;",
-				"const keys = isObjectSnapshot(snapshot)",
-				'!["id", "slug", "source", "createdAt"].includes(key)',
-				': ["value"];',
-				"keys.map((key) =>",
-				"key={`${resource.id}-${key}`}",
-				"formatFieldValue(getFieldValue(snapshot, key))",
+				"<AiResponseSingleSnapshotComparison before={resource.before} after={resource.after} />",
 				"function AiResponseChangedField({",
-				"const before = getFieldValue(resource.before, field);",
-				"const after = getFieldValue(resource.after, field);",
+				"const before = getFieldValue(resource.before, field, wholeSnapshot);",
+				"const after = getFieldValue(resource.after, field, wholeSnapshot);",
 				'field === "notes" && (Array.isArray(before) || Array.isArray(after))',
 				"return renderNoteArrayDiff(resource, before, after);",
-				'{lang.t("Before")}',
-				"formatFieldValue(before)",
-				'{lang.t("After")}',
-				"formatFieldValue(after)",
+				"<AiResponseValueComparison before={before} after={after} />",
 				"export default function AiResponseGenericDiff({",
 				"const isSingleSnapshot = resource.before === null || resource.after === null;",
 				"const fieldKeys = getPreviewFieldKeys(",
@@ -4031,7 +4022,7 @@ await run(
 				"<AiResponseSingleSnapshotFields resource={resource} />",
 				"fieldKeys.map((field) =>",
 				"key={`${resource.id}-${field}`}",
-				"{field}",
+				"{getAiResponseFieldLabel(field)}",
 				"<AiResponseChangedField",
 				"field={field}",
 				"renderNoteArrayDiff={renderNoteArrayDiff}",
@@ -5397,7 +5388,6 @@ await run(
 				"hasDescriptionData,",
 				"isDescriptionCollapsed,",
 				"const {",
-				"handleBulkNotesCollapse,",
 				"} = useCampaignNotesControls({",
 				"const toggleCampaignDescription = () => {",
 				"if (!hasDescriptionData) return;",
@@ -5499,36 +5489,23 @@ await run(
 			[
 				"function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {",
 				"const view = useCampaignView({ campaign });",
-				"hasCharactersData,",
-				"hasNpcsData,",
-				"hasLocationsData,",
 				"isCharactersCollapsed,",
 				"isNpcsCollapsed,",
 				"isLocationsCollapsed,",
 				"const characterSectionControls = getCampaignEntitySectionControls({",
 				'type: "characters",',
-				"onSetCollapsed: view.setIsCharactersCollapsed,",
-				"onReorder: view.handleCharactersReorder,",
 				"onPersistReorder: view.persistEntitiesReorder,",
 				"const npcSectionControls = getCampaignEntitySectionControls({",
 				'type: "npc",',
-				"onSetCollapsed: view.setIsNpcsCollapsed,",
-				"onReorder: view.handleNpcsReorder,",
 				"onPersistReorder: view.persistEntitiesReorder,",
 				"const locationSectionControls = getCampaignEntitySectionControls({",
 				'type: "locations",',
-				"onSetCollapsed: view.setIsLocationsCollapsed,",
-				"onReorder: view.handleLocationsReorder,",
 				"onPersistReorder: view.persistEntitiesReorder,",
 				"<CampaignEntitySection",
 				'title={lang.t("Characters")}',
 				"items={view.characters}",
-				"hasData={hasCharactersData}",
-				"isCollapsed={isCharactersCollapsed}",
 				'listVariant="person"',
 				'dropType="characters"',
-				"onToggle={characterSectionControls.onToggle}",
-				"onBulkCollapse={characterSectionControls.onBulkCollapse}",
 				"onReorder={view.handleCharactersReorder}",
 				"onReorderDrop={characterSectionControls.onReorderDrop}",
 				"dragData={(character) => ({",
@@ -5536,8 +5513,6 @@ await run(
 				"renderItem={(character) => (",
 				'"campaign", "character", character.id',
 				"<CharacterCard",
-				"onToggleCollapse={(id) => {",
-				"view.handleToggleCharacterCollapse(id);",
 				"onChange={(id, updated) => {",
 				"view.handleCharacterChange(id, updated);",
 				"onNameBlur={(id, updated, oldName, newName) =>",
@@ -5547,12 +5522,8 @@ await run(
 				"<CampaignEntitySection",
 				'title={lang.t("NPC")}',
 				"items={view.npcs}",
-				"hasData={hasNpcsData}",
-				"isCollapsed={isNpcsCollapsed}",
 				'listVariant="person"',
 				'dropType="npc"',
-				"onToggle={npcSectionControls.onToggle}",
-				"onBulkCollapse={npcSectionControls.onBulkCollapse}",
 				"onReorder={view.handleNpcsReorder}",
 				"onReorderDrop={npcSectionControls.onReorderDrop}",
 				"dragData={(npc) => ({",
@@ -5562,18 +5533,13 @@ await run(
 				"toggleCampaignEntityAiIgnored(\"npc\", npc.id, ignored)",
 				"renderItem={(npc) => (",
 				'"campaign", "npc", npc.id',
-				"view.handleToggleNpcCollapse(id);",
 				"view.handleNpcChange(id, updated);",
 				"view.handleNpcNameBlur(id, updated, oldName, newName)",
 				"view.handleNpcDelete(id);",
 				"<CampaignEntitySection",
 				'title={lang.t("Locations/Factions")}',
 				"items={view.locations}",
-				"hasData={hasLocationsData}",
-				"isCollapsed={isLocationsCollapsed}",
 				'listVariant="location"',
-				"onToggle={locationSectionControls.onToggle}",
-				"onBulkCollapse={locationSectionControls.onBulkCollapse}",
 				"onReorder={view.handleLocationsReorder}",
 				"onReorderDrop={locationSectionControls.onReorderDrop}",
 				"isItemControlActive={(location) =>",
@@ -5585,7 +5551,6 @@ await run(
 				"renderItem={(location) => (",
 				'"campaign", "location", location.id',
 				"<LocationCard",
-				"view.handleToggleLocationCollapse(id);",
 				"view.handleLocationChange(id, updated);",
 				"view.handleLocationNameBlur(id, updated, oldName, newName)",
 				"view.handleLocationDelete(id);",
@@ -5595,29 +5560,10 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sectionControlsSource,
-			[
-				'export type CampaignEntitySectionType = "characters" | "npc" | "locations";',
-				"interface CampaignEntitySectionControlsOptions {",
-				"const COLLAPSE_STATE_KEYS = {",
-				'characters: "isCharactersCollapsed",',
-				'npc: "isNpcsCollapsed",',
-				'locations: "isLocationsCollapsed",',
-				"export function getCampaignEntitySectionControls({",
-				"return {",
-				"onToggle() {",
-				"if (!hasData) return;",
-				"const next = !isCollapsed;",
-				"onSetCollapsed(next);",
-				"onTriggerSave({ [COLLAPSE_STATE_KEYS[type]]: next });",
-				"onBulkCollapse(items, collapsed) {",
-				"const nextItems = items.map((item) => ({ ...item, collapsed }));",
-				"onReorder(nextItems);",
-				"onPersistReorder(type, nextItems);",
-				"onReorderDrop(items) {",
-				"onPersistReorder(type, items);",
-			],
-			"Campaign private entity-section control policy",
+			["interface CampaignEntitySectionControlsOptions {", "onPersistReorder:", "export function getCampaignEntitySectionControls({", "onReorderDrop(items)", "onPersistReorder(type, items)"],
+			"Campaign reorder persistence policy",
 		);
+		assert.doesNotMatch(sectionControlsSource, /onBulkCollapse|onToggle/);
 		assert.doesNotMatch(
 			sectionControlsSource,
 			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|CampaignViewController|campaignApi|app\/model|shared\/model/,
@@ -5632,56 +5578,10 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sectionSource,
-			[
-				'import type { ReactNode } from "react";',
-				"Button,",
-				"CollapseToggleButton,",
-				"DraggableList,",
-				'import { BulkCollapseButton } from "../../../../features/notes/ui/index.js";',
-				'import type { CampaignPageEntity } from "../../model/contracts.ts";',
-				'import { getCampaignEntityRenderKey } from "../../model/campaignPagePresentation.ts";',
-				"interface CampaignEntitySectionProps {",
-				"title: string;",
-				"items: CampaignPageEntity[];",
-				"hasData: boolean;",
-				"isCollapsed: boolean;",
-				"dropType?: \"characters\" | \"npc\";",
-				"actions: ReactNode;",
-				"onToggle: () => void;",
-				"onBulkCollapse: (",
-				"onReorder: (items: CampaignPageEntity[]) => void;",
-				"onReorderDrop: (items: CampaignPageEntity[]) => void;",
-				"export default function CampaignEntitySection({",
-				'"CampaignEntitySection"',
-				"data-character-drop-type={dropType}",
-				'"CampaignEntitySection__row"',
-				'"CampaignEntitySection__titleGroup"',
-				"onClick={onToggle}",
-				"{hasData && (",
-				"<CollapseToggleButton",
-				"size={Button.SIZES.MEDIUM}",
-				"collapsed={isCollapsed}",
-				"onClick={onToggle}",
-				"{!isCollapsed && (",
-				'"CampaignEntitySection__actions"',
-				"<BulkCollapseButton",
-				"items={items}",
-				"onChange={(collapsed) => onBulkCollapse(items, collapsed)}",
-				"{actions}",
-				"<DraggableList",
-				"items={items}",
-				"className={`CampaignEntitySection__list CampaignEntitySection__list_${listVariant}`}",
-				"onReorder={onReorder}",
-				"onDrop={onReorderDrop}",
-				"dragData={dragData}",
-				"keyExtractor={(entity, index) =>",
-				"getCampaignEntityRenderKey(entity, index)",
-				"renderItemControl={renderItemControl}",
-				"isItemControlActive={isItemControlActive}",
-				"renderItem={renderItem}",
-			],
-			"Campaign private entity-section presentation",
+			["interface CampaignEntitySectionProps {", "onReorder:", "onReorderDrop:", "export default function CampaignEntitySection({", "useHashItemSelection(", 'className="CampaignEntitySection__workspace"', "<DraggableList", "onReorder={onReorder}", "onDrop={onReorderDrop}", "renderItemControl={renderItemControl}", "setSelectedKey(", "renderItem(selected)"],
+			"Campaign entity list, selection, and persistence boundaries",
 		);
+		assert.doesNotMatch(sectionSource, /CollapseToggleButton|BulkCollapseButton/);
 		assert.doesNotMatch(
 			sectionSource,
 			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|useCampaignPageRuntime|CampaignViewController|\bview\b|triggerSave|persistEntitiesReorder|setIs(?:Characters|Npcs|Locations)Collapsed|campaignApi|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
@@ -5729,7 +5629,6 @@ await run(
 				"number: number;",
 				"campaignSlug: string;",
 				"simplifiedNotesEnabled: boolean;",
-				"onToggle: (sceneId: SessionResourceId) => void;",
 				"onToggleNoteAiIgnored: (",
 				"getEncounterName: (scene: SessionScene) => string;",
 				"function SessionSceneItem({",
@@ -5746,8 +5645,6 @@ await run(
 				"<SessionSceneCard",
 				"number={number}",
 				"fields={SessionViewModel.sceneSchema}",
-				"collapsed={Boolean(scene.collapsed)}",
-				"onToggle={() => onToggle(scene.id)}",
 				"onRemove={() => onRemove(scene.id)}",
 				"onOpenEncounter={(event) => onOpenEncounter(scene, event)}",
 				"onImageChange(scene.id, imageUrl)",
@@ -5755,7 +5652,6 @@ await run(
 				"hasEncounter={Boolean(scene.encounterId)}",
 				"encounterName={getEncounterName(scene)}",
 				"onUpdateField(scene.id, field, value)",
-				"onToggleNotesCollapse(scene.id)",
 				"onNotesReorder(scene.id, notes)",
 				"onToggleNoteAiIgnored(scene.id, noteId, ignored)",
 				"renderNoteCard={(note, isLast) => (",
@@ -5775,13 +5671,10 @@ await run(
 			sessionSource,
 			[
 				"function SessionView() {",
-				"const handleBulkScenesCollapse = (collapsed: boolean) => {",
-				'view.updateData(\n\t\t\t"scenes",\n\t\t\tscenes.map((scene) => ({ ...scene, collapsed })),\n\t\t\ttrue,',
 				"const getEncounterName = (scene: SessionScene) =>",
 				"lang.t(viewModel.findEncounterName(scene));",
 				"<SessionScenesSection",
 				"scenes={scenes}",
-				"onBulkCollapse={handleBulkScenesCollapse}",
 				"onAddScene={view.addScene}",
 				'onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}',
 				"renderScene={(scene) => (",
@@ -5790,13 +5683,11 @@ await run(
 				"number={scenes.findIndex((item) => item.id === scene.id) + 1}",
 				"campaignSlug={view.campaignSlug}",
 				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
-				"onToggle={view.toggleSceneCollapse}",
 				"onRemove={view.removeScene}",
 				"onOpenEncounter={view.handleOpenEncounter}",
 				"onImageChange={(sceneId, imageUrl) =>",
 				'view.updateScene(sceneId, "imageUrl", imageUrl, true)',
 				"onUpdateField={view.updateScene}",
-				"onToggleNotesCollapse={view.handleToggleSceneNotesCollapse}",
 				"onNotesReorder={view.handleSceneNotesReorder}",
 				"onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}",
 				"onToggleNoteCollapse={view.handleSceneToggleNoteCollapse}",
@@ -5821,7 +5712,6 @@ await run(
 			[
 				'import type { ReactNode } from "react";',
 				"interface SessionScenesSectionProps {",
-				"onBulkCollapse: (collapsed: boolean) => void;",
 				"onAddScene: () => void;",
 				"onReorder: (scenes: SessionScene[]) => void;",
 				"onOpenScene: (scene: SessionScene) => void;",
@@ -5833,7 +5723,6 @@ await run(
 				'className="SessionWorkspace__outline"',
 				"<DraggableList items={scenes} onReorder={onReorder}",
 				"onClick={() => onOpenScene(scene)}",
-				"<BulkCollapseButton items={scenes} onChange={onBulkCollapse} />",
 				'className="SessionWorkspace__editor"',
 				"renderScene(selectedScene)",
 				'className="SessionWorkspace__reference"',
@@ -5982,15 +5871,8 @@ await run(
 				"const sessionNotesForRender = getNotesForRender(sessionNotes, {",
 				"const isSessionNotesCollapsed = getSessionSectionCollapsed(",
 				"const toggleSessionNoteAiIgnored = (",
-				"const handleBulkSessionNotesCollapse = (collapsed: boolean) => {",
-				'view.updateData(\n\t\t\t"notes",\n\t\t\t(viewModel.notes || []).map((note) => ({ ...note, collapsed })),\n\t\t\ttrue,',
 				"<SessionNotesSection",
-				"notes={viewModel.notes}",
 				"renderableNotes={sessionNotesForRender}",
-				"hasData={hasSessionNotesData}",
-				"isCollapsed={isSessionNotesCollapsed}",
-				'onToggle={() => view.handleToggleSectionCollapse("Notes")}',
-				"onBulkCollapse={handleBulkSessionNotesCollapse}",
 				"onToggleAiIgnored={toggleSessionNoteAiIgnored}",
 				"onReorder={(nextNotes) =>",
 				'view.updateData("notes", sanitizeNotesForSave(nextNotes))',
@@ -6019,49 +5901,13 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sectionSource,
-			[
-				'import type { ReactNode } from "react";',
-				"BulkCollapseButton,",
-				"getAiIgnoredNoteListProps,",
-				'import { lang, type SharedNote } from "../../../../shared/lib/index.js";',
-				'import { DraggableList } from "../../../../shared/ui/index.js";',
-				'import TodoSection from "./TodoSection.tsx";',
-				"type SessionNoteListItem = SharedNote & {",
-				"_aiIgnored?: boolean;",
-				"_isVirtual?: boolean;",
-				"_renderKey?: string | number;",
-				"interface SessionNotesSectionProps {",
-				"notes: readonly SharedNote[];",
-				"renderableNotes: readonly SessionNoteListItem[];",
-				"hasData: boolean;",
-				"isCollapsed: boolean;",
-				"onToggle: () => void;",
-				"onBulkCollapse: (collapsed: boolean) => void;",
-				"onToggleAiIgnored: (",
-				"onReorder: (notes: SessionNoteListItem[]) => void;",
-				"renderItem: (",
-				"export default function SessionNotesSection({",
-				"<TodoSection",
-				'title={lang.t("Notes")}',
-				"collapsed={isCollapsed}",
-				"onToggle={hasData ? onToggle : undefined}",
-				"action={",
-				"!isCollapsed && (",
-				"<BulkCollapseButton items={notes} onChange={onBulkCollapse} />",
-				"{!isCollapsed && (",
-				"<DraggableList",
-				"items={renderableNotes}",
-				'className="SessionNotesSection__list"',
-				"onReorder={onReorder}",
-				"{...getAiIgnoredNoteListProps(onToggleAiIgnored, {",
-				"isolateDragEvents: false,",
-				"renderItem={renderItem}",
-			],
-			"Session private notes-section presentation",
+			["interface SessionNotesSectionProps {", "onToggleAiIgnored:", "onReorder:", "renderItem:", "useHashItemSelection(", "<TodoSection", '<div className="CampaignEntitySection__workspace">', "<DraggableList", "items={renderableNotes}", "onReorder={onReorder}", "getAiIgnoredNoteListProps(onToggleAiIgnored", "setSelectedKey(", "renderItem(selected, false"],
+			"Session note selection and persistence boundaries",
 		);
+		assert.doesNotMatch(sectionSource, /BulkCollapseButton|CollapseToggleButton/);
 		assert.doesNotMatch(
 			sectionSource,
-			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|updateData|sanitizeNotesForSave|getNoteRenderKey|makeDomId|SessionNoteCard|AiContextIgnoreButton|handleToggleSectionCollapse|toggleSessionNoteAiIgnored|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|updateData|sanitizeNotesForSave|getNoteRenderKey|SessionNoteCard|AiContextIgnoreButton|handleToggleSectionCollapse|toggleSessionNoteAiIgnored|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
 		);
 		assertSourceTokensInOrder(
 			aiIgnoredListPropsSource,
@@ -6081,7 +5927,7 @@ await run(
 				"function CampaignNotesList({",
 				"<DraggableList",
 				'items={notes}',
-				'className="CampaignNotesSection__list"',
+				'className="CampaignNotesSection__list NoteSelectionList"',
 				"onReorder={view.handleNotesReorder}",
 				"onDrop={view.finishTrackedReorder}",
 				"{...getAiIgnoredNoteListProps(onToggleIgnored, {",
@@ -6200,11 +6046,6 @@ await run(
 				"view.handleSessionLocationChange(entityId, {",
 				"_aiIgnored: ignored,",
 				"view.handleSessionNpcChange(entityId, { ...entity, _aiIgnored: ignored });",
-				"const handleBulkSessionEntitiesCollapse = (",
-				"items: SessionPageEntity[],",
-				'type === "locations" ? "locations" : "npcs",',
-				"items.map((item) => ({ ...item, collapsed })),",
-				"true,",
 				"<SessionEntitySection",
 				'title={lang.t("Session NPCs")}',
 				"actions={",
@@ -6214,14 +6055,12 @@ await run(
 				'entityType="npc"',
 				'buttonLabel={lang.t("New session NPC")}',
 				'buttonClassName="SessionEntitySection__mobileIconOnly"',
-				"onCreate={view.handleCreateSessionNpc}",
+				"await view.handleCreateSessionNpc(payload)",
 				'onClick={() => view.openCampaignScopeImport("npc")}',
 				'{lang.t("Move from campaign")}',
 				'emptyText={lang.t("No session NPCs yet.")}',
 				"items={view.sessionNpcs}",
 				'listVariant="person"',
-				"onBulkCollapse={(items, collapsed) =>",
-				'handleBulkSessionEntitiesCollapse("npc", items, collapsed)',
 				"onReorder={view.handleSessionNpcsReorder}",
 				"onToggleAiIgnored={(entityId, ignored) =>",
 				'toggleSessionEntityAiIgnored("npc", entityId, ignored)',
@@ -6229,32 +6068,27 @@ await run(
 				'makeDomId("session", "npc", npc.id)',
 				"<CharacterCard",
 				"character={npc}",
-				"onToggleCollapse={view.handleSessionNpcToggleCollapse}",
 				"onChange={view.handleSessionNpcChange}",
 				"onDelete={view.handleSessionNpcDelete}",
 				"enableHistory={false}",
 				'type="npc"',
-				'view.moveSessionEntityToCampaign("npc", npc.id)',
 				"<SessionEntitySection",
 				'title={lang.t("Session locations/factions")}',
 				"<CreateLocationButton",
 				'buttonLabel={lang.t("New session location/faction")}',
-				"onCreate={view.handleCreateSessionLocation}",
+				"await view.handleCreateSessionLocation(payload)",
 				'onClick={() => view.openCampaignScopeImport("locations")}',
 				'emptyText={lang.t("No session locations/factions yet.")}',
 				"items={view.sessionLocations}",
 				'listVariant="location"',
-				'handleBulkSessionEntitiesCollapse("locations", items, collapsed)',
 				"onReorder={view.handleSessionLocationsReorder}",
 				'toggleSessionEntityAiIgnored("locations", entityId, ignored)',
 				"renderItem={(location) => (",
 				'makeDomId("session", "location", location.id)',
 				"<LocationCard",
 				"location={location}",
-				"onToggleCollapse={view.handleSessionLocationToggleCollapse}",
 				"onChange={view.handleSessionLocationChange}",
 				"onDelete={view.handleSessionLocationDelete}",
-				'view.moveSessionEntityToCampaign("locations", location.id)',
 				"<SessionScenesSection",
 			],
 			"Session raw entity persistence, actions, and card workflow ownership",
@@ -6275,57 +6109,14 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sectionSource,
-			[
-				'import type { ReactNode } from "react";',
-				"AiContextIgnoreButton,",
-				"BulkCollapseButton,",
-				'import { DraggableList } from "../../../../shared/ui/index.js";',
-				'import TodoSection from "./TodoSection.tsx";',
-				"interface SessionEntityListItem {",
-				"collapsed?: boolean;",
-				"id: string | number;",
-				"_aiIgnored?: boolean;",
-				"interface SessionEntitySectionProps<Item extends SessionEntityListItem> {",
-				"title: ReactNode;",
-				"actions: ReactNode;",
-				"emptyText: ReactNode;",
-				"items: Item[];",
-				'listVariant: "person" | "location";',
-				"onBulkCollapse: (items: Item[], collapsed: boolean) => void;",
-				"onReorder: (items: Item[]) => void;",
-				"onToggleAiIgnored: (entityId: Item[\"id\"], ignored: boolean) => void;",
-				"renderItem: (item: Item) => ReactNode;",
-				"export default function SessionEntitySection<Item extends SessionEntityListItem>({",
-				"<TodoSection",
-				"title={title}",
-				"action={",
-				'"SessionEntitySection__actions"',
-				"<BulkCollapseButton",
-				"items={items}",
-				"onChange={(collapsed) => onBulkCollapse(items, collapsed)}",
-				"{actions}",
-				"{items.length > 0 ? (",
-				"<DraggableList",
-				"items={items}",
-				"className={`SessionEntitySection__list SessionEntitySection__list_${listVariant}`}",
-				"onReorder={onReorder}",
-				"keyExtractor={(entity) => entity.id}",
-				"isItemControlActive={(entity) => Boolean(entity._aiIgnored)}",
-				"renderItemControl={(entity) => (",
-				"<AiContextIgnoreButton",
-				"ignored={Boolean(entity._aiIgnored)}",
-				"onToggle={(ignored) =>",
-				"onToggleAiIgnored(entity.id, ignored)",
-				"renderItem={renderItem}",
-				"muted SessionEntitySection__empty",
-				"{emptyText}",
-			],
-			"Session private entity-section presentation",
+			["interface SessionEntitySectionProps", "onReorder:", "onToggleAiIgnored:", "renderItem:", "useHashItemSelection(", "<TodoSection", "{actions}", "<DraggableList", "onReorder={onReorder}", "AiContextIgnoreButton", "onToggleAiIgnored(entity.id, ignored)", "setSelectedKey(", "renderItem(selected)"],
+			"Session entity selection and persistence boundaries",
 		);
+		assert.doesNotMatch(sectionSource, /BulkCollapseButton|CollapseToggleButton/);
 		assert.doesNotMatch(sectionSource, /isolateDragEvents/);
 		assert.doesNotMatch(
 			sectionSource,
-			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|SessionViewModel|SessionEntityType|SessionPageEntity|CharacterCard|LocationCard|CreateCharacterButton|CreateLocationButton|<Button\b|makeDomId|updateData|handleSession|openCampaignScopeImport|moveSessionEntityToCampaign|toggleSessionEntityAiIgnored|handleBulkSessionEntitiesCollapse|lang\.t|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|widgets\/campaign-entity-card|features\/campaign-entity|\.\.\/model/,
+			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|SessionViewModel|SessionEntityType|SessionPageEntity|CharacterCard|LocationCard|CreateCharacterButton|CreateLocationButton|<Button\b|updateData|handleSession|openCampaignScopeImport|moveSessionEntityToCampaign|toggleSessionEntityAiIgnored|handleBulkSessionEntitiesCollapse|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|widgets\/campaign-entity-card|features\/campaign-entity|\.\.\/model/,
 		);
 	},
 );
@@ -6388,8 +6179,6 @@ await run(
 				"number={number}",
 				"scene={scene}",
 				"fields={SessionViewModel.sceneSchema}",
-				"collapsed={Boolean(scene.collapsed)}",
-				"onToggle={() => onToggle(scene.id)}",
 				"onRemove={() => onRemove(scene.id)}",
 				"onOpenEncounter={(event) => onOpenEncounter(scene, event)}",
 				"onImageChange(scene.id, imageUrl)",
@@ -6397,7 +6186,6 @@ await run(
 				"hasEncounter={Boolean(scene.encounterId)}",
 				"encounterName={getEncounterName(scene)}",
 				"onUpdateField(scene.id, field, value)",
-				"onToggleNotesCollapse(scene.id)",
 				"onNotesReorder(scene.id, notes)",
 				"onToggleNoteAiIgnored(scene.id, noteId, ignored)",
 				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
@@ -6440,8 +6228,6 @@ await run(
 				"number: number;",
 				"scene: SessionScene;",
 				"fields: readonly SceneCardFieldDefinition[];",
-				"collapsed: boolean;",
-				"onToggle: () => void;",
 				"onRemove: () => void;",
 				"onOpenEncounter: (event: MouseEvent<HTMLButtonElement>) => void;",
 				"imageUrl?: string | null;",
@@ -6450,7 +6236,6 @@ await run(
 				"hasEncounter: boolean;",
 				"encounterName: string;",
 				"onUpdateField: (field: string, value: string) => void;",
-				"onToggleNotesCollapse: () => void;",
 				"onSceneNotesReorder: (notes: SharedNote[]) => void;",
 				"onSceneNoteAiIgnoredChange: (",
 				'noteId: SharedNote["id"],',
@@ -6463,13 +6248,10 @@ await run(
 				'<div className="SessionSceneCard">',
 				"<SceneCardHeader",
 				"number={props.number}",
-				"collapsed={props.collapsed}",
-				"onToggle={props.onToggle}",
 				"onOpenEncounter={props.onOpenEncounter}",
 				"onRemove={props.onRemove}",
 				"hasEncounter={props.hasEncounter}",
 				"encounterName={encounterLabel}",
-				"{!props.collapsed && (",
 				'"SessionSceneCard__content"',
 				'"SessionSceneCard__textSide"',
 				"<SceneCardFields",
@@ -6482,7 +6264,6 @@ await run(
 				"simplifiedNotesEnabled={props.simplifiedNotesEnabled}",
 				"onSceneNoteAiIgnoredChange={props.onSceneNoteAiIgnoredChange}",
 				"onSceneNotesReorder={props.onSceneNotesReorder}",
-				"onToggleNotesCollapse={props.onToggleNotesCollapse}",
 				"renderNoteCard={props.renderNoteCard}",
 				"<SceneCardMedia",
 				"number={props.number}",
@@ -6829,7 +6610,7 @@ await run(
 			monsterRowSource,
 			[
 				'import { classNames, lang, makeDomId } from "../../../../shared/lib/index.js";',
-				'import { Button, Tooltip } from "../../../../shared/ui/index.js";',
+			'import { Button, Icon, Tooltip } from "../../../../shared/ui/index.js";',
 				'import { renderMentionText } from "../../../../features/entity-link/index.js";',
 				"getEncounterCharacterDisplayName,",
 				"hasMonsterHpFormula,",
@@ -8470,67 +8251,10 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sceneNotesSource,
-			[
-				'import type { ReactNode } from "react";',
-				'import type { SessionScene } from "../../../../entities/session/index.js";',
-				'import { getAiIgnoredNoteListProps } from "../../../../features/notes/ui/index.js";',
-				'import type { SessionResourceId } from "../../../../features/session-editor/index.js";',
-				'import { lang, type SharedNote } from "../../../../shared/lib/index.js";',
-				"Button,",
-				"CollapseToggleButton,",
-				"DraggableList,",
-				"getSceneNotesWithCollapsedState,",
-				"getSessionSceneNotesPresentation,",
-				"type SessionSceneNotesPresentation,",
-				"interface SceneNotesProps {",
-				"onSceneNoteAiIgnoredChange: (",
-				"onSceneNotesReorder: (notes: SharedNote[]) => void;",
-				"onToggleNotesCollapse: () => void;",
-				"renderNoteCard: (note: SharedNote, isLast: boolean) => ReactNode;",
-				"scene: SessionScene;",
-				"simplifiedNotesEnabled: boolean;",
-				"export default function SceneNotes({",
-				"const presentation = getSessionSceneNotesPresentation(",
-				"scene.notes,",
-				"scene.isNotesCollapsed,",
-				"simplifiedNotesEnabled,",
-				"const handleBulkSceneNotesCollapse = () => {",
-				"onSceneNotesReorder(",
-				"getSceneNotesWithCollapsedState(",
-				"presentation.notes,",
-				"presentation.bulkActionShouldCollapse,",
-				"return (",
-				'"SessionSceneCard__notes"',
-				"renderSceneNotesHeader({",
-				"onBulkSceneNotesCollapse: handleBulkSceneNotesCollapse,",
-				"presentation,",
-				"presentation.showList && (",
-				"renderSceneNotesList({",
-				"interface SceneNotesHeaderProps {",
-				"function renderSceneNotesHeader({",
-				'"SessionSceneCard__notesHeaderRow"',
-				'"SessionSceneCard__notesHeader"',
-				"presentation.hasData ? onToggleNotesCollapse : undefined",
-				"<CollapseToggleButton",
-				"collapsed={presentation.isCollapsed}",
-				"onClick={onToggleNotesCollapse}",
-				'{lang.t("Scene notes")}',
-				"presentation.showBulkAction && (",
-				'icon="chevron"',
-				"onClick={onBulkSceneNotesCollapse}",
-				"interface SceneNotesListProps {",
-				"function renderSceneNotesList({",
-				"<DraggableList",
-				"items={presentation.renderableNotes}",
-				'"SessionSceneCard__notesList"',
-				"onReorder={onSceneNotesReorder}",
-				"{...getAiIgnoredNoteListProps(onSceneNoteAiIgnoredChange)}",
-				"renderItem={(note, isDragging, index) =>",
-				"renderNoteCard(",
-				"index === presentation.renderableNotes.length - 1,",
-			],
-			"Session scene-note private presentation",
+			["getNotesForRender(scene.notes,", "simplifiedNotesEnabled", 'lang.t("Scene notes")', "renderSceneNotesList({", "<DraggableList", "items={notes}", "onReorder={onSceneNotesReorder}", "getAiIgnoredNoteListProps(onSceneNoteAiIgnoredChange)", "renderNoteCard("],
+			"Session scene notes stay visible and retain reorder and AI controls",
 		);
+		assert.doesNotMatch(sceneNotesSource, /CollapseToggleButton|onToggleNotesCollapse|scene\.isNotesCollapsed/);
 		assert.doesNotMatch(
 			sceneNotesSource,
 			/createNoteCardComponent|SessionNoteCard|useState|useEffect|useSessionView|useSessionPageRuntime|<Modal\b|handleScene|onSceneNoteTitleChange|onSceneNoteChange|onSceneNoteDelete/,
@@ -9288,6 +9012,7 @@ await run(
 			"selectedItem",
 			"selectedMeta",
 			"canInsertReference",
+			"selectionActionLabel",
 			"listRef",
 			"renderReferenceItem",
 			"onNavigateHistory",
@@ -9302,14 +9027,14 @@ await run(
 			"MonsterStatBlock",
 			"SpellsBrowser",
 		]);
-		assert.match(viewTag, /\bcanInsertReference=\{Boolean\(onSelectReference\)\}/);
+		assert.match(viewTag, /\bcanInsertReference=\{Boolean\(onSelectReference\) && \(!selectableTab \|\| activeTab.id === selectableTab\)\}/);
 		assert.match(
 			viewTag,
-			/\bonSelectBestiary=\{getEnabledHandler\(onSelectReference, selectBestiaryReference\)\}/,
+			/\bonSelectBestiary=\{getEnabledHandler\(onSelectReference && \(!selectableTab \|\| selectableTab === "bestiary"\), selectBestiaryReference\)\}/,
 		);
 		assert.match(
 			viewTag,
-			/\bonSelectSpell=\{getEnabledHandler\(onSelectReference, selectSpellReference\)\}/,
+			/\bonSelectSpell=\{getEnabledHandler\(onSelectReference && \(!selectableTab \|\| selectableTab === "spells"\), selectSpellReference\)\}/,
 		);
 		assert.match(
 			rulesViewSource,
@@ -10352,13 +10077,14 @@ await run(
 			);
 			assert.deepEqual(
 				factoryConsumers.createRulesLinkComponent.sort(),
-				expectedCompositionConsumers,
+				[...expectedCompositionConsumers, "src/pages/encounter/ui/components/EncounterConditions.tsx"].sort(),
 			);
 			assert.deepEqual(staleRawImports, []);
 			assert.deepEqual(mentionConsumers.sort(), [
 				"src/pages/campaign/ui/components/CampaignGraphConnection.tsx",
 				"src/pages/campaign/ui/components/CampaignGraphDetails.tsx",
 				"src/pages/campaign/ui/components/CampaignNotesSection.tsx",
+				"src/pages/campaign/ui/components/CampaignOverview.tsx",
 				"src/pages/encounter/ui/components/EncounterHeader.tsx",
 				"src/pages/encounter/ui/components/EncounterMonsterRow.tsx",
 				"src/pages/session/ui/components/SceneCardHeader.tsx",
@@ -15338,13 +15064,15 @@ await run(
 				entityType: "npc",
 				payload: { firstName: "Iryna" },
 				onRefreshEntities: () => creationEvents.push(["refresh"]),
+				onCreated: (entity) => creationEvents.push(["selected", entity.id]),
 			});
-			assert.equal(creationEvents.length, 2);
+			assert.equal(creationEvents.length, 3);
 			assert.deepEqual(creationEvents[0].slice(0, 2), [
 				"create",
 				"/api/campaigns/demo/entities/npc",
 			]);
 			assert.deepEqual(creationEvents[1], ["refresh"]);
+			assert.deepEqual(creationEvents[2], ["selected", "created"]);
 
 			creationEvents.length = 0;
 			const customPayload = { firstName: "Oksana" };
@@ -15356,6 +15084,7 @@ await run(
 					creationEvents.push(["custom", payload]);
 				},
 				onRefreshEntities: () => creationEvents.push(["refresh"]),
+				onCreated: () => creationEvents.push(["selected"]),
 			});
 			assert.deepEqual(creationEvents, [["custom", customPayload]]);
 
@@ -15371,6 +15100,7 @@ await run(
 					entityType: "npc",
 					payload: { firstName: "Iryna" },
 					onRefreshEntities: () => creationEvents.push(["refresh"]),
+					onCreated: () => creationEvents.push(["selected"]),
 				}),
 				(error) => error === creationFailure,
 			);
@@ -15937,7 +15667,7 @@ await run(
 				"<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>",
 				"<RulesReferenceRuntimeProvider",
 				"<MainContent />",
-				"<DiceCalculatorHost />",
+				"<DiceCalculatorHost openRequest={dicePanelRequest} />",
 				"<RulesReferenceModalHost",
 			],
 			"App-owned AI attachment alert runtime",
@@ -16152,7 +15882,7 @@ await run(
 				"<AiAttachmentAlertRuntimeProvider",
 				"<MainContent />",
 				"<MessageBoxHost />",
-				"<DiceCalculatorHost />",
+				"<DiceCalculatorHost openRequest={dicePanelRequest} />",
 				"<MentionPickerModalHost />",
 			],
 			"App-owned Editor mention picker runtime",
@@ -16409,7 +16139,7 @@ await run(
 				"<AiAttachmentAlertRuntimeProvider",
 				"<MainContent />",
 				"<MessageBoxHost />",
-				"<DiceCalculatorHost />",
+				"<DiceCalculatorHost openRequest={dicePanelRequest} />",
 				"<MentionPickerModalHost />",
 			],
 			"App mention picker host scope",
@@ -16480,7 +16210,7 @@ await run(
 		);
 		assert.match(
 			calculatorSource,
-			/export interface DiceCalculatorProps \{\s*diceRollRequest: unknown;\s*publishResult\(result: DiceResultEntry, context: unknown\): void;\s*\}/,
+			/export interface DiceCalculatorProps \{\s*diceRollRequest: unknown;\s*openRequest\?: number;\s*publishResult\(result: DiceResultEntry, context: unknown\): void;\s*\}/,
 		);
 		for (const source of [calculatorSource, rollDiceSource, runtimeSource]) {
 			assert.doesNotMatch(
@@ -16541,7 +16271,7 @@ await run(
 				"<DiceRequestRuntimeProvider runtime={diceRequestRuntime}>",
 				"<EditorMentionPickerRuntimeProvider",
 				"<MainContent />",
-				"<DiceCalculatorHost />",
+				"<DiceCalculatorHost openRequest={dicePanelRequest} />",
 				"<RulesReferenceModalHost",
 			],
 			"App-owned Dice runtime",
@@ -21556,6 +21286,10 @@ await run("note helpers maintain trailing empty note slot", () => {
 });
 
 await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
+	assert.equal(getNoteListLabel({ title: "  Назва  ", text: "Текст" }), "Назва");
+	assert.equal(getNoteListLabel({ title: "  ", text: "  " + "Ї".repeat(31) }), "Ї".repeat(30));
+	assert.equal(getNoteListLabel({ text: "🐉".repeat(31) }), "🐉".repeat(30));
+	assert.equal(getNoteListLabel({ text: "  " }), "");
 	const emptyNote = createModelEmptyNote();
 	assert.equal(isNoteEmpty(emptyNote), true);
 	assert.equal(isNoteEmpty({ title: "Title", text: "" }), false);
@@ -45604,6 +45338,23 @@ await run("Encounter participant synchronization preserves combat-local identity
 	assert.equal(images.get("iryna vale"), "/iryna.png");
 });
 
+await run("Encounter conditions survive custom refresh and AI monster replacement", () => {
+	const participant = {
+		instanceId: "monster-1", name: "Sentinel", source: "CUSTOM",
+		currentHp: 8, hit_points: 12, encounterConditions: ["Концентрація", "Отруєння"],
+	};
+	const encounter = { id: "enc", name: "Ambush", monsters: [participant] };
+	const refreshed = synchronizeCustomMonsterParticipants(encounter, [
+		{ name: "Sentinel", source: "CUSTOM", hp: { average: 15 } },
+	]).encounter.monsters[0];
+	assert.deepEqual(refreshed.encounterConditions, participant.encounterConditions);
+	const replaced = replaceEncounterMonsterFromAi(encounter, "monster-1", {
+		name: "Sentinel", hit_points: 20, encounterConditions: ["other"],
+	}).monsters[0];
+	assert.deepEqual(replaced.encounterConditions, participant.encounterConditions);
+	assert.deepEqual(participant.encounterConditions, ["Концентрація", "Отруєння"]);
+});
+
 await run("encounter add-monster targets normalize active campaign sessions", () => {
 	const campaigns = normalizeActiveEncounterCampaigns([
 		{ slug: "active", name: "Активна", completed: false },
@@ -46452,35 +46203,6 @@ await run("session page policies preserve keyboard, sync, and presentation behav
 		"cancelled",
 	);
 
-	const emptySceneNotes = getSessionSceneNotesPresentation([], true, false);
-	assert.equal(emptySceneNotes.hasData, false);
-	assert.equal(emptySceneNotes.isCollapsed, false);
-	assert.equal(emptySceneNotes.showBulkAction, false);
-	assert.equal(emptySceneNotes.showList, true);
-	assert.equal(emptySceneNotes.renderableNotes.at(-1)._isVirtual, true);
-	const openSceneNotes = getSessionSceneNotesPresentation(
-		[{ id: 1, title: "План", collapsed: false }],
-		false,
-		false,
-	);
-	assert.equal(openSceneNotes.bulkActionShouldCollapse, true);
-	assert.equal(openSceneNotes.bulkActionTitleKey, "Collapse all items");
-	assert.equal(openSceneNotes.bulkActionLabelKey, "Collapse all");
-	assert.equal(openSceneNotes.showBulkAction, true);
-	const collapsedSceneNotes = getSessionSceneNotesPresentation(
-		[{ id: 1, title: "План", collapsed: true }],
-		true,
-		true,
-	);
-	assert.equal(collapsedSceneNotes.isCollapsed, true);
-	assert.equal(collapsedSceneNotes.showList, false);
-	assert.equal(collapsedSceneNotes.showBulkAction, false);
-	assert.equal(collapsedSceneNotes.bulkActionShouldCollapse, false);
-	assert.equal(collapsedSceneNotes.bulkActionTitleKey, "Expand all items");
-	assert.deepEqual(
-		getSceneNotesWithCollapsedState([{ id: 1, title: "План" }], true),
-		[{ id: 1, title: "План", collapsed: true }],
-	);
 });
 
 await run("SessionViewModel encounter lookup", () => {
@@ -48967,7 +48689,7 @@ await run("monster stat block presentation policies normalize source variants", 
 			showDropzone: true,
 			hasImageError: false,
 			allowTokenUpload: false,
-			customTokenSrc: "/український-токен.webp",
+			isReplacingToken: true,
 			isCustomMonster: false,
 			hasTokenImageChange: false,
 		}),
@@ -48982,7 +48704,7 @@ await run("monster stat block presentation policies normalize source variants", 
 			showDropzone: true,
 			hasImageError: true,
 			allowTokenUpload: true,
-			customTokenSrc: "/token.webp",
+			isReplacingToken: false,
 			isCustomMonster: true,
 			hasTokenImageChange: true,
 		}),
@@ -48997,7 +48719,7 @@ await run("monster stat block presentation policies normalize source variants", 
 			showDropzone: false,
 			hasImageError: false,
 			allowTokenUpload: true,
-			customTokenSrc: "",
+			isReplacingToken: false,
 			isCustomMonster: false,
 			hasTokenImageChange: true,
 		}),
@@ -49012,7 +48734,7 @@ await run("monster stat block presentation policies normalize source variants", 
 			showDropzone: false,
 			hasImageError: true,
 			allowTokenUpload: true,
-			customTokenSrc: "/token.webp",
+			isReplacingToken: false,
 			isCustomMonster: true,
 			hasTokenImageChange: true,
 		}),
@@ -49027,7 +48749,7 @@ await run("monster stat block presentation policies normalize source variants", 
 			showDropzone: false,
 			hasImageError: false,
 			allowTokenUpload: true,
-			customTokenSrc: "",
+			isReplacingToken: false,
 			isCustomMonster: true,
 			hasTokenImageChange: false,
 		}).showReplaceAction,
@@ -49038,7 +48760,7 @@ await run("monster stat block presentation policies normalize source variants", 
 			showDropzone: false,
 			hasImageError: false,
 			allowTokenUpload: true,
-			customTokenSrc: "",
+			isReplacingToken: false,
 			isCustomMonster: false,
 			hasTokenImageChange: false,
 		}).showReplaceAction,
@@ -68899,6 +68621,14 @@ await run("image gallery presentation preserves history and unique items", () =>
 		})?.path,
 		{ source: "general", category: "tokens", subcategory: "" },
 	);
+	assert.deepEqual(
+		getGlobalGalleryResultNavigationPlan({
+			categories,
+			image: { name: "map.png", url: "/map.png", source: "forest", category: "characters", subcategory: "npc" },
+			isSelectionMode: false,
+		})?.path,
+		{ source: "forest", category: "characters", subcategory: "npc" },
+	);
 	for (const input of [
 		{
 			image: null,
@@ -69418,6 +69148,16 @@ await run("image gallery interaction plans validate drops, moves, and selection"
 		"ally.png",
 	]);
 	assert.equal(freshReverseSelection.lastIndex, 4);
+	const firstSearchResult = { name: "map.png", url: "/one", source: "first", category: "maps", subcategory: "" };
+	const secondSearchResult = { name: "map.png", url: "/two", source: "second", category: "maps", subcategory: "" };
+	const firstKey = getGalleryImageSelectionKey(firstSearchResult);
+	assert.notEqual(firstKey, getGalleryImageSelectionKey(secondSearchResult));
+	const selectedSearchResult = getGallerySelectionPlan({
+		allSubs: [], filenames: new Set(), images: [firstSearchResult, secondSearchResult], index: 0,
+		isAdditive: false, isReadonlyImage: () => false, isReadonlySub: () => false,
+		isShift: false, lastIndex: null, name: firstKey, subfolders: new Set(), type: "image",
+	});
+	assert.deepEqual([...selectedSearchResult.filenames], [firstKey]);
 	assert.deepEqual(
 		getGalleryDragPlan({
 			item: { name: "hero.png", url: "/hero.png" },
@@ -72028,6 +71768,255 @@ await run("campaign history survives service recreation and restores global ment
 			"Зустріч із [Новий NPC]",
 		);
 	});
+});
+
+await run("AI value comparison highlights changes and bounds large inputs", async () => {
+	const { compareText } = await import("../src/widgets/ai-response-modal/model/compareText.ts");
+	const result = compareText("Стара назва 12", "Нова назва 15");
+	assert.deepEqual(result.before, [
+		{ text: "Стара", changed: true },
+		{ text: " назва ", changed: false },
+		{ text: "12", changed: true },
+	]);
+	assert.deepEqual(result.after, [
+		{ text: "Нова", changed: true },
+		{ text: " назва ", changed: false },
+		{ text: "15", changed: true },
+	]);
+	assert.deepEqual(compareText("", "нове"), {
+		before: [], after: [{ text: "нове", changed: true }],
+	});
+	assert.deepEqual(compareText("однаково", "однаково").before, [{ text: "однаково", changed: false }]);
+	const large = "слово ".repeat(300);
+	assert.deepEqual(compareText(large, "інше").before, [{ text: large, changed: true }]);
+});
+
+await run("AI comparison distinguishes a value field from a scalar snapshot", async () => {
+	const { getFieldValue, getPreviewFieldKeys } = await import("../src/widgets/ai-response-modal/model/aiResponseModal.ts");
+	const before = { name: "Здоров'я", value: 12 };
+	const after = { name: "Здоров'я", value: 15 };
+	assert.deepEqual(getPreviewFieldKeys(before, after), ["value"]);
+	assert.equal(getFieldValue(before, "value"), 12);
+	assert.equal(getFieldValue(after, "value"), 15);
+	assert.equal(getFieldValue("стара назва", "value"), "стара назва");
+	assert.equal(getFieldValue(after, "value", true), after);
+	assert.equal(getFieldValue(null, "name"), undefined);
+});
+
+await run("application history undoes and redoes a cross-campaign entity transfer", async () => {
+	const os = await import("node:os");
+	const tracking = require("../server/modules/history/http/historyTrackingMiddleware.js").__test;
+	const realtime = require("../server/realtime.js").__test;
+	const request = { method: "POST", path: "/api/campaigns/one/entities/npc/transfer", body: {} };
+	assert.deepEqual(tracking.getTrackingTarget(request), { kind: "application" });
+	assert.equal(tracking.getOperation(request, request.path), "entity.transfer");
+	const notification = realtime.describeChange({ method: "POST", originalUrl: request.path });
+	assert.equal(notification.resource, "history");
+	assert.equal(notification.campaignSlug, null);
+	const root = await fs.mkdtemp(path.join(os.tmpdir(), "prm-entity-transfer-"));
+	const isolated = createIsolatedHistoryStorage(root);
+	const { createTransferCampaignEntity } = require("../server/modules/campaign/application/transferCampaignEntity.js");
+	try {
+		for (const slug of ["one", "two"]) await isolated.writeJson(isolated.campaignMetaPath(slug), { id: slug, slug, name: slug });
+		await isolated.writeEntity("one", "npc", "mira", { id: "n1", firstName: "Міра" });
+		await isolated.writeJson(isolated.sessionPath("two", "session.json"), { id: "s1", name: "Сесія", data: { npcs: [] } });
+		const repository = {
+			readCampaign: (slug) => isolated.readJson(isolated.campaignMetaPath(slug)),
+			readEntity: (slug, type, entitySlug) => isolated.readJson(path.join(isolated.campaignDir(slug), type, entitySlug, "info.json")),
+			listEntities: async () => [],
+			writeEntity: isolated.writeEntity,
+			deleteEntity: isolated.deleteEntity,
+			readSession: (slug, fileName) => isolated.readJson(isolated.sessionPath(slug, fileName)),
+			writeSession: (slug, fileName, value) => isolated.writeJson(isolated.sessionPath(slug, fileName), value),
+			sanitizeName: (name) => name,
+			toSlug: () => "mira",
+			ensureUniqueSlug: async () => "mira",
+		};
+		const service = createHistoryService(isolated);
+		const pending = await service.beginApplication("entity.transfer", {});
+		await createTransferCampaignEntity(repository)({ campaignSlug: "one", type: "npc", source: { scope: "campaign", entitySlug: "mira" }, target: { campaignSlug: "two", scope: "session", fileName: "session.json" } });
+		await service.finishApplication(pending, false);
+		const status = await service.getApplicationStatus();
+		const undone = await service.applyApplicationHistory("undo", status.revision);
+		assert.equal((await repository.readEntity("one", "npc", "mira")).firstName, "Міра");
+		assert.deepEqual((await repository.readSession("two", "session.json")).data.npcs, []);
+		await service.applyApplicationHistory("redo", undone.history.revision);
+		assert.equal((await repository.readSession("two", "session.json")).data.npcs[0].id, "n1");
+		await assert.rejects(() => repository.readEntity("one", "npc", "mira"));
+	} finally {
+		assert.equal(path.dirname(path.resolve(root)), path.resolve(os.tmpdir()));
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("application history restores location transfers between sessions", async () => {
+	const os = await import("node:os");
+	const root = await fs.mkdtemp(path.join(os.tmpdir(), "prm-location-transfer-"));
+	const isolated = createIsolatedHistoryStorage(root);
+	const { createTransferCampaignEntity } = require("../server/modules/campaign/application/transferCampaignEntity.js");
+	const readSession = (slug, fileName) => isolated.readJson(isolated.sessionPath(slug, fileName));
+	const entity = { id: 0, name: "Стара вежа", description: "Занедбана", notes: [{ id: "note", text: "Таємний хід" }] };
+	try {
+		await isolated.writeJson(isolated.campaignMetaPath("one"), { id: "one", slug: "one", name: "Кампанія" });
+		await isolated.writeJson(isolated.sessionPath("one", "source.json"), { id: "s1", data: { locations: [entity], scenes: [{ id: "scene" }] } });
+		await isolated.writeJson(isolated.sessionPath("one", "target.json"), { id: "s2", data: { locations: [{ id: "other", name: "Місто" }] } });
+		const repository = {
+			readCampaign: (slug) => isolated.readJson(isolated.campaignMetaPath(slug)),
+			readSession,
+			writeSession: (slug, fileName, value) => isolated.writeJson(isolated.sessionPath(slug, fileName), value),
+		};
+		const service = createHistoryService(isolated);
+		const pending = await service.beginApplication("entity.transfer", {});
+		await createTransferCampaignEntity(repository)({ campaignSlug: "one", type: "locations", source: { scope: "session", fileName: "source.json", entityId: 0 }, target: { scope: "session", fileName: "target.json" } });
+		await service.finishApplication(pending, false);
+		assert.deepEqual((await readSession("one", "source.json")).data.locations, []);
+		assert.deepEqual((await readSession("one", "target.json")).data.locations, [{ id: "other", name: "Місто" }, entity]);
+		const status = await service.getApplicationStatus();
+		const undone = await service.applyApplicationHistory("undo", status.revision);
+		assert.deepEqual((await readSession("one", "source.json")).data.locations, [entity]);
+		assert.deepEqual((await readSession("one", "target.json")).data.locations, [{ id: "other", name: "Місто" }]);
+		await service.applyApplicationHistory("redo", undone.history.revision);
+		assert.deepEqual((await readSession("one", "source.json")).data.scenes, [{ id: "scene" }]);
+		assert.deepEqual((await readSession("one", "target.json")).data.locations, [{ id: "other", name: "Місто" }, entity]);
+	} finally {
+		assert.equal(path.dirname(path.resolve(root)), path.resolve(os.tmpdir()));
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+await run("session save tracking waits for the originating session", async () => {
+	const { createSessionSaveTracker } = await import("../src/features/session-editor/model/sessionSaveTracker.ts");
+	const tracker = createSessionSaveTracker();
+	let finishFirst;
+	let finishOther;
+	const first = new Promise((resolve) => { finishFirst = resolve; });
+	const other = new Promise((resolve) => { finishOther = resolve; });
+	tracker.track(first, "campaign\0first");
+	tracker.track(other, "campaign\0other");
+	assert.equal(tracker.last("campaign\0first"), first);
+	let settled = false;
+	const waiting = tracker.wait("campaign\0first").then((result) => { settled = true; return result; });
+	await Promise.resolve();
+	assert.equal(settled, false);
+	finishFirst({ fileName: "renamed.json" });
+	assert.deepEqual(await waiting, { fileName: "renamed.json" });
+	assert.equal(tracker.last("campaign\0first"), undefined);
+	assert.equal(tracker.last("campaign\0other"), other);
+	finishOther(null);
+	await tracker.wait("campaign\0other");
+});
+
+await run("campaign entity save tracking waits by scope and retains unresolved failures", async () => {
+	const { createEntitySaveTracker } = await import("../src/features/campaign-entity/model/entitySaveTracker.ts");
+	const tracker = createEntitySaveTracker();
+	const key = "one\0npc:1";
+	const older = tracker.nextVersion();
+	const newer = tracker.nextVersion();
+	let finishOne;
+	let finishTwo;
+	const one = new Promise((resolve) => { finishOne = resolve; });
+	const two = new Promise((resolve) => { finishTwo = resolve; });
+	tracker.track(one, "one", key);
+	tracker.track(two, "two", "two\0npc:2");
+	assert.equal(tracker.lastForKey(key), one);
+	let waited = false;
+	const waiting = tracker.wait("one").then(() => { waited = true; });
+	await Promise.resolve();
+	assert.equal(waited, false);
+	finishOne();
+	await waiting;
+	assert.equal(waited, true);
+	assert.equal(tracker.lastForKey(key), undefined);
+	tracker.failed(key, older);
+	assert.equal(tracker.hasFailed(key), true);
+	tracker.succeeded(key, newer);
+	assert.equal(tracker.hasFailed(key), false);
+	tracker.failed(key, older);
+	assert.equal(tracker.hasFailed(key), false);
+	tracker.failed(key, tracker.nextVersion());
+	assert.equal(tracker.hasFailed(key), true);
+	tracker.clear(key);
+	assert.equal(tracker.hasFailed(key), false);
+	finishTwo();
+	await tracker.wait("two");
+});
+
+await run("entity transfers preserve campaign and session data across destinations", async () => {
+	const { createTransferCampaignEntity } = require("../server/modules/campaign/application/transferCampaignEntity.js");
+	for (const type of ["npc", "locations"]) {
+		for (const sourceScope of ["campaign", "session"]) {
+			for (const targetScope of ["campaign", "session"]) {
+				const key = type === "npc" ? "npcs" : "locations";
+				const entity = { id: 0, name: "Міра", description: "Опис", imageUrl: "/portrait.png", notes: [{ id: 4, text: "Нотатка" }] };
+				const entities = new Map(sourceScope === "campaign" ? [[`one:${type}:original`, structuredClone(entity)]] : []);
+				const sessions = new Map([
+					["one:source.json", { name: "Джерело", data: { [key]: sourceScope === "session" ? [structuredClone(entity)] : [], scenes: [{ id: "scene" }] } }],
+					["two:target.json", { name: "Призначення", data: { [key]: [{ id: "existing", name: "Інший" }], notes: [{ id: "note" }] } }],
+				]);
+				const repo = {
+					async readCampaign() {},
+					async readEntity(slug, kind, id) { return structuredClone(entities.get(`${slug}:${kind}:${id}`)); },
+					async listEntities(slug, kind) { return [...entities.entries()].filter(([id]) => id.startsWith(`${slug}:${kind}:`)).map(([, value]) => value); },
+					async writeEntity(slug, kind, id, value) { const saved = { ...structuredClone(value), slug: id }; entities.set(`${slug}:${kind}:${id}`, saved); return saved; },
+					async deleteEntity(slug, kind, id) { entities.delete(`${slug}:${kind}:${id}`); },
+					async readSession(slug, file) { return structuredClone(sessions.get(`${slug}:${file}`)); },
+					async writeSession(slug, file, value) { sessions.set(`${slug}:${file}`, structuredClone(value)); },
+					sanitizeName: (name) => name, toSlug: () => "mira", async ensureUniqueSlug() { return "mira"; },
+				};
+				const source = sourceScope === "campaign" ? { scope: "campaign", entitySlug: "original" } : { scope: "session", fileName: "source.json", entityId: 0 };
+				const target = targetScope === "campaign" ? { campaignSlug: "two", scope: "campaign" } : { campaignSlug: "two", scope: "session", fileName: "target.json" };
+				await createTransferCampaignEntity(repo)({ campaignSlug: "one", type, source, target });
+				const moved = targetScope === "campaign" ? entities.get(`two:${type}:mira`) : sessions.get("two:target.json").data[key][1];
+				assert.equal(moved.id, 0);
+				assert.equal(moved.description, entity.description);
+				assert.equal(moved.imageUrl, entity.imageUrl);
+				assert.deepEqual(moved.notes, entity.notes);
+				assert.deepEqual(sessions.get("one:source.json").data.scenes, [{ id: "scene" }]);
+				assert.deepEqual(sessions.get("two:target.json").data.notes, [{ id: "note" }]);
+				if (sourceScope === "campaign") assert.equal(entities.has(`one:${type}:original`), false);
+				else assert.deepEqual(sessions.get("one:source.json").data[key], []);
+			}
+		}
+	}
+});
+
+await run("entity transfers preserve identity and compensate failed source writes", async () => {
+	const { createTransferCampaignEntity } = require("../server/modules/campaign/application/transferCampaignEntity.js");
+	const campaigns = new Set(["one", "two"]);
+	const entities = new Map([["one:npc:hero", { id: 0, slug: "hero", firstName: "Міра" }]]);
+	const sessions = new Map([["one:a.json", { data: { npcs: [] } }], ["two:b.json", { data: { npcs: [] } }]]);
+	let failDelete = false;
+	const repository = {
+		async readCampaign(slug) { if (!campaigns.has(slug)) throw new Error("missing campaign"); },
+		async readEntity(slug, type, id) { const value = entities.get(`${slug}:${type}:${id}`); if (!value) throw new Error("missing entity"); return structuredClone(value); },
+		async listEntities(slug, type) { return [...entities.entries()].filter(([key]) => key.startsWith(`${slug}:${type}:`)).map(([, value]) => value); },
+		async writeEntity(slug, type, id, value) { const result = { ...structuredClone(value), slug: id }; entities.set(`${slug}:${type}:${id}`, result); return result; },
+		async deleteEntity(slug, type, id) { if (failDelete) throw new Error("delete failed"); entities.delete(`${slug}:${type}:${id}`); },
+		async readSession(slug, file) { const value = sessions.get(`${slug}:${file}`); if (!value) throw new Error("missing session"); return structuredClone(value); },
+		async writeSession(slug, file, value) { sessions.set(`${slug}:${file}`, structuredClone(value)); },
+		sanitizeName: (name) => String(name).trim(),
+		toSlug: () => "mira",
+		async ensureUniqueSlug() { return "mira"; },
+	};
+	const transfer = createTransferCampaignEntity(repository);
+	const input = { campaignSlug: "one", type: "npc", source: { scope: "campaign", entitySlug: "hero" }, target: { campaignSlug: "two", scope: "session", fileName: "b.json" } };
+	failDelete = true;
+	await assert.rejects(() => transfer(input), /delete failed/);
+	assert.equal(entities.has("one:npc:hero"), true);
+	assert.deepEqual(sessions.get("two:b.json").data.npcs, []);
+	failDelete = false;
+	await transfer(input);
+	assert.equal(entities.has("one:npc:hero"), false);
+	assert.equal(sessions.get("two:b.json").data.npcs[0].id, 0);
+	await transfer({ campaignSlug: "two", type: "npc", source: { scope: "session", fileName: "b.json", entityId: 0 }, target: { campaignSlug: "one", scope: "campaign" } });
+	assert.equal(entities.get("one:npc:mira").firstName, "Міра");
+	assert.deepEqual(sessions.get("two:b.json").data.npcs, []);
+	await transfer({ campaignSlug: "one", type: "npc", source: { scope: "campaign", entitySlug: "mira" }, target: { scope: "session", fileName: "a.json" } });
+	await assert.rejects(() => transfer({ campaignSlug: "one", type: "npc", source: { scope: "session", fileName: "a.json", entityId: 0 }, target: { scope: "session", fileName: "a.json" } }), /same/);
+	sessions.get("two:b.json").data.npcs.push({ id: 0, firstName: "Existing" });
+	await assert.rejects(() => transfer({ campaignSlug: "one", type: "npc", source: { scope: "session", fileName: "a.json", entityId: 0 }, target: { campaignSlug: "two", scope: "session", fileName: "b.json" } }), /already contains/);
+	assert.equal(sessions.get("one:a.json").data.npcs[0].firstName, "Міра");
+	await assert.rejects(() => transfer({ ...input, source: { scope: "campaign", entitySlug: "../mira" } }), /invalid/i);
 });
 
 const failed = results.filter((r) => !r.ok);

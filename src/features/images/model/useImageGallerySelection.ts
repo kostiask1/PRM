@@ -11,7 +11,7 @@ import type {
 	GalleryMoveGroup,
 	ImageGalleryCategory,
 } from "./contracts.ts";
-import { getGallerySelectionPlan } from "./imageGalleryInteraction.ts";
+import { getGalleryImageSelectionKey, getGallerySelectionPlan } from "./imageGalleryInteraction.ts";
 
 interface ImageGallerySelectionOptions {
 	dynamicSubs: string[];
@@ -83,7 +83,7 @@ export function useImageGallerySelection({
 		(name: string) => {
 			const image = images.find((item) => item.name === name);
 			if (!image) return false;
-			setSelectedFilenames(new Set([name]));
+			setSelectedFilenames(new Set([getGalleryImageSelectionKey(image)]));
 			setSelectedSubs(new Set());
 			setLastSelectedIndex(null);
 			return true;
@@ -93,7 +93,7 @@ export function useImageGallerySelection({
 	const hasSelection = useMemo(
 		() =>
 			images.some(
-				(image) => selectedFilenames.has(image.name) && !isReadonlyImage(image),
+				(image) => selectedFilenames.has(getGalleryImageSelectionKey(image)) && !isReadonlyImage(image),
 			) || Array.from(selectedSubs).some((name) => !isReadonlySub(name)),
 		[images, isReadonlyImage, isReadonlySub, selectedFilenames, selectedSubs],
 	);
@@ -121,14 +121,14 @@ export function useImageGallerySelection({
 			(name) => !isReadonlySub(name),
 		);
 		const selectedImages = images.filter(
-			(image) => selectedFilenames.has(image.name) && !isReadonlyImage(image),
+			(image) => selectedFilenames.has(getGalleryImageSelectionKey(image)) && !isReadonlyImage(image),
 		);
 		const imageGroupsMap = new Map<string, GalleryMoveGroup>();
 		for (const image of selectedImages) {
 			const src = {
-				slug: image.source || selectedSource,
-				category: image.category || selectedCat.id,
-				subcategory: image.subcategory || selectedSub,
+				slug: image.source ?? selectedSource,
+				category: image.category ?? selectedCat.id,
+				subcategory: image.subcategory ?? selectedSub,
 			};
 			const key = [src.slug, src.category, src.subcategory].join("\u0000");
 			const group = imageGroupsMap.get(key) || { src, items: [] };
@@ -158,7 +158,7 @@ export function useImageGallerySelection({
 		(name: string, type: GalleryItemType, event: ReactMouseEvent) => {
 			event.stopPropagation();
 			if (type === "image") {
-				const image = images.find((item) => item.name === name);
+				const image = images.find((item) => getGalleryImageSelectionKey(item) === name);
 				if (isReadonlyImage(image)) return;
 				const next = new Set(selectedFilenames);
 				if (next.has(name)) next.delete(name);

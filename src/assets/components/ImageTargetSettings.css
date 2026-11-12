@@ -16,7 +16,7 @@
 
 .ImageTargetSettings__grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr));
 	gap: var(--space-2);
 }
 
@@ -82,7 +82,7 @@
 	align-items: center;
 	justify-content: center;
 	gap: var(--space-2);
-	padding: 6px 10px;
+	padding: var(--space-1-5) var(--space-2-5);
 	border: 1px solid var(--border);
 	background: var(--bg);
 	color: var(--text);
@@ -103,7 +103,7 @@
 }
 
 .ImageTargetSettings__tabBtn__back {
-	padding: 5px 10px;
+	padding: var(--space-1-25) var(--space-2-5);
 	font-weight: 600;
 	background: var(--panel-2);
 }

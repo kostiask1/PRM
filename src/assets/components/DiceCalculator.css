@@ -10,13 +10,17 @@
 	transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+body:has(.Modal__overlay) .DiceCalculator:not(.is_open) {
+	visibility: hidden;
+}
+
 .DiceCalculator__toggle {
 	width: var(--size-10);
 	height: var(--size-10);
 	border-radius: 50%;
 	background: var(--accent);
 	border: none;
-	color: var(--text-bright);
+	color: var(--text-on-accent);
 	cursor: pointer;
 	display: flex;
 	align-items: center;
@@ -46,16 +50,16 @@
 .DiceCalculator__toggle::before {
 	background:
 		radial-gradient(circle at 30% 30%,
-			color-mix(in srgb, white, transparent 15%),
+			color-mix(in srgb, var(--highlight-ink), transparent 15%),
 			transparent 45%),
 		radial-gradient(circle at 70% 75%,
-			color-mix(in srgb, var(--accent), white 10%),
+			color-mix(in srgb, var(--accent), var(--highlight-ink) 10%),
 			transparent 55%);
 	z-index: -1;
 }
 
 .DiceCalculator__toggle::after {
-	border: 2px solid color-mix(in srgb, var(--accent), white 25%);
+	border: 2px solid color-mix(in srgb, var(--accent), var(--highlight-ink) 25%);
 	box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent), transparent 70%);
 	z-index: -2;
 }
@@ -67,6 +71,7 @@
 .DiceCalculator.is_open .DiceCalculator__toggle {
 	transform: rotate(45deg);
 	background: var(--panel-2);
+	color: var(--text);
 	box-shadow: var(--shadow-sm);
 }
 
@@ -74,7 +79,7 @@
 	animation: DiceCalculatorToggleRoll 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 	box-shadow:
 		0 8px 24px color-mix(in srgb, var(--accent), transparent 48%),
-		0 0 18px color-mix(in srgb, white, transparent 88%);
+		0 0 18px color-mix(in srgb, var(--highlight-ink), transparent 88%);
 }
 
 .DiceCalculator__toggle.is_rolling::before {
@@ -162,11 +167,12 @@
 }
 
 .DiceCalculator__panel {
-	width: 380px;
-	background: color-mix(in srgb, var(--bg), transparent 10%);
-	backdrop-filter: blur(12px);
-	border: 1px solid color-mix(in srgb, var(--border), transparent 50%);
-	border-radius: var(--radius-2xl);
+	width: min(380px, calc(100vw - var(--space-6)));
+	max-height: calc(100dvh - var(--size-10) - var(--space-7));
+	overflow-y: auto;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-3xl);
 	padding: var(--space-4);
 	box-shadow: var(--shadow);
 	display: flex;
@@ -211,13 +217,13 @@
 }
 
 .DiceCalculator__display {
-	background: color-mix(in srgb, var(--bg-2), transparent 40%);
+	background: var(--panel-soft);
 	border-radius: var(--radius-lg);
 	height: 70px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border: 1px inset color-mix(in srgb, var(--text-bright), transparent 95%);
+	border: 1px solid var(--border);
 	position: relative;
 	overflow: hidden;
 }
@@ -313,7 +319,7 @@
 .DiceCalculator__averageValue {
 	display: inline-flex;
 	align-items: baseline;
-	gap: 2px;
+	gap: var(--space-0-5);
 	font-size: 1.1rem;
 	line-height: 1;
 	color: var(--muted);
@@ -339,6 +345,11 @@
 	grid-template-columns: minmax(0, 1fr) var(--size-8);
 	align-items: center;
 	gap: var(--space-2);
+}
+
+.DiceCalculator__formulaError {
+	color: var(--danger);
+	font-size: 0.8rem;
 }
 
 .DiceCalculator__helpIcon {
@@ -446,7 +457,12 @@
 	justify-content: space-between;
 	align-items: center;
 	width: 100%;
+	border: 0;
 	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	text-align: left;
 	cursor: pointer;
 	transition: background 0.2s ease;
 	padding: var(--space-2);
@@ -594,7 +610,7 @@
 	border-radius: inherit;
 	background: linear-gradient(
 		90deg,
-		color-mix(in srgb, var(--accent), white 8%),
+		color-mix(in srgb, var(--accent), var(--highlight-ink) 8%),
 		color-mix(in srgb, var(--success), var(--accent) 45%)
 	);
 }

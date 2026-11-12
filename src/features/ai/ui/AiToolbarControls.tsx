@@ -32,6 +32,7 @@ function AiGenerationToggleButton({
 			variant={active ? "primary" : "ghost"}
 			size={Button.SIZES.SMALL}
 			icon={icon}
+			aria-pressed={active}
 			onClick={() => setActive((value) => !value)}
 			disabled={disabled}
 			title={title}
@@ -81,6 +82,7 @@ export function AiModelPicker({
 				className={classNames("AiAssistantPanel__modelSelect", {
 					is_disabled: disabled,
 				})}
+				aria-label={lang.t("AI model")}
 				disabled={disabled}
 				value={selectedModel}
 				onChange={(event) => {
@@ -115,6 +117,7 @@ export function AiContextActions({
 		>
 			<Checkbox
 				checked={useContext}
+				aria-label={lang.t("Use context")}
 				onChange={setUseContext}
 				title={
 					useContext
@@ -130,7 +133,7 @@ export function AiContextActions({
 				disabled={loading}
 				title={lang.t("Configure context details for AI")}
 			>
-				{lang.t("Context")}
+				{lang.t("Context settings")}
 			</Button>
 		</div>
 	);
@@ -245,6 +248,7 @@ export function AiResponseParsingAction({
 			}
 			size={Button.SIZES.SMALL}
 			icon="list"
+			aria-pressed={parseAIResponse || isResponseParsingLocked}
 			onClick={() => {
 				if (!isResponseParsingLocked) setParseAIResponse(!parseAIResponse);
 			}}
@@ -255,7 +259,7 @@ export function AiResponseParsingAction({
 					: lang.t("Show response as text in a modal")
 			}
 		>
-			{lang.t("Response parsing")}
+			{lang.t("Structured changes")}
 		</Button>
 	);
 }
@@ -330,6 +334,7 @@ export function AiEncounterGenerationActions({
 					variant={generateEncounters ? "primary" : "ghost"}
 					size={Button.SIZES.SMALL}
 					icon="swords"
+					aria-pressed={generateEncounters}
 					onClick={toggleEncounterGeneration}
 					disabled={loading}
 					title={getAiEncounterGenerationTitle(view.encounterTitleKind)}

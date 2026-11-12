@@ -57,24 +57,32 @@ export default function CampaignHeaderActions({
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="search"
+				aria-label={lang.t("Global search")}
 				onClick={onOpenSearch}
 				title={lang.t("Global search")}
 			>
 				{lang.t("Search")}
 			</Button>
+			<div className="CampaignHeaderActions__history" role="group" aria-label={lang.t("Campaign history")}>
+			<span className="CampaignHeaderActions__historyScope">{lang.t("Campaign history")}</span>
 			<UndoRedoButtons
 				canRedo={canRedo}
 				canUndo={canUndo}
+				showLabels
 				disabled={disabled}
 				onRedo={onRedo}
 				onUndo={onUndo}
 				redoTitle={redoTitle}
 				undoTitle={undoTitle}
 			/>
+			</div>
+			<Button className="CampaignHeaderActions__archive" variant="ghost" size={Button.SIZES.SMALL} icon="database" onClick={onOpenPartialArchive}>{lang.t("Import/export parts")}</Button>
 			<Button
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="menu"
+				aria-label={lang.t("Campaign actions")}
+				aria-expanded={isHeaderActionsOpen}
 				className="CampaignHeaderActions__toggle"
 				onClick={() => setIsHeaderActionsOpen((value) => !value)}
 				title={lang.t("Campaign actions")}

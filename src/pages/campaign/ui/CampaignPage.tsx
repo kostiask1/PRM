@@ -1,5 +1,6 @@
 import {
 	useCallback,
+	useId,
 	useMemo,
 	useRef,
 	useState,
@@ -10,6 +11,7 @@ import {
 	SectionTabs,
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
+import { EntityMoveDialog } from "../../../features/campaign-entity/ui/index.js";
 import { ListCard } from "../../../shared/ui/index.js";
 import {
 	AiContextIgnoreButton,
@@ -45,7 +47,7 @@ import {
 	makeHistoryTargetId,
 	matchesHistoryTargetId,
 } from "../../../entities/history/index.js";
-import type { CampaignPageCampaign } from "../model/contracts.ts";
+import type { CampaignPageCampaign, CampaignPageEntity } from "../model/contracts.ts";
 import {
 	filterCampaignSessions,
 	getCampaignHashTarget,
@@ -56,6 +58,7 @@ import {
 } from "../model/campaignPagePresentation.ts";
 
 function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
+	const tabsId = useId();
 	const { navigateToSession } = useCampaignPageRuntime();
 	const view = useCampaignView({ campaign });
 	const viewModel = new CampaignViewModel(campaign);
@@ -64,13 +67,11 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const lastRevealedHash = useRef("");
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);
+	const [moveTarget, setMoveTarget] = useState<{ type: "npc" | "locations"; entity: CampaignPageEntity } | null>(null);
+	const [requestedEntity, setRequestedEntity] = useState<{ type: "characters" | "npc" | "locations"; id: DomainId } | null>(null);
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const {
 		hasDescriptionData,
-		hasNotesData,
-		hasCharactersData,
-		hasNpcsData,
-		hasLocationsData,
 		isDescriptionCollapsed,
 		isNotesCollapsed,
 		isCharactersCollapsed,
@@ -115,7 +116,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		notesViewMode,
 		setNotesViewMode,
 		handleNotesViewModeChange,
-		handleBulkNotesCollapse,
 		toggleCampaignNoteAiIgnored,
 	} = useCampaignNotesControls({
 		notes: view.notes,
@@ -127,29 +127,14 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	});
 	const characterSectionControls = getCampaignEntitySectionControls({
 		type: "characters",
-		hasData: hasCharactersData,
-		isCollapsed: isCharactersCollapsed,
-		onSetCollapsed: view.setIsCharactersCollapsed,
-		onTriggerSave: view.triggerSave,
-		onReorder: view.handleCharactersReorder,
 		onPersistReorder: view.persistEntitiesReorder,
 	});
 	const npcSectionControls = getCampaignEntitySectionControls({
 		type: "npc",
-		hasData: hasNpcsData,
-		isCollapsed: isNpcsCollapsed,
-		onSetCollapsed: view.setIsNpcsCollapsed,
-		onTriggerSave: view.triggerSave,
-		onReorder: view.handleNpcsReorder,
 		onPersistReorder: view.persistEntitiesReorder,
 	});
 	const locationSectionControls = getCampaignEntitySectionControls({
 		type: "locations",
-		hasData: hasLocationsData,
-		isCollapsed: isLocationsCollapsed,
-		onSetCollapsed: view.setIsLocationsCollapsed,
-		onTriggerSave: view.triggerSave,
-		onReorder: view.handleLocationsReorder,
 		onPersistReorder: view.persistEntitiesReorder,
 	});
 	const revealCampaignHistoryTarget = useCallback((hash: string) => {
@@ -294,6 +279,8 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 					variant="danger"
 					icon="trash"
 					size={Button.SIZES.SMALL}
+					aria-label={`${lang.t("Delete session")}: ${session.name}`}
+					title={lang.t("Delete session")}
 					onClick={(e) => {
 						e.stopPropagation();
 						view.handleDeleteSession(session);
@@ -322,7 +309,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 				onOpenPartialArchive={() => setIsPartialArchiveOpen(true)}
 			/>
 			<div className="Panel__body">
-				<SectionTabs<CampaignSection> label={lang.t("Campaign sections")} value={activeSection} onChange={setActiveSection} items={[
+				<SectionTabs<CampaignSection> idPrefix={tabsId} label={lang.t("Campaign sections")} value={activeSection} onChange={setActiveSection} items={[
 					{ id: "overview", label: lang.t("Overview") },
 					{ id: "sessions", label: lang.t("Sessions"), count: view.sessions.length },
 					{ id: "characters", label: lang.t("Characters"), count: view.characters.length },
@@ -331,13 +318,14 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 					{ id: "notes", label: lang.t("Notes") },
 					{ id: "story", label: lang.t("Campaign story") },
 				]} />
-				<div hidden={activeSection !== "overview"}>
-					<CampaignOverview sessions={allSessions} characters={view.characters} npcCount={view.npcs.length} locationCount={view.locations.length}
+				<div role="tabpanel" id={`${tabsId}-panel-overview`} aria-labelledby={`${tabsId}-tab-overview`} hidden={activeSection !== "overview"}>
+					<CampaignOverview sessions={allSessions} characters={view.characters} notes={view.notes}
 						description={view.description} onSelectSection={setActiveSection} onCreateSession={view.handleCreateSession}
+						onOpenCharacter={(id) => { setRequestedEntity({ type: "characters", id }); setActiveSection("characters"); }}
 						onOpenSession={(session) => navigateToSession(campaign.slug, session.fileName)} renderSessionCard={renderSessionCard} />
 				</div>
 				<div className="CampaignView__layout">
-					<div hidden={activeSection !== "sessions"}>
+					<div role="tabpanel" id={`${tabsId}-panel-sessions`} aria-labelledby={`${tabsId}-tab-sessions`} hidden={activeSection !== "sessions"}>
 					<CampaignSessionsSection
 						canReorderSessions={canReorderSessions}
 						filteredSessions={filteredSessions}
@@ -351,7 +339,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 					</div>
 
 					<div className="CampaignView__contentPanel">
-						<div hidden={activeSection !== "story"}>
+						<div role="tabpanel" id={`${tabsId}-panel-story`} aria-labelledby={`${tabsId}-tab-story`} hidden={activeSection !== "story"}>
 						<CampaignDescriptionSection
 							hasData={hasDescriptionData}
 							isCollapsed={isDescriptionCollapsed}
@@ -360,21 +348,18 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 						/>
 						</div>
 
-						<div hidden={activeSection !== "notes"}>
+						<div role="tabpanel" id={`${tabsId}-panel-notes`} aria-labelledby={`${tabsId}-tab-notes`} hidden={activeSection !== "notes"}>
 						<CampaignNotesSection
 							campaign={campaign}
 							view={view}
 							notes={notesForRender}
-							hasData={hasNotesData}
-							isCollapsed={isNotesCollapsed}
 							viewMode={notesViewMode}
 							onViewModeChange={handleNotesViewModeChange}
-							onBulkCollapse={handleBulkNotesCollapse}
 							onToggleIgnored={toggleCampaignNoteAiIgnored}
 						/>
 						</div>
 
-						<div hidden={activeSection !== "characters"}>
+						<div role="tabpanel" id={`${tabsId}-panel-characters`} aria-labelledby={`${tabsId}-tab-characters`} hidden={activeSection !== "characters"}>
 						<CampaignEntitySection
 							historyFocusId={makeHistoryTargetId(
 								"campaign",
@@ -382,18 +367,16 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							)}
 							title={lang.t("Characters")}
 							items={view.characters}
-							hasData={hasCharactersData}
-							isCollapsed={isCharactersCollapsed}
+							selectionRequest={requestedEntity?.type === "characters" ? requestedEntity : null}
 							listVariant="person"
 							dropType="characters"
 							actions={
 								<CreateCharacterButton
+									onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "characters", id: entity.id }); }}
 									campaignSlug={campaign.slug}
 									entityType="characters"
 								/>
 							}
-							onToggle={characterSectionControls.onToggle}
-							onBulkCollapse={characterSectionControls.onBulkCollapse}
 							onReorder={view.handleCharactersReorder}
 							onReorderDrop={characterSectionControls.onReorderDrop}
 							dragData={(character) => ({
@@ -412,11 +395,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 								>
 									<CharacterCard
 										character={character}
-										onToggleCollapse={(id) => {
-											if (id !== undefined) {
-												view.handleToggleCharacterCollapse(id);
-											}
-										}}
 										onChange={(id, updated) => {
 											if (id !== undefined) {
 												view.handleCharacterChange(id, updated);
@@ -440,7 +418,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 						/>
 
 						</div>
-						<div hidden={activeSection !== "npc"}>
+						<div role="tabpanel" id={`${tabsId}-panel-npc`} aria-labelledby={`${tabsId}-tab-npc`} hidden={activeSection !== "npc"}>
 						<CampaignEntitySection
 							historyFocusId={makeHistoryTargetId(
 								"campaign",
@@ -448,18 +426,16 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							)}
 							title={lang.t("NPC")}
 							items={view.npcs}
-							hasData={hasNpcsData}
-							isCollapsed={isNpcsCollapsed}
+							selectionRequest={requestedEntity?.type === "npc" ? requestedEntity : null}
 							listVariant="person"
 							dropType="npc"
 							actions={
 								<CreateCharacterButton
+									onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "npc", id: entity.id }); }}
 									campaignSlug={campaign.slug}
 									entityType="npc"
 								/>
 							}
-							onToggle={npcSectionControls.onToggle}
-							onBulkCollapse={npcSectionControls.onBulkCollapse}
 							onReorder={view.handleNpcsReorder}
 							onReorderDrop={npcSectionControls.onReorderDrop}
 							dragData={(npc) => ({
@@ -487,11 +463,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 								>
 									<CharacterCard
 										character={npc}
-										onToggleCollapse={(id) => {
-											if (id !== undefined) {
-												view.handleToggleNpcCollapse(id);
-											}
-										}}
+										headerActions={<Button variant="ghost" icon="export" onClick={() => setMoveTarget({ type: "npc", entity: npc })}>{lang.t("Move")}</Button>}
 										onChange={(id, updated) => {
 											if (id !== undefined) {
 												view.handleNpcChange(id, updated);
@@ -515,7 +487,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 						/>
 
 						</div>
-						<div hidden={activeSection !== "locations"}>
+						<div role="tabpanel" id={`${tabsId}-panel-locations`} aria-labelledby={`${tabsId}-tab-locations`} hidden={activeSection !== "locations"}>
 						<CampaignEntitySection
 							historyFocusId={makeHistoryTargetId(
 								"campaign",
@@ -523,12 +495,9 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							)}
 							title={lang.t("Locations/Factions")}
 							items={view.locations}
-							hasData={hasLocationsData}
-							isCollapsed={isLocationsCollapsed}
+							selectionRequest={requestedEntity?.type === "locations" ? requestedEntity : null}
 							listVariant="location"
-							actions={<CreateLocationButton campaignSlug={campaign.slug} />}
-							onToggle={locationSectionControls.onToggle}
-							onBulkCollapse={locationSectionControls.onBulkCollapse}
+							actions={<CreateLocationButton campaignSlug={campaign.slug} onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "locations", id: entity.id }); }} />}
 							onReorder={view.handleLocationsReorder}
 							onReorderDrop={locationSectionControls.onReorderDrop}
 							isItemControlActive={(location) =>
@@ -557,11 +526,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 								>
 									<LocationCard
 										location={location}
-										onToggleCollapse={(id) => {
-											if (id !== undefined) {
-												view.handleToggleLocationCollapse(id);
-											}
-										}}
+										headerActions={<Button variant="ghost" icon="export" onClick={() => setMoveTarget({ type: "locations", entity: location })}>{lang.t("Move")}</Button>}
 										onChange={(id, updated) => {
 											if (id !== undefined) {
 												view.handleLocationChange(id, updated);
@@ -589,6 +554,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 			{isGlobalSearchOpen && (
 				<GlobalSearchModal onCancel={onCloseGlobalSearch} />
 			)}
+			{moveTarget && <EntityMoveDialog campaignSlug={campaign.slug} entityName={String(moveTarget.entity.name || [moveTarget.entity.firstName, moveTarget.entity.lastName].filter(Boolean).join(" ") || lang.t("Untitled"))} onCancel={() => setMoveTarget(null)} onMove={async (destination) => {
+				if (typeof moveTarget.entity.slug !== "string" || !moveTarget.entity.slug) throw new Error("Entity slug is required.");
+				await view.transferCampaignEntity(moveTarget.type, moveTarget.entity.slug, destination);
+			}} />}
 			<CampaignPartialArchiveOverlay
 				open={isPartialArchiveOpen}
 				onClose={() => setIsPartialArchiveOpen(false)}

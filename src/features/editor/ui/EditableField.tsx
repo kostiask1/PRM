@@ -694,6 +694,7 @@ interface MentionTooltipState {
 }
 
 interface LexicalEditableFieldProps {
+	ariaLabel?: string;
 	openMentionPicker: Parameters<typeof requestMentionSelection>[0];
 	enableHistory: boolean;
 	historySourceValue: string;
@@ -774,6 +775,7 @@ function useHistoryCaretRequests({
 }
 
 interface LexicalEditableFieldViewProps {
+	ariaLabel?: string;
 	enableHistory: boolean;
 	handleBlur: (event: FocusEvent<HTMLElement>) => void;
 	handleClick: (event: MouseEvent<HTMLElement>) => void;
@@ -796,6 +798,7 @@ interface LexicalEditableFieldViewProps {
 }
 
 function LexicalEditableFieldView({
+	ariaLabel,
 	enableHistory,
 	handleBlur,
 	handleClick,
@@ -823,6 +826,7 @@ function LexicalEditableFieldView({
 	);
 	const editableNode = (
 		<ContentEditable
+			aria-label={ariaLabel}
 			className={classNames("MarkdownView", "MarkdownView__editable", {
 				MarkdownView__active: isActive,
 				MarkdownView__disabled: isDisabled,
@@ -879,6 +883,7 @@ function LexicalEditableFieldView({
 }
 
 function LexicalEditableField({
+	ariaLabel,
 	openMentionPicker,
 	enableHistory,
 	historySourceValue,
@@ -1001,6 +1006,7 @@ function LexicalEditableField({
 
 	return (
 		<LexicalEditableFieldView
+			ariaLabel={ariaLabel}
 			enableHistory={enableHistory}
 			handleBlur={handleBlur}
 			handleClick={handleClick}
@@ -1155,6 +1161,7 @@ function EditableFieldView({
 					<LexicalComposer key={editorKey} initialConfig={initialConfig}>
 						<EditorRefPlugin editorRef={editorRef} />
 						<LexicalEditableField
+							ariaLabel={domProps["aria-label"]}
 							openMentionPicker={openMentionPicker}
 							enableHistory={enableHistory}
 							historySourceValue={historySourceValue}

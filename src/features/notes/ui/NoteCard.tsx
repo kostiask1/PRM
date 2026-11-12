@@ -25,6 +25,7 @@ function NoteCard({
 	isLast,
 	campaignSlug,
 	enableHistory = true,
+	collapsible = true,
 	onToggleCollapse,
 	onTitleChange,
 	onTextChange,
@@ -35,7 +36,7 @@ function NoteCard({
 }: NoteCardInternalProps) {
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const presentation = getNoteCardPresentation(
-		note,
+		collapsible ? note : { ...note, collapsed: false },
 		isLast,
 		simplifiedNotesEnabled,
 		SHORT_TEXT_LENGTH,
@@ -62,7 +63,7 @@ function NoteCard({
 				visible={presentation.showClassicHeader}
 				note={note}
 				isLast={isLast}
-				canCollapse={presentation.canCollapse}
+				canCollapse={collapsible && presentation.canCollapse}
 				isCollapsed={presentation.isCollapsed}
 				enableHistory={enableHistory}
 				highlightFields={highlightFields}
@@ -74,7 +75,7 @@ function NoteCard({
 			<NoteCardSimplified
 				visible={presentation.showSimplifiedActions}
 				noteId={note.id}
-				canCollapse={presentation.canCollapse}
+				canCollapse={collapsible && presentation.canCollapse}
 				isCollapsed={presentation.isCollapsed}
 				shortText={presentation.shortText}
 				hasTruncatedPreview={presentation.hasTruncatedPreview}

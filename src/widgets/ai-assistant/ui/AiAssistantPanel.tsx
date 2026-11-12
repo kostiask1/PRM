@@ -164,6 +164,12 @@ export interface AiAssistantPanelProps {
 	) => void;
 }
 
+function getWorkspaceName(value: unknown): string {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+	const name = (value as Record<string, unknown>).name;
+	return typeof name === "string" ? name.trim() : "";
+}
+
 export default function AiAssistantPanel({
 	ResponseModal,
 	isBestiary = false,
@@ -469,6 +475,15 @@ export default function AiAssistantPanel({
 		parseAiResponse: parseAIResponse,
 	};
 	const assistantTitle = getAiAssistantTitle(routePresentation, translate);
+	const campaignName = getWorkspaceName(activeCampaign);
+	const encounterName = getWorkspaceName(activeEncounter);
+	const scope = lang.t(isBestiary ? "Bestiary" : isEncounter ? "Encounter" : isCampaign ? "Campaign" : "Session");
+	const target = isBestiary
+		? lang.t("Custom creatures")
+		: isEncounter ? encounterName || scope : isCampaign ? campaignName || scope : sessionName || scope;
+	const workspacePath = isBestiary || isCampaign
+		? ""
+		: [campaignName, isEncounter ? sessionName : ""].filter(Boolean).join(" / ");
 	const promptPlaceholder = getAiAssistantPromptPlaceholder(
 		routePresentation,
 		translate,
@@ -587,6 +602,13 @@ export default function AiAssistantPanel({
 
 	return (
 		<AiAssistantPanelView
+			workspace={{
+				scope,
+				target,
+				path: workspacePath,
+				result: lang.t(isBestiary || parseAIResponse ? "Structured changes" : "Text response only"),
+				context: isBestiary ? "" : lang.t(useContext ? "Context enabled" : "Context disabled"),
+			}}
 			shell={{
 				title: assistantTitle,
 				isOpen,

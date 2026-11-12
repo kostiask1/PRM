@@ -22,6 +22,45 @@ type ControlledMouseEvent = Pick<
 type OverlayMouseEvent = ControlledMouseEvent &
 	Pick<ReactMouseEvent<HTMLElement>, "currentTarget" | "target">;
 
+function isTopModal(card: HTMLElement | null): boolean {
+	const dialogs = document.querySelectorAll(".Modal__card[role='dialog']");
+	return Boolean(card && dialogs[dialogs.length - 1] === card);
+}
+
+function useModalFocusBoundary(cardRef: React.RefObject<HTMLDivElement | null>): void {
+	useEffect(() => {
+		const card = cardRef.current;
+		if (!card) return;
+		const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		if (!card.contains(document.activeElement)) card.focus({ preventScroll: true });
+		const handleTab = (event: KeyboardEvent) => {
+			if (event.key !== "Tab" || event.defaultPrevented || !isTopModal(card)) return;
+			const portals = Array.from(document.querySelectorAll<HTMLElement>("[data-modal-owner]"))
+				.filter((element) => element.dataset.modalOwner === card.id);
+			const focusable = [card, ...portals].flatMap((root) => Array.from(root.querySelectorAll<HTMLElement>(
+				'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]',
+			))).filter((element) => !element.closest('[inert], [aria-hidden="true"]') && element.getClientRects().length > 0);
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			if (!first || !last) {
+				event.preventDefault();
+				card.focus();
+			} else if (document.activeElement === card || ![card, ...portals].some((root) => root.contains(document.activeElement)) || (event.shiftKey && document.activeElement === first)) {
+				event.preventDefault();
+				(event.shiftKey ? last : first).focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		};
+		window.addEventListener("keydown", handleTab);
+		return () => {
+			window.removeEventListener("keydown", handleTab);
+			if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+		};
+	}, [cardRef]);
+}
+
 function blurActiveElement(): void {
 	const activeElement = document.activeElement;
 	if (
@@ -65,13 +104,18 @@ function useModalKeyboard({
 	hasChildren,
 	onClose,
 	onConfirm,
+	cardRef,
 }: {
 	hasChildren: boolean;
 	onClose: () => void;
 	onConfirm: () => void;
+	cardRef: React.RefObject<HTMLDivElement | null>;
 }): void {
 	useEffect(() => {
 		const handleGlobalKeyDown = (event: KeyboardEvent) => {
+			if (!isTopModal(cardRef.current)) return;
+			const portal = event.target instanceof Element ? event.target.closest("[data-modal-owner]") : null;
+			if (portal?.getAttribute("data-modal-owner") === cardRef.current?.id) return;
 			executeModalKeyboardPlan(
 				getModalKeyboardPlan(event.key, event.defaultPrevented, hasChildren),
 				{
@@ -84,7 +128,7 @@ function useModalKeyboard({
 
 		window.addEventListener("keydown", handleGlobalKeyDown);
 		return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-	}, [hasChildren, onClose, onConfirm]);
+	}, [cardRef, hasChildren, onClose, onConfirm]);
 }
 
 export function useModalController({
@@ -113,6 +157,7 @@ export function useModalController({
 	);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const confirmButtonRef = useRef<HTMLButtonElement>(null);
+	const cardRef = useRef<HTMLDivElement>(null);
 	const hasChildren = Boolean(children);
 	const hasCancelHandler = Boolean(onCancel);
 
@@ -168,6 +213,7 @@ export function useModalController({
 		[handleCloseWithEvent, hasCancelHandler],
 	);
 
+	useModalFocusBoundary(cardRef);
 	useModalInitialFocus({
 		hasChildren,
 		showInput: Boolean(showInput),
@@ -178,6 +224,7 @@ export function useModalController({
 		hasChildren,
 		onClose: handleClose,
 		onConfirm: handleConfirm,
+		cardRef,
 	});
 
 	return {
@@ -187,6 +234,7 @@ export function useModalController({
 		setCheckboxValue,
 		inputRef,
 		confirmButtonRef,
+		cardRef,
 		handleConfirm,
 		handleCloseWithEvent,
 		handleOverlayClick,

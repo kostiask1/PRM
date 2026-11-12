@@ -101,7 +101,7 @@
 .CampaignNotesGraph__connectionModes {
 	display: inline-flex;
 	flex: 0 0 auto;
-	padding: 2px;
+	padding: var(--space-0-5);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--bg), transparent 18%);
@@ -109,7 +109,7 @@
 
 .CampaignNotesGraph__connectionMode {
 	min-height: 26px;
-	padding: 4px 9px;
+	padding: var(--space-1) var(--space-2-25);
 	border-color: transparent;
 	border-radius: 999px;
 	font-size: 0.72rem;
@@ -119,13 +119,31 @@
 .CampaignNotesGraph__filters {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: var(--space-1-5);
 	min-width: 0;
+}
+
+.CampaignNotesGraph__campaignLegend {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-md);
+	background: var(--graph-campaign-surface);
+	color: var(--graph-campaign-ink);
+	font-size: 0.72rem;
+	font-weight: 680;
+}
+
+.CampaignNotesGraph__campaignLegend span {
+	width: var(--space-2);
+	height: var(--space-2);
+	background: var(--graph-campaign-ink);
 }
 
 .CampaignNotesGraph__filter {
 	min-height: 26px;
-	padding: 4px 9px;
+	padding: var(--space-1) var(--space-2-25);
 	border-color: color-mix(in srgb, var(--filter-color), transparent 45%);
 	background: color-mix(in srgb, var(--filter-color), transparent 92%);
 	color: color-mix(in srgb, var(--filter-color), var(--text) 20%);
@@ -134,9 +152,9 @@
 }
 
 .CampaignNotesGraph__filter.Button__primary {
-	border-color: color-mix(in srgb, var(--filter-color), white 10%);
-	background: color-mix(in srgb, var(--filter-color), #111 18%);
-	color: #fff;
+	border-color: var(--filter-color);
+	background: var(--filter-color);
+	color: var(--graph-filter-text);
 	box-shadow: 0 3px 10px color-mix(in srgb, var(--filter-color), transparent 80%);
 }
 
@@ -157,13 +175,7 @@
 	height: 720px;
 	min-height: 620px;
 	overflow: hidden;
-	background:
-		radial-gradient(circle at 52% 42%,
-			color-mix(in srgb, var(--accent), transparent 92%),
-			transparent 48%),
-		linear-gradient(145deg,
-			color-mix(in srgb, var(--bg-deep), transparent 28%),
-			color-mix(in srgb, var(--bg), var(--panel) 18%));
+	background: var(--panel);
 	overscroll-behavior: contain;
 }
 
@@ -239,23 +251,16 @@
 	position: relative;
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
-	gap: 9px;
+	gap: var(--space-2-25);
 	align-items: center;
 	width: 100%;
 	height: 100%;
-	padding: 0px 10px;
-	border: 1px solid color-mix(in srgb, var(--graph-node-color), transparent 45%);
-	border-radius: 15px;
-	background:
-		linear-gradient(130deg,
-			color-mix(in srgb, var(--graph-node-color), transparent 84%),
-			color-mix(in srgb, var(--panel), transparent 4%) 42%,
-			color-mix(in srgb, var(--bg), transparent 2%));
+	padding: 0 var(--space-2-5);
+	border: 1px solid var(--graph-node-color);
+	border-radius: var(--radius-sm);
+	background: var(--graph-node-surface, var(--panel));
 	color: var(--text);
-	box-shadow:
-		0 12px 28px rgba(0, 0, 0, 0.2),
-		inset 0 1px 0 color-mix(in srgb, white, transparent 90%);
-	backdrop-filter: blur(8px);
+	box-shadow: var(--shadow-sm);
 	overflow: hidden;
 	transition:
 		border-color 140ms ease,
@@ -278,9 +283,9 @@
 }
 
 .CampaignNotesGraph__nodeCard:hover {
-	border-color: color-mix(in srgb, var(--graph-node-color), white 16%);
+	border-color: color-mix(in srgb, var(--graph-node-color), var(--highlight-ink) 16%);
 	box-shadow:
-		0 16px 34px rgba(0, 0, 0, 0.26),
+		0 16px 34px color-mix(in srgb, var(--shadow-ink), transparent 74%),
 		0 0 0 1px color-mix(in srgb, var(--graph-node-color), transparent 68%);
 	transform: translateY(-2px);
 }
@@ -288,17 +293,14 @@
 .react-flow__node.dragging .CampaignNotesGraph__nodeCard {
 	border-color: var(--graph-node-color);
 	box-shadow:
-		0 22px 42px rgba(0, 0, 0, 0.34),
+		0 22px 42px color-mix(in srgb, var(--shadow-ink), transparent 66%),
 		0 0 0 2px color-mix(in srgb, var(--graph-node-color), transparent 48%);
 	transform: scale(1.025);
 }
 
 .CampaignNotesGraph__nodeCard.is_selected {
-	border-color: color-mix(in srgb, var(--graph-node-color), white 26%);
-	box-shadow:
-		0 15px 34px rgba(0, 0, 0, 0.27),
-		0 0 0 2px color-mix(in srgb, var(--graph-node-color), transparent 32%),
-		0 0 28px color-mix(in srgb, var(--graph-node-color), transparent 78%);
+	border-color: var(--graph-node-color);
+	box-shadow: inset 0 0 0 2px var(--graph-node-color), var(--shadow-sm);
 }
 
 .CampaignNotesGraph__nodeCard.is_muted {
@@ -314,10 +316,6 @@
 .CampaignNotesGraph__nodeCard.is_campaign {
 	grid-template-columns: minmax(0, 1fr) auto;
 	border-width: 1.5px;
-	background:
-		linear-gradient(135deg,
-			color-mix(in srgb, var(--graph-node-color), transparent 72%),
-			color-mix(in srgb, var(--panel), transparent 1%) 58%);
 }
 
 .CampaignNotesGraph__nodeIcon,
@@ -328,7 +326,7 @@
 	border: 1px solid color-mix(in srgb, var(--graph-node-color), transparent 48%);
 	border-radius: 11px;
 	background: color-mix(in srgb, var(--graph-node-color), transparent 82%);
-	color: color-mix(in srgb, var(--graph-node-color), white 22%);
+	color: color-mix(in srgb, var(--graph-node-color), var(--highlight-ink) 22%);
 }
 
 .CampaignNotesGraph__nodeIcon {
@@ -359,10 +357,10 @@
 .CampaignNotesGraph__nodeType {
 	overflow: hidden;
 	margin-bottom: 3px;
-	color: color-mix(in srgb, var(--graph-node-color), var(--text-bright) 26%);
-	font-size: 0.5rem;
+	color: var(--graph-node-color);
+	font-size: 0.6875rem;
 	font-weight: 780;
-	letter-spacing: 0.065em;
+	letter-spacing: 0.03em;
 	text-overflow: ellipsis;
 	text-transform: uppercase;
 	white-space: nowrap;
@@ -372,7 +370,7 @@
 	overflow: hidden;
 	margin-top: 3px;
 	color: var(--muted);
-	font-size: 0.62rem;
+	font-size: 0.6875rem;
 	line-height: 1.2;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -410,7 +408,7 @@
 	border: 1px solid color-mix(in srgb, var(--graph-node-color), transparent 44%);
 	border-radius: 8px;
 	background: color-mix(in srgb, var(--panel), transparent 10%);
-	color: color-mix(in srgb, var(--graph-node-color), white 24%);
+	color: var(--graph-node-color);
 	cursor: pointer;
 	opacity: 0;
 	transform: translateY(3px);
@@ -463,7 +461,7 @@
 	border: 1px solid color-mix(in srgb, var(--border), transparent 24%);
 	border-radius: 12px;
 	background: color-mix(in srgb, var(--bg), transparent 18%);
-	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 10px 25px color-mix(in srgb, var(--shadow-ink), transparent 80%);
 	overflow: hidden;
 	backdrop-filter: blur(10px);
 }
@@ -492,7 +490,7 @@
 }
 
 .CampaignNotesGraph__miniMapSvg>rect:not(.CampaignNotesGraph__miniMapViewport) {
-	stroke: rgba(255, 255, 255, 0.72);
+	stroke: color-mix(in srgb, var(--image-overlay-contrast), transparent 28%);
 	stroke-width: 2px;
 	vector-effect: non-scaling-stroke;
 }
@@ -522,7 +520,8 @@
 
 .CampaignNotesGraph__nodeCard.is_campaign,
 .CampaignNotesGraph__dot.is_campaign {
-	--graph-node-color: #f59e0b;
+	--graph-node-color: var(--graph-campaign-ink);
+	--graph-node-surface: var(--graph-campaign-surface);
 }
 
 .CampaignNotesGraph__nodeCard.is_campaign_note,
@@ -531,37 +530,44 @@
 .CampaignNotesGraph__dot.is_campaign_note,
 .CampaignNotesGraph__dot.is_session_note,
 .CampaignNotesGraph__dot.is_scene_note {
-	--graph-node-color: #38bdf8;
+	--graph-node-color: var(--graph-note-ink);
+	--graph-node-surface: var(--graph-note-surface);
 }
 
 .CampaignNotesGraph__nodeCard.is_character,
 .CampaignNotesGraph__dot.is_character {
-	--graph-node-color: #22c55e;
+	--graph-node-color: var(--graph-character-ink);
+	--graph-node-surface: var(--graph-character-surface);
 }
 
 .CampaignNotesGraph__nodeCard.is_npc,
 .CampaignNotesGraph__dot.is_npc {
-	--graph-node-color: #f97316;
+	--graph-node-color: var(--graph-npc-ink);
+	--graph-node-surface: var(--graph-npc-surface);
 }
 
 .CampaignNotesGraph__nodeCard.is_location,
 .CampaignNotesGraph__dot.is_location {
-	--graph-node-color: #a3e635;
+	--graph-node-color: var(--graph-location-ink);
+	--graph-node-surface: var(--graph-location-surface);
 }
 
 .CampaignNotesGraph__nodeCard.is_session,
 .CampaignNotesGraph__dot.is_session {
-	--graph-node-color: #818cf8;
+	--graph-node-color: var(--graph-session-ink);
+	--graph-node-surface: var(--graph-session-surface);
 }
 
 .CampaignNotesGraph__nodeCard.is_scene,
 .CampaignNotesGraph__dot.is_scene {
-	--graph-node-color: #e879f9;
+	--graph-node-color: var(--graph-scene-ink);
+	--graph-node-surface: var(--graph-scene-surface);
 }
 
 .CampaignNotesGraph__nodeCard.is_unresolved,
 .CampaignNotesGraph__dot.is_unresolved {
-	--graph-node-color: #94a3b8;
+	--graph-node-color: var(--graph-unresolved-ink);
+	--graph-node-surface: var(--graph-unresolved-surface);
 }
 
 .CampaignNotesGraph__details {
@@ -681,7 +687,7 @@
 
 .CampaignNotesGraph__stats__cards>div {
 	display: grid;
-	gap: 3px;
+	gap: var(--space-0-75);
 	justify-content: initial;
 	padding: var(--space-2);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 42%);
@@ -833,7 +839,9 @@
 	}
 
 	.CampaignNotesGraph__searchWrap {
-		width: 100%;
+		flex: 1 1 0;
+		width: auto;
+		min-width: 0;
 	}
 
 	.CampaignNotesGraph__relayout>span {

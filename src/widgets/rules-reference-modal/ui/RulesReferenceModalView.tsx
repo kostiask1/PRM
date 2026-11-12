@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type KeyboardEvent, type ReactNode } from "react";
 import ReactList from "react-list";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
 import { RollDice } from "../../../features/dice/index.js";
@@ -6,7 +6,7 @@ import { createRichContentRenderers } from "../../../features/rich-content/index
 import { createRulesLinkComponent } from "../../../features/rules-reference/index.js";
 import { Input } from "../../../features/editor/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { Button, highlightText } from "../../../shared/ui/index.js";
+import { Button, highlightText, useRevealSelectedTab } from "../../../shared/ui/index.js";
 import { getCreatureReferenceName, getReferenceItemKey, getSpellReferenceName, type ReferenceItem, type ReferenceTabId, type ReferenceTabPolicy } from "../model.js";
 import type { SpellRecord } from "../../../entities/spell/index.js";
 import type { RulesReferenceModalCompositionSlots } from "./rulesReferenceModalComposition.ts";
@@ -39,6 +39,7 @@ export interface RulesReferenceModalViewProps
 	selectedItem: ReferenceItem | null;
 	selectedMeta: string;
 	canInsertReference: boolean;
+	selectionActionLabel?: string;
 	listRef: React.RefObject<ReactList>;
 	renderReferenceItem: (index: number) => ReactNode;
 	onNavigateHistory: (direction: -1 | 1) => void;
@@ -55,20 +56,34 @@ function ReferenceSearch({ query, isDetailedSearch, canNavigateBack, canNavigate
 	return (
 		<div className="RulesReferenceModalContent__search">
 			<div className="RulesReferenceModalContent__nav">
-				<Button variant="ghost" size={Button.SIZES.SMALL} icon="back" onClick={() => onNavigateHistory(-1)} disabled={!canNavigateBack} title={lang.t("Back")} className="RulesReferenceModalContent__nav_btn" />
-				<Button variant="ghost" size={Button.SIZES.SMALL} icon="forward" onClick={() => onNavigateHistory(1)} disabled={!canNavigateForward} title={lang.t("Forward")} className="RulesReferenceModalContent__nav_btn" />
+				<Button variant="ghost" size={Button.SIZES.SMALL} icon="back" aria-label={lang.t("Back")} onClick={() => onNavigateHistory(-1)} disabled={!canNavigateBack} title={lang.t("Back")} className="RulesReferenceModalContent__nav_btn" />
+				<Button variant="ghost" size={Button.SIZES.SMALL} icon="forward" aria-label={lang.t("Forward")} onClick={() => onNavigateHistory(1)} disabled={!canNavigateForward} title={lang.t("Forward")} className="RulesReferenceModalContent__nav_btn" />
 			</div>
-			<Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={lang.t("Search")} autoFocus />
-			<Button variant={isDetailedSearch ? "primary" : "ghost"} icon="search-detailed" onClick={onToggleDetailedSearch} title={lang.t("Detailed search")} className="DetailedSearchButton RulesReferenceModalContent__detailed_search_btn" />
+			<Input aria-label={lang.t("Search")} value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={lang.t("Search")} autoFocus />
+			<Button variant={isDetailedSearch ? "primary" : "ghost"} icon="search-detailed" aria-label={lang.t("Detailed search")} aria-pressed={isDetailedSearch} onClick={onToggleDetailedSearch} title={lang.t("Detailed search")} className="DetailedSearchButton RulesReferenceModalContent__detailed_search_btn" />
 		</div>
 	);
 }
 
-function ReferenceTabs({ tabs, activeTab, tabsWithSearchMatches, onSelectTab }: Pick<RulesReferenceModalViewProps, "tabs" | "activeTab" | "tabsWithSearchMatches" | "onSelectTab">) {
+function ReferenceTabs({ tabs, activeTab, tabsWithSearchMatches, onSelectTab, idPrefix }: Pick<RulesReferenceModalViewProps, "tabs" | "activeTab" | "tabsWithSearchMatches" | "onSelectTab"> & { idPrefix: string }) {
+	const tabsRef = useRevealSelectedTab(activeTab.id);
+	const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+		if (tabs.length === 0) return;
+		const current = tabs.findIndex((tab) => tab.id === activeTab.id);
+		let next: number;
+		if (event.key === "ArrowRight") next = (current + 1) % tabs.length;
+		else if (event.key === "ArrowLeft") next = (current + tabs.length - 1) % tabs.length;
+		else if (event.key === "Home") next = 0;
+		else if (event.key === "End") next = tabs.length - 1;
+		else return;
+		event.preventDefault();
+		onSelectTab(tabs[next].id);
+		event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+	};
 	return (
-		<div className="RulesReferenceModalContent__tabs" role="tablist">
+		<div ref={tabsRef} className="RulesReferenceModalContent__tabs" role="tablist" aria-label={lang.t("Rules Reference")}>
 			{tabs.map((tab) => (
-				<button key={tab.id} type="button" role="tab" aria-selected={activeTab.id === tab.id} className={["RulesReferenceModalContent__tab", activeTab.id === tab.id ? "RulesReferenceModalContent__tab__active" : "", tabsWithSearchMatches.has(tab.id) ? "RulesReferenceModalContent__tab__hasMatches" : ""].filter(Boolean).join(" ")} onClick={() => onSelectTab(tab.id)}>
+				<button key={tab.id} type="button" role="tab" id={`${idPrefix}-tab-${tab.id}`} aria-controls={`${idPrefix}-panel`} aria-selected={activeTab.id === tab.id} tabIndex={activeTab.id === tab.id ? 0 : -1} aria-label={tabsWithSearchMatches.has(tab.id) ? `${lang.t(tab.label)} — ${lang.t("Contains search matches")}` : undefined} className={["RulesReferenceModalContent__tab", activeTab.id === tab.id ? "RulesReferenceModalContent__tab__active" : "", tabsWithSearchMatches.has(tab.id) ? "RulesReferenceModalContent__tab__hasMatches" : ""].filter(Boolean).join(" ")} onClick={() => onSelectTab(tab.id)} onKeyDown={handleKeyDown}>
 					{lang.t(tab.label)}
 				</button>
 			))}
@@ -76,12 +91,12 @@ function ReferenceTabs({ tabs, activeTab, tabsWithSearchMatches, onSelectTab }: 
 	);
 }
 
-function ReferenceDetailsHeader({ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "onInsertReference"> & { selectedItem: ReferenceItem }) {
+function ReferenceDetailsHeader({ activeTab, query, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, onInsertReference }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "selectionActionLabel" | "onInsertReference"> & { selectedItem: ReferenceItem }) {
 	return (
 		<div className="RulesReferenceModalContent__contentHeader">
 			<h3 className="RulesReferenceModalContent__title">{highlightText(String(selectedItem.name || ""), query)}</h3>
 			{selectedMeta && <div className="muted">{highlightText(selectedMeta, query)}</div>}
-			{canInsertReference && <div className="RulesReferenceModalContent__contentActions"><Button variant="primary" icon="plus" onClick={() => onInsertReference(activeTab.id, selectedItem)}>{lang.t("Insert")}</Button></div>}
+			{canInsertReference && <div className="RulesReferenceModalContent__contentActions"><Button variant="primary" icon="plus" onClick={() => onInsertReference(activeTab.id, selectedItem)}>{selectionActionLabel || lang.t("Insert")}</Button></div>}
 		</div>
 	);
 }
@@ -102,12 +117,12 @@ function GenericReferenceEntry({ item, query }: ReferenceEntryProps) {
 	return renderRulesReferenceContent(item.entries, query);
 }
 
-function ReferenceDetails({ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference, MonsterStatBlock }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "onInsertReference" | "MonsterStatBlock">) {
+function ReferenceDetails({ activeTab, query, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, onInsertReference, MonsterStatBlock }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "selectionActionLabel" | "onInsertReference" | "MonsterStatBlock">) {
 	if (!selectedItem) return <div className="RulesReferenceModalContent__content" />;
 	const Entry = activeTab.id === "bestiary" ? BestiaryReferenceEntry : GenericReferenceEntry;
 	return (
 		<div className="RulesReferenceModalContent__content">
-			<ReferenceDetailsHeader {...{ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference }} />
+			<ReferenceDetailsHeader {...{ activeTab, query, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, onInsertReference }} />
 			<div key={getReferenceItemKey(activeTab.id, selectedItem)} className="RulesReferenceModalContent__entryContent">
 				<Entry MonsterStatBlock={MonsterStatBlock} item={selectedItem} query={query} />
 			</div>
@@ -145,7 +160,7 @@ function ReferenceSidebar({ activeTab, isDetailedSearch, isLoading, normalizedQu
 	return <ReactList key={`${activeTab.id}:${normalizedQuery}:${searchMode}`} ref={listRef} itemRenderer={renderReferenceItem} length={filteredItems.length} type="uniform" />;
 }
 
-function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "listRef" | "renderReferenceItem" | "onInsertReference" | "MonsterStatBlock">) {
+function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "selectionActionLabel" | "listRef" | "renderReferenceItem" | "onInsertReference" | "MonsterStatBlock">) {
 	return (
 		<div className="RulesReferenceModalContent__main">
 			<div className="RulesReferenceModalContent__sidebar">
@@ -159,18 +174,21 @@ function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "acti
 }
 
 export default function RulesReferenceModalView(props: RulesReferenceModalViewProps) {
-	const { activeTab, tabs, query, isDetailedSearch, activeSelectedName, tabsWithSearchMatches, canNavigateBack, canNavigateForward, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onNavigateHistory, onQueryChange, onToggleDetailedSearch, onSelectTab, onEmbeddedSelection, onSelectBestiary, onSelectSpell, onInsertReference, BestiaryBrowser, MonsterStatBlock, SpellsBrowser } = props;
+	const tabsId = useId();
+	const { activeTab, tabs, query, isDetailedSearch, activeSelectedName, tabsWithSearchMatches, canNavigateBack, canNavigateForward, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, listRef, renderReferenceItem, onNavigateHistory, onQueryChange, onToggleDetailedSearch, onSelectTab, onEmbeddedSelection, onSelectBestiary, onSelectSpell, onInsertReference, BestiaryBrowser, MonsterStatBlock, SpellsBrowser } = props;
 	return (
 		<div className="RulesReferenceModalContent RulesReferenceModalContent__withTabs">
+			<ReferenceTabs idPrefix={tabsId} tabs={tabs} activeTab={activeTab} tabsWithSearchMatches={tabsWithSearchMatches} onSelectTab={onSelectTab} />
 			<ReferenceSearch {...{ query, isDetailedSearch, canNavigateBack, canNavigateForward, onNavigateHistory, onQueryChange, onToggleDetailedSearch }} />
-			<ReferenceTabs tabs={tabs} activeTab={activeTab} tabsWithSearchMatches={tabsWithSearchMatches} onSelectTab={onSelectTab} />
+			<div className="RulesReferenceModalContent__panel" role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-tab-${activeTab.id}`}>
 			{activeTab.id === "bestiary" ? (
 				<EmbeddedBestiaryReference {...{ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectBestiary, BestiaryBrowser }} />
 			) : activeTab.id === "spells" ? (
 				<EmbeddedSpellReference {...{ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell, SpellsBrowser }} />
 			) : (
-				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onInsertReference, MonsterStatBlock }} />
+				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, listRef, renderReferenceItem, onInsertReference, MonsterStatBlock }} />
 			)}
+			</div>
 		</div>
 	);
 }

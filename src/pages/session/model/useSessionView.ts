@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { campaignApi } from "../../../entities/campaign/index.js";
-import type { CampaignEntityRecord } from "../../../entities/campaign/index.js";
+import type { CampaignEntityRecord, EntityTransferEndpoint } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
 import type { SessionRecord } from "../../../entities/session/index.js";
 import {
@@ -93,6 +93,7 @@ export default function useSessionView() {
 
 	const [session, setSession] = useState<SessionPageSession | null>(null);
 	const [isChecklistOpen, setIsChecklistOpen] = useState(false);
+	const failedTransferSaveRef = useRef(new Set<string>());
 
 	const campaignSlug = campaign.slug;
 	const handleBack = useCallback(() => {
@@ -106,8 +107,9 @@ export default function useSessionView() {
 		[campaignSlug, navigateToSession, requestCampaignReload],
 	);
 	const reportSessionSaveError = useCallback((error: unknown) => {
+		failedTransferSaveRef.current.add(`${campaignSlug}\0${sessionId}`);
 		console.error("Save failed", error);
-	}, []);
+	}, [campaignSlug, sessionId]);
 	const reportSessionHistoryError = useCallback((error: unknown) => {
 		console.error("Failed to restore session history", error);
 		showMessage({
@@ -128,6 +130,7 @@ export default function useSessionView() {
 		discardPendingSave: discardPendingSessionSave,
 		flushPendingSave,
 		hasPendingSave,
+		waitForActiveSave,
 		isSaving,
 		scheduleSave: triggerSave,
 	} = useSessionPersistence({
@@ -172,6 +175,29 @@ export default function useSessionView() {
 			return next ? normalizeLoadedSession(next) : null;
 		});
 	}, [normalizeLoadedSession]);
+	const transferSessionEntity = useCallback(async (type: "npc" | "locations", entityId: string | number, target: EntityTransferEndpoint) => {
+		const saveScope = `${campaignSlug}\0${sessionId}`;
+		const activeSaved = await waitForActiveSave();
+		if (failedTransferSaveRef.current.has(saveScope) && !hasPendingSave()) {
+			if (!session) throw new Error("Session is required.");
+			triggerSave(session);
+		}
+		let flushed;
+		try {
+			flushed = await flushPendingSave({ throwOnError: true });
+			failedTransferSaveRef.current.delete(saveScope);
+		} catch (error) {
+			failedTransferSaveRef.current.add(saveScope);
+			throw error;
+		}
+		const fileName = flushed?.fileName || activeSaved?.fileName || session?.fileName || sessionId;
+		if (!fileName) throw new Error("Session file name is required.");
+		const result = await api.transferEntity(campaignSlug, type, { scope: "session", fileName, entityId }, target);
+		if (!result?.sourceSession) throw new Error("Transfer did not return the source session.");
+		setScopeSession(result.sourceSession as CampaignEntitySession);
+		refreshEntities();
+		requestCampaignReload();
+	}, [campaignSlug, flushPendingSave, hasPendingSave, refreshEntities, requestCampaignReload, session, sessionId, setScopeSession, triggerSave, waitForActiveSave]);
 	const setEncounterSession = useCallback<
 		Dispatch<
 			SetStateAction<EncounterCreationSession | SessionRecord | null>
@@ -277,12 +303,14 @@ export default function useSessionView() {
 	const handleCreateSessionEntity = async (
 		type: import("./sessionEntityModel.ts").SessionEntityType,
 		payload: Record<string, unknown>,
-	): Promise<void> => {
+	): Promise<import("./sessionEntityModel.ts").SessionPageEntity> => {
+		const entity = normalizeSessionEntity(type, payload);
 		updateSessionEntityList(
 			type,
-			(current) => [...current, normalizeSessionEntity(type, payload)],
+			(current) => [...current, entity],
 			true,
 		);
+		return entity;
 	};
 
 	const handleSessionEntityChange = (
@@ -615,6 +643,7 @@ export default function useSessionView() {
 		closeScopeImportModal,
 		moveCampaignEntityToSession,
 		moveSessionEntityToCampaign,
+		transferSessionEntity,
 		addScene,
 		updateScene,
 		toggleSceneCollapse,

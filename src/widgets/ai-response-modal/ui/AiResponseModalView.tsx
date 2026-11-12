@@ -37,6 +37,7 @@ function ResponseToolbar({
 				size={Button.SIZES.SMALL}
 				icon={isCopied ? "check" : "copy"}
 				onClick={onCopy}
+				aria-label={lang.t("Copy formatted text for Word")}
 				title={lang.t("Copy formatted text for Word")}
 			/>
 		);
@@ -84,6 +85,21 @@ function ResponseDetails({ rows }: { rows: AiResponseDetailRow[] }) {
 			))}
 		</div>
 	);
+}
+
+function ResponseDestination({ entry }: { entry: AiResponseHistoryEntry | null }) {
+	const path = entry?.path;
+	if (!path) return null;
+	const parts: string[] = [];
+	if (path.campaign) {
+		parts.push(path.campaign === "bestiary" ? lang.t("Bestiary") : `${lang.t("Campaign")}: ${path.campaign}`);
+	}
+	if (path.session) parts.push(`${lang.t("Session")}: ${path.session}`);
+	if (path.encounter !== null && path.encounter !== undefined && path.encounter !== "") {
+		parts.push(`${lang.t("Encounter")}: ${path.encounter}`);
+	}
+	if (parts.length === 0) return null;
+	return <div className="AiAssistantPanel__response_destination"><strong>{lang.t("Target workspace")}</strong><span>{parts.join(" / ")}</span></div>;
 }
 
 interface DraftEditorProps {
@@ -178,13 +194,15 @@ function DiffViewSwitch({
 		<div className="AiAssistantPanel__diff_view_switch">
 			<Button
 				variant={viewMode === "preview" ? "primary" : "ghost"}
+				aria-pressed={viewMode === "preview"}
 				size={Button.SIZES.SMALL}
 				onClick={() => setViewMode("preview")}
 			>
-				{lang.t("Preview")}
+				{lang.t("Comparison")}
 			</Button>
 			<Button
 				variant={viewMode === "json" ? "primary" : "ghost"}
+				aria-pressed={viewMode === "json"}
 				size={Button.SIZES.SMALL}
 				onClick={() => setViewMode("json")}
 			>
@@ -202,13 +220,6 @@ function ResponseDiff(props: ResponseDiffProps) {
 				<span>{lang.t("Changes")}</span>
 				<span>{props.getHistoryChangeSummary(props.entry)}</span>
 			</div>
-			{props.isDraft && (
-				<div className="AiAssistantPanel__diff_hint">
-					{lang.t(
-						"You can enable automatic applying of parsed AI changes in settings.",
-					)}
-				</div>
-			)}
 			<DiffViewSwitch viewMode={props.viewMode} setViewMode={props.setViewMode} />
 			{props.viewMode === "preview" ? props.preview : props.jsonDiff}
 			{hasDraftResources && props.draftError && (
@@ -276,6 +287,7 @@ export default function AiResponseModalView(props: AiResponseModalViewProps) {
 						</ReactMarkdown>
 					</div>
 				)}
+				{props.selectedResponseHasChanges && <ResponseDestination entry={props.selectedResponseEntry} />}
 				<ResponseDetails rows={props.selectedResponseDetails} />
 				{props.selectedResponseHasChanges && (
 					<ResponseDiff

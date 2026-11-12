@@ -146,6 +146,11 @@ function describeCampaignSessionChange(event, segments) {
 }
 
 function describeCampaignEntityChange(event, segments) {
+	if (segments[5] === "transfer") {
+		event.resource = "history";
+		event.campaignSlug = null;
+		return;
+	}
 	event.resource = "entities";
 	event.entityType = segments[4] || null;
 	event.entitySlug = segments[5] || null;
@@ -229,3 +234,4 @@ module.exports = {
 	realtimeMiddleware,
 	setupRealtime,
 };
+Object.defineProperty(module.exports, "__test", { value: { describeChange } });

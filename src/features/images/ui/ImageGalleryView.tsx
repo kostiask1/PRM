@@ -53,80 +53,89 @@ function ImageGallerySidebar({
 	} = controller;
 	const {
 		campaigns,
+		categories,
+		dragSource,
 		dragOverTarget,
 		handleDrop,
-		isReadonlyPath,
-		selectedCat,
 		selectedSource,
-		selectedSub,
 		setDragOverTarget,
 		setSelectedSource,
 	} = galleryController;
+	const dropCategory = categories.find((category) => category.id === dragSource?.category);
+	const dropHint = dragSource ? lang.t("Drop in {category}", { category: dropCategory ? lang.t(dropCategory.label) : dragSource.category }) : "";
 	return (
 		<aside className="ImageGallery__sidebar">
 			<button
+				type="button"
+				aria-pressed={selectedSource === "general"}
 				className={classNames("ImageGallery__sourceButton", {
 					is_active: selectedSource === "general",
-					is_drag_over: dragOverTarget?.id === "general",
+					is_drag_over: dragOverTarget?.type === "source" && dragOverTarget.id === "general",
 				})}
 				onClick={() => {
 					resetContentScope();
 					setSelectedSource("general");
 				}}
 				onDragOver={(event) => {
+					if (!dragSource || dragSource.slug === "general") return;
 					event.preventDefault();
-					if (dragOverTarget?.id !== "general") {
+					if (dragOverTarget?.type !== "source" || dragOverTarget.id !== "general") {
 						setDragOverTarget({ type: "source", id: "general" });
 					}
 				}}
 				onDragLeave={() => setDragOverTarget(null)}
-				onDrop={(event) =>
+				onDrop={(event) => {
+					if (!dragSource || dragSource.slug === "general") { event.preventDefault(); event.stopPropagation(); return; }
 					void handleDrop(event, {
 						slug: "general",
-						category: selectedCat.id,
-						subcategory: selectedSub,
-						readonly: isReadonlyPath(selectedSub),
-					})
-				}
+						category: dragSource.category,
+						subcategory: "",
+						readonly: false,
+					});
+				}}
 			>
 				<Icon name="database" size={16} />
 				<span>{lang.t("General")}</span>
 				<span className="ImageGallery__sourceButton__size">
-					{formatBytes(sourceSizes.general ?? 0)}
+					{dragOverTarget?.type === "source" && dragOverTarget.id === "general" ? dropHint : formatBytes(sourceSizes.general ?? 0)}
 				</span>
 			</button>
 			<div className="ImageGallery__sidebar_divider">{lang.t("Campaigns")}</div>
 			{campaigns.map((campaign) => (
 				<button
 					key={campaign.slug}
+					type="button"
+					aria-pressed={selectedSource === campaign.slug}
 					className={classNames("ImageGallery__sourceButton", {
 						is_active: selectedSource === campaign.slug,
-						is_drag_over: dragOverTarget?.id === campaign.slug,
+						is_drag_over: dragOverTarget?.type === "source" && dragOverTarget.id === campaign.slug,
 					})}
 					onClick={() => {
 						resetContentScope();
 						setSelectedSource(campaign.slug);
 					}}
 					onDragOver={(event) => {
+						if (!dragSource || dragSource.slug === campaign.slug) return;
 						event.preventDefault();
-						if (dragOverTarget?.id !== campaign.slug) {
+						if (dragOverTarget?.type !== "source" || dragOverTarget.id !== campaign.slug) {
 							setDragOverTarget({ type: "source", id: campaign.slug });
 						}
 					}}
 					onDragLeave={() => setDragOverTarget(null)}
-					onDrop={(event) =>
+					onDrop={(event) => {
+						if (!dragSource || dragSource.slug === campaign.slug) { event.preventDefault(); event.stopPropagation(); return; }
 						void handleDrop(event, {
 							slug: campaign.slug,
-							category: selectedCat.id,
-							subcategory: selectedSub,
+							category: dragSource.category,
+							subcategory: "",
 							readonly: false,
-						})
-					}
+						});
+					}}
 				>
 					<Icon name="map" size={16} />
 					<span>{campaign.name}</span>
 					<span className="ImageGallery__sourceButton__size">
-						{formatBytes(sourceSizes[campaign.slug] ?? 0)}
+						{dragOverTarget?.type === "source" && dragOverTarget.id === campaign.slug ? dropHint : formatBytes(sourceSizes[campaign.slug] ?? 0)}
 					</span>
 				</button>
 			))}
@@ -138,6 +147,7 @@ function ImageGalleryTabs({ controller }: { controller: ImageGalleryUiController
 	const { galleryController, resetContentScope } = controller;
 	const {
 		categories,
+		dragSource,
 		dragOverTarget,
 		handleDrop,
 		selectedCat,
@@ -151,9 +161,11 @@ function ImageGalleryTabs({ controller }: { controller: ImageGalleryUiController
 			{categories.map((category) => (
 				<button
 					key={category.id}
+					type="button"
+					aria-pressed={selectedCat.id === category.id}
 					className={classNames("ImageGallery__tabButton", {
 						is_active: selectedCat.id === category.id,
-						is_drag_over: dragOverTarget?.id === category.id,
+						is_drag_over: dragOverTarget?.type === "cat" && dragOverTarget.id === category.id,
 					})}
 					onClick={() => {
 						resetContentScope();
@@ -161,20 +173,22 @@ function ImageGalleryTabs({ controller }: { controller: ImageGalleryUiController
 						setSelectedSub("");
 					}}
 					onDragOver={(event) => {
+						if (!dragSource || (dragSource.slug === selectedSource && dragSource.category === category.id && !dragSource.subcategory)) return;
 						event.preventDefault();
-						if (dragOverTarget?.id !== category.id) {
+						if (dragOverTarget?.type !== "cat" || dragOverTarget.id !== category.id) {
 							setDragOverTarget({ type: "cat", id: category.id });
 						}
 					}}
 					onDragLeave={() => setDragOverTarget(null)}
-					onDrop={(event) =>
+					onDrop={(event) => {
+						if (!dragSource || (dragSource.slug === selectedSource && dragSource.category === category.id && !dragSource.subcategory)) { event.preventDefault(); event.stopPropagation(); return; }
 						void handleDrop(event, {
 							slug: selectedSource,
 							category: category.id,
 							subcategory: "",
 							readonly: false,
-						})
-					}
+						});
+					}}
 				>
 					<Icon name={category.icon as IconName} size={14} />
 					<span>{lang.t(category.label)}</span>
@@ -189,6 +203,15 @@ function ImageGalleryToolbar({
 }: {
 	controller: ImageGalleryUiController;
 }) {
+	const { galleryController } = controller;
+	const destination = galleryController.moveFeedback;
+	const destinationSource = destination?.slug === "general"
+		? lang.t("General")
+		: galleryController.campaigns.find((campaign) => campaign.slug === destination?.slug)?.name || destination?.slug;
+	const destinationCategory = galleryController.categories.find((category) => category.id === destination?.category);
+	const destinationLabel = destination
+		? [destinationSource, destinationCategory ? lang.t(destinationCategory.label) : destination.category, destination.subcategory].filter(Boolean).join(" / ")
+		: "";
 	return (
 		<div className="ImageGallery__toolbar">
 			<ImageGalleryNavigation
@@ -207,6 +230,7 @@ function ImageGalleryToolbar({
 				controller={controller.galleryController}
 				onOpenMove={controller.openMoveModal}
 			/>
+			{destination && <div className="ImageGallery__moveFeedback" role="status">{lang.t("Items moved to {destination}.", { destination: destinationLabel })}</div>}
 		</div>
 	);
 }

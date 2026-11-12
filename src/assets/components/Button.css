@@ -31,7 +31,7 @@
 
 .Button__primary {
 	background: var(--accent);
-	border-color: color-mix(in srgb, var(--accent), #000 12%);
+	border-color: color-mix(in srgb, var(--accent), var(--shadow-ink) 12%);
 	color: var(--text-on-accent);
 }
 
@@ -40,7 +40,7 @@
 }
 
 .Button__primary:hover {
-	background: color-mix(in srgb, var(--accent), #000 8%);
+	background: color-mix(in srgb, var(--accent), var(--shadow-ink) 8%);
 }
 
 .Button__danger {
@@ -50,9 +50,9 @@
 }
 
 .Button__danger:hover {
-	background: color-mix(in srgb, var(--danger), #000 10%);
-	border-color: color-mix(in srgb, var(--danger), #000 8%);
-	color: #fff;
+	background: color-mix(in srgb, var(--danger), var(--shadow-ink) 10%);
+	border-color: color-mix(in srgb, var(--danger), var(--shadow-ink) 8%);
+	color: var(--text-on-danger);
 }
 
 .Button__ghost {

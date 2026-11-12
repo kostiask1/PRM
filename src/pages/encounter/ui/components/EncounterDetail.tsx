@@ -7,6 +7,7 @@ import {
 	type CharacterCardProps,
 } from "../../../../widgets/campaign-entity-card/index.js";
 import { MonsterStatBlock } from "../../../../widgets/monster-stat-block/index.js";
+import EncounterConditions from "./EncounterConditions.tsx";
 import type {
 	EncounterViewModel,
 	EncounterViewParticipant,
@@ -24,6 +25,7 @@ interface EncounterDetailProps {
 	setGridItemRef: (instanceId: string, node: HTMLDivElement | null) => void;
 	onAiAction: (monster: EncounterViewParticipant) => void;
 	onFieldEdit: (monster: EncounterViewParticipant) => void;
+	onOpenConditionPicker: (instanceId: string) => void;
 	onTokenImageChange: (
 		monster: EncounterViewParticipant,
 		imageUrl: string | null,
@@ -32,6 +34,7 @@ interface EncounterDetailProps {
 		instanceId: string,
 	) => CharacterCardProps["onChange"];
 	getMonsterImageOverride: EncounterViewModel["getMonsterImageOverride"];
+	updateMonsterConditions: EncounterViewModel["updateMonsterConditions"];
 }
 
 export default function EncounterDetail(props: EncounterDetailProps) {
@@ -80,6 +83,10 @@ function EncounterSelectedDetail(props: EncounterDetailProps) {
 
 function EncounterMonsterStatBlock({ monster, props, layoutMode }: { monster: EncounterViewParticipant; props: EncounterDetailProps; layoutMode?: "grid" }) {
 	return (
+		<div className="EncounterView__monsterCard">
+			<div className="EncounterView__monsterConditions">
+				<EncounterConditions monster={monster} instanceId={props.getParticipantInstanceId(monster)} view={{ updateMonsterConditions: props.updateMonsterConditions }} onAdd={props.onOpenConditionPicker} />
+			</div>
 		<MonsterStatBlock
 			monster={monster as BestiaryMonster}
 			onAiAction={(value) => props.onAiAction(value as EncounterViewParticipant)}
@@ -89,6 +96,7 @@ function EncounterMonsterStatBlock({ monster, props, layoutMode }: { monster: En
 			tokenImageOverrideUrl={props.getMonsterImageOverride(monster)}
 			layoutMode={layoutMode}
 		/>
+		</div>
 	);
 }
 

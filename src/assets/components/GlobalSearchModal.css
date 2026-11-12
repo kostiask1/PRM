@@ -5,10 +5,10 @@
 
 .GlobalSearchModal__bar input {
 	width: 100%;
-	padding: 12px 14px;
+	padding: var(--space-3) var(--space-3-5);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
-	background: var(--input-bg);
+	background: var(--input);
 	color: var(--text);
 	font-size: 1rem;
 }
@@ -26,9 +26,9 @@
 }
 
 .GlobalSearchModal__filter.Button__primary {
-	background: color-mix(in srgb, var(--search-result-color), #111 18%);
+	background: color-mix(in srgb, var(--search-result-color), var(--shadow-ink) 18%);
 	border-color: var(--search-result-color);
-	color: #fff;
+	color: var(--panel);
 }
 
 .GlobalSearchModal__filter.Button__ghost {
@@ -50,7 +50,7 @@
 
 .GlobalSearchModal__result {
 	display: grid;
-	gap: 4px;
+	gap: var(--space-1);
 	padding: var(--space-3);
 	border: 1px solid var(--border);
 	border-left: 4px solid var(--search-result-color, var(--accent));
@@ -97,14 +97,14 @@
 
 .GlobalSearchModal__highlight {
 	border-radius: 3px;
-	background: color-mix(in srgb, var(--warning, #f59e0b), transparent 62%);
+	background: color-mix(in srgb, var(--warning), transparent 62%);
 	color: var(--text-bright);
 	padding: 0 2px;
 }
 
 .GlobalSearchModal__resultType {
 	justify-self: start;
-	padding: 2px 7px;
+	padding: var(--space-0-5) var(--space-1-75);
 	border-radius: var(--radius-sm);
 	background: color-mix(in srgb,
 			var(--search-result-color, var(--accent)),

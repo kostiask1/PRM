@@ -36,6 +36,14 @@
 	cursor: pointer;
 }
 
+/* Empty entity portraits should leave room for the editable fields. */
+:is(.CharacterCard__body, .LocationCard__body):is(.has_no_image, :has(.ImageAssetField__missing)) .ImageDropzone__content {
+	min-height: 0;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
 .ImageDropzone__upload_settings {
 	display: flex;
 	flex-direction: column;

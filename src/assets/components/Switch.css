@@ -39,7 +39,7 @@
 .Switch__content {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-0-5);
 }
 
 .Switch__label {
@@ -56,6 +56,11 @@
 	border-color: color-mix(in srgb, var(--accent), transparent 45%);
 }
 
+.Switch input:focus-visible + .Switch__track {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
 .Switch.is_checked .Switch__track {
 	background: color-mix(in srgb, var(--accent), var(--bg) 30%);
 	border-color: color-mix(in srgb, var(--accent), transparent 20%);
@@ -63,7 +68,7 @@
 
 .Switch.is_checked .Switch__thumb {
 	transform: translateX(18px);
-	background: #fff;
+	background: var(--switch-thumb);
 }
 
 .Switch.is_disabled {

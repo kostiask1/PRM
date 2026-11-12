@@ -13,6 +13,7 @@ import {
 	getGalleryFolderDragOverPlan,
 	getGalleryFolderDropTarget,
 	getGalleryFolderRenameName,
+	getGalleryImageSelectionKey,
 	type GalleryFolderDragOverPlan,
 } from "../model/imageGalleryInteraction.ts";
 import type useImageGallery from "../model/useImageGallery.ts";
@@ -69,6 +70,7 @@ function ImageGalleryFolderItem({
 	item: Extract<GalleryPresentationItem, { type: "sub" }>;
 }) {
 	const {
+		dragSource,
 		dragOverTarget,
 		handleDragEnd,
 		handleDragStart,
@@ -106,6 +108,9 @@ function ImageGalleryFolderItem({
 
 	return (
 		<div
+			role="group"
+			tabIndex={0}
+			aria-label={lang.t("Folder: {name}. Press Enter to open.", { name: folderLabel })}
 			className={classNames(
 				"ImageGallery__item",
 				"ImageGallery__item__folder",
@@ -126,16 +131,24 @@ function ImageGalleryFolderItem({
 				resetContentScope();
 				setSelectedSub(presentation.subcategory);
 			}}
+			onKeyDown={(event) => {
+				if (event.target !== event.currentTarget || event.key !== "Enter") return;
+				event.preventDefault();
+				resetContentScope();
+				setSelectedSub(presentation.subcategory);
+			}}
 			draggable={presentation.canInteract}
 			onDragStart={(event) => handleDragStart(event, sub, "sub")}
 			onDragEnd={handleDragEnd}
-			onDragOver={(event) =>
+			onDragOver={(event) => {
+				event.stopPropagation();
+				if (!dragSource) return;
 				executeGalleryFolderDragOver(
 					event,
 					dragOverPlan,
 					setDragOverTarget,
-				)
-			}
+				);
+			}}
 			onDragLeave={() => setDragOverTarget(null)}
 			onDrop={(event) => {
 				const target = getGalleryFolderDropTarget({
@@ -149,6 +162,7 @@ function ImageGalleryFolderItem({
 		>
 			<ImageGalleryFolderVisual
 				presentation={presentation}
+				folderLabel={folderLabel}
 				sub={sub}
 				toggleSelect={toggleSelect}
 			/>
@@ -165,10 +179,12 @@ function ImageGalleryFolderItem({
 
 function ImageGalleryFolderVisual({
 	presentation,
+	folderLabel,
 	sub,
 	toggleSelect,
 }: {
 	presentation: GalleryFolderPresentation;
+	folderLabel: string;
 	sub: string;
 	toggleSelect: ImageGalleryController["toggleSelect"];
 }) {
@@ -181,12 +197,15 @@ function ImageGalleryFolderVisual({
 				</span>
 			)}
 			{presentation.canInteract && (
-				<div
+				<button
+					type="button"
 					className="ImageGallery__checkbox"
+					aria-label={lang.t("Select folder: {name}", { name: folderLabel })}
+					aria-pressed={presentation.isSelected}
 					onClick={(event) => toggleSelect(sub, "sub", event)}
 				>
 					<Icon name={presentation.checkboxIcon} size={12} />
-				</div>
+				</button>
 			)}
 		</div>
 	);
@@ -256,21 +275,31 @@ function ImageGalleryImageItem({
 	} = controller;
 	const { image } = item;
 	const imageReadonly = isReadonlyImage(image);
+	const selectionKey = getGalleryImageSelectionKey(image);
 
 	return (
 		<Tooltip content={lang.t("Right-click: open fullscreen")}>
 			<div
+				role="group"
+				tabIndex={0}
+				aria-label={lang.t("Image: {name}. Press Enter to open.", { name: image.displayName || image.name })}
 				data-gallery-image-id={encodeURIComponent(image.name)}
 				className={classNames("ImageGallery__item", {
-					is_selected: selectedFilenames.has(image.name),
+					is_selected: selectedFilenames.has(selectionKey),
 					is_navigated: highlightedImageName === image.name,
 					is_protected: imageReadonly,
 				})}
 				onClick={(event) => {
 					event.stopPropagation();
-					handleItemClick(image.name, "image", itemIndex, event);
+					handleItemClick(selectionKey, "image", itemIndex, event);
 				}}
 				onDoubleClick={() => onSelect?.(image)}
+				onKeyDown={(event) => {
+					if (event.target !== event.currentTarget || event.key !== "Enter") return;
+					event.preventDefault();
+					if (onSelect) onSelect(image);
+					else setPreviewImage(image);
+				}}
 				onContextMenu={(event) => {
 					event.preventDefault();
 					setPreviewImage(image);
@@ -288,15 +317,18 @@ function ImageGalleryImageItem({
 				<div className="ImageGallery__image_wrap">
 					<img src={image.url} alt="" loading="lazy" decoding="async" draggable={false} />
 					{!imageReadonly && (
-						<div
+						<button
+							type="button"
 							className="ImageGallery__checkbox"
-							onClick={(event) => toggleSelect(image.name, "image", event)}
+							aria-label={lang.t("Select image: {name}", { name: image.displayName || image.name })}
+							aria-pressed={selectedFilenames.has(selectionKey)}
+							onClick={(event) => toggleSelect(selectionKey, "image", event)}
 						>
 							<Icon
-								name={selectedFilenames.has(image.name) ? "check" : "plus"}
+								name={selectedFilenames.has(selectionKey) ? "check" : "plus"}
 								size={12}
 							/>
-						</div>
+						</button>
 					)}
 				</div>
 				<Tooltip content={image.displayName || image.name}>
@@ -322,6 +354,7 @@ function ImageGalleryImageItem({
 									void handleRenameImage(
 										image.name,
 										`${newBaseName}.${extension}`,
+										image,
 									);
 								}
 							}}

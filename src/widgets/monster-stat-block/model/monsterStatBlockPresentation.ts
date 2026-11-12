@@ -107,7 +107,7 @@ export interface MonsterTokenSectionPresentationInput {
 	showDropzone: boolean;
 	hasImageError: boolean;
 	allowTokenUpload: boolean;
-	customTokenSrc: string;
+	isReplacingToken: boolean;
 	isCustomMonster: boolean;
 	hasTokenImageChange: boolean;
 }
@@ -664,7 +664,7 @@ function shouldShowMonsterTokenCancel(
 	input: MonsterTokenSectionPresentationInput,
 	mode: MonsterTokenSectionMode,
 ): boolean {
-	return mode === "dropzone" && Boolean(input.customTokenSrc) && !input.hasImageError;
+	return mode === "dropzone" && input.isReplacingToken;
 }
 
 function shouldShowMonsterTokenReplace(

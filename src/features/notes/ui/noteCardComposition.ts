@@ -7,6 +7,7 @@ export interface NoteCardProps {
 	isLast: boolean;
 	campaignSlug?: string | null;
 	enableHistory?: boolean;
+	collapsible?: boolean;
 	onToggleCollapse: (noteId: NoteId) => void;
 	onTitleChange: (noteId: NoteId, value: string) => void;
 	onTextChange: (noteId: NoteId, value: string) => void;
@@ -19,6 +20,7 @@ export interface NoteCardEditableFieldChangeEvent {
 }
 
 export interface NoteCardEditableFieldSlotProps {
+	"aria-label"?: string;
 	value: string | number | null | undefined;
 	enableHistory: boolean;
 	onChange: (event: NoteCardEditableFieldChangeEvent) => void;

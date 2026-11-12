@@ -68,6 +68,7 @@ export interface SubmitCreateEntityOptions {
 	entityType: CampaignEntityType;
 	payload: CampaignEntityRecord;
 	onCreate?: (payload: CampaignEntityRecord) => void | Promise<void>;
+	onCreated?: (entity: CampaignEntityRecord) => void;
 	onRefreshEntities: () => unknown;
 }
 
@@ -76,14 +77,16 @@ export async function submitCreateEntity({
 	entityType,
 	payload,
 	onCreate,
+	onCreated,
 	onRefreshEntities,
 }: SubmitCreateEntityOptions): Promise<void> {
 	if (typeof onCreate === "function") {
 		await onCreate(payload);
 		return;
 	}
-	await createCampaignEntity(campaignSlug, entityType, payload);
+	const entity = await createCampaignEntity(campaignSlug, entityType, payload);
 	onRefreshEntities();
+	if (entity) onCreated?.(entity);
 }
 
 export async function createCampaignEntity(

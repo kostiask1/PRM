@@ -1,7 +1,6 @@
 import type { MouseEvent } from "react";
 import {
 	Button,
-	CollapseToggleButton,
 	Icon,
 } from "../../../../shared/ui/index.js";
 import { lang } from "../../../../shared/lib/index.js";
@@ -9,8 +8,7 @@ import { renderMentionText } from "../../../../features/entity-link/index.js";
 
 export interface SceneCardHeaderProps {
 	number: number;
-	collapsed: boolean;
-	onToggle: () => void;
+	sceneTitle: string;
 	onOpenEncounter: (event: MouseEvent<HTMLButtonElement>) => void;
 	onRemove: () => void;
 	hasEncounter: boolean;
@@ -19,8 +17,7 @@ export interface SceneCardHeaderProps {
 
 export default function SceneCardHeader({
 	number,
-	collapsed,
-	onToggle,
+	sceneTitle,
 	onOpenEncounter,
 	onRemove,
 	hasEncounter,
@@ -28,14 +25,9 @@ export default function SceneCardHeader({
 }: SceneCardHeaderProps) {
 	return (
 		<div className="SessionSceneCard__header">
-			<div className="SessionSceneCard__titleGroup" onClick={onToggle}>
-				<CollapseToggleButton
-					size={Button.SIZES.SMALL}
-					collapsed={collapsed}
-					onClick={onToggle}
-				/>
+			<div className="SessionSceneCard__titleGroup">
 				<div className="SessionSceneCard__title">
-					{lang.t("Scene {number}", { number })}
+					{sceneTitle.trim() ? renderMentionText(sceneTitle) : lang.t("Scene {number}", { number })}
 				</div>
 			</div>
 			<div className="SessionSceneCard__headerActions">
@@ -55,6 +47,7 @@ export default function SceneCardHeader({
 				<Button
 					variant="danger"
 					icon="x"
+					aria-label={lang.t("Delete scene")}
 					iconSize={16}
 					onClick={(event) => {
 						event.stopPropagation();

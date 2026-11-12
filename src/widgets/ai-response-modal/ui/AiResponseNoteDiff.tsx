@@ -6,6 +6,7 @@ import {
 	isResourceApplied,
 	type PreviewResource,
 } from "../model/aiResponseModal.ts";
+import { AiResponseFieldComparison, AiResponseSingleSnapshotComparison } from "./AiResponseFieldComparison.tsx";
 
 type RenderNoteCard = (
 	resource: PreviewResource,
@@ -60,6 +61,8 @@ function AiResponseSingleNoteDiff({
 	isNew: boolean;
 }) {
 	return (
+		<>
+		<AiResponseSingleSnapshotComparison before={resource.before} after={resource.after} />
 		<div className="AiAssistantPanel__preview_card_stack">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">
@@ -75,6 +78,7 @@ function AiResponseSingleNoteDiff({
 				</div>
 			</div>
 		</div>
+		</>
 	);
 }
 
@@ -85,6 +89,8 @@ function AiResponseChangedNoteDiff({
 }: Pick<AiResponseNoteDiffProps, "isDraft" | "renderNoteCard" | "resource">) {
 	const highlightFields = buildNoteHighlightFields(resource);
 	return (
+		<>
+		<AiResponseFieldComparison before={resource.before} after={resource.after} />
 		<div className="AiAssistantPanel__preview_card_columns">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">{lang.t("Before")}</div>
@@ -109,6 +115,7 @@ function AiResponseChangedNoteDiff({
 				</div>
 			</div>
 		</div>
+		</>
 	);
 }
 

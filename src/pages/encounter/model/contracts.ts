@@ -9,6 +9,7 @@ export interface EncounterViewParticipant extends EncounterParticipant {
 	name?: string;
 	currentHp?: unknown;
 	hit_points?: unknown;
+	encounterConditions?: string[];
 }
 
 export interface EncounterViewState extends Record<string, unknown> {
@@ -80,6 +81,7 @@ export interface EncounterViewModel {
 	removeMonster: (instanceId: string) => void;
 	updateMonsterHp: (instanceId: string, value: string | number) => void;
 	updateMonsterMaxHp: (instanceId: string, value: string | number) => void;
+	updateMonsterConditions: (instanceId: string, conditions: string[]) => void;
 	updateMonsterImage: (instanceId: string, imageUrl: string | null) => void;
 	updateMonsterFromAi: (
 		instanceId: string,

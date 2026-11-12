@@ -13,8 +13,6 @@ interface SessionSceneCardProps {
 	number: number;
 	scene: SessionScene;
 	fields: readonly SceneCardFieldDefinition[];
-	collapsed: boolean;
-	onToggle: () => void;
 	onRemove: () => void;
 	onOpenEncounter: (event: MouseEvent<HTMLButtonElement>) => void;
 	imageUrl?: string | null;
@@ -23,7 +21,6 @@ interface SessionSceneCardProps {
 	hasEncounter: boolean;
 	encounterName: string;
 	onUpdateField: (field: string, value: string) => void;
-	onToggleNotesCollapse: () => void;
 	onSceneNotesReorder: (notes: SharedNote[]) => void;
 	onSceneNoteAiIgnoredChange: (
 		noteId: SharedNote["id"],
@@ -34,6 +31,9 @@ interface SessionSceneCardProps {
 }
 
 export default function SessionSceneCard(props: SessionSceneCardProps) {
+	const sceneTitle = [props.scene.name, props.scene.title].find(
+		(value): value is string => typeof value === "string" && Boolean(value.trim()),
+	) || "";
 	const encounterLabel = props.hasEncounter
 		? props.encounterName
 		: lang.t("New encounter");
@@ -42,14 +42,12 @@ export default function SessionSceneCard(props: SessionSceneCardProps) {
 		<div className="SessionSceneCard">
 			<SceneCardHeader
 				number={props.number}
-				collapsed={props.collapsed}
-				onToggle={props.onToggle}
+				sceneTitle={sceneTitle}
 				onOpenEncounter={props.onOpenEncounter}
 				onRemove={props.onRemove}
 				hasEncounter={props.hasEncounter}
 				encounterName={encounterLabel}
 			/>
-			{!props.collapsed && (
 				<div className="SessionSceneCard__content">
 					<div className="SessionSceneCard__textSide">
 						<SceneCardFields
@@ -63,7 +61,6 @@ export default function SessionSceneCard(props: SessionSceneCardProps) {
 							simplifiedNotesEnabled={props.simplifiedNotesEnabled}
 							onSceneNoteAiIgnoredChange={props.onSceneNoteAiIgnoredChange}
 							onSceneNotesReorder={props.onSceneNotesReorder}
-							onToggleNotesCollapse={props.onToggleNotesCollapse}
 							renderNoteCard={props.renderNoteCard}
 						/>
 					</div>
@@ -74,7 +71,6 @@ export default function SessionSceneCard(props: SessionSceneCardProps) {
 						onImageChange={props.onImageChange}
 					/>
 				</div>
-			)}
 		</div>
 	);
 }

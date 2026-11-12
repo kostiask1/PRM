@@ -322,7 +322,7 @@ function isGlobalGalleryResult(
 	isSelectionMode: boolean,
 ): image is GalleryImage {
 	if (isSelectionMode || !image) return false;
-	return Boolean(image.globalSearch);
+	return Boolean(image.globalSearch || (image.source && image.category));
 }
 
 function findGalleryResultCategory(

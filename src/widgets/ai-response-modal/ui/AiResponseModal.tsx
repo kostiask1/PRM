@@ -41,6 +41,7 @@ import AiResponseEncounterParticipantList from "./AiResponseEncounterParticipant
 import AiResponseEncounterMonsterChange from "./AiResponseEncounterMonsterChange.tsx";
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
 import AiResponseGenericDiff from "./AiResponseGenericDiff.tsx";
+import { AiResponseFieldComparison, AiResponseValueComparison, AiResponseSingleSnapshotComparison } from "./AiResponseFieldComparison.tsx";
 import AiResponseJsonDiff from "./AiResponseJsonDiff.tsx";
 import AiResponseNoteDiff from "./AiResponseNoteDiff.tsx";
 import AiResponseModalView from "./AiResponseModalView.tsx";
@@ -365,6 +366,7 @@ function AiResponseModal({
 			<AiResponseEncounterMonsterChange
 				key={`${resource.id}-${key}`}
 				isPaired={false}
+				comparison={<AiResponseSingleSnapshotComparison before={before} after={after} />}
 				label={label}
 				singleCard={singleCard}
 				statusLabel={statusLabel}
@@ -401,6 +403,7 @@ function AiResponseModal({
 			<AiResponseEncounterMonsterChange
 				key={`${resource.id}-${key}`}
 				isPaired
+				comparison={<AiResponseFieldComparison before={before} after={after} />}
 				label={label}
 				beforeCard={beforeCard}
 				beforeLabel={beforeLabel}
@@ -545,6 +548,15 @@ function AiResponseModal({
 		const afterByKey = new Map(
 			afterList.map((note, index) => [getNoteDiffKey(note, index), note]),
 		);
+		const beforeOrder = beforeList.map(getNoteDiffKey).filter((key) => afterByKey.has(key));
+		const afterOrder = afterList.map(getNoteDiffKey).filter((key) => beforeByKey.has(key));
+		const uniqueOrder = new Set(beforeOrder).size === beforeOrder.length && new Set(afterOrder).size === afterOrder.length;
+		const orderChanged = uniqueOrder && beforeOrder.some((key, index) => key !== afterOrder[index]);
+		const noteOrderLabel = (key: string) => {
+			const note = afterByKey.get(key) ?? beforeByKey.get(key);
+			const title = isObjectSnapshot(note) ? String(note.title || note.text || "").trim().slice(0, 60) : "";
+			return `${beforeOrder.indexOf(key) + 1}. ${title || lang.t("Note")}`;
+		};
 		const keys = [
 			...new Set([...beforeByKey.keys(), ...afterByKey.keys()]),
 		].filter(
@@ -552,6 +564,12 @@ function AiResponseModal({
 		);
 		return (
 			<div className="AiAssistantPanel__preview_note_list">
+				{orderChanged && (
+					<div className="AiAssistantPanel__preview_field">
+						<div className="AiAssistantPanel__preview_field_label">{lang.t("Note order")}</div>
+						<AiResponseValueComparison before={beforeOrder.map(noteOrderLabel).join("\n")} after={afterOrder.map(noteOrderLabel).join("\n")} />
+					</div>
+				)}
 				{keys.map((key, index) => {
 					const before = beforeByKey.get(key) ?? null;
 					const after = afterByKey.get(key) ?? null;

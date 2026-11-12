@@ -26,7 +26,6 @@
 	align-items: center;
 	gap: var(--space-2);
 	user-select: none;
-	cursor: pointer;
 }
 
 .CampaignNotesSection__viewToggle {
@@ -38,33 +37,9 @@
 
 .CampaignNotesSection__list {
 	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: var(--space-3);
-}
-
-.CampaignNotesSection__list .DraggableList__itemControl {
-	top: var(--space-2);
-	left: 0;
-	transform: translateX(-100%);
-}
-
-.CampaignNotesSection__list .DraggableList > div:hover .DraggableList__handle {
-	transform: translateX(-200%);
-}
-
-.CampaignNotesSection__list .NoteCard {
-	height: 100%;
-	align-items: center;
-}
-
-.CampaignNotesSection__list .NoteCard .NoteCard__content {
-	width: 100%;
-}
-
-.CampaignNotesSection__list > div {
-	flex: 1 1 550px;
-	max-width: 100%;
+	flex-direction: column;
+	gap: var(--space-1);
+	min-width: 0;
 }
 
 @media (max-width: 1024px) {
@@ -98,15 +73,9 @@
 		scrollbar-width: thin;
 	}
 
-	.CampaignNotesSection__viewToggle .Button span {
-		display: none;
-	}
-
 	.CampaignNotesSection__list {
 		gap: var(--space-2);
-	}
-
-	.CampaignNotesSection__list > div {
-		flex-basis: 100%;
+		max-height: 30dvh;
+		overflow-y: auto;
 	}
 }

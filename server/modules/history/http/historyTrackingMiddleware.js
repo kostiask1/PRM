@@ -34,6 +34,7 @@ function isHistoryPath(pathname) {
 }
 
 function isApplicationMutation(req, pathname) {
+	if (req.method === "POST" && /^\/api\/campaigns\/[^/]+\/entities\/[^/]+\/transfer$/.test(pathname)) return true;
 	if (pathname === "/api/campaigns" && req.method === "POST") return true;
 	if (pathname === "/api/campaigns/reorder" && req.method === "POST") return true;
 	if (/^\/api\/campaigns\/[^/]+$/.test(pathname)) {
@@ -45,6 +46,7 @@ function isApplicationMutation(req, pathname) {
 
 function getOperation(req, pathname) {
 	if (isApplicationMutation(req, pathname)) {
+		if (pathname.endsWith("/transfer")) return "entity.transfer";
 		if (pathname === "/api/campaigns") return "campaign.create";
 		if (pathname.endsWith("/reorder")) return "campaign.reorder";
 		if (req.method === "DELETE") return "campaign.delete";

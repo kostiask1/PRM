@@ -9,7 +9,7 @@ import {
 	useState,
 } from "react";
 import "../../assets/components/DraggableList.css";
-import { classNames } from "../lib/index.js";
+import { classNames, lang } from "../lib/index.js";
 import {
 	applyDraggableFinishPlan,
 	getDefaultDraggableItemKey,
@@ -73,6 +73,8 @@ export interface DraggableListProps<Item> {
 	isolateDragEvents?: boolean;
 	renderItemControl?: (item: Item, index: number) => ReactNode;
 	isItemControlActive?: (item: Item, index: number) => boolean;
+	keyboardReorder?: boolean;
+	getKeyboardReorderLabel?: (item: Item, index: number) => string;
 }
 
 /**
@@ -91,6 +93,8 @@ export default function DraggableList<Item>({
 	isolateDragEvents = false,
 	renderItemControl,
 	isItemControlActive,
+	keyboardReorder = false,
+	getKeyboardReorderLabel,
 }: DraggableListProps<Item>) {
 	const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -191,6 +195,16 @@ export default function DraggableList<Item>({
 
 	const canDragItem = (item: Item, index: number) =>
 		draggableItemsCount > 1 && isItemAllowedToDrag(item, index);
+
+	const reorderByKeyboard = (index: number, direction: -1 | 1) => {
+		const targetIndex = index + direction;
+		if (!onReorder || targetIndex < 0 || targetIndex >= items.length || !isItemAllowedToDrag(items[targetIndex], targetIndex)) return;
+		const next = [...items];
+		const [item] = next.splice(index, 1);
+		next.splice(targetIndex, 0, item);
+		onReorder(next);
+		onDrop?.(next);
+	};
 
 	const getListItemFromPoint = (
 		clientX: number,
@@ -499,7 +513,16 @@ export default function DraggableList<Item>({
 								key="drag-handle"
 								className="DraggableList__handle"
 								data-list-drag-handle="true"
-								aria-hidden="true"
+								role={keyboardReorder ? "button" : undefined}
+								tabIndex={keyboardReorder ? 0 : undefined}
+								aria-label={keyboardReorder ? getKeyboardReorderLabel?.(item, index) || lang.t("Reorder item with arrow keys") : undefined}
+								aria-hidden={keyboardReorder ? undefined : true}
+								onKeyDown={keyboardReorder ? (event) => {
+									if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+									event.preventDefault();
+									event.stopPropagation();
+									reorderByKeyboard(index, event.key === "ArrowUp" ? -1 : 1);
+								} : undefined}
 							>
 								<Icon name="drag-handle" size={18} strokeWidth={2} />
 							</span>

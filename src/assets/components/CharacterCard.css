@@ -1,8 +1,8 @@
 .CharacterCard {
     display: flex;
     flex-direction: column;
-    background: color-mix(in srgb, var(--text-bright), transparent 97%);
-    border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     overflow: hidden;
     transition: all 0.2s ease;
@@ -17,9 +17,9 @@
 .CharacterCard__header {
     display: flex;
     align-items: center;
-    padding: 0 var(--space-4);
+    padding: var(--space-2) var(--space-4);
     gap: var(--space-3);
-    height: 60px;
+    min-height: 60px;
     cursor: pointer;
     background: color-mix(in srgb, var(--text-bright), transparent 98%);
 }
@@ -52,12 +52,16 @@
 }
 
 .CharacterCard__name {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-weight: 600;
     line-height: var(--size-7);
     color: var(--text-bright);
 }
 
 .CharacterCard__metaBrief {
+    min-width: 0;
+    overflow-wrap: anywhere;
     text-align: right;
     font-size: 0.85rem;
     line-height: var(--size-7);
@@ -97,7 +101,10 @@
     flex-grow: 1;
     padding: var(--space-4);
     border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
-    display: flow-root;
+    display: grid;
+    grid-template-columns: var(--entity-portrait-size) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-4);
 }
 
 .CharacterCard__grid {
@@ -106,14 +113,15 @@
     gap: var(--space-2) var(--space-3);
 }
 
-.CharacterCard__grid > .EditableField {
+.CharacterCard__grid > .CharacterCard__identityField {
     flex: 1 1 calc(50% - var(--space-3));
     min-width: 180px;
 }
 
 .CharacterCard__rowTrio {
     display: flex;
-    align-items: center;
+    align-items: start;
+    flex-wrap: wrap;
     gap: var(--space-3);
     flex: 1 1 100%;
     min-width: 0;
@@ -124,8 +132,19 @@
     min-width: 0;
 }
 
-.CharacterCard__rowTrio .Select {
-    flex: 0 0 110px;
+.CharacterCard__rowTrio .CharacterCard__identityField {
+    flex: 1 1 110px;
+}
+
+.CharacterCard__identityField {
+    display: grid;
+    min-width: 0;
+    gap: var(--space-1);
+}
+
+.CharacterCard__identityField > span {
+    color: var(--muted);
+    font-size: 0.8rem;
 }
 
 .CharacterCard .Select {
@@ -138,10 +157,17 @@
 }
 
 .CharacterCard__imageSide {
-    float: right;
-    width: min(38%, 520px);
-    min-width: 320px;
-    margin: 0 0 var(--space-4) var(--space-6);
+    min-width: 0;
+}
+
+.CharacterCard__body.has_no_image .CharacterCard__imageSide,
+.CharacterCard__body.has_no_image .CharacterCard__infoSide,
+.CharacterCard__body:has(.ImageAssetField__missing) .CharacterCard__imageSide,
+.CharacterCard__body:has(.ImageAssetField__missing) .CharacterCard__infoSide,
+.CharacterCard__body > .CharacterCard__details,
+.CharacterCard__body > .CharacterCard__field,
+.CharacterCard__body > .CharacterCard__notes {
+    grid-column: 1 / -1;
 }
 
 .CharacterCard__portraitContainer {
@@ -150,7 +176,7 @@
 }
 
 .CharacterCard__portraitContainer .ImageDropzone__content {
-    min-height: 250px;
+    min-height: 100px;
     align-items: center;
     justify-content: center;
 }
@@ -175,8 +201,8 @@
 
 .CharacterCard__portraitWrapper img {
     width: 100%;
-    object-fit: contain;
-    object-position: top;
+    aspect-ratio: 1;
+    object-fit: cover;
     border-radius: var(--radius-md);
     display: block;
 }
@@ -203,6 +229,14 @@
     z-index: 2;
 }
 
+.CharacterCard .Button__danger.CharacterCard__imageDelete {
+    background: var(--panel);
+    color: var(--danger);
+    opacity: 1;
+    width: var(--control-h-sm);
+    height: var(--control-h-sm);
+}
+
 .CharacterCard__portraitPlaceholder {
     width: 100%;
     background: var(--bg-2);
@@ -215,15 +249,14 @@
 }
 
 .CharacterCard__details {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: var(--space-3);
 }
 
 .CharacterCard__infoSide,
-.CharacterCard__details,
 .CharacterCard__body > .CharacterCard__field {
-    display: flow-root;
+    min-width: 0;
 }
 
 .CharacterCard__field label {
@@ -237,14 +270,14 @@
 }
 
 .CharacterCard__body .CharacterCard__field {
-    margin-top: var(--space-4);
+    margin-top: 0;
 }
 
 .CharacterCard__notes {
     clear: both;
     display: flex;
     flex-direction: column;
-    margin-top: var(--space-4);
+    margin-top: 0;
     flex-grow: 1;
 }
 
@@ -285,7 +318,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--bg-2), black 20%);
+    background: color-mix(in srgb, var(--bg-2), var(--shadow-ink) 20%);
     border-radius: var(--radius-sm);
     overflow: hidden;
 }
@@ -374,13 +407,10 @@
     }
 
     .CharacterCard__imageSide {
-        float: none;
         width: 100%;
-        min-width: 0;
-        margin: 0 0 var(--space-4);
     }
 
-    .CharacterCard__grid > .EditableField {
+    .CharacterCard__grid > .CharacterCard__identityField {
         flex-basis: 100%;
         min-width: 0;
     }
@@ -389,11 +419,6 @@
         align-items: stretch;
         flex-direction: column;
         gap: var(--space-2);
-    }
-
-    .CharacterCard__rowTrio .Select {
-        flex-basis: auto;
-        width: 100%;
     }
 
     .CharacterCard__imageModal {

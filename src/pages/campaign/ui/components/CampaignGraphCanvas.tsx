@@ -69,10 +69,13 @@ function CampaignGraphMiniMap<Data extends CampaignGraphCanvasNodeData>({
 
 	const moveViewport = useCallback((event: ReactPointerEvent<SVGSVGElement>) => {
 		if (!bounds || !svgRef.current) return;
-		const rect = svgRef.current.getBoundingClientRect();
-		const x = bounds.x + ((event.clientX - rect.left) / rect.width) * bounds.width;
-		const y = bounds.y + ((event.clientY - rect.top) / rect.height) * bounds.height;
-		setCenter(x, y, { zoom: viewport.zoom, duration: 0 });
+		const transform = svgRef.current.getScreenCTM();
+		if (!transform) return;
+		const point = svgRef.current.createSVGPoint();
+		point.x = event.clientX;
+		point.y = event.clientY;
+		const graphPoint = point.matrixTransform(transform.inverse());
+		setCenter(graphPoint.x, graphPoint.y, { zoom: viewport.zoom, duration: 0 });
 	}, [bounds, setCenter, viewport.zoom]);
 
 	if (!bounds) return null;
@@ -119,7 +122,7 @@ function CampaignGraphMiniMap<Data extends CampaignGraphCanvasNodeData>({
 							width={width}
 							height={height}
 							rx={10}
-							fill={node.data?.color || "#94a3b8"}
+							fill={node.data?.color || "var(--muted)"}
 						/>
 					);
 				})}

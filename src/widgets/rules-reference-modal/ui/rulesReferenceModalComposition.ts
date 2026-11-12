@@ -13,6 +13,8 @@ export interface RulesReferenceModalContentProps {
 	initialName?: string;
 	forceTab?: boolean;
 	onSelectReference?: ((selection: ReferenceSelection) => void) | null;
+	selectableTab?: ReferenceTabId;
+	selectionActionLabel?: string;
 }
 
 export type RulesReferenceModalContentComponent =

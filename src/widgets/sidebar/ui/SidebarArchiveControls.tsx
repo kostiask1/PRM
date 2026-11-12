@@ -30,7 +30,7 @@ export default function SidebarArchiveControls({
 			<div className="Sidebar__footerGrid">
 				<Button
 					variant="footer"
-					icon={isExporting ? undefined : "database"}
+					icon={isExporting ? undefined : "export"}
 					iconSize={16}
 					onClick={onExport}
 					disabled={isExporting}
@@ -39,15 +39,15 @@ export default function SidebarArchiveControls({
 					{isExporting && (
 						<span className="Sidebar__backupLoader" aria-hidden="true" />
 					)}
-					{isExporting ? lang.t("Loading...") : lang.t("Backup")}
+					{isExporting ? lang.t("Loading...") : lang.t("Export data")}
 				</Button>
 				<Button
 					variant="footer"
-					icon="restore"
+					icon="import"
 					iconSize={16}
 					onClick={onImport}
 				>
-					{lang.t("Import DB")}
+					{lang.t("Import data")}
 				</Button>
 			</div>
 		</div>

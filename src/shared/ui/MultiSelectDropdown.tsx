@@ -13,8 +13,11 @@ import {
 
 interface MultiSelectDropdownProps<Value extends MultiSelectValue> {
 	dropdownRef: RefObject<HTMLDivElement>;
+	dropdownId: string;
 	activeOptionRef: RefObject<HTMLButtonElement>;
 	dropdownStyle: DropdownPortalStyle | undefined;
+	modalOwnerId?: string;
+	onEscape: () => void;
 	options: readonly MultiSelectOption<Value, ReactNode>[];
 	selection: MultiSelectSelectionState;
 	activeValue: Value | "all" | "";
@@ -32,8 +35,11 @@ export default function MultiSelectDropdown<
 	Value extends MultiSelectValue,
 >({
 	dropdownRef,
+	dropdownId,
 	activeOptionRef,
 	dropdownStyle,
+	modalOwnerId,
+	onEscape,
 	options,
 	selection,
 	activeValue,
@@ -50,6 +56,16 @@ export default function MultiSelectDropdown<
 	return (
 		<div
 			ref={dropdownRef}
+			id={dropdownId}
+			data-modal-owner={modalOwnerId}
+			onKeyDown={(event) => {
+				if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onEscape(); }
+				else if ((event.key === "Enter" || event.key === " ") && event.target instanceof HTMLButtonElement) {
+					event.preventDefault();
+					event.stopPropagation();
+					event.target.click();
+				}
+			}}
 			className="MultiSelect__dropdown MultiSelect__dropdown__portal"
 			style={dropdownStyle}
 		>
@@ -76,7 +92,7 @@ export default function MultiSelectDropdown<
 					{clearLabel}
 				</Button>
 			</div>
-			{options.map((option) => {
+			{options.map((option, index) => {
 				const { optionKey, isSelected, isActive } =
 					getMultiSelectOptionPresentation(
 						option.value,
@@ -84,25 +100,30 @@ export default function MultiSelectDropdown<
 						activeValue,
 					);
 				return (
-					<button
+					<div
 						key={optionKey}
-						type="button"
-						ref={isActive ? activeOptionRef : null}
 						className={classNames("MultiSelect__option", {
 							is_selected: isSelected,
 							is_active_filter: isActive,
 						})}
-						onClick={() => onOptionClick(option.value)}
 					>
 						<Checkbox
 							checked={isSelected}
 							onChange={() => onOptionToggle(option.value)}
 							className="MultiSelect__checkbox"
+							aria-labelledby={`${dropdownId}-option-${index}`}
 						/>
-						<span className="MultiSelect__optionLabel">
-							{option.label}
-						</span>
-					</button>
+						<button
+							type="button"
+							ref={isActive ? activeOptionRef : null}
+							className="MultiSelect__optionAction"
+							onClick={() => onOptionClick(option.value)}
+						>
+							<span id={`${dropdownId}-option-${index}`} className="MultiSelect__optionLabel">
+								{option.label}
+							</span>
+						</button>
+					</div>
 				);
 			})}
 		</div>

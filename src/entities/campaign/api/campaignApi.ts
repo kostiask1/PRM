@@ -18,6 +18,21 @@ export interface CampaignEntityRecord extends Record<string, unknown> {
 
 export type CampaignOrder = Record<string, number>;
 
+export interface EntityTransferEndpoint {
+	campaignSlug?: string;
+	scope: "campaign" | "session";
+	fileName?: string;
+	entitySlug?: string;
+	entityId?: DomainId;
+}
+
+export interface EntityTransferResult {
+	entity: CampaignEntityRecord;
+	source: EntityTransferEndpoint;
+	target: EntityTransferEndpoint;
+	sourceSession: Record<string, unknown> | null;
+}
+
 export const CAMPAIGN_PARTIAL_ARCHIVE_SECTIONS = [
 	"sessions",
 	"npc",
@@ -116,6 +131,11 @@ export const campaignApi = {
 		options: RequestInit = {},
 	) =>
 		request<CampaignEntityRecord[]>(entityPath(slug, type), options),
+	transferEntity: (slug: string, type: "npc" | "locations", source: EntityTransferEndpoint, target: EntityTransferEndpoint) =>
+		request<EntityTransferResult>(`${entityPath(slug, type)}/transfer`, {
+			method: "POST",
+			body: JSON.stringify({ source, target }),
+		}),
 	createEntity: (
 		slug: string,
 		type: CampaignEntityType,

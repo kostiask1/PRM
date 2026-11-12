@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { BestiaryMonster } from "../../../../entities/bestiary/index.js";
 import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
@@ -16,6 +17,7 @@ import {
 } from "./EncounterBestiary.tsx";
 import EncounterBestiaryOverlay from "./EncounterBestiaryOverlay.tsx";
 import EncounterCharacterOverlays from "./EncounterCharacterOverlays.tsx";
+import EncounterConditionPicker from "./EncounterConditionPicker.tsx";
 import EncounterDetail from "./EncounterDetail.tsx";
 import EncounterHeader from "./EncounterHeader.tsx";
 import EncounterMonsterActionModals from "./EncounterMonsterActionModals.tsx";
@@ -40,6 +42,7 @@ function getDiffResourceState(resource: AiHistoryResource) {
 }
 
 export default function EncounterPageContent({ controller }: Props) {
+	const [conditionTarget, setConditionTarget] = useState<string | null>(null);
 	const {
 		aiDraft,
 		aiDraftDiffResources,
@@ -104,6 +107,7 @@ export default function EncounterPageContent({ controller }: Props) {
 								onSelect={monsterInteractions.select}
 								onHpChange={hpEditing.onChange}
 								onHpBlur={hpEditing.onBlur}
+								onOpenConditionPicker={setConditionTarget}
 								getParticipantInstanceId={getParticipantInstanceId}
 							/>
 						)}
@@ -121,12 +125,33 @@ export default function EncounterPageContent({ controller }: Props) {
 						setGridItemRef={setGridItemRef}
 						onAiAction={monsterAiAction.openAction}
 						onFieldEdit={monsterFieldEditing.openAction}
+						onOpenConditionPicker={setConditionTarget}
 						onTokenImageChange={monsterInteractions.updateTokenImage}
 						onCharacterChange={characterModal.getOnChange}
 						getMonsterImageOverride={view.getMonsterImageOverride}
+						updateMonsterConditions={view.updateMonsterConditions}
 					/>
 				</div>
 			</div>
+			{conditionTarget !== null && (
+				<EncounterConditionPicker
+					onClose={() => setConditionTarget(null)}
+					onSelect={(selection) => {
+							if (selection.tabId !== "conditions") return;
+							const participant = encounter.monsters.find((monster) => getParticipantInstanceId(monster) === conditionTarget);
+							const name = selection.name.trim();
+							if (participant && name) {
+								const conditions = Array.isArray(participant.encounterConditions)
+									? participant.encounterConditions.filter((condition): condition is string => typeof condition === "string" && Boolean(condition.trim()))
+									: [];
+								if (!conditions.some((condition) => condition.trim().toLocaleLowerCase() === name.toLocaleLowerCase())) {
+									view.updateMonsterConditions(conditionTarget, [...conditions, name]);
+								}
+							}
+							setConditionTarget(null);
+					}}
+				/>
+			)}
 
 			<EncounterBestiaryOverlay
 				open={view.showBestiary}

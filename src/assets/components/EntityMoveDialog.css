@@ -1,0 +1,6 @@
+.EntityMoveDialog { display: grid; gap: var(--space-3); min-width: 0; }
+.EntityMoveDialog p { margin: 0; }
+.EntityMoveDialog label { display: grid; gap: var(--space-1); color: var(--muted); font-size: 0.85rem; }
+.EntityMoveDialog .Select { min-width: 0; }
+.EntityMoveDialog__error { color: var(--danger); }
+.EntityMoveDialog__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); }

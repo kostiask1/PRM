@@ -5,6 +5,7 @@ interface AiResponseEncounterMonsterChangeProps {
 	afterLabel?: ReactNode;
 	beforeCard?: ReactNode;
 	beforeLabel?: ReactNode;
+	comparison?: ReactNode;
 	isPaired: boolean;
 	label: ReactNode;
 	singleCard?: ReactNode;
@@ -16,12 +17,15 @@ export default function AiResponseEncounterMonsterChange({
 	afterLabel,
 	beforeCard,
 	beforeLabel,
+	comparison,
 	isPaired,
 	label,
 	singleCard,
 	statusLabel,
 }: AiResponseEncounterMonsterChangeProps) {
 	return isPaired ? (
+		<>
+		{comparison}
 		<div className="AiAssistantPanel__preview_card_columns">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">
@@ -36,7 +40,10 @@ export default function AiResponseEncounterMonsterChange({
 				{afterCard}
 			</div>
 		</div>
+		</>
 	) : (
+		<>
+		{comparison}
 		<div className="AiAssistantPanel__preview_card_stack">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">
@@ -45,5 +52,6 @@ export default function AiResponseEncounterMonsterChange({
 				{singleCard}
 			</div>
 		</div>
+		</>
 	);
 }

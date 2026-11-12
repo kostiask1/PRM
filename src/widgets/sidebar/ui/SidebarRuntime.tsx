@@ -44,6 +44,7 @@ export interface SidebarRuntime extends Pick<
 	closeModal(value?: unknown): void;
 	openModal(config: SidebarModalConfig): Promise<unknown>;
 	reportError(error: SidebarErrorNotice): void;
+	publishHistoryRefresh(): void;
 	requestDiceRoll(request: PlayerQuestionsDiceRollRequest): void;
 	requestRulesReferenceNavigation(
 		tab: string,

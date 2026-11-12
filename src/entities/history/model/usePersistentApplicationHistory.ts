@@ -52,7 +52,8 @@ export function usePersistentApplicationHistory({
 			const isCampaignLifecycle =
 				path === "/campaigns" ||
 				path === "/campaigns/reorder" ||
-				/^\/campaigns\/[^/]+$/.test(path);
+				/^\/campaigns\/[^/]+$/.test(path) ||
+				/^\/campaigns\/[^/]+\/entities\/[^/]+\/transfer$/.test(path);
 			if (
 				!isCampaignLifecycle &&
 				!path.startsWith("/import-all") &&

@@ -11,10 +11,10 @@ import {
 } from "../model.js";
 
 const FILTER_COLOR_BY_ID: Record<CampaignSearchFilter, string> = {
-	notes: "#38bdf8",
-	npc: "#f97316",
-	locations: "#a3e635",
-	scenes: "#e879f9",
+	notes: "var(--graph-note-ink)",
+	npc: "var(--graph-npc-ink)",
+	locations: "var(--graph-location-ink)",
+	scenes: "var(--graph-scene-ink)",
 };
 
 const MARKDOWN_TAGS_WITH_MENTIONS = ["p", "strong", "em", "del", "blockquote", "li", "h1", "h2", "h3", "h4", "h5", "h6", "td", "th", "a", "span"] as const;

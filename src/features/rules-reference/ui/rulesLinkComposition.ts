@@ -6,6 +6,7 @@ export interface RulesLinkProps {
 	children?: ReactNode;
 	name?: string;
 	type?: RulesReferenceType;
+	previewOnly?: boolean;
 }
 
 export interface RulesLinkRollDiceSlotProps {

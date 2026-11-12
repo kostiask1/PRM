@@ -3,8 +3,10 @@ import React, {
 	type OptionHTMLAttributes,
 	type ReactElement,
 	type ReactNode,
+	type KeyboardEvent,
 	useCallback,
 	useEffect,
+	useId,
 	useRef,
 	useState,
 } from "react";
@@ -48,6 +50,8 @@ export default function Select<Value extends SelectValue = SelectValue>({
 	...props
 }: SelectProps<Value>) {
 	const [isOpen, setIsOpen] = useState(false);
+	const [activeIndex, setActiveIndex] = useState(0);
+	const listboxId = useId();
 	const [dropdownStyle, setDropdownStyle] =
 		useState<SelectDropdownStyle>();
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -93,6 +97,36 @@ export default function Select<Value extends SelectValue = SelectValue>({
 		setIsOpen(false);
 	};
 
+	const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+		if (disabled) return;
+		if (event.key === "Tab") { setIsOpen(false); return; }
+		if (event.key === "Escape" && isOpen) {
+			event.preventDefault();
+			event.stopPropagation();
+			setIsOpen(false);
+			return;
+		}
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
+			if (isOpen && options[activeIndex]) handleSelect(options[activeIndex].value);
+			else if (!isOpen) {
+				setActiveIndex(Math.max(0, options.findIndex((option) => option.value === selectedOption?.value)));
+				updateDropdownPosition();
+				setIsOpen(true);
+			}
+			return;
+		}
+		if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key) || options.length === 0) return;
+		event.preventDefault();
+		if (!isOpen) {
+			setActiveIndex(Math.max(0, options.findIndex((option) => option.value === selectedOption?.value)));
+			updateDropdownPosition();
+			setIsOpen(true);
+			return;
+		}
+		setActiveIndex((current) => event.key === "Home" ? 0 : event.key === "End" ? options.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length);
+	};
+
 	const scrollSelectedOptionIntoView = useCallback(() => {
 		const dropdown = dropdownRef.current;
 		const selected = selectedOptionRef.current;
@@ -110,7 +144,7 @@ export default function Select<Value extends SelectValue = SelectValue>({
 		if (!isOpen) return;
 		const frame = requestAnimationFrame(scrollSelectedOptionIntoView);
 		return () => cancelAnimationFrame(frame);
-	}, [isOpen, scrollSelectedOptionIntoView, value]);
+	}, [activeIndex, isOpen, scrollSelectedOptionIntoView, value]);
 
 	const renderDropdown =
 		isOpen &&
@@ -119,15 +153,22 @@ export default function Select<Value extends SelectValue = SelectValue>({
 		createPortal(
 			<div
 				ref={dropdownRef}
+				id={listboxId}
+				role="listbox"
+				data-modal-owner={containerRef.current?.closest(".Modal__card")?.id || undefined}
 				className="Select__dropdown Select__dropdown__portal"
 				style={dropdownStyle}
 			>
-				{options.map((option) => (
+				{options.map((option, index) => (
 					<div
 						key={option.value}
-						ref={option.value === value ? selectedOptionRef : null}
+						id={`${listboxId}-${index}`}
+						role="option"
+						aria-selected={option.value === value}
+						ref={index === activeIndex ? selectedOptionRef : null}
 						className={classNames("Select__option", {
 							is_selected: option.value === value,
+							is_active: index === activeIndex,
 						})}
 						onClick={() => handleSelect(option.value)}
 					>
@@ -148,11 +189,24 @@ export default function Select<Value extends SelectValue = SelectValue>({
 				ref={containerRef}
 				{...props}
 			>
-				<div
+				<button
+					type="button"
 					className="Select__trigger"
+					disabled={disabled}
+					role="combobox"
+					aria-label={props["aria-label"]}
+					aria-labelledby={props["aria-labelledby"]}
+					aria-expanded={isOpen && !disabled}
+					aria-controls={isOpen && !disabled ? listboxId : undefined}
+					aria-activedescendant={isOpen && options[activeIndex] ? `${listboxId}-${activeIndex}` : undefined}
+					aria-haspopup="listbox"
+					onKeyDown={handleKeyDown}
 					onClick={() => {
 						if (disabled) return;
-						if (!isOpen) updateDropdownPosition();
+						if (!isOpen) {
+							setActiveIndex(Math.max(0, options.findIndex((option) => option.value === selectedOption?.value)));
+							updateDropdownPosition();
+						}
 						setIsOpen((previous) => !previous);
 					}}
 				>
@@ -160,7 +214,7 @@ export default function Select<Value extends SelectValue = SelectValue>({
 						{selectedOption?.label as ReactNode}
 					</span>
 					<Icon name="chevron" className="Select__icon" />
-				</div>
+				</button>
 			</div>
 			{renderDropdown}
 		</>

@@ -66,16 +66,16 @@ import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
 
 const NODE_COLOR_BY_TYPE: Readonly<Record<string, string>> = {
-	campaign: "#f59e0b",
-	"campaign-note": "#38bdf8",
-	character: "#22c55e",
-	npc: "#f97316",
-	location: "#a3e635",
-	session: "#818cf8",
-	scene: "#e879f9",
-	"session-note": "#38bdf8",
-	"scene-note": "#38bdf8",
-	unresolved: "#94a3b8",
+	campaign: "var(--graph-campaign-ink)",
+	"campaign-note": "var(--graph-note-ink)",
+	character: "var(--graph-character-ink)",
+	npc: "var(--graph-npc-ink)",
+	location: "var(--graph-location-ink)",
+	session: "var(--graph-session-ink)",
+	scene: "var(--graph-scene-ink)",
+	"session-note": "var(--graph-note-ink)",
+	"scene-note": "var(--graph-note-ink)",
+	unresolved: "var(--graph-unresolved-ink)",
 };
 
 const TYPE_LABELS: Readonly<Record<string, string>> = {

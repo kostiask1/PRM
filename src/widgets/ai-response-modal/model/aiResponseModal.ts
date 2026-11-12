@@ -89,9 +89,11 @@ export function getPreviewFieldKeys(
 	return keys.length > 0 ? keys : summary;
 }
 
-export function getFieldValue(snapshot: unknown, key: string): unknown {
+export function getFieldValue(snapshot: unknown, key: string, wholeSnapshot = false): unknown {
+	if (wholeSnapshot) return snapshot;
+	if (isObjectSnapshot(snapshot)) return snapshot[key];
 	if (key === "value") return snapshot;
-	return isObjectSnapshot(snapshot) ? snapshot[key] : undefined;
+	return undefined;
 }
 
 export function getChangedObjectKeys(before: unknown, after: unknown): string[] {

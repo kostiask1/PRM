@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import "../../../../assets/components/SessionNotesSection.css";
+import "../../../../assets/components/CampaignEntitySection.css";
 import {
-	BulkCollapseButton,
 	getAiIgnoredNoteListProps,
 } from "../../../../features/notes/ui/index.js";
-import { lang, type SharedNote } from "../../../../shared/lib/index.js";
-import { DraggableList } from "../../../../shared/ui/index.js";
+import { getNoteListLabel, lang, makeDomId, type SharedNote } from "../../../../shared/lib/index.js";
+import { DraggableList, useHashItemSelection } from "../../../../shared/ui/index.js";
+import { matchesHistoryTargetId } from "../../../../entities/history/index.js";
 import TodoSection from "./TodoSection.tsx";
 
 type SessionNoteListItem = SharedNote & {
@@ -15,12 +16,7 @@ type SessionNoteListItem = SharedNote & {
 };
 
 interface SessionNotesSectionProps {
-	notes: readonly SharedNote[];
 	renderableNotes: readonly SessionNoteListItem[];
-	hasData: boolean;
-	isCollapsed: boolean;
-	onToggle: () => void;
-	onBulkCollapse: (collapsed: boolean) => void;
 	onToggleAiIgnored: (
 		noteId: SessionNoteListItem["id"],
 		ignored: boolean,
@@ -34,38 +30,30 @@ interface SessionNotesSectionProps {
 }
 
 export default function SessionNotesSection({
-	notes,
 	renderableNotes,
-	hasData,
-	isCollapsed,
-	onToggle,
-	onBulkCollapse,
 	onToggleAiIgnored,
 	onReorder,
 	renderItem,
 }: SessionNotesSectionProps) {
+	const { selected, setSelectedKey } = useHashItemSelection(renderableNotes, (note) => String(note.id), (note, hash) => matchesHistoryTargetId(hash, "session", "note", note.id) || hash === `#${makeDomId("session", "note", note.id)}`, (note, key) => note._renderKey != null && String(note._renderKey) === key);
 	return (
 		<TodoSection
 			title={lang.t("Notes")}
-			collapsed={isCollapsed}
-			onToggle={hasData ? onToggle : undefined}
-			action={
-				!isCollapsed && (
-					<BulkCollapseButton items={notes} onChange={onBulkCollapse} />
-				)
-			}
 		>
-			{!isCollapsed && (
+			<div className="CampaignEntitySection__workspace">
 				<DraggableList
 					items={renderableNotes}
-					className="SessionNotesSection__list"
+					className="CampaignEntitySection__list NoteSelectionList"
+					keyboardReorder
+					getKeyboardReorderLabel={(note) => lang.t("Reorder note: {name} (arrow keys)", { name: getNoteListLabel(note) || lang.t("New note") })}
 					onReorder={onReorder}
 					{...getAiIgnoredNoteListProps(onToggleAiIgnored, {
 						isolateDragEvents: false,
 					})}
-					renderItem={renderItem}
+					renderItem={(note) => <button type="button" className="CampaignEntitySection__item" aria-pressed={note === selected} onClick={() => setSelectedKey(String(note.id))}><span>{getNoteListLabel(note) || lang.t("New note")}</span></button>}
 				/>
-			)}
+				<div className="CampaignEntitySection__detail">{selected && renderItem(selected, false, renderableNotes.indexOf(selected))}</div>
+			</div>
 		</TodoSection>
 	);
 }

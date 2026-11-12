@@ -6,7 +6,7 @@
 	color: var(--text-on-accent);
 	padding: var(--space-3) var(--space-6);
 	border-radius: var(--radius);
-	box-shadow: 0 4px 15px color-mix(in srgb, black, transparent 60%);
+	box-shadow: 0 4px 15px color-mix(in srgb, var(--shadow-ink), transparent 60%);
 	z-index: 10000;
 	font-weight: 500;
 	animation: slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);

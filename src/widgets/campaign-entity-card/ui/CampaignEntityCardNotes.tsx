@@ -11,7 +11,7 @@ import {
 } from "../../../features/notes/ui/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
 import { makeDomId, sanitizeNotesForSave } from "../../../shared/lib/index.js";
-import { Button, CollapseToggleButton, DraggableList } from "../../../shared/ui/index.js";
+import { DraggableList } from "../../../shared/ui/index.js";
 import {
 	getCampaignNoteHighlightFields,
 	setCampaignNoteAiIgnored,
@@ -32,9 +32,6 @@ export interface CampaignEntityCardNotesProps<Entity extends CardEntity> {
 	entityId: CampaignCardEntityId;
 	model: CardNoteModel<Entity>;
 	notesForRender: CardNote[];
-	hasNotesData: boolean;
-	isNotesCollapsed: boolean;
-	currentNotesCollapsed: boolean;
 	campaignSlug?: string | null;
 	enableHistory: boolean;
 	label: ReactNode;
@@ -50,9 +47,6 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 	entityId,
 	model,
 	notesForRender,
-	hasNotesData,
-	isNotesCollapsed,
-	currentNotesCollapsed,
 	campaignSlug,
 	enableHistory,
 	label,
@@ -61,19 +55,14 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 	onReorderDrop,
 }: CampaignEntityCardNotesProps<Entity>) {
 	const updateNotes = (notes: CardNote[]) => onChange(entityId, model.withField("notes", notes));
-	const toggleNotes = () => onChange(entityId, model.withField("isNotesCollapsed", !currentNotesCollapsed));
 	return (
 		<div className={`${classPrefix}__notes`}>
-			<div className={`${classPrefix}__notesHeader`} onClick={hasNotesData ? toggleNotes : undefined}>
-				{hasNotesData && (
-					<CollapseToggleButton size={Button.SIZES.SMALL} collapsed={isNotesCollapsed} onClick={toggleNotes} />
-				)}
+			<div className={`${classPrefix}__notesHeader`}>
 				<label>{label}</label>
 			</div>
-			{!isNotesCollapsed && (
 				<DraggableList<CardNote>
 					items={notesForRender}
-					className={`${classPrefix}__notesList`}
+					className={`${classPrefix}__notesList NoteCardList`}
 					onReorder={(notes) =>
 						onChange(
 							entityId,
@@ -97,6 +86,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 							isLast={index === notesForRender.length - 1}
 							campaignSlug={campaignSlug}
 							enableHistory={enableHistory}
+							collapsible={false}
 							onToggleCollapse={(noteId) => updateNotes(model.toggleNoteCollapse(noteId))}
 							onTitleChange={(noteId, title) => updateNotes(model.withUpdatedNote(noteId, { title }))}
 							onTextChange={(noteId, text) => updateNotes(model.withUpdatedNote(noteId, { text }))}
@@ -106,7 +96,6 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 						</div>
 					)}
 				/>
-			)}
 		</div>
 	);
 }

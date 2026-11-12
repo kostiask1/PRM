@@ -46,22 +46,29 @@ const DICE_TYPES = [4, 6, 8, 10, 12, 20, 100] as const;
 
 export interface DiceCalculatorProps {
 	diceRollRequest: unknown;
+	openRequest?: number;
 	publishResult(result: DiceResultEntry, context: unknown): void;
 }
 
 export default function DiceCalculator({
 	diceRollRequest,
+	openRequest = 0,
 	publishResult,
 }: DiceCalculatorProps) {
 	const [isOpen, setIsOpen] = useState(false);
+	const [modalOwnerId, setModalOwnerId] = useState<string | undefined>();
 	const [isPanelMounted, setIsPanelMounted] = useState(false);
 	const [isRolling, setIsRolling] = useState(false);
 	const [history, setHistory] = useState<DiceResultEntry[]>([]);
 	const [lastResult, setLastResult] = useState<DiceResultEntry | null>(null);
 	const [manualInput, setManualInput] = useState("");
+	const [formulaError, setFormulaError] = useState(false);
 	const [probabilityFormula, setProbabilityFormula] = useState("");
 	const { requestRoll } = useDiceRequestRuntime();
 	const rootRef = useRef<HTMLDivElement>(null);
+	const formulaRef = useRef<HTMLInputElement>(null);
+	const openingElementRef = useRef<HTMLElement | null>(null);
+	const focusedOpenRequestRef = useRef(0);
 	const processedRollRequestIdRef = useRef<unknown>(null);
 	const rollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const rollingAnimationFrameRef = useRef<number | null>(null);
@@ -85,9 +92,36 @@ export default function DiceCalculator({
 	);
 
 	useEffect(() => {
+		if (openRequest === 0) return;
+		openingElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		setModalOwnerId(undefined);
+		if (autoCloseTimeoutRef.current) {
+			clearTimeout(autoCloseTimeoutRef.current);
+			autoCloseTimeoutRef.current = null;
+		}
+		setIsOpen(true);
+	}, [openRequest]);
+
+	const closeAndRestoreFocus = () => {
+		setIsOpen(false);
+		if (openingElementRef.current?.isConnected) openingElementRef.current.focus();
+	};
+
+	useEffect(() => {
+		if (!isOpen || !isPanelMounted || openRequest === 0 || focusedOpenRequestRef.current === openRequest) return;
+		focusedOpenRequestRef.current = openRequest;
+		formulaRef.current?.focus();
+	}, [isOpen, isPanelMounted, openRequest]);
+
+	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (isDicePanelShortcut(event)) {
 				event.preventDefault();
+				if (!rootRef.current?.contains(document.activeElement)) {
+					openingElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+				}
+				const dialogs = document.querySelectorAll<HTMLElement>('.Modal__card[role="dialog"]');
+				setModalOwnerId(dialogs[dialogs.length - 1]?.id);
 				setIsOpen((prev) => !prev);
 			}
 		};
@@ -129,6 +163,7 @@ export default function DiceCalculator({
 			const target = event.target;
 			if (target instanceof Node && rootRef.current?.contains(target)) return;
 			if (target instanceof Element && target.closest(".RollDice")) return;
+			if (target instanceof Element && target.closest(".DiceCalculator__probabilityOverlay")) return;
 			if (
 				target instanceof Element &&
 				target.closest(".MonsterStatBlock__ability_box")
@@ -164,9 +199,19 @@ export default function DiceCalculator({
 	const parseAndRoll = useCallback(
 		(str: unknown, context: unknown = null) => {
 			if (!str) return;
+			if (!rootRef.current?.contains(document.activeElement)) {
+				openingElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+			}
+			const dialogs = document.querySelectorAll<HTMLElement>('.Modal__card[role="dialog"]');
+			setModalOwnerId(dialogs[dialogs.length - 1]?.id);
 
 			const entry = rollDiceFormula(str);
-			if (!entry) return;
+			if (!entry || !entry.formula) {
+				setFormulaError(true);
+				setIsOpen(true);
+				return;
+			}
+			setFormulaError(false);
 
 			if (rollingTimeoutRef.current) {
 				clearTimeout(rollingTimeoutRef.current);
@@ -224,6 +269,7 @@ export default function DiceCalculator({
 
 	const addToFormula = (type: "die", value: number) => {
 		if (type === "die") {
+			setFormulaError(false);
 			if (lastResult) {
 				setLastResult(null);
 				setManualInput("");
@@ -235,6 +281,7 @@ export default function DiceCalculator({
 	const clearFormula = () => {
 		setManualInput("");
 		setLastResult(null);
+		setFormulaError(false);
 	};
 
 	const executeRoll = () => {
@@ -315,6 +362,14 @@ export default function DiceCalculator({
 		<div
 			ref={rootRef}
 			className={classNames("DiceCalculator", { is_open: isOpen })}
+			data-modal-owner={isOpen ? modalOwnerId : undefined}
+			onKeyDown={(event) => {
+				if (event.key === "Escape" && isOpen && !probabilityFormula) {
+					event.preventDefault();
+					event.stopPropagation();
+					closeAndRestoreFocus();
+				}
+			}}
 		>
 			{isPanelMounted && (
 				<div
@@ -323,12 +378,13 @@ export default function DiceCalculator({
 					})}
 				>
 					<div className="DiceCalculator__header">
-						<span>{lang.t("Dice Roller")}</span>
+						<span>{lang.t("Dice calculator")}</span>
 						<Button
 							variant="ghost"
 							size={Button.SIZES.SMALL}
 							icon="x"
-							onClick={() => setIsOpen(false)}
+							aria-label={lang.t("Close")}
+							onClick={closeAndRestoreFocus}
 						/>
 					</div>
 
@@ -393,11 +449,15 @@ export default function DiceCalculator({
 
 					<div className="DiceCalculator__manual">
 						<TextInput
+							ref={formulaRef}
+							aria-label={lang.t("Dice formula")}
 							placeholder={lang.t("Formula (e.g. 1d12+5)")}
 							value={manualInput}
-							onChange={(event: ChangeEvent<HTMLInputElement>) =>
-								setManualInput(event.target.value)
-							}
+							aria-invalid={formulaError}
+							onChange={(event: ChangeEvent<HTMLInputElement>) => {
+								setManualInput(event.target.value);
+								setFormulaError(false);
+							}}
 							onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
 								if (event.key === "Enter" && manualInput.trim()) {
 									requestRoll(manualInput);
@@ -414,6 +474,7 @@ export default function DiceCalculator({
 							</span>
 						</Tooltip>
 					</div>
+					{formulaError && <div className="DiceCalculator__formulaError" role="alert">{lang.t("Invalid dice formula. Check the syntax and try again.")}</div>}
 
 					<div>
 						<div className="DiceCalculator__group">
@@ -469,11 +530,17 @@ export default function DiceCalculator({
 						</div>
 						<div className="DiceCalculator__historyList">
 							{history.map((roll) => (
-								<div
+								<button
+									type="button"
 									className="DiceCalculator__historyItem"
 									onClick={() =>
 										requestRoll(createHistoryRollPayload(roll))
 									}
+									onKeyDown={(event) => {
+										if (event.key !== "Enter" || event.repeat) return;
+										event.preventDefault();
+										requestRoll(createHistoryRollPayload(roll));
+									}}
 									key={roll.id}
 								>
 									<Tooltip
@@ -502,7 +569,7 @@ export default function DiceCalculator({
 											{renderHistoryBreakdown(roll)}
 										</div>
 									</Tooltip>
-								</div>
+								</button>
 							))}
 						</div>
 					</div>
@@ -510,10 +577,16 @@ export default function DiceCalculator({
 			)}
 			<Tooltip content="CTRL+D">
 				<button
+					type="button"
+					aria-label={lang.t("Dice calculator")}
+					aria-expanded={isOpen}
 					className={classNames("DiceCalculator__toggle", {
 						is_rolling: isRolling,
 					})}
-					onClick={() => setIsOpen(!isOpen)}
+					onClick={(event) => {
+						if (!isOpen) openingElementRef.current = event.currentTarget;
+						setIsOpen(!isOpen);
+					}}
 				>
 					<Icon
 						name="dice"

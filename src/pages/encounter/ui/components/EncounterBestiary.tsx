@@ -54,4 +54,4 @@ export function EncounterBestiary(props: EncounterBestiaryProps) {
 	);
 }
 
-export { EncounterAiResponseModal, EncounterMonsterEditorModal };
+export { EncounterAiResponseModal, EncounterMonsterEditorModal, EncounterRulesReferenceContent };

@@ -8,7 +8,7 @@ import { useAppDispatch, useAppSelector } from "../model/index.js";
 
 type DicePublishResult = DiceCalculatorProps["publishResult"];
 
-export default function DiceCalculatorHost() {
+export default function DiceCalculatorHost({ openRequest }: { openRequest: number }) {
 	const dispatch = useAppDispatch();
 	const diceRollRequest = useAppSelector((state) => state.dice.rollRequest);
 	const publishResult = useCallback<DicePublishResult>(
@@ -21,6 +21,7 @@ export default function DiceCalculatorHost() {
 	return (
 		<DiceCalculator
 			diceRollRequest={diceRollRequest}
+			openRequest={openRequest}
 			publishResult={publishResult}
 		/>
 	);

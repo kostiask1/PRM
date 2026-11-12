@@ -64,7 +64,7 @@
 }
 
 .Spells__sort_btn.is_active {
-	background: rgba(56, 189, 248, 0.15) !important;
+	background: color-mix(in srgb, var(--accent), transparent 85%) !important;
 	border-color: var(--accent) !important;
 	color: var(--text-bright) !important;
 }
@@ -94,6 +94,25 @@
 .Spells__list .ListCard {
 	height: 81px;
 	margin-bottom: 6px;
+}
+
+.Spells__list .ListCard__main {
+	min-width: 0;
+}
+
+.Spells__list .ListCard__title {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+}
+
+.Spells__list .ListCard__meta {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .Spells__item_source {
@@ -162,7 +181,10 @@
 	.Spells__source_select,
 	.Spells__level_select,
 	.Spells__class_select,
-	.Spells__school_select,
+	.Spells__school_select {
+		flex: 1 1 calc(50% - var(--space-2));
+	}
+
 	.Spells__searchInput {
 		flex-basis: 100%;
 	}
@@ -206,7 +228,7 @@
 
 	.Spells__mobileDetailTitle {
 		display: grid;
-		gap: 2px;
+		gap: var(--space-0-5);
 		min-width: 0;
 	}
 

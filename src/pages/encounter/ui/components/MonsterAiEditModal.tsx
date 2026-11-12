@@ -72,6 +72,7 @@ export default function MonsterAiEditModal({
 				</div>
 				<Select
 					className="Bestiary__ai_edit_model"
+					aria-label={lang.t("AI model")}
 					value={selectedAiModel}
 					onChange={(event) => onModelChange(event.target.value)}
 					disabled={isAiEditingMonster || aiModels.length === 0}
@@ -80,6 +81,7 @@ export default function MonsterAiEditModal({
 				</Select>
 				<EditableField
 					type="textarea"
+					aria-label={presentation.placeholder}
 					value={aiEditInstructions}
 					onChange={(event) => onInstructionsChange(event.target.value)}
 					disabled={isAiEditingMonster}

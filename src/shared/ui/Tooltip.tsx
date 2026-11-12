@@ -34,6 +34,7 @@ export interface TooltipProps {
 	disabled?: boolean;
 	className?: string;
 	anchorElement?: Element | null;
+	interactive?: boolean;
 }
 
 function containsNode(parent: Node | null, child: Node | null): boolean {
@@ -69,6 +70,7 @@ export default function Tooltip({
 	disabled = false,
 	className,
 	anchorElement = null,
+	interactive = false,
 }: TooltipProps) {
 	const tooltipIdRef = useRef(`tooltip-${Math.random().toString(36).slice(2)}`);
 	const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,9 +117,11 @@ export default function Tooltip({
 		triggerActiveRef.current = false;
 		if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
 		closeTimerRef.current = setTimeout(() => {
+			const focused = document.activeElement;
+			if (containsNode(triggerRef.current, focused) || (interactive && containsNode(tooltipRef.current, focused))) return;
 			closeTooltip();
 		}, CLOSE_DELAY);
-	}, [closeTooltip]);
+	}, [closeTooltip, interactive]);
 
 	const cancelCloseTooltip = useCallback(() => {
 		if (closeTimerRef.current) {
@@ -261,8 +265,9 @@ export default function Tooltip({
 			);
 			const isOverTrigger = containsNode(trigger, hoveredElement);
 			const isOverAnchor = anchor && containsNode(anchor, hoveredElement);
+			const isOverTooltip = interactive && containsNode(tooltipRef.current, hoveredElement);
 
-			if (!isOverTrigger && !isOverAnchor) {
+			if (!isOverTrigger && !isOverAnchor && !isOverTooltip) {
 				scheduleCloseTooltip();
 			}
 		};
@@ -271,7 +276,7 @@ export default function Tooltip({
 		return () => {
 			document.removeEventListener("pointermove", handlePointerMove, true);
 		};
-	}, [anchorElement, closeTooltip, isOpen, scheduleCloseTooltip]);
+	}, [anchorElement, closeTooltip, interactive, isOpen, scheduleCloseTooltip]);
 
 	useEffect(() => {
 		const tooltipId = tooltipIdRef.current;
@@ -329,6 +334,7 @@ export default function Tooltip({
 				onMouseLeave={scheduleCloseTooltip}
 				onBlur={scheduleCloseTooltip}
 				onFocus={handleTriggerEnter}
+				onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); triggerActiveRef.current = false; closeTooltip(); } }}
 				className={classNames("Tooltip__trigger", className)}
 			>
 				{children}
@@ -338,9 +344,13 @@ export default function Tooltip({
 						<div
 							ref={tooltipRef}
 							data-tooltip-id={tooltipIdRef.current}
-							className="Tooltip"
+							className={classNames("Tooltip", interactive && "Tooltip__interactive")}
+							tabIndex={interactive ? 0 : undefined}
 							onMouseEnter={handleTooltipEnter}
 							onMouseLeave={scheduleCloseTooltip}
+							onFocus={cancelCloseTooltip}
+							onBlur={scheduleCloseTooltip}
+							onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); triggerActiveRef.current = false; closeTooltip(); } }}
 							style={{
 								top: `${position.top}px`,
 								left: `${position.left}px`,

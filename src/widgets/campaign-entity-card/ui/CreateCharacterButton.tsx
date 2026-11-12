@@ -23,6 +23,7 @@ export interface CreateCharacterButtonProps {
 	buttonClassName?: string;
 	icon?: IconName;
 	onCreate?: ((payload: CampaignEntityRecord) => void | Promise<void>) | null;
+	onCreated?: (entity: CampaignEntityRecord) => void;
 }
 
 export default function CreateCharacterButton({
@@ -34,6 +35,7 @@ export default function CreateCharacterButton({
 	buttonClassName,
 	icon = "plus",
 	onCreate = null,
+	onCreated,
 }: CreateCharacterButtonProps) {
 	const { notifyError, refreshEntities } = useCampaignEntityCreationRuntime();
 	const [isOpen, setIsOpen] = useState(false);
@@ -56,6 +58,7 @@ export default function CreateCharacterButton({
 				entityType,
 				payload,
 				onCreate: onCreate ?? undefined,
+				onCreated,
 				onRefreshEntities: refreshEntities,
 			});
 			setIsOpen(false);

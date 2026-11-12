@@ -25,7 +25,12 @@ export default function RollDice({
 
 	return (
 		<Tooltip content={lang.t("Roll {formula}", { formula })}>
-			<span className="RollDice" onClick={handleClick}>
+			<span className="RollDice" role="button" tabIndex={0} aria-label={lang.t("Roll {formula}", { formula })} onClick={handleClick} onKeyDown={(event) => {
+				if ((event.key !== "Enter" && event.key !== " ") || event.repeat) return;
+				event.preventDefault();
+				event.stopPropagation();
+				requestRoll(createRollDicePayload(formula, context));
+			}}>
 				{children || formula}
 			</span>
 		</Tooltip>

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import Button from "./Button.tsx";
 import Checkbox from "./Checkbox.tsx";
 import Icon from "./Icon.tsx";
@@ -19,16 +19,20 @@ function ModalHeader({
 	headerActions,
 	cancelDisabled,
 	controller,
+	titleId,
 }: Pick<ModalProps, "title" | "headerActions" | "cancelDisabled"> & {
 	controller: ModalController;
+	titleId: string;
 }) {
 	return (
 		<div className="Modal__header">
-			<h3>{title}</h3>
+			<h3 id={titleId}>{title}</h3>
 			<div className="Modal__header_actions">
 				{headerActions}
 				<button
+					type="button"
 					className="Modal__close"
+					aria-label={lang.t("Close")}
 					disabled={cancelDisabled}
 					onMouseDown={controller.suppressMouseEvent}
 					onClick={controller.handleCloseButtonClick}
@@ -157,6 +161,7 @@ export function ModalView({
 	cancelDisabled = false,
 	controller,
 }: ModalViewProps) {
+	const titleId = useId();
 	const plan = getModalPresentationPlan({
 		showFooter,
 		hasCancelHandler: Boolean(onCancel),
@@ -170,7 +175,14 @@ export function ModalView({
 			onMouseDown={controller.handleOverlayMouseDown}
 		>
 			<div
+				ref={controller.cardRef}
+				id={`${titleId}-dialog`}
 				className={classNames("Modal__card", `Modal__card__${type}`, className)}
+				role="dialog"
+				tabIndex={-1}
+				aria-modal="true"
+				aria-labelledby={title ? titleId : undefined}
+				aria-label={title ? undefined : lang.t("Dialog")}
 				onClick={controller.stopMousePropagation}
 			>
 				<ModalHeader
@@ -178,6 +190,7 @@ export function ModalView({
 					headerActions={headerActions}
 					cancelDisabled={cancelDisabled}
 					controller={controller}
+					titleId={titleId}
 				/>
 				<ModalBody
 					children={children}

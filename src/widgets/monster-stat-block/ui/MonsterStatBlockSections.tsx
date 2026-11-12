@@ -42,6 +42,7 @@ interface TokenSectionProps {
 	monster: BestiaryMonster;
 	sources: MonsterTokenSources;
 	showDropzone: boolean;
+	isReplacingToken: boolean;
 	hasImageError: boolean;
 	allowTokenUpload: boolean;
 	tokenUploadCampaignSlug: string;
@@ -108,6 +109,7 @@ function MonsterTokenImage({
 	"monster" | "sources" | "dragPayload" | "onReplace" | "onImageError"
 > & { presentation: MonsterTokenSectionPresentation }) {
 	return (
+		<>
 		<div
 			className="MonsterStatBlock__tokenDragProxy"
 			draggable
@@ -120,17 +122,18 @@ function MonsterTokenImage({
 				draggable={false}
 				onError={onImageError}
 			/>
+		</div>
 			{presentation.showReplaceAction && (
 				<Button
 					variant="ghost"
 					size={Button.SIZES.SMALL}
-					icon="image"
 					className="MonsterStatBlock__replaceTokenButton"
 					onClick={onReplace}
-					title={lang.t("Replace image")}
-				/>
+				>
+					{lang.t("Change token")}
+				</Button>
 			)}
-		</div>
+		</>
 	);
 }
 
@@ -155,6 +158,7 @@ export function MonsterTokenSection({
 	monster,
 	sources,
 	showDropzone,
+	isReplacingToken,
 	hasImageError,
 	allowTokenUpload,
 	tokenUploadCampaignSlug,
@@ -169,7 +173,7 @@ export function MonsterTokenSection({
 		showDropzone,
 		hasImageError,
 		allowTokenUpload,
-		customTokenSrc: sources.customTokenSrc,
+		isReplacingToken,
 		isCustomMonster: sources.isCustomMonster,
 		hasTokenImageChange,
 	});
@@ -180,6 +184,7 @@ export function MonsterTokenSection({
 				monster={monster}
 				sources={sources}
 				showDropzone={showDropzone}
+				isReplacingToken={isReplacingToken}
 				hasImageError={hasImageError}
 				allowTokenUpload={allowTokenUpload}
 				tokenUploadCampaignSlug={tokenUploadCampaignSlug}
@@ -213,15 +218,17 @@ export function MonsterAbilities({ model, helpers, onRoll }: AbilitySectionProps
 				const value = model.abilityScores[field];
 				const modifier = getAbilityModifier(value);
 				return (
-					<Tooltip key={field} content={lang.t("Roll {label} check", { label })}>
-						<div
+					<Tooltip key={field} content={lang.t("Roll {label} check", { label: lang.t(label) })}>
+						<button
+							type="button"
+							aria-label={lang.t("Roll {label} check", { label: lang.t(label) })}
 							className={classNames("MonsterStatBlock__ability_box", helpers.changedClass(field))}
 							onClick={() => onRoll(`1d20${formatModifier(modifier)}`)}
 						>
-							<span className="MonsterStatBlock__abilityLabel">{label}</span>
+							<span className="MonsterStatBlock__abilityLabel">{lang.t(label)}</span>
 							<span className="MonsterStatBlock__abilityModifier">{formatModifier(modifier)}</span>
 							<span className="MonsterStatBlock__abilityScore">{value}</span>
-						</div>
+						</button>
 					</Tooltip>
 				);
 			})}
@@ -253,8 +260,10 @@ export function MonsterHeaderDetails(props: HeaderDetailsProps) {
 	const { monster, model, helpers } = props;
 	return (
 		<div className="MonsterStatBlock__header__details">
-			<MonsterNameRow {...props} />
-			<MonsterMetadata monster={monster} model={model} sourceLabel={props.sourceLabel} helpers={helpers} />
+			<div className="MonsterStatBlock__identity">
+				<MonsterNameRow {...props} />
+				<MonsterMetadata monster={monster} model={model} sourceLabel={props.sourceLabel} helpers={helpers} />
+			</div>
 			<div className="MonsterStatBlock__stats__wrap">
 				<MonsterStats monster={monster} model={model} helpers={helpers} onRoll={props.onRoll} renderSenses={props.renderSenses} />
 			</div>
@@ -310,6 +319,7 @@ function MonsterNameRow(props: HeaderDetailsProps) {
 				icon="edit"
 				className="MonsterStatBlock__editButton"
 				titleKey="Edit creature"
+				showLabel
 			/>
 			<MonsterCallbackAction
 				monster={monster}
@@ -385,7 +395,8 @@ function MonsterFavoriteAction({
 				is_active: presentation.favoriteActive,
 			})}
 			onClick={onFavorite}
-			title={presentation.favoriteTitle}
+			aria-label={lang.t(presentation.favoriteTitle)}
+			title={lang.t(presentation.favoriteTitle)}
 		/>
 	);
 }
@@ -398,6 +409,7 @@ interface MonsterCallbackActionProps {
 	icon: "wand" | "edit" | "trash";
 	className: string;
 	titleKey: string;
+	showLabel?: boolean;
 }
 
 function MonsterCallbackAction({
@@ -408,6 +420,7 @@ function MonsterCallbackAction({
 	icon,
 	className,
 	titleKey,
+	showLabel = false,
 }: MonsterCallbackActionProps) {
 	if (!visible || !onAction) return null;
 	return (
@@ -417,8 +430,11 @@ function MonsterCallbackAction({
 			icon={icon}
 			className={className}
 			onClick={() => executeMonsterAction(onAction, monster)}
+			aria-label={lang.t(titleKey)}
 			title={lang.t(titleKey)}
-		/>
+		>
+			{showLabel ? lang.t("Edit") : null}
+		</Button>
 	);
 }
 
@@ -495,7 +511,7 @@ function MonsterSourceLine({
 				helpers.changedClass("source"),
 			)}
 		>
-			<strong>Source:</strong> {helpers.highlight(sourceLabel)}
+			<strong>{lang.t("Source")}:</strong> {helpers.highlight(sourceLabel)}
 		</div>
 	);
 }
@@ -518,17 +534,17 @@ function MonsterStats({ monster, model, helpers, renderSenses }: StatsProps) {
 	return (
 		<>
 			<div className="MonsterStatBlock__stats">
-				<div className={classNames("MonsterStatBlock__statItem", helpers.changedClass("hp", "hit_points"))}><strong>HP:</strong> {helpers.renderContent(model.hp.val)} {model.hp.formula && <>(<RollDice formula={model.hp.formula}>{helpers.highlight(model.hp.formula)}</RollDice>)</>}</div>
-				<div className={classNames("MonsterStatBlock__statItem MonsterStatBlock__statItem_ac", helpers.changedClass("ac", "armor_class"))}><strong>AC:</strong> {helpers.renderContent(model.ac.val)} {helpers.renderContent(model.ac.desc)}</div>
-				<div className={classNames("MonsterStatBlock__statItem", helpers.changedClass("speed"))}><strong>Speed:</strong> {helpers.highlight(model.speed)}</div>
+				<div className={classNames("MonsterStatBlock__statItem", helpers.changedClass("hp", "hit_points"))}><strong>{lang.t("HP")}:</strong> {helpers.renderContent(model.hp.val)} {model.hp.formula && <>(<RollDice formula={model.hp.formula}>{helpers.highlight(model.hp.formula)}</RollDice>)</>}</div>
+				<div className={classNames("MonsterStatBlock__statItem MonsterStatBlock__statItem_ac", helpers.changedClass("ac", "armor_class"))}><strong>{lang.t("AC")}:</strong> {helpers.renderContent(model.ac.val)} {helpers.renderContent(model.ac.desc)}</div>
+				<div className={classNames("MonsterStatBlock__statItem", helpers.changedClass("speed"))}><strong>{lang.t("Speed")}:</strong> {helpers.highlight(model.speed)}</div>
 			</div>
 			<div className="MonsterStatBlock__properties">
-				{model.saves.length > 0 && <div className={classNames("MonsterStatBlock__propertyItem", helpers.changedClass("save"))}><strong>Saving Throws:</strong>{" "}{model.saves.map((save, index) => <React.Fragment key={save.label}>{save.label} <RollDice formula={`1d20${formatModifier(Number.parseInt(String(save.val)))}`}>{formatModifier(Number.parseInt(String(save.val)))}</RollDice>{index < model.saves.length - 1 ? ", " : ""}</React.Fragment>)}</div>}
-				{model.skills.length > 0 && <div className={classNames("MonsterStatBlock__propertyItem MonsterStatBlock__propertyItem_skills", helpers.changedClass("skill"))}><strong>Skills:</strong>{" "}{model.skills.map(([name, value], index) => <React.Fragment key={name}><span style={{ textTransform: "capitalize" }}>{helpers.highlight(name)}</span>{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(value)))}`}>{formatModifier(Number.parseInt(String(value)))}</RollDice>{index < model.skills.length - 1 ? ", " : ""}</React.Fragment>)}</div>}
-				{damageProperties.map(([field, label]) => monster[field] ? <div key={field} className={classNames("MonsterStatBlock__propertyItem", helpers.changedClass(field))}><strong>{label}:</strong>{" "}{helpers.highlight(model.formatDamageProperty(monster[field]))}</div> : null)}
+				{model.saves.length > 0 && <div className={classNames("MonsterStatBlock__propertyItem", helpers.changedClass("save"))}><strong>{lang.t("Saving Throws")}:</strong>{" "}{model.saves.map((save, index) => <React.Fragment key={save.label}>{save.label} <RollDice formula={`1d20${formatModifier(Number.parseInt(String(save.val)))}`}>{formatModifier(Number.parseInt(String(save.val)))}</RollDice>{index < model.saves.length - 1 ? ", " : ""}</React.Fragment>)}</div>}
+				{model.skills.length > 0 && <div className={classNames("MonsterStatBlock__propertyItem MonsterStatBlock__propertyItem_skills", helpers.changedClass("skill"))}><strong>{lang.t("Skills")}:</strong>{" "}{model.skills.map(([name, value], index) => <React.Fragment key={name}><span style={{ textTransform: "capitalize" }}>{helpers.highlight(name)}</span>{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(value)))}`}>{formatModifier(Number.parseInt(String(value)))}</RollDice>{index < model.skills.length - 1 ? ", " : ""}</React.Fragment>)}</div>}
+				{damageProperties.map(([field, label]) => monster[field] ? <div key={field} className={classNames("MonsterStatBlock__propertyItem", helpers.changedClass(field))}><strong>{lang.t(label)}:</strong>{" "}{helpers.highlight(model.formatDamageProperty(monster[field]))}</div> : null)}
 				<div className="MonsterStatBlock__description">
-					<p className={helpers.changedClass("senses")}><strong>Senses:</strong> {renderSenses()}</p>
-					<p className={helpers.changedClass("languages")}><strong>Languages:</strong> {helpers.highlight(model.languages)}</p>
+					<p className={helpers.changedClass("senses")}><strong>{lang.t("Senses")}:</strong> {renderSenses()}</p>
+					<p className={helpers.changedClass("languages")}><strong>{lang.t("Languages")}:</strong> {helpers.highlight(model.languages || "—")}</p>
 					<p className={helpers.changedClass("cr")}><strong>CR:</strong> {helpers.highlight(model.challenge)}</p>
 				</div>
 				{typeof monster.desc === "string" && <div className={classNames("MonsterStatBlock__lore", helpers.changedClass("desc"))}>{helpers.renderInlineText(monster.desc)}</div>}
@@ -540,9 +556,9 @@ function MonsterStats({ monster, model, helpers, renderSenses }: StatsProps) {
 interface SpellSectionProps { helpers: RenderHelpers; }
 
 export function LegacySpellcastingSection({ loading, groups, helpers }: SpellSectionProps & { loading: boolean; groups: SpellLevelGroup[] }) {
-	if (loading) return <div className="MonsterStatBlock__section"><p className="muted">Loading spells...</p></div>;
+	if (loading) return <div className="MonsterStatBlock__section"><p className="muted">{lang.t("Loading spells...")}</p></div>;
 	if (groups.length === 0) return null;
-	return <div className={classNames("MonsterStatBlock__section MonsterStatBlock__spells", helpers.changedClass("spell_list"))}><h4>Spells:</h4>{groups.map(({ level, spells }) => <div key={level}><strong>{level === "0" ? "Cantrip" : `${level}-level`}:</strong>{" "}<SpellLinks spells={spells} highlight={helpers.highlight} /></div>)}</div>;
+	return <div className={classNames("MonsterStatBlock__section MonsterStatBlock__spells", helpers.changedClass("spell_list"))}><h4>{lang.t("Spells")}:</h4>{groups.map(({ level, spells }) => <div key={level}><strong>{level === "0" ? lang.t("Cantrip") : lang.t("Level {level}", { level })}:</strong>{" "}<SpellLinks spells={spells} highlight={helpers.highlight} /></div>)}</div>;
 }
 
 function SpellLinks({ spells, highlight }: { spells: LoadedMonsterSpell[]; highlight: RenderHelpers["highlight"] }) {
@@ -650,12 +666,12 @@ function SpellContentLine({ label, values, helpers }: { label: string; values: u
 
 export function MonsterActionList({ actions, spellcastingEntries = [], title, field, helpers }: { actions: MonsterEntry[]; spellcastingEntries?: MonsterSpellcastingEntry[]; title: string; field: string; helpers: RenderHelpers }) {
 	if (actions.length === 0 && spellcastingEntries.length === 0) return null;
-	return <div className={classNames("MonsterStatBlock__section", helpers.changedClass(field), spellcastingEntries.length > 0 && helpers.changedClass("spellcasting"))}><h4>{title}:</h4>{spellcastingEntries.map((entry, index) => <StructuredSpellcastingEntry key={`spellcasting-${entry.name}-${index}`} entry={entry} helpers={helpers} embedded />)}{actions.map((action, index) => <div key={index} className="MonsterStatBlock__action"><strong>{helpers.renderActionName(action.name)}.</strong>{" "}{helpers.renderContent(action.entries ?? action.desc)}<div className="MonsterStatBlock__actionRolls">{action.attack_bonus != null && <div className="MonsterStatBlock__statItem">Atk:{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(action.attack_bonus)))}`}>{formatModifier(Number.parseInt(String(action.attack_bonus)))}</RollDice></div>}{action.damage_dice && <div className="MonsterStatBlock__statItem">Dmg:{" "}<RollDice formula={`${action.damage_dice}${getDamageBonus(action)}`} /></div>}</div></div>)}</div>;
+	return <div className={classNames("MonsterStatBlock__section", helpers.changedClass(field), spellcastingEntries.length > 0 && helpers.changedClass("spellcasting"))}><h4>{lang.t(title)}:</h4>{spellcastingEntries.map((entry, index) => <StructuredSpellcastingEntry key={`spellcasting-${entry.name}-${index}`} entry={entry} helpers={helpers} embedded />)}{actions.map((action, index) => <div key={index} className="MonsterStatBlock__action"><strong>{helpers.renderActionName(action.name)}.</strong>{" "}{helpers.renderContent(action.entries ?? action.desc)}<div className="MonsterStatBlock__actionRolls">{action.attack_bonus != null && <div className="MonsterStatBlock__statItem">Atk:{" "}<RollDice formula={`1d20${formatModifier(Number.parseInt(String(action.attack_bonus)))}`}>{formatModifier(Number.parseInt(String(action.attack_bonus)))}</RollDice></div>}{action.damage_dice && <div className="MonsterStatBlock__statItem">Dmg:{" "}<RollDice formula={`${action.damage_dice}${getDamageBonus(action)}`} /></div>}</div></div>)}</div>;
 }
 
 export function MonsterContentSection({ content, title, field, helpers }: { content: unknown[]; title: string; field: string; helpers: RenderHelpers }) {
 	if (content.length === 0) return null;
-	return <div className={classNames("MonsterStatBlock__section", helpers.changedClass(field))}><h4>{title}:</h4>{helpers.renderContent(content)}</div>;
+	return <div className={classNames("MonsterStatBlock__section", helpers.changedClass(field))}><h4>{lang.t(title)}:</h4>{helpers.renderContent(content)}</div>;
 }
 
 export function renderSenseParts(parts: SenseTextPart[], helpers: RenderHelpers): ReactNode {

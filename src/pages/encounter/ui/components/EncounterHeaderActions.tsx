@@ -71,6 +71,8 @@ export default function EncounterHeaderActions({
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="menu"
+				aria-label={lang.t("Encounter actions")}
+				aria-expanded={isActionsOpen}
 				className="EncounterView__headerActionsToggle"
 				onClick={onToggleActions}
 				title={lang.t("Encounter actions")}
@@ -98,6 +100,7 @@ export default function EncounterHeaderActions({
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon="import"
+					aria-label={lang.t("Import encounter")}
 					onClick={() => view.fileInputRef.current?.click()}
 					title={lang.t("Import encounter")}
 				/>
@@ -105,6 +108,7 @@ export default function EncounterHeaderActions({
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon="export"
+					aria-label={lang.t("Export encounter")}
 					onClick={view.handleExport}
 					title={lang.t("Export encounter")}
 				/>
@@ -130,6 +134,8 @@ function EncounterViewModeControls({
 				variant={displayMode === "single" ? "primary" : "ghost"}
 				size={Button.SIZES.SMALL}
 				icon="list"
+				aria-label={lang.t("Preview")}
+				aria-pressed={displayMode === "single"}
 				onClick={() => onDisplayMode("single")}
 				title={lang.t("Preview")}
 			/>
@@ -137,6 +143,8 @@ function EncounterViewModeControls({
 				variant={displayMode === "grid" ? "primary" : "ghost"}
 				size={Button.SIZES.SMALL}
 				icon="layers"
+				aria-label={lang.t("All")}
+				aria-pressed={displayMode === "grid"}
 				onClick={() => onDisplayMode("grid")}
 				disabled={displayedMonsterCount === 1}
 				title={lang.t("All")}
@@ -183,23 +191,26 @@ function EncounterHistoryControls({
 	view: EncounterHeaderActionsView;
 }) {
 	return (
-		<>
+		<div className="EncounterView__historyControls" role="group" aria-label={lang.t("Campaign history")}>
+			<span className="EncounterView__historyScope">{lang.t("Campaign history")}</span>
 			<Button
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="undo"
+				aria-label={view.undoLabel}
 				onClick={view.handleUndo}
 				disabled={!view.canUndo || view.isSaving || view.isHistoryRestoring}
 				title={view.undoLabel}
-			/>
+			>{lang.t("Undo")}</Button>
 			<Button
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="redo"
+				aria-label={view.redoLabel}
 				onClick={view.handleRedo}
 				disabled={!view.canRedo || view.isSaving || view.isHistoryRestoring}
 				title={view.redoLabel}
-			/>
-		</>
+			>{lang.t("Redo")}</Button>
+		</div>
 	);
 }

@@ -16,6 +16,8 @@ export default function AiContextIgnoreButton({
 			size={Button.SIZES.SMALL}
 			icon={ignored ? "x" : "database"}
 			iconSize={13}
+			aria-label={lang.t(ignored ? "Include in AI context" : "Ignore in AI context")}
+			aria-pressed={ignored}
 			onClick={(event) => {
 				event.preventDefault();
 				event.stopPropagation();

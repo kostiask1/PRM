@@ -2,12 +2,22 @@
 	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 	border-radius: var(--radius-sm);
 	padding: var(--space-4);
-	overflow-y: scroll;
-	height: 100%;
+	min-width: 0;
+}
+
+.MonsterStatBlock .MonsterStatBlock__editButton,
+.MonsterStatBlock.MonsterStatBlock__grid .MonsterStatBlock__editButton {
+	width: auto;
+	min-width: var(--size-8);
+	padding: 0 var(--space-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
 }
 
 .MonsterStatBlock__header {
-	display: flow-root;
+	display: grid;
+	grid-template-columns: var(--monster-token-size) minmax(0, 1fr);
+	gap: var(--space-2) var(--space-4);
 	margin-bottom: var(--space-4);
 	width: 100%;
 }
@@ -17,19 +27,39 @@
 }
 
 .MonsterStatBlock__token_wrapper {
-	float: right;
-	width: 280px;
-	height: 280px;
-	margin: 0 0 var(--space-4) var(--space-6);
+	width: var(--monster-token-size);
+	min-height: var(--monster-token-size);
 	border-radius: 50%;
 	overflow: visible;
 	display: flex;
+	flex-direction: column;
 	align-items: flex-start;
-	justify-content: center;
+	gap: var(--space-1);
+}
+
+.MonsterStatBlock__identity {
+	min-width: 0;
+	align-self: center;
+}
+
+.MonsterStatBlock__header__details > .MonsterStatBlock__stats__wrap,
+.MonsterStatBlock__header__details > .MonsterStatBlock__abilities {
+	grid-column: 1 / -1;
+}
+
+.MonsterStatBlock__header.is_token_dropzone .MonsterStatBlock__token_wrapper,
+.MonsterStatBlock__header.is_token_dropzone .MonsterStatBlock__identity {
+	grid-column: 1 / -1;
+}
+
+.MonsterStatBlock__header.is_token_dropzone .MonsterStatBlock__token_wrapper {
+	width: 100%;
+	height: auto;
 }
 
 .MonsterStatBlock__metaLine {
 	display: flex;
+	flex-wrap: wrap;
 	gap: var(--space-2);
 	margin-bottom: var(--space-2);
 }
@@ -79,14 +109,10 @@
 	background: var(--bg);
 }
 
-.MonsterStatBlock__token_wrapper:hover .MonsterStatBlock__token {
-	transform: translate(-30%, 30%) scale(1.7);
-}
-
 .MonsterStatBlock__tokenDragProxy {
 	position: relative;
 	width: 100%;
-	height: 100%;
+	height: var(--monster-token-size);
 }
 
 .MonsterStatBlock__token {
@@ -94,41 +120,27 @@
 	height: 100%;
 	object-fit: contain;
 	transition: transform 0.2s ease;
-	cursor: zoom-in;
+	cursor: grab;
 }
 
 .MonsterStatBlock__replaceTokenButton {
-	position: absolute;
-	right: var(--space-2);
-	bottom: var(--space-2);
-	z-index: 3;
-	width: var(--size-8);
-	height: var(--size-8);
-	min-width: var(--size-8);
+	min-height: 0;
 	padding: 0;
-	border-radius: 999px;
-	background: color-mix(in srgb, var(--panel), transparent 8%);
-	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
-	box-shadow: var(--shadow-md);
-	opacity: 0;
-	pointer-events: none;
-	transform: translateY(4px);
-	transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+	border: 0;
+	background: transparent;
+	color: var(--accent);
+	font-size: 0.75rem;
+	line-height: 1.4;
+	text-align: left;
 }
 
 .MonsterStatBlock__replaceTokenButton:hover {
 	background: color-mix(in srgb, var(--accent), transparent 82%);
 }
 
-.MonsterStatBlock__tokenDragProxy:hover .MonsterStatBlock__replaceTokenButton,
-.MonsterStatBlock__tokenDragProxy:focus-within .MonsterStatBlock__replaceTokenButton {
-	opacity: 1;
-	pointer-events: auto;
-	transform: translateY(0);
-}
-
 .MonsterStatBlock__stats__wrap {
 	display: flex;
+	flex-wrap: wrap;
 	gap: var(--space-2);
 	margin-top: var(--space-2);
 }
@@ -136,7 +148,7 @@
 .MonsterStatBlock__stats {
 	flex: 1;
 	display: flex;
-	flex: 1 1 auto;
+	flex: 1 1 180px;
 	flex-direction: column;
 	gap: var(--space-3) var(--space-6);
 	padding: var(--space-3);
@@ -152,7 +164,7 @@
 	font-size: 0.9rem;
 	line-height: 1.4;
 	display: flex;
-	flex: 1 1 auto;
+	flex: 2 1 240px;
 	height: 100%;
 	flex-direction: column;
 	gap: var(--space-2);
@@ -190,6 +202,7 @@
 }
 
 .MonsterStatBlock__ability_box {
+	font: inherit;
 	background: color-mix(in srgb, var(--bg), transparent 40%);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 50%);
 	border-radius: var(--radius-lg);
@@ -200,6 +213,8 @@
 	cursor: pointer;
 	transition: all 0.2s ease;
 }
+
+.MonsterStatBlock__ability_box:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .MonsterStatBlock__ability_box:hover {
 	border-color: var(--accent);
@@ -269,6 +284,8 @@
 .MonsterStatBlock__name {
 	cursor: pointer;
 	display: inline-block;
+	min-width: 0;
+	overflow-wrap: anywhere;
 	font-size: 2.2em;
 	line-height: 1;
 	font-weight: 600;
@@ -346,10 +363,12 @@
 }
 
 .MonsterStatBlock__grid .MonsterStatBlock__token_wrapper {
-	width: 160px;
-	height: 160px;
-	margin-left: var(--space-3);
-	margin-bottom: var(--space-2);
+	width: var(--monster-token-size);
+}
+
+.MonsterStatBlock__grid .MonsterStatBlock__header.is_token_dropzone .MonsterStatBlock__token_wrapper {
+	width: 100%;
+	height: auto;
 }
 
 .MonsterStatBlock__grid .MonsterStatBlock__nameRow {
@@ -451,13 +470,6 @@
 	}
 
 	.MonsterStatBlock__header {
-		margin-bottom: var(--space-3);
-	}
-
-	.MonsterStatBlock__token_wrapper {
-		width: 160px;
-		height: 160px;
-		margin-left: var(--space-4);
 		margin-bottom: var(--space-3);
 	}
 
@@ -564,18 +576,6 @@
 
 	.MonsterStatBlock__header__details {
 		gap: var(--space-2);
-	}
-
-	.MonsterStatBlock__token_wrapper {
-		float: left;
-		width: min(46vw, 140px);
-		height: min(46vw, 140px);
-		margin: 0 var(--space-2) var(--space-2) 0;
-	}
-
-	.MonsterStatBlock__token_wrapper:hover .MonsterStatBlock__token,
-	.EncounterView__gridItem .MonsterStatBlock__token_wrapper:hover .MonsterStatBlock__token {
-		transform: none;
 	}
 
 	.MonsterStatBlock__nameRow {

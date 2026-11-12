@@ -1,19 +1,18 @@
 import type { ReactNode } from "react";
 import "../../../../assets/components/CampaignEntitySection.css";
 import {
-	Button,
-	CollapseToggleButton,
 	DraggableList,
+	useHashItemSelection,
 } from "../../../../shared/ui/index.js";
-import { BulkCollapseButton } from "../../../../features/notes/ui/index.js";
+import { lang, makeDomId } from "../../../../shared/lib/index.js";
+import { matchesHistoryTargetId } from "../../../../entities/history/index.js";
 import type { CampaignPageEntity } from "../../model/contracts.ts";
 import { getCampaignEntityRenderKey } from "../../model/campaignPagePresentation.ts";
 
 interface CampaignEntitySectionProps {
 	title: string;
 	items: CampaignPageEntity[];
-	hasData: boolean;
-	isCollapsed: boolean;
+	selectionRequest?: { id: string | number } | null;
 	listVariant: "person" | "location";
 	historyFocusId: string;
 	dropType?: "characters" | "npc";
@@ -22,11 +21,6 @@ interface CampaignEntitySectionProps {
 	renderItemControl?: (entity: CampaignPageEntity) => ReactNode;
 	isItemControlActive?: (entity: CampaignPageEntity) => boolean;
 	renderItem: (entity: CampaignPageEntity) => ReactNode;
-	onToggle: () => void;
-	onBulkCollapse: (
-		items: CampaignPageEntity[],
-		collapsed: boolean,
-	) => void;
 	onReorder: (items: CampaignPageEntity[]) => void;
 	onReorderDrop: (items: CampaignPageEntity[]) => void;
 }
@@ -34,8 +28,7 @@ interface CampaignEntitySectionProps {
 export default function CampaignEntitySection({
 	title,
 	items,
-	hasData,
-	isCollapsed,
+	selectionRequest,
 	listVariant,
 	historyFocusId,
 	dropType,
@@ -44,11 +37,11 @@ export default function CampaignEntitySection({
 	renderItemControl,
 	isItemControlActive,
 	renderItem,
-	onToggle,
-	onBulkCollapse,
 	onReorder,
 	onReorderDrop,
 }: CampaignEntitySectionProps) {
+	const kind = dropType === "characters" ? "character" : dropType === "npc" ? "npc" : "location";
+	const { selected, setSelectedKey } = useHashItemSelection(items, (entity, index) => String(getCampaignEntityRenderKey(entity, index)), (entity, hash) => matchesHistoryTargetId(hash, "campaign", kind, entity.id) || hash === `#${makeDomId("campaign", kind, entity.id)}`, undefined, selectionRequest);
 	return (
 		<div
 			className="CampaignEntitySection"
@@ -56,30 +49,22 @@ export default function CampaignEntitySection({
 			data-history-focus-id={historyFocusId}
 		>
 			<div className="CampaignEntitySection__row">
-				<div className="CampaignEntitySection__titleGroup" onClick={onToggle}>
-					{hasData && (
-						<CollapseToggleButton
-							size={Button.SIZES.MEDIUM}
-							collapsed={isCollapsed}
-							onClick={onToggle}
-						/>
-					)}
+				<div className="CampaignEntitySection__titleGroup">
 					<h3>{title}</h3>
 				</div>
-				{!isCollapsed && (
 					<div className="CampaignEntitySection__actions">
-						<BulkCollapseButton
-							items={items}
-							onChange={(collapsed) => onBulkCollapse(items, collapsed)}
-						/>
 						{actions}
 					</div>
-				)}
 			</div>
-			{!isCollapsed && (
+			<div className="CampaignEntitySection__workspace">
 				<DraggableList
 					items={items}
-					className={`CampaignEntitySection__list CampaignEntitySection__list_${listVariant}`}
+					className={`CampaignEntitySection__list CampaignEntitySection__list_${listVariant} EntitySelectionList`}
+					keyboardReorder
+					getKeyboardReorderLabel={(entity) => {
+						const name = listVariant === "location" ? entity.name || entity.title : [entity.firstName, entity.lastName].filter(Boolean).join(" ") || entity.name;
+						return lang.t("Reorder item: {name} (arrow keys)", { name: String(name || lang.t("Untitled")) });
+					}}
 					onReorder={onReorder}
 					onDrop={onReorderDrop}
 					dragData={dragData}
@@ -88,9 +73,16 @@ export default function CampaignEntitySection({
 					}
 					renderItemControl={renderItemControl}
 					isItemControlActive={isItemControlActive}
-					renderItem={renderItem}
+					renderItem={(entity, _dragging, index) => {
+						const name = listVariant === "location" ? entity.name || entity.title : [entity.firstName, entity.lastName].filter(Boolean).join(" ") || entity.name;
+						return <button type="button" className="CampaignEntitySection__item" aria-pressed={entity === selected} onClick={() => setSelectedKey(String(getCampaignEntityRenderKey(entity, index)))}>
+							{typeof entity.imageUrl === "string" && entity.imageUrl && <img src={entity.imageUrl} alt="" />}
+							<span>{String(name || lang.t("Untitled"))}</span>
+						</button>;
+					}}
 				/>
-			)}
+				<div className="CampaignEntitySection__detail">{selected ? renderItem(selected) : <p className="muted">{lang.t("No items yet.")}</p>}</div>
+			</div>
 		</div>
 	);
 }

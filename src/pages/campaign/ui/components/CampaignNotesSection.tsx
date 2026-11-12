@@ -1,16 +1,17 @@
-import { Button, CollapseToggleButton, DraggableList } from "../../../../shared/ui/index.js";
+import { Button, DraggableList, useHashItemSelection } from "../../../../shared/ui/index.js";
 import "../../../../assets/components/CampaignNotesSection.css";
+import "../../../../assets/components/CampaignEntitySection.css";
 import {
-	BulkCollapseButton,
 	createNoteCardComponent,
 	getAiIgnoredNoteListProps,
 } from "../../../../features/notes/ui/index.js";
 import { EditableField } from "../../../../features/editor/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
 import type { DomainId } from "../../../../entities/campaign/index.js";
-import { makeHistoryTargetId } from "../../../../entities/history/index.js";
+import { makeHistoryTargetId, matchesHistoryTargetId } from "../../../../entities/history/index.js";
 import {
 	getNotesForRender,
+	getNoteListLabel,
 	lang,
 	makeDomId,
 } from "../../../../shared/lib/index.js";
@@ -18,7 +19,6 @@ import type { CampaignPageCampaign } from "../../model/contracts.ts";
 import type useCampaignView from "../../model/useCampaignView.ts";
 import { useCampaignPageRuntime } from "../../model/CampaignPageRuntime.tsx";
 import {
-	getCampaignNotesCollapsePatch,
 	getCampaignNotesSectionPresentation,
 	normalizeCampaignCardNote,
 	type CampaignNotesSectionPresentation,
@@ -47,16 +47,26 @@ function CampaignNotesList({
 	notes,
 	onToggleIgnored,
 }: CampaignNotesListProps) {
+	const { selected, setSelectedKey } = useHashItemSelection(notes, (note) => String(note.id), (note, hash) => matchesHistoryTargetId(hash, "campaign", "note", note.id) || hash === `#${makeDomId("campaign", "note", note.id)}`, (note, key) => note._renderKey != null && String(note._renderKey) === key);
 	return (
+		<div className="CampaignEntitySection__workspace">
 		<DraggableList
 			items={notes}
-			className="CampaignNotesSection__list"
+			className="CampaignNotesSection__list NoteSelectionList"
+			keyboardReorder
+			getKeyboardReorderLabel={(note) => lang.t("Reorder note: {name} (arrow keys)", { name: getNoteListLabel(note) || lang.t("New note") })}
 			onReorder={view.handleNotesReorder}
 			onDrop={view.finishTrackedReorder}
 			{...getAiIgnoredNoteListProps(onToggleIgnored, {
 				isolateDragEvents: false,
 			})}
-			renderItem={(note, _isDragging, index) => (
+			renderItem={(note) => <button type="button" className="CampaignEntitySection__item" aria-pressed={note === selected} onClick={() => setSelectedKey(String(note.id))}><span>{getNoteListLabel(note) || lang.t("New note")}</span></button>}
+		/>
+		<div className="CampaignEntitySection__detail">
+			{selected && (() => {
+				const note = selected;
+				const index = notes.indexOf(note);
+				return (
 				<div
 					id={makeDomId("campaign", "note", note.id)}
 					data-history-focus-id={makeHistoryTargetId(
@@ -70,35 +80,31 @@ function CampaignNotesList({
 						isLast={index === notes.length - 1}
 						campaignSlug={campaignSlug}
 						enableHistory={false}
+						collapsible={false}
 						onToggleCollapse={view.handleToggleNoteCollapse}
 						onTitleChange={view.handleNoteTitleChange}
 						onTextChange={view.handleNoteChange}
 						onDelete={view.handleDeleteNote}
 					/>
 				</div>
-			)}
-		/>
+				);
+			})()}
+		</div>
+		</div>
 	);
 }
 
 interface CampaignNotesViewToggleProps {
 	presentation: CampaignNotesSectionPresentation;
-	items: CampaignViewController["notes"];
 	onViewModeChange: (mode: CampaignNotesViewMode) => void;
-	onBulkCollapse: (collapsed: boolean) => void;
 }
 
 function CampaignNotesViewToggle({
 	presentation,
-	items,
 	onViewModeChange,
-	onBulkCollapse,
 }: CampaignNotesViewToggleProps) {
 	return (
 		<div className="CampaignNotesSection__viewToggle">
-			{presentation.showBulkCollapse && (
-				<BulkCollapseButton items={items} onChange={onBulkCollapse} />
-			)}
 			<Button
 				variant={presentation.listButtonVariant}
 				size={Button.SIZES.SMALL}
@@ -176,11 +182,8 @@ interface CampaignNotesSectionProps {
 	campaign: CampaignPageCampaign;
 	view: CampaignViewController;
 	notes: CampaignRenderableNote[];
-	hasData: boolean;
-	isCollapsed: boolean;
 	viewMode: CampaignNotesViewMode;
 	onViewModeChange: (mode: CampaignNotesViewMode) => void;
-	onBulkCollapse: (collapsed: boolean) => void;
 	onToggleIgnored: (noteId: DomainId, ignored: boolean) => void;
 }
 
@@ -188,24 +191,15 @@ export default function CampaignNotesSection({
 	campaign,
 	view,
 	notes,
-	hasData,
-	isCollapsed,
 	viewMode,
 	onViewModeChange,
-	onBulkCollapse,
 	onToggleIgnored,
 }: CampaignNotesSectionProps) {
 	const presentation = getCampaignNotesSectionPresentation({
-		hasData,
-		isCollapsed,
+		hasData: true,
+		isCollapsed: false,
 		viewMode,
 	});
-	const toggle = () => {
-		const patch = getCampaignNotesCollapsePatch(hasData, isCollapsed);
-		if (!patch) return;
-		view.setIsNotesCollapsed(patch.isNotesCollapsed);
-		view.triggerSave(patch);
-	};
 	return (
 		<div
 			id={makeDomId("campaign", "notes")}
@@ -213,21 +207,12 @@ export default function CampaignNotesSection({
 			data-history-focus-id={makeHistoryTargetId("campaign", "notes")}
 		>
 			<div className="CampaignNotesSection__row">
-				<div className="CampaignNotesSection__titleGroup" onClick={toggle}>
-					{presentation.canToggleCollapse && (
-						<CollapseToggleButton
-							size={Button.SIZES.MEDIUM}
-							collapsed={isCollapsed}
-							onClick={toggle}
-						/>
-					)}
+				<div className="CampaignNotesSection__titleGroup">
 					<h3>{lang.t("Notes")}</h3>
 				</div>
 				<CampaignNotesViewToggle
 					presentation={presentation}
-					items={view.notes}
 					onViewModeChange={onViewModeChange}
-					onBulkCollapse={onBulkCollapse}
 				/>
 			</div>
 			<CampaignNotesContent

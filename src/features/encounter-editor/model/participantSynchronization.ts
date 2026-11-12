@@ -103,6 +103,7 @@ function mergeCustomMonsterParticipant(
 		: nextMaxHp;
 	return {
 		...sourceMonster,
+		...(current.encounterConditions !== undefined ? { encounterConditions: current.encounterConditions } : {}),
 		name: current.name || sourceMonster.name,
 		instanceId: current.instanceId,
 		originalBestiaryName: sourceMonster.name,

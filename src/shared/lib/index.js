@@ -29,6 +29,7 @@ export { default as useDebounce } from "./useDebounce.js";
 export {
 	createEmptyNote,
 	getNoteRenderKey,
+	getNoteListLabel,
 	getNotesForRender,
 	isNoteEmpty,
 	isVirtualNoteId,

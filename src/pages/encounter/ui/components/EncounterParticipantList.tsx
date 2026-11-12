@@ -23,6 +23,7 @@ export default function EncounterParticipantList({
 }: EncounterParticipantListProps) {
 	return (
 		<div className="EncounterParticipantList">
+			<h2 className="EncounterParticipantList__title">{lang.t("Participants")}</h2>
 			<div className="EncounterParticipantList__actions">
 				<Button variant="create" onClick={onOpenBestiary} icon="plus" className="EncounterParticipantList__addButton">{lang.t("Add monster")}</Button>
 				<Button variant="ghost" onClick={onOpenCharacterPicker} icon="user" className="EncounterParticipantList__addButton">{lang.t("Add player")}</Button>

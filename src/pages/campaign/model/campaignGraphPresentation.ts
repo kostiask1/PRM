@@ -378,7 +378,7 @@ export function getCampaignGraphFlowNodePresentation(
 	return {
 		position: getCampaignGraphFlowNodePosition(input.currentNode, input.layoutPosition),
 		size: getCampaignGraphNodeSize(graphNode.type),
-		color: getCampaignGraphMappedValue(input.colors, graphNode.type, "#94a3b8"),
+		color: getCampaignGraphMappedValue(input.colors, graphNode.type, "var(--graph-unresolved-ink)"),
 		typeLabelKey: getCampaignGraphMappedValue(input.typeLabels, graphNode.type, graphNode.type),
 		isSelected,
 		isMuted: isCampaignGraphFlowNodeMuted(input.focusedNodeId, input.connectedIds, graphNode.id),
@@ -613,10 +613,10 @@ export function getCampaignGraphEdgeStrokeWidth(edge: CampaignGraphEdge): number
 }
 
 export function getCampaignGraphEdgeColor(edge: CampaignGraphEdge): string {
-	if (edge.relation === "mentions") return "#38bdf8";
-	if (edge.relation === "sequence") return "#e879f9";
-	if (edge.relation === "related") return "#f59e0b";
-	return "#94a3b8";
+	if (edge.relation === "mentions") return "var(--graph-edge-mention)";
+	if (edge.relation === "sequence") return "var(--graph-edge-sequence)";
+	if (edge.relation === "related") return "var(--graph-edge-related)";
+	return "var(--graph-edge-default)";
 }
 
 export function getCampaignGraphEdgeOpacity(

@@ -91,6 +91,27 @@
 	flex: 0 0 auto;
 }
 
+div.MultiSelect__option {
+	padding-block: 0;
+}
+
+.MultiSelect__optionAction {
+	min-width: 0;
+	flex: 1;
+	border: 0;
+	padding: var(--space-2) 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.MultiSelect__optionAction:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
 .MultiSelect__checkbox .Checkbox__indicator {
 	width: var(--size-5);
 	height: var(--size-5);
@@ -102,6 +123,7 @@
 }
 
 .MultiSelect__optionLabel {
+	display: block;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;

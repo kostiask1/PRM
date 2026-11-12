@@ -33,6 +33,16 @@
 	overflow-wrap: anywhere;
 }
 
+.Tooltip__entries > * + * {
+	margin-top: var(--space-2);
+}
+
+.Tooltip__interactive {
+	max-height: calc(100dvh - var(--space-4));
+	overflow-y: auto;
+	pointer-events: auto;
+}
+
 .Tooltip__creature_card {
 	display: flex;
 	align-items: flex-start;

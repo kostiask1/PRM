@@ -77,12 +77,14 @@ export default function AiImagePromptDetails({
 }: AiImagePromptDetailsProps) {
 	return (
 		<div className="AiAssistantPanel__image_prompt_details">
+			<p className="AiAssistantPanel__image_prompt_explanation">{lang.t("This creates text for an image generator.")}</p>
 			<SelectedImagePromptTarget
 				selectedTarget={selectedTarget}
 				getTitle={getImagePromptTargetTitle}
 			/>
 			<Select
 				className="AiAssistantPanel__image_prompt_model"
+				aria-label={lang.t("AI model")}
 				value={selectedModel}
 				onChange={(event) => onModelChange(event.target.value)}
 				disabled={loading || aiModels.length === 0}
@@ -94,6 +96,7 @@ export default function AiImagePromptDetails({
 					<span>{lang.t("What to generate")}</span>
 					<EditableField
 						type="textarea"
+						aria-label={lang.t("What to generate")}
 						value={imagePromptRequest}
 						onChange={(event) => onRequestChange(event.target.value)}
 						placeholder={lang.t("Describe what image prompt to generate...")}
@@ -106,6 +109,7 @@ export default function AiImagePromptDetails({
 				<span>{lang.t("Base image prompt")}</span>
 				<EditableField
 					type="textarea"
+					aria-label={lang.t("Base image prompt")}
 					value={imagePromptInstructions}
 					onChange={(event) => onInstructionsChange(event.target.value)}
 					placeholder={lang.t("Optional image prompt instructions...")}

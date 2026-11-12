@@ -1,5 +1,3 @@
-import type { MouseEvent } from "react";
-
 import { lang } from "../../../shared/lib/index.js";
 import { Icon, type IconName } from "../../../shared/ui/index.js";
 
@@ -45,13 +43,9 @@ export default function SidebarResources({
 }: {
 	onOpenPlayerQuestions: () => void;
 }) {
-	const handlePlayerQuestions = (event: MouseEvent<HTMLAnchorElement>) => {
-		event.preventDefault();
-		onOpenPlayerQuestions();
-	};
-
 	return (
 		<div className="Sidebar__section Sidebar__section__resources">
+			<h2 className="Sidebar__sectionTitle">{lang.t("Useful resources")}</h2>
 			<div className="Sidebar__resource_list">
 				{EXTERNAL_RESOURCES.map((resource) => (
 					<a
@@ -69,14 +63,14 @@ export default function SidebarResources({
 						</span>
 					</a>
 				))}
-				<a
-					href="#"
+				<button
+					type="button"
 					className="Sidebar__resource_item"
-					onClick={handlePlayerQuestions}
+					onClick={onOpenPlayerQuestions}
 				>
 					<Icon name="help" size={16} />
 					<span>{lang.t("Player questions")}</span>
-				</a>
+				</button>
 			</div>
 		</div>
 	);

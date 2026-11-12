@@ -15,7 +15,7 @@
 	background: var(--bg-2);
 	border-radius: 50%;
 	border: 1px solid var(--border);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 4px 15px color-mix(in srgb, var(--shadow-ink), transparent 70%);
 	color: var(--accent);
 	transition: all 0.2s ease;
 }

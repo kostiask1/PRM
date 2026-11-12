@@ -27,18 +27,20 @@ export default function Checkbox({
 	title,
 	...props
 }: CheckboxProps) {
-	const handleChange = (e: MouseEvent<HTMLLabelElement>) => {
-		e.preventDefault();
-		e.stopPropagation();
-
-		onChange(!checked);
+	const stopPropagation = (event: MouseEvent<HTMLLabelElement>) => {
+		event.stopPropagation();
 	};
 	const checkboxNode = (
 		<label
 			className={classNames("Checkbox", className, { is_checked: checked })}
-			onClick={handleChange}
+			onClick={stopPropagation}
 		>
-			<input type="checkbox" checked={checked} readOnly {...props} />
+			<input
+				type="checkbox"
+				checked={checked}
+				onChange={(event) => onChange(event.currentTarget.checked)}
+				{...props}
+			/>
 			<div className="Checkbox__indicator">
 				<Icon
 					name="check"

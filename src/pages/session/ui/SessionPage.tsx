@@ -1,6 +1,7 @@
 import {
 	useCallback,
 	useContext,
+	useId,
 	useMemo,
 	useRef,
 	useState,
@@ -11,10 +12,10 @@ import {
 	Button,
 	Panel,
 	SectionTabs,
-	Checkbox,
 	usePointerDownOutsideDismissal,
 } from "../../../shared/ui/index.js";
 import { useSimplifiedNotesEnabled } from "../../../features/notes/ui/index.js";
+import { EntityMoveDialog } from "../../../features/campaign-entity/ui/index.js";
 import SessionHeader from "./components/SessionHeader.tsx";
 import SessionChecklistOverlay from "./components/SessionChecklistOverlay.tsx";
 import SessionEntitySection from "./components/SessionEntitySection.tsx";
@@ -70,10 +71,7 @@ import {
 	getSessionSectionCollapsed,
 	hasSessionNoteContent,
 } from "../model/sessionPagePresentation.ts";
-import {
-	type SessionEntityType,
-	type SessionPageEntity,
-} from "../model/sessionEntityModel.ts";
+import type { SessionEntityType, SessionPageEntity } from "../model/sessionEntityModel.ts";
 import { useSessionPageRuntime } from "../model/SessionPageRuntime.tsx";
 
 function isSessionEntityId(value: unknown): value is string | number {
@@ -171,10 +169,13 @@ function getSessionPageDataRecord(session: SessionController["session"]) {
 }
 
 function SessionView() {
+	const tabsId = useId();
 	const { activeSessionFileName: sessionId, navigateToEncounter } =
 		useSessionPageRuntime();
 	const view = useSessionView();
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+	const [createdEntity, setCreatedEntity] = useState<{ type: "npc" | "locations"; id: string | number; campaign: string; session: string | null } | null>(null);
+	const [moveTarget, setMoveTarget] = useState<{ type: "npc" | "locations"; entity: SessionPageEntity } | null>(null);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const [activeSection, setActiveSection] = useState<"scenes" | "notes" | "entities" | "result">("scenes");
 	const lastRevealedHash = useRef("");
@@ -437,33 +438,6 @@ function SessionView() {
 			),
 		);
 	};
-	const handleBulkSessionNotesCollapse = (collapsed: boolean) => {
-		view.updateData(
-			"notes",
-			(viewModel.notes || []).map((note) => ({ ...note, collapsed })),
-			true,
-		);
-	};
-
-	const handleBulkSessionEntitiesCollapse = (
-		type: SessionEntityType,
-		items: SessionPageEntity[],
-		collapsed: boolean,
-	) => {
-		view.updateData(
-			type === "locations" ? "locations" : "npcs",
-			items.map((item) => ({ ...item, collapsed })),
-			true,
-		);
-	};
-
-	const handleBulkScenesCollapse = (collapsed: boolean) => {
-		view.updateData(
-			"scenes",
-			scenes.map((scene) => ({ ...scene, collapsed })),
-			true,
-		);
-	};
 	const getEncounterName = (scene: SessionScene) =>
 		lang.t(viewModel.findEncounterName(scene));
 
@@ -507,25 +481,21 @@ function SessionView() {
 				/>
 
 				<div className="Panel__body">
-					<SectionTabs label={lang.t("Session sections")} value={activeSection} onChange={setActiveSection} items={[
+					<SectionTabs idPrefix={tabsId} label={lang.t("Session sections")} value={activeSection} onChange={setActiveSection} items={[
 						{ id: "scenes", label: lang.t("Preparation") },
 						{ id: "notes", label: lang.t("Notes") },
 						{ id: "entities", label: lang.t("Characters") },
 						{ id: "result", label: lang.t("Summary") },
 					]} />
 					<div className="SessionView__todoList">
-						<div hidden={activeSection !== "notes"}>
+						<div role="tabpanel" id={`${tabsId}-panel-notes`} aria-labelledby={`${tabsId}-tab-notes`} hidden={activeSection !== "notes"}>
 						<div
 							id={makeDomId("session", "notes")}
 							data-history-focus-id={makeHistoryTargetId("session", "notes")}
 						>
 						<SessionNotesSection
-							notes={viewModel.notes}
+							key={`${view.campaignSlug}:${sessionId}:notes`}
 							renderableNotes={sessionNotesForRender}
-							hasData={hasSessionNotesData}
-							isCollapsed={isSessionNotesCollapsed}
-							onToggle={() => view.handleToggleSectionCollapse("Notes")}
-							onBulkCollapse={handleBulkSessionNotesCollapse}
 							onToggleAiIgnored={toggleSessionNoteAiIgnored}
 							onReorder={(nextNotes) =>
 								view.updateData("notes", sanitizeNotesForSave(nextNotes))
@@ -544,6 +514,7 @@ function SessionView() {
 										isLast={index === sessionNotesForRender.length - 1}
 										campaignSlug={view.campaignSlug}
 										enableHistory={false}
+										collapsible={false}
 										onToggleCollapse={view.handleToggleNoteCollapse}
 										onTitleChange={view.handleNoteTitleChange}
 										onTextChange={view.handleNoteChange}
@@ -554,8 +525,10 @@ function SessionView() {
 						/>
 						</div>
 						</div>
-						<div hidden={activeSection !== "entities"} className="SessionView__entities">
+						<div role="tabpanel" id={`${tabsId}-panel-entities`} aria-labelledby={`${tabsId}-tab-entities`} hidden={activeSection !== "entities"} className="SessionView__entities">
 						<SessionEntitySection
+							key={`${view.campaignSlug}:${sessionId}:npc`}
+							selectionRequest={createdEntity?.type === "npc" && createdEntity.campaign === view.campaignSlug && createdEntity.session === sessionId ? createdEntity : null}
 							historyFocusId={makeHistoryTargetId(
 								"session",
 								"npc-section",
@@ -569,7 +542,7 @@ function SessionView() {
 										entityType="npc"
 										buttonLabel={lang.t("New session NPC")}
 										buttonClassName="SessionEntitySection__mobileIconOnly"
-										onCreate={view.handleCreateSessionNpc}
+										onCreate={async (payload) => { const entity = await view.handleCreateSessionNpc(payload); setCreatedEntity({ type: "npc", id: entity.id, campaign: view.campaignSlug, session: sessionId }); }}
 									/>
 									<Button
 										variant="ghost"
@@ -585,9 +558,6 @@ function SessionView() {
 							emptyText={lang.t("No session NPCs yet.")}
 							items={view.sessionNpcs}
 							listVariant="person"
-							onBulkCollapse={(items, collapsed) =>
-								handleBulkSessionEntitiesCollapse("npc", items, collapsed)
-							}
 							onReorder={view.handleSessionNpcsReorder}
 							onToggleAiIgnored={(entityId, ignored) =>
 								toggleSessionEntityAiIgnored("npc", entityId, ignored)
@@ -603,7 +573,6 @@ function SessionView() {
 								>
 									<CharacterCard
 										character={npc}
-										onToggleCollapse={view.handleSessionNpcToggleCollapse}
 										onChange={view.handleSessionNpcChange}
 										onDelete={view.handleSessionNpcDelete}
 										campaignSlug={view.campaignSlug}
@@ -616,11 +585,9 @@ function SessionView() {
 												size={Button.SIZES.SMALL}
 												icon="export"
 												iconSize={14}
-												onClick={() =>
-													view.moveSessionEntityToCampaign("npc", npc.id)
-												}
-												title={lang.t("Move to campaign")}
-											/>
+												onClick={() => setMoveTarget({ type: "npc", entity: npc })}
+												title={lang.t("Move")}
+											>{lang.t("Move")}</Button>
 										}
 									/>
 								</div>
@@ -628,6 +595,8 @@ function SessionView() {
 						/>
 
 						<SessionEntitySection
+							key={`${view.campaignSlug}:${sessionId}:locations`}
+							selectionRequest={createdEntity?.type === "locations" && createdEntity.campaign === view.campaignSlug && createdEntity.session === sessionId ? createdEntity : null}
 							historyFocusId={makeHistoryTargetId(
 								"session",
 								"location-section",
@@ -640,7 +609,7 @@ function SessionView() {
 										campaignSlug={view.campaignSlug}
 										buttonLabel={lang.t("New session location/faction")}
 										buttonClassName="SessionEntitySection__mobileIconOnly"
-										onCreate={view.handleCreateSessionLocation}
+										onCreate={async (payload) => { const entity = await view.handleCreateSessionLocation(payload); setCreatedEntity({ type: "locations", id: entity.id, campaign: view.campaignSlug, session: sessionId }); }}
 									/>
 									<Button
 										variant="ghost"
@@ -656,9 +625,6 @@ function SessionView() {
 							emptyText={lang.t("No session locations/factions yet.")}
 							items={view.sessionLocations}
 							listVariant="location"
-							onBulkCollapse={(items, collapsed) =>
-								handleBulkSessionEntitiesCollapse("locations", items, collapsed)
-							}
 							onReorder={view.handleSessionLocationsReorder}
 							onToggleAiIgnored={(entityId, ignored) =>
 								toggleSessionEntityAiIgnored("locations", entityId, ignored)
@@ -674,7 +640,6 @@ function SessionView() {
 								>
 									<LocationCard
 										location={location}
-										onToggleCollapse={view.handleSessionLocationToggleCollapse}
 										onChange={view.handleSessionLocationChange}
 										onDelete={view.handleSessionLocationDelete}
 										campaignSlug={view.campaignSlug}
@@ -686,51 +651,45 @@ function SessionView() {
 												size={Button.SIZES.SMALL}
 												icon="export"
 												iconSize={14}
-												onClick={() =>
-													view.moveSessionEntityToCampaign("locations", location.id)
-												}
-												title={lang.t("Move to campaign")}
-											/>
+												onClick={() => setMoveTarget({ type: "locations", entity: location })}
+												title={lang.t("Move")}
+											>{lang.t("Move")}</Button>
 										}
 									/>
 								</div>
 							)}
 						/>
 						</div>
-						<div hidden={activeSection !== "scenes"}>
+						<div role="tabpanel" id={`${tabsId}-panel-scenes`} aria-labelledby={`${tabsId}-tab-scenes`} hidden={activeSection !== "scenes"}>
 						<SessionScenesSection
 							scenes={scenes}
-							onBulkCollapse={handleBulkScenesCollapse}
 							onAddScene={view.addScene}
 							onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}
 							selectedScene={selectedScene}
-							onOpenScene={(scene) => { selectScene(scene); if (scene.collapsed) view.toggleSceneCollapse(scene.id); }}
-							reference={<>
+							onOpenScene={selectScene}
+							reference={
 								<section className="SessionReferenceCard"><h3>{lang.t("In this session")}</h3>
 									<p className="WorkspaceEyebrow">{lang.t("Locations/Factions")}</p>
+									{view.sessionLocations.length === 0 && <p className="muted">{lang.t("No session locations/factions yet.")}</p>}
 									{view.sessionLocations.map((location) => <p key={location.id ?? location.slug}>{String(location.name || location.title || lang.t("Untitled"))}</p>)}
 									<p className="WorkspaceEyebrow">{lang.t("NPC")}</p>
+									{view.sessionNpcs.length === 0 && <p className="muted">{lang.t("No session NPCs yet.")}</p>}
 									{view.sessionNpcs.map((npc) => <p key={npc.id ?? npc.slug}>{String(npc.name || [npc.firstName, npc.lastName].filter(Boolean).join(" ") || lang.t("Untitled"))}</p>)}
 									<button type="button" className="WorkspaceTextLink" onClick={() => setActiveSection("entities")}>{lang.t("View all")} →</button>
 								</section>
-								<section className="SessionReferenceCard"><h3>{lang.t("Before the game")}</h3>
-									{view.checklistItems.map((item) => <Checkbox key={item.id} label={item.label} checked={Boolean(sessionData[`${item.id}_check`])} onChange={(checked) => view.updateData(`${item.id}_check`, checked, true)} />)}
-								</section>
-							</>}
+							}
 							renderScene={(scene) => (
 							<SessionSceneItem
 								scene={scene}
 								number={scenes.findIndex((item) => item.id === scene.id) + 1}
 								campaignSlug={view.campaignSlug}
 								simplifiedNotesEnabled={simplifiedNotesEnabled}
-								onToggle={view.toggleSceneCollapse}
 								onRemove={view.removeScene}
 								onOpenEncounter={view.handleOpenEncounter}
 								onImageChange={(sceneId, imageUrl) =>
 									view.updateScene(sceneId, "imageUrl", imageUrl, true)
 								}
 								onUpdateField={view.updateScene}
-								onToggleNotesCollapse={view.handleToggleSceneNotesCollapse}
 								onNotesReorder={view.handleSceneNotesReorder}
 								onToggleNoteAiIgnored={toggleSceneNoteAiIgnored}
 								onToggleNoteCollapse={view.handleSceneToggleNoteCollapse}
@@ -743,7 +702,7 @@ function SessionView() {
 						/>
 						</div>
 
-						<div hidden={activeSection !== "result"}>
+						<div role="tabpanel" id={`${tabsId}-panel-result`} aria-labelledby={`${tabsId}-tab-result`} hidden={activeSection !== "result"}>
 						<SessionResultSection
 							value={String(sessionData.result_text || "")}
 							onChange={(value) => view.updateData("result_text", value)}
@@ -772,6 +731,7 @@ function SessionView() {
 						view.moveCampaignEntityToSession(type, entity)
 					}
 				/>
+				{moveTarget && <EntityMoveDialog campaignSlug={view.campaignSlug} currentSession={session.fileName} entityName={String(moveTarget.entity.name || [moveTarget.entity.firstName, moveTarget.entity.lastName].filter(Boolean).join(" ") || lang.t("Untitled"))} onCancel={() => setMoveTarget(null)} onMove={(destination) => view.transferSessionEntity(moveTarget.type, moveTarget.entity.id, destination)} />}
 				<SessionFloatingActions
 					progress={view.progress}
 					isGlobalSearchOpen={isGlobalSearchOpen}

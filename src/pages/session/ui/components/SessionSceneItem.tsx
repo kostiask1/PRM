@@ -14,7 +14,6 @@ interface SessionSceneItemProps {
 	number: number;
 	campaignSlug: string;
 	simplifiedNotesEnabled: boolean;
-	onToggle: (sceneId: SessionResourceId) => void;
 	onRemove: (sceneId: SessionResourceId) => void;
 	onOpenEncounter: (
 		scene: SessionScene,
@@ -26,7 +25,6 @@ interface SessionSceneItemProps {
 		field: string,
 		value: unknown,
 	) => void;
-	onToggleNotesCollapse: (sceneId: SessionResourceId) => void;
 	onNotesReorder: (
 		sceneId: SessionResourceId,
 		notes: NonNullable<SessionScene["notes"]>,
@@ -62,12 +60,10 @@ function SessionSceneItem({
 	number,
 	campaignSlug,
 	simplifiedNotesEnabled,
-	onToggle,
 	onRemove,
 	onOpenEncounter,
 	onImageChange,
 	onUpdateField,
-	onToggleNotesCollapse,
 	onNotesReorder,
 	onToggleNoteAiIgnored,
 	onToggleNoteCollapse,
@@ -98,8 +94,6 @@ function SessionSceneItem({
 				number={number}
 				scene={scene}
 				fields={SessionViewModel.sceneSchema}
-				collapsed={Boolean(scene.collapsed)}
-				onToggle={() => onToggle(scene.id)}
 				onRemove={() => onRemove(scene.id)}
 				onOpenEncounter={(event) => onOpenEncounter(scene, event)}
 				imageUrl={scene.imageUrl}
@@ -111,9 +105,6 @@ function SessionSceneItem({
 				encounterName={getEncounterName(scene)}
 				onUpdateField={(field, value) =>
 					onUpdateField(scene.id, field, value)
-				}
-				onToggleNotesCollapse={() =>
-					onToggleNotesCollapse(scene.id)
 				}
 				onSceneNotesReorder={(notes) =>
 					onNotesReorder(scene.id, notes)
@@ -143,6 +134,7 @@ function SessionSceneItem({
 							isLast={isLast}
 							campaignSlug={campaignSlug}
 							enableHistory={false}
+							collapsible={false}
 							onToggleCollapse={onSceneNoteToggleCollapse}
 							onTitleChange={onSceneNoteTitleChange}
 							onTextChange={onSceneNoteChange}

@@ -8,9 +8,12 @@ import {
 	AiResponseHistory,
 } from "../../../features/ai/ui/index.js";
 import { AiAssistantPromptComposer } from "./aiAssistantUiComposition.ts";
+import { Icon } from "../../../shared/ui/index.js";
+import { lang } from "../../../shared/lib/index.js";
 
 export interface AiAssistantPanelViewProps {
 	shell: Omit<ComponentProps<typeof AiAssistantShell>, "children">;
+	workspace: { scope: string; target: string; path: string; result: string; context: string };
 	toolbar: ComponentProps<typeof AiAssistantToolbar>;
 	apiKey: ComponentProps<typeof AiApiKeyPanel> | null;
 	contextModal: ComponentProps<typeof AiContextSettingsModal>;
@@ -22,6 +25,7 @@ export interface AiAssistantPanelViewProps {
 
 export default function AiAssistantPanelView({
 	shell,
+	workspace,
 	toolbar,
 	apiKey,
 	contextModal,
@@ -32,6 +36,18 @@ export default function AiAssistantPanelView({
 }: AiAssistantPanelViewProps) {
 	return (
 		<AiAssistantShell {...shell}>
+			<div className="AiAssistantPanel__workspace">
+				<Icon name="wand" size={20} />
+				<div className="AiAssistantPanel__workspace_identity">
+					<span className="AiAssistantPanel__workspace_label">{lang.t("Current workspace")} · {workspace.scope}</span>
+					<strong>{workspace.target}</strong>
+					{workspace.path && <span>{workspace.path}</span>}
+				</div>
+				<div className="AiAssistantPanel__workspace_summary">
+					<span>{workspace.result}</span>
+					{workspace.context && <span>{workspace.context}</span>}
+				</div>
+			</div>
 			<AiAssistantToolbar {...toolbar} />
 			{apiKey ? <AiApiKeyPanel {...apiKey} /> : null}
 			<AiContextSettingsModal {...contextModal} />

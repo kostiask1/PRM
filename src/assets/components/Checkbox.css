@@ -33,13 +33,23 @@
     border-color: var(--accent);
 }
 
+.Checkbox input:focus-visible + .Checkbox__indicator {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.Checkbox:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 .Checkbox.is_checked .Checkbox__indicator {
     background: var(--success);
     border-color: var(--success);
 }
 
 .Checkbox__icon {
-    color: white;
+    color: var(--text-on-success);
     opacity: 0;
     transform: scale(0.72);
     transition:

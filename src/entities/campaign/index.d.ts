@@ -4,6 +4,8 @@ export {
 	type CampaignRecord,
 	type CampaignEntityRecord,
 	type CampaignEntityType,
+	type EntityTransferEndpoint,
+	type EntityTransferResult,
 	type CampaignPartialArchiveSection,
 	type DomainId,
 } from "./api/campaignApi.ts";

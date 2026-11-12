@@ -120,9 +120,14 @@ export function useImageGalleryMutations({
 	const [isCreatingSub, setIsCreatingSub] = useState(false);
 	const [newSubName, setNewSubName] = useState("");
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
+	const [moveFeedback, setMoveFeedback] = useState<ImageLocation | null>(null);
 	const [dragSource, setDragSource] = useState<ImageLocation | null>(null);
 	const [dragOverTarget, setDragOverTarget] =
 		useState<GalleryDragOverTarget | null>(null);
+
+	useEffect(() => {
+		setMoveFeedback(null);
+	}, [isOpen, selectedCat.id, selectedSource, selectedSub]);
 
 	const getCleanName = useCallback((name: string) => {
 		return name.replace(/\.[^/.]+$/, "").replace(/-\d{10,}$/, "");
@@ -194,12 +199,15 @@ export function useImageGalleryMutations({
 			});
 			if (plan.kind === "ignore") return;
 			if (plan.kind === "upload") {
+				if (dest.slug !== selectedSource || dest.category !== selectedCat.id || (dest.subcategory || "") !== selectedSub) return;
 				await handleFileUpload(event.dataTransfer.files);
 				return;
 			}
+			setMoveFeedback(null);
 			setLoading(true);
 			try {
 				await api.moveImages(plan.payload);
+				setMoveFeedback(plan.payload.dest);
 				setSelectedFilenames(new Set());
 				setSelectedSubs(new Set());
 				void loadImages();
@@ -207,6 +215,7 @@ export function useImageGalleryMutations({
 				void loadStorageStats();
 			} catch (error) {
 				console.error("Move failed", error);
+				showAlert({ title: lang.t("Move error"), message: getErrorMessage(error) });
 			} finally {
 				setLoading(false);
 			}
@@ -216,9 +225,13 @@ export function useImageGalleryMutations({
 			loadImages,
 			loadStorageStats,
 			loadSubcategories,
+			selectedCat.id,
+			selectedSource,
+			selectedSub,
 			setLoading,
 			setSelectedFilenames,
 			setSelectedSubs,
+			showAlert,
 		],
 	);
 
@@ -238,9 +251,11 @@ export function useImageGalleryMutations({
 				src,
 			});
 			if (movePayloads.length === 0) return false;
+			setMoveFeedback(null);
 			setLoading(true);
 			try {
 				await Promise.all(movePayloads.map((payload) => api.moveImages(payload)));
+				setMoveFeedback(dest);
 				clearSelection();
 				void loadImages();
 				void loadSubcategories();
@@ -333,13 +348,13 @@ export function useImageGalleryMutations({
 	);
 
 	const handleRenameImage = useCallback(
-		async (oldName: string, newName: string) => {
+		async (oldName: string, newName: string, image?: GalleryImage) => {
 			if (!newName.trim() || oldName === newName) return;
 			try {
 				await api.renameImage(
-					selectedSource,
-					selectedCat.id,
-					selectedSub,
+					image?.source ?? selectedSource,
+					image?.category ?? selectedCat.id,
+					image?.subcategory ?? selectedSub,
 					oldName,
 					newName,
 				);
@@ -463,14 +478,16 @@ export function useImageGalleryMutations({
 			type: GalleryItemType = "image",
 		) => {
 			const location = {
-				slug: selectedSource,
-				category: selectedCat.id,
-				subcategory: selectedSub,
+				slug: typeof item === "string" ? selectedSource : item.source ?? selectedSource,
+				category: typeof item === "string" ? selectedCat.id : item.category ?? selectedCat.id,
+				subcategory: typeof item === "string" ? selectedSub : item.subcategory ?? selectedSub,
 			};
 			const plan = getGalleryDragPlan({
 				item,
 				location,
-				getMovableSelection: () => getMovableSelectedItems().items,
+				getMovableSelection: () => contentScope === "local" || typeof item === "string"
+					? getMovableSelectedItems().items
+					: [item.name],
 				selectedFilenames,
 				selectedSubs,
 				type,
@@ -486,6 +503,7 @@ export function useImageGalleryMutations({
 			setDragSource(plan.src);
 		},
 		[
+			contentScope,
 			getMovableSelectedItems,
 			isReadonlyImage,
 			isReadonlySub,
@@ -517,6 +535,7 @@ export function useImageGalleryMutations({
 		handleRenameSub,
 		isCreatingSub,
 		isDraggingOver,
+		moveFeedback,
 		newSubName,
 		setDragOverTarget,
 		setIsCreatingSub,

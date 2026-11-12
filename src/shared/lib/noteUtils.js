@@ -35,6 +35,12 @@ export function getNoteRenderKey(note = {}, fallback) {
 	return note._renderKey ?? note.id ?? fallback;
 }
 
+export function getNoteListLabel(note = {}) {
+	const title = String(note.title || "").trim();
+	if (title) return title;
+	return Array.from(String(note.text || "").trim()).slice(0, 30).join("");
+}
+
 export function isNoteEmpty(note = {}, simplifiedMode = false) {
 	const title = String(note.title || "").trim();
 	const text = String(note.text || "").trim();

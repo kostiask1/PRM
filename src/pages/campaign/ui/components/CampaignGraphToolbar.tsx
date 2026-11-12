@@ -85,6 +85,9 @@ export function CampaignGraphToolbar({
 				</div>
 			</div>
 			<div className="CampaignNotesGraph__filters">
+				<span className="CampaignNotesGraph__campaignLegend">
+					<span aria-hidden="true" />{lang.t("Campaign")}
+				</span>
 				{CAMPAIGN_GRAPH_FILTERS.map((filter) => (
 					<Button
 						key={filter.id}

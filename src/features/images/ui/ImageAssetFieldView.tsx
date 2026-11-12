@@ -46,6 +46,8 @@ function ImageAssetValidContent({
 					size={Button.SIZES.SMALL}
 					icon="x"
 					className={deleteButtonClassName}
+					aria-label={lang.t("Remove image")}
+					title={lang.t("Remove image")}
 					onClick={controller.clearImage}
 				/>
 			)}

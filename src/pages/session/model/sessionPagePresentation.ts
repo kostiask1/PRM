@@ -2,7 +2,6 @@ import type {
 	SessionEncounter,
 	SessionScene as SessionViewScene,
 } from "../../../entities/session/index.js";
-import { getNotesForRender } from "../../../shared/lib/index.js";
 import type { SharedNote } from "../../../shared/lib/index.js";
 import type {
 	SessionPageData,
@@ -46,18 +45,6 @@ export interface SessionScopeImportCopy {
 export interface SessionScopeImportPresentation {
 	type: SessionEntityType;
 	copy: SessionScopeImportCopy | null;
-}
-
-export interface SessionSceneNotesPresentation {
-	notes: SharedNote[];
-	renderableNotes: ReturnType<typeof getNotesForRender>;
-	hasData: boolean;
-	isCollapsed: boolean;
-	showBulkAction: boolean;
-	showList: boolean;
-	bulkActionShouldCollapse: boolean;
-	bulkActionTitleKey: "Collapse all items" | "Expand all items";
-	bulkActionLabelKey: "Collapse all" | "Expand all";
 }
 
 export type SessionTranslate = (
@@ -288,46 +275,6 @@ export function executeSessionRenamePlan(
 	if (plan.kind === "cancelled") return "cancelled";
 	onRename(plan.name);
 	return "renamed";
-}
-
-export function getSessionSceneNotesPresentation(
-	notesValue: SharedNote[] | null | undefined,
-	storedCollapsed: unknown,
-	simplifiedNotes: boolean,
-): SessionSceneNotesPresentation {
-	const notes = notesValue || [];
-	const renderableNotes = getNotesForRender(notes, { simplifiedNotes });
-	const hasData = hasSessionNoteContent(notes);
-	const isCollapsed = getSessionSectionCollapsed(hasData, storedCollapsed);
-	const bulkActionShouldCollapse = renderableNotes.some(
-		shouldCollapseSessionSceneNote,
-	);
-	return {
-		notes,
-		renderableNotes,
-		hasData,
-		isCollapsed,
-		showBulkAction: !isCollapsed && notes.length > 0,
-		showList: !isCollapsed,
-		bulkActionShouldCollapse,
-		bulkActionTitleKey: bulkActionShouldCollapse
-			? "Collapse all items"
-			: "Expand all items",
-		bulkActionLabelKey: bulkActionShouldCollapse ? "Collapse all" : "Expand all",
-	};
-}
-
-function shouldCollapseSessionSceneNote(
-	note: ReturnType<typeof getNotesForRender>[number],
-): boolean {
-	return !note._isVirtual && !note.collapsed;
-}
-
-export function getSceneNotesWithCollapsedState(
-	notes: readonly SharedNote[],
-	collapsed: boolean,
-): SharedNote[] {
-	return notes.map((note) => ({ ...note, collapsed }));
 }
 
 export function shouldExpandSessionNotesFromHash(

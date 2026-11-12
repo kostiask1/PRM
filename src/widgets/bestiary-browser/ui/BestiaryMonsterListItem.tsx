@@ -11,6 +11,7 @@ import { lang } from "../../../shared/lib/index.js";
 import {
 	Button,
 	highlightText,
+	Icon,
 	ListCard,
 	Tooltip,
 } from "../../../shared/ui/index.js";
@@ -72,6 +73,7 @@ function MonsterListItemActions({
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="star"
+				aria-label={`${lang.t(presentation.favoriteTitleKey)}: ${monster.name}`}
 				className={classNames("Bestiary__item_fav_btn", {
 					is_active: presentation.isFavorite,
 				})}
@@ -87,6 +89,7 @@ function MonsterListItemActions({
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon="plus"
+					aria-label={`${lang.t(presentation.primaryTitleKey)}: ${monster.name}`}
 					onClick={(event) =>
 						executeStoppedMonsterRowAction(event, () =>
 							executeMonsterRowPrimaryAction(
@@ -105,6 +108,7 @@ function MonsterListItemActions({
 				className="Bestiary__item_edit_btn"
 				size={Button.SIZES.SMALL}
 				icon="edit"
+				aria-label={`${lang.t("Edit creature")}: ${monster.name}`}
 				onClick={(event) =>
 					executeStoppedMonsterRowAction(event, () => onEdit(monster))
 				}
@@ -117,6 +121,7 @@ function MonsterListItemActions({
 						className="Bestiary__item_ai_edit_btn"
 						size={Button.SIZES.SMALL}
 						icon="wand"
+						aria-label={`${lang.t("AI edit custom creature")}: ${monster.name}`}
 						onClick={(event) =>
 							executeStoppedMonsterRowAction(event, () => onAiEdit(monster))
 						}
@@ -127,6 +132,7 @@ function MonsterListItemActions({
 						className="Bestiary__item_delete_btn"
 						size={Button.SIZES.SMALL}
 						icon="trash"
+						aria-label={`${lang.t("Delete custom creature")}: ${monster.name}`}
 						onClick={(event) =>
 							executeStoppedMonsterRowAction(event, () => onDelete(monster))
 						}
@@ -143,6 +149,8 @@ interface MonsterListItemContentProps {
 	presentation: BestiaryMonsterRowPresentation;
 	search: string;
 	sourceFullName: string;
+	localTokenSrc: string;
+	externalTokenSrc: string;
 }
 
 function MonsterListItemContent({
@@ -150,6 +158,8 @@ function MonsterListItemContent({
 	presentation,
 	search,
 	sourceFullName,
+	localTokenSrc,
+	externalTokenSrc,
 }: MonsterListItemContentProps) {
 	return (
 		<div className="Bestiary__item_content">
@@ -159,12 +169,20 @@ function MonsterListItemContent({
 				alt=""
 				loading="lazy"
 				draggable={false}
+				onLoad={(event) => {
+					event.currentTarget.hidden = false;
+				}}
 				onError={(event) => {
-					event.currentTarget.hidden = true;
+					if (presentation.tokenSrc === localTokenSrc && event.currentTarget.src !== externalTokenSrc) {
+						event.currentTarget.src = externalTokenSrc;
+					} else {
+						event.currentTarget.hidden = true;
+					}
 				}}
 			/>
+			<span className="Bestiary__item_tokenFallback" aria-hidden="true"><Icon name="skull" size={20} /></span>
 			<div className="Bestiary__item_info">
-				<div className="ListCard__title">
+				<div className="ListCard__title" title={monster.name}>
 					{highlightText(monster.name, search)}
 				</div>
 				<div className="ListCard__meta">
@@ -207,7 +225,8 @@ export interface MonsterListItemProps {
 
 export function BestiaryMonsterListItem(props: MonsterListItemProps) {
 	const { favorites, monster, search, selectedMonster } = props;
-	const fallbackTokenSrc = new MonsterStatBlockModel(monster).localTokenSrc;
+	const tokenModel = new MonsterStatBlockModel(monster);
+	const fallbackTokenSrc = tokenModel.localTokenSrc;
 	const presentation = getBestiaryMonsterRowPresentation(
 		monster,
 		selectedMonster,
@@ -247,6 +266,8 @@ export function BestiaryMonsterListItem(props: MonsterListItemProps) {
 					presentation={presentation}
 					search={search}
 					sourceFullName={getSourceFullName(monster.source)}
+					localTokenSrc={fallbackTokenSrc}
+					externalTokenSrc={tokenModel.externalTokenSrc}
 				/>
 			</ListCard>
 		</div>

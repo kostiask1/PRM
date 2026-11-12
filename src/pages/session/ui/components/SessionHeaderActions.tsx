@@ -46,6 +46,8 @@ export default function SessionHeaderActions({
 				variant="ghost"
 				size={Button.SIZES.SMALL}
 				icon="menu"
+				aria-label={lang.t("Session actions")}
+				aria-expanded={isOpen}
 				className="SessionHeaderActions__toggle"
 				onClick={onToggle}
 				title={lang.t("Session actions")}
@@ -60,15 +62,19 @@ export default function SessionHeaderActions({
 				>
 					{lang.t("Search")}
 				</Button>
+				<div className="SessionHeaderActions__history" role="group" aria-label={lang.t("Campaign history")}>
+				<span className="SessionHeaderActions__historyScope">{lang.t("Campaign history")}</span>
 				<UndoRedoButtons
 					canRedo={canRedo}
 					canUndo={canUndo}
+					showLabels
 					disabled={isSaving || isHistoryRestoring}
 					onRedo={onRedo}
 					onUndo={onUndo}
 					redoTitle={redoTitle}
 					undoTitle={undoTitle}
 				/>
+				</div>
 				<Button
 					variant="danger"
 					size={Button.SIZES.SMALL}

@@ -18,6 +18,7 @@ export {
 export { default as Icon, type IconName, type IconProps } from "./Icon.tsx";
 export { default as ListCard, type ListCardProps } from "./ListCard.tsx";
 export { default as Modal, type ModalProps } from "./Modal.tsx";
+export { useHashItemSelection } from "./useHashItemSelection.ts";
 export {
 	default as MultiSelect,
 	type MultiSelectProps,
@@ -30,6 +31,7 @@ export { default as Tooltip, type TooltipProps } from "./Tooltip.tsx";
 export { UndoRedoButtons } from "./UndoRedoButtons.tsx";
 export { default as Panel, type PanelProps } from "./Panel.tsx";
 export { default as SectionTabs, type SectionTabsProps, type SectionTab } from "./SectionTabs.tsx";
+export { useRevealSelectedTab } from "./useRevealSelectedTab.ts";
 export { default as Switch, type SwitchProps } from "./Switch.tsx";
 export {
 	default as TextInput,
