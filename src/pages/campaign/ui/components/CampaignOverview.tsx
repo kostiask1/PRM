@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Button } from "../../../../shared/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
-import { lang, type SharedNote } from "../../../../shared/lib/index.js";
+import { getNoteListPreview, lang, type SharedNote } from "../../../../shared/lib/index.js";
 import type { CampaignPageEntity } from "../../model/contracts.ts";
 import { getCampaignEntityRenderKey, type CampaignSessionItem } from "../../model/campaignPagePresentation.ts";
 import type { DomainId } from "../../../../entities/campaign/index.js";
@@ -30,7 +30,7 @@ export default function CampaignOverview({ sessions, characters, notes, descript
 				<div className="CampaignOverview__heroContent">
 					<p className="WorkspaceEyebrow">{lang.t("Your story continues")}</p>
 					<h3>{latest?.name || lang.t("Your next adventure starts here")}</h3>
-					<p className="CampaignOverview__description">{description || lang.t("Gather your heroes and write the next chapter.")}</p>
+					<p className="CampaignOverview__description">{renderMentionText(description || lang.t("Gather your heroes and write the next chapter."))}</p>
 					<div className="CampaignOverview__heroActions">
 						<Button variant="primary" onClick={() => latest ? onOpenSession(latest) : onCreateSession()}>
 							{lang.t(latest ? "Open latest session" : "New session")}
@@ -52,7 +52,7 @@ export default function CampaignOverview({ sessions, characters, notes, descript
 					{previewNotes.length ? previewNotes.map((note) => (
 						<div className="CampaignOverview__note" key={note.id}>
 							{note.title?.trim() && <strong>{note.title}</strong>}
-							{note.text?.trim() && <p>{renderMentionText(note.text)}</p>}
+							{note.text?.trim() && <p>{renderMentionText(getNoteListPreview({ text: note.text }).text)}</p>}
 						</div>
 					)) : <p className="muted">{lang.t("No campaign notes yet.")}</p>}
 					<Button variant="ghost" icon="edit" onClick={() => onSelectSection("notes")}>{lang.t("Edit notes")}</Button>

@@ -19,6 +19,7 @@ type RenderEntityCard = (
 interface AiResponseCardDiffProps {
 	isDraft: boolean;
 	renderEntityCard: RenderEntityCard;
+	renderNoteArrayDiff: (resource: PreviewResource, before: unknown, after: unknown) => ReactNode;
 	resource: PreviewResource;
 }
 
@@ -50,6 +51,7 @@ function AiResponseSingleCardDiff({
 	isDraft,
 	resource,
 	renderEntityCard,
+	renderNoteArrayDiff,
 	isNew,
 }: AiResponseCardDiffProps & {
 	isNew: boolean;
@@ -57,7 +59,7 @@ function AiResponseSingleCardDiff({
 	const snapshot = isNew ? resource.after : resource.before;
 	return (
 		<>
-		<AiResponseSingleSnapshotComparison before={resource.before} after={resource.after} />
+		<AiResponseSingleSnapshotComparison before={resource.before} after={resource.after} renderNotes={(before, after) => renderNoteArrayDiff(resource, before, after)} />
 		<div className="AiAssistantPanel__preview_card_stack">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">
@@ -83,11 +85,12 @@ function AiResponseChangedCardDiff({
 	isDraft,
 	resource,
 	renderEntityCard,
+	renderNoteArrayDiff,
 }: AiResponseCardDiffProps) {
 	const highlightFields = buildCardHighlightFields(resource);
 	return (
 		<>
-		<AiResponseFieldComparison before={resource.before} after={resource.after} />
+		<AiResponseFieldComparison before={resource.before} after={resource.after} renderNotes={(before, after) => renderNoteArrayDiff(resource, before, after)} />
 		<div className="AiAssistantPanel__preview_card_columns">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">{lang.t("Before")}</div>
@@ -120,6 +123,7 @@ export default function AiResponseCardDiff({
 	isDraft,
 	resource,
 	renderEntityCard,
+	renderNoteArrayDiff,
 }: AiResponseCardDiffProps) {
 	const isNew = resource.before === null;
 	return isNew || resource.after === null ? (
@@ -127,6 +131,7 @@ export default function AiResponseCardDiff({
 			isDraft={isDraft}
 			resource={resource}
 			renderEntityCard={renderEntityCard}
+		renderNoteArrayDiff={renderNoteArrayDiff}
 			isNew={isNew}
 		/>
 	) : (
@@ -134,6 +139,7 @@ export default function AiResponseCardDiff({
 			isDraft={isDraft}
 			resource={resource}
 			renderEntityCard={renderEntityCard}
+		renderNoteArrayDiff={renderNoteArrayDiff}
 		/>
 	);
 }

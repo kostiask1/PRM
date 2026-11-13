@@ -94,8 +94,10 @@ function ReferenceTabs({ tabs, activeTab, tabsWithSearchMatches, onSelectTab, id
 function ReferenceDetailsHeader({ activeTab, query, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, onInsertReference }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "selectionActionLabel" | "onInsertReference"> & { selectedItem: ReferenceItem }) {
 	return (
 		<div className="RulesReferenceModalContent__contentHeader">
-			<h3 className="RulesReferenceModalContent__title">{highlightText(String(selectedItem.name || ""), query)}</h3>
-			{selectedMeta && <div className="muted">{highlightText(selectedMeta, query)}</div>}
+			<div className="RulesReferenceModalContent__contentHeading">
+				<h3 className="RulesReferenceModalContent__title">{highlightText(String(selectedItem.name || ""), query)}</h3>
+				{selectedMeta && <div className="muted">{highlightText(selectedMeta, query)}</div>}
+			</div>
 			{canInsertReference && <div className="RulesReferenceModalContent__contentActions"><Button variant="primary" icon="plus" onClick={() => onInsertReference(activeTab.id, selectedItem)}>{selectionActionLabel || lang.t("Insert")}</Button></div>}
 		</div>
 	);

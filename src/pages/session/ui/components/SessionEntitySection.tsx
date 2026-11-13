@@ -46,7 +46,7 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 	renderItem,
 }: SessionEntitySectionProps<Item>) {
 	const kind = listVariant === "location" ? "location" : "npc";
-	const { selected, setSelectedKey } = useHashItemSelection(items, (item) => String(item.id), (item, hash) => matchesHistoryTargetId(hash, "session", kind, item.id) || hash === `#${makeDomId("session", kind, item.id)}`, undefined, selectionRequest);
+	const { selected, setSelectedKey } = useHashItemSelection(items, (item) => String(item.id), (item, hash) => matchesHistoryTargetId(hash, "session", kind, item.id) || matchesHistoryTargetId(hash, "session", `${kind}-note`, item.id) || hash === `#${makeDomId("session", kind, item.id)}`, undefined, selectionRequest);
 	return (
 		<TodoSection
 			title={title}

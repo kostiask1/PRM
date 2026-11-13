@@ -93,7 +93,7 @@
 
 .Spells__list .ListCard {
 	height: 81px;
-	margin-bottom: 6px;
+	margin-bottom: var(--space-1-5);
 }
 
 .Spells__list .ListCard__main {

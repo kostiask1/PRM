@@ -1,6 +1,7 @@
 .CampaignView__layout, .CampaignView__contentPanel { min-width: 0; }
 .CampaignView [hidden] { display: none !important; }
-.CampaignView .SectionTabs { width: fit-content; max-width: 100%; min-height: 48px; margin-bottom: var(--space-4); padding: var(--space-1); gap: var(--space-1); border-radius: var(--radius-sm); background: var(--panel-soft); }
+.CampaignView__navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); }
+.CampaignView .SectionTabs { width: fit-content; max-width: 100%; min-height: 48px; margin-bottom: 0; padding: var(--space-1); gap: var(--space-1); border-radius: var(--radius-sm); background: var(--panel-soft); }
 .CampaignView .SectionTabs__tab { padding-inline: var(--space-3); border: 1px solid transparent; border-radius: var(--radius-md); text-align: center; }
 .CampaignView .SectionTabs__tab[aria-selected="true"] { border-color: var(--border); background: var(--panel); }
 .CampaignView__script, .CampaignView__script .MarkdownView { min-height: 200px; }
@@ -21,7 +22,7 @@
 .CampaignOverview__heroContent { display: grid; gap: var(--space-2); min-width: 0; }
 .CampaignOverview__hero h3 { font-size: 32px; line-height: 40px; overflow-wrap: anywhere; }
 .CampaignOverview__hero .WorkspaceEyebrow { color: var(--warning); }
-.CampaignOverview__description { color: var(--muted); max-width: 710px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.CampaignOverview__description { color: var(--muted); max-width: 710px; max-height: 5em; overflow-y: auto; overflow-wrap: anywhere; scrollbar-width: thin; }
 .CampaignOverview__heroActions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
 .CampaignOverview__journey { flex-shrink: 0; width: 280px; height: 160px; }
 .CampaignOverview__dashboard { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: var(--space-4); align-items: start; }

@@ -168,6 +168,15 @@
 	min-height: 0;
 }
 
+.Bestiary__filterNotice {
+	margin: 0 0 var(--space-3);
+	padding: var(--space-2) var(--space-3);
+	border-radius: var(--radius-md);
+	background: var(--warning-soft);
+	color: var(--text);
+	font-size: 0.85rem;
+}
+
 .Bestiary__item_content {
 	display: flex;
 	justify-content: space-between;
@@ -332,7 +341,7 @@
 
 .Bestiary .ListCard {
 	height: 76px;
-	margin-bottom: 6px;
+	margin-bottom: var(--space-1-5);
 }
 
 .Bestiary__item_token {
@@ -479,8 +488,16 @@
 	}
 
 	.Bestiary__embedded_actions {
-		margin-left: 0;
+		margin-left: auto;
 	}
+
+	.Bestiary__header_actionsMenu {
+		width: min(260px, calc(100vw - var(--space-7)));
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.Bestiary__header_actionsMenu .Button { justify-content: flex-start; }
 
 	.Bestiary__sort_btn {
 		flex: 1 1 140px;

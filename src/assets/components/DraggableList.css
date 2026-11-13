@@ -60,36 +60,6 @@
 	background: var(--panel-2);
 }
 
-.NoteCardList > div {
-	padding-left: calc(var(--size-6) * 2);
-}
-
-.NoteCardList > div > .DraggableList__handle {
-	top: var(--space-1);
-	left: 0;
-	width: var(--size-6);
-	height: var(--control-h-sm);
-	transform: none;
-	opacity: 0.75;
-	touch-action: none;
-}
-
-.NoteCardList > div > .DraggableList__itemControl {
-	top: var(--space-1);
-	left: var(--size-6);
-	transform: none;
-	opacity: 0.75;
-}
-
-.NoteCardList > div > .DraggableList__itemControl .Button {
-	width: var(--size-6);
-	height: var(--control-h-sm);
-}
-
-.NoteCardList > div > .DraggableList__itemControl:focus-within {
-	opacity: 1;
-}
-
 .DraggableList>div:hover>.DraggableList__handle,
 .DraggableList>div.is_dragging>.DraggableList__handle,
 .DraggableList>div:hover>.DraggableList__itemControl,

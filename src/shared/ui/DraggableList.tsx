@@ -109,6 +109,9 @@ export default function DraggableList<Item>({
 	const dragPreviewRef = useRef<HTMLDivElement>(null);
 	const dragPreviewFrameRef = useRef<number | null>(null);
 	const dragPreviewPositionRef = useRef<DragPreviewPosition | null>(null);
+	const autoScrollFrameRef = useRef<number | null>(null);
+	const autoScrollPointerRef = useRef<DragPointerCoordinates | null>(null);
+	const keyboardMovedHandleRef = useRef<HTMLElement | null>(null);
 	const displayItems = items;
 	const draggableItemsCount = displayItems.filter((item, index) =>
 		isItemAllowedToDrag(item, index),
@@ -116,6 +119,14 @@ export default function DraggableList<Item>({
 
 	useLayoutEffect(() => {
 		itemsRef.current = items;
+		const root = listRef.current;
+		const handle = keyboardMovedHandleRef.current;
+		keyboardMovedHandleRef.current = null;
+		if (!root || !handle || root.ownerDocument.activeElement !== handle || root.scrollHeight <= root.clientHeight) return;
+		const container = root.getBoundingClientRect();
+		const item = handle.getBoundingClientRect();
+		if (item.top < container.top) root.scrollTop += item.top - container.top;
+		else if (item.bottom > container.bottom) root.scrollTop += item.bottom - container.bottom;
 	});
 
 	useLayoutEffect(() => {
@@ -126,6 +137,7 @@ export default function DraggableList<Item>({
 		const ownerDocument = listRef.current?.ownerDocument || document;
 		return () => {
 			removePointerListenersRef.current?.();
+			if (autoScrollFrameRef.current !== null) ownerDocument.defaultView?.cancelAnimationFrame(autoScrollFrameRef.current);
 			if (dragPreviewFrameRef.current) {
 				cancelAnimationFrame(dragPreviewFrameRef.current);
 				dragPreviewFrameRef.current = null;
@@ -196,12 +208,13 @@ export default function DraggableList<Item>({
 	const canDragItem = (item: Item, index: number) =>
 		draggableItemsCount > 1 && isItemAllowedToDrag(item, index);
 
-	const reorderByKeyboard = (index: number, direction: -1 | 1) => {
+	const reorderByKeyboard = (index: number, direction: -1 | 1, handle: HTMLElement) => {
 		const targetIndex = index + direction;
 		if (!onReorder || targetIndex < 0 || targetIndex >= items.length || !isItemAllowedToDrag(items[targetIndex], targetIndex)) return;
 		const next = [...items];
 		const [item] = next.splice(index, 1);
 		next.splice(targetIndex, 0, item);
+		keyboardMovedHandleRef.current = handle;
 		onReorder(next);
 		onDrop?.(next);
 	};
@@ -322,7 +335,38 @@ export default function DraggableList<Item>({
 		setDragOverIndex(targetIndex);
 	};
 
+	const stopAutoScroll = () => {
+		const ownerWindow = listRef.current?.ownerDocument.defaultView || window;
+		if (autoScrollFrameRef.current !== null) ownerWindow.cancelAnimationFrame(autoScrollFrameRef.current);
+		autoScrollFrameRef.current = null;
+		autoScrollPointerRef.current = null;
+	};
+
+	const scheduleAutoScroll = (pointer: DragPointerCoordinates) => {
+		autoScrollPointerRef.current = { clientX: pointer.clientX, clientY: pointer.clientY };
+		if (autoScrollFrameRef.current !== null) return;
+		const ownerWindow = listRef.current?.ownerDocument.defaultView || window;
+		const tick = () => {
+			autoScrollFrameRef.current = null;
+			const root = listRef.current;
+			const position = autoScrollPointerRef.current;
+			if (!root || !position || !dragStateRef.current || root.scrollHeight <= root.clientHeight) return;
+			const bounds = root.getBoundingClientRect();
+			if (position.clientX < bounds.left || position.clientX > bounds.right || position.clientY < bounds.top || position.clientY > bounds.bottom) return;
+			const edge = Math.min(32, bounds.height / 4);
+			const direction = position.clientY < bounds.top + edge ? -1 : position.clientY > bounds.bottom - edge ? 1 : 0;
+			if (!direction) return;
+			const previous = root.scrollTop;
+			root.scrollTop += direction * 12;
+			if (root.scrollTop === previous) return;
+			updatePointerDrag(position);
+			autoScrollFrameRef.current = ownerWindow.requestAnimationFrame(tick);
+		};
+		autoScrollFrameRef.current = ownerWindow.requestAnimationFrame(tick);
+	};
+
 	const consumePointerDragState = () => {
+		stopAutoScroll();
 		removePointerListenersRef.current?.();
 		removePointerListenersRef.current = null;
 		pendingPointerRef.current = null;
@@ -430,6 +474,7 @@ export default function DraggableList<Item>({
 			moveEvent.preventDefault();
 			startPointerDrag(moveEvent);
 			updatePointerDrag(moveEvent);
+			scheduleAutoScroll(moveEvent);
 		};
 
 		const handlePointerUp = (upEvent: PointerEvent) => {
@@ -521,7 +566,7 @@ export default function DraggableList<Item>({
 									if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
 									event.preventDefault();
 									event.stopPropagation();
-									reorderByKeyboard(index, event.key === "ArrowUp" ? -1 : 1);
+									reorderByKeyboard(index, event.key === "ArrowUp" ? -1 : 1, event.currentTarget);
 								} : undefined}
 							>
 								<Icon name="drag-handle" size={18} strokeWidth={2} />

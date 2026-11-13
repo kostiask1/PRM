@@ -74,6 +74,7 @@ export function formatHistoryOperationLabel(
 				})
 				: lang.t("Rename {entityType}", { entityType });
 		case "entity.move":
+		case "entity.transfer":
 			return lang.t("Move {entityType}", { entityType });
 		case "entity.reorder":
 			return lang.t("Reorder {entityType}", { entityType });

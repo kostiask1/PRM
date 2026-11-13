@@ -35,6 +35,7 @@ export function getNoteRenderKey(
 ): string | number;
 
 export function getNoteListLabel(note: Pick<SharedNote, "title" | "text">): string;
+export function getNoteListPreview(note: Pick<SharedNote, "title" | "text">): { text: string; maxLength: number | undefined };
 
 export function upsertNoteById<T extends SharedNote>(
 	notes: T[],

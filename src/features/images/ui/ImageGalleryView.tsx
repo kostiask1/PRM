@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import ReactList from "react-list";
 
 import { getSourceFullName } from "../../../entities/reference/index.js";
@@ -63,8 +63,20 @@ function ImageGallerySidebar({
 	} = galleryController;
 	const dropCategory = categories.find((category) => category.id === dragSource?.category);
 	const dropHint = dragSource ? lang.t("Drop in {category}", { category: dropCategory ? lang.t(dropCategory.label) : dragSource.category }) : "";
+	const sidebarRef = useRef<HTMLElement>(null);
+	useEffect(() => {
+		const sidebar = sidebarRef.current;
+		const selected = sidebar?.querySelector<HTMLElement>('.ImageGallery__sourceButton[aria-pressed="true"]');
+		if (!sidebar || !selected) return;
+		const container = sidebar.getBoundingClientRect();
+		const item = selected.getBoundingClientRect();
+		if (item.left < container.left) sidebar.scrollLeft += item.left - container.left;
+		else if (item.right > container.right) sidebar.scrollLeft += item.right - container.right;
+		if (item.top < container.top) sidebar.scrollTop += item.top - container.top;
+		else if (item.bottom > container.bottom) sidebar.scrollTop += item.bottom - container.bottom;
+	}, [selectedSource, campaigns]);
 	return (
-		<aside className="ImageGallery__sidebar">
+		<aside ref={sidebarRef} className="ImageGallery__sidebar">
 			<button
 				type="button"
 				aria-pressed={selectedSource === "general"}
@@ -299,6 +311,15 @@ function ImageGalleryItems({
 			controller={galleryController}
 			viewportRef={galleryViewportRef}
 		>
+			{galleryRowCount === 0 && (
+				<p className="ImageGallery__empty" role="status">
+					{galleryController.loading
+						? lang.t("Loading...")
+						: galleryController.searchQuery.trim()
+							? lang.t("No results")
+							: lang.t("This folder is empty.")}
+				</p>
+			)}
 			{galleryRowCount > 0 && (
 				<ReactList
 					ref={galleryListRef}
@@ -337,6 +358,30 @@ function ImageGalleryLayout({
 	);
 }
 
+export function ImageGalleryWorkspaceView({ controller }: { controller: ImageGalleryUiController }) {
+	return <section className="ImageGalleryWorkspace">
+		<header className="ImageGalleryWorkspace__heading">
+			<h1>{lang.t("Gallery")}</h1>
+			<p>{lang.t("Organize images by group and move them between campaigns.")}</p>
+		</header>
+		<ImageGalleryLayout controller={controller} />
+		<GalleryDialogs controller={controller} />
+	</section>;
+}
+
+function GalleryDialogs({ controller }: { controller: ImageGalleryUiController }) {
+	return <ImageGalleryDialogs
+		availableSources={controller.availableSources}
+		controller={controller.galleryController}
+		isMoveOpen={controller.isMoveModalOpen}
+		moveTarget={controller.moveTarget}
+		previewImage={controller.previewImage}
+		setIsMoveOpen={controller.setIsMoveModalOpen}
+		setMoveTarget={controller.setMoveTarget}
+		setPreviewImage={controller.setPreviewImage}
+	/>;
+}
+
 export function ImageGalleryView({
 	controller,
 	onClose,
@@ -355,16 +400,7 @@ export function ImageGalleryView({
 			type="custom"
 		>
 			<ImageGalleryLayout controller={controller} onSelect={onSelect} />
-			<ImageGalleryDialogs
-				availableSources={controller.availableSources}
-				controller={controller.galleryController}
-				isMoveOpen={controller.isMoveModalOpen}
-				moveTarget={controller.moveTarget}
-				previewImage={controller.previewImage}
-				setIsMoveOpen={controller.setIsMoveModalOpen}
-				setMoveTarget={controller.setMoveTarget}
-				setPreviewImage={controller.setPreviewImage}
-			/>
+			<GalleryDialogs controller={controller} />
 		</Modal>
 	);
 }

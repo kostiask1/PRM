@@ -1113,3 +1113,14 @@ function replaceMonsterHp(
 			: monster,
 	);
 }
+
+/** Advance in the manually arranged participant order, preserving identity across reorders. */
+export function advanceEncounterTurn(encounter: EncounterViewState): EncounterViewState {
+	const participants = encounter.monsters.filter((participant) => participant.instanceId != null && String(participant.instanceId) !== "");
+	if (!participants.length) return encounter;
+	const currentId = encounter.currentTurnId == null ? "" : String(encounter.currentTurnId);
+	const index = participants.findIndex((participant) => String(participant.instanceId) === currentId);
+	const round = typeof encounter.round === "number" && Number.isInteger(encounter.round) && encounter.round > 0 ? encounter.round : 1;
+	const nextIndex = index < 0 ? 0 : (index + 1) % participants.length;
+	return { ...encounter, currentTurnId: String(participants[nextIndex].instanceId), round: index >= 0 && nextIndex === 0 ? round + 1 : round };
+}

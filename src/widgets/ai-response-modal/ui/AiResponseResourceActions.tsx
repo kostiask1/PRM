@@ -83,13 +83,13 @@ export default function AiResponseResourceActions({
 			<ApplyButton
 				resource={resource}
 				disabled={isRestoringResponse}
-				visible={isDraft && !applied}
+				visible={!resource.parentResourceId && isDraft && !applied}
 				onAction={onApply}
 			/>
 			<UndoButton
 				resource={resource}
 				disabled={isRestoringResponse}
-				visible={applied || (isDraft && !undone)}
+				visible={!resource.parentResourceId && (applied || (isDraft && !undone))}
 				onAction={onUndo}
 			/>
 		</>

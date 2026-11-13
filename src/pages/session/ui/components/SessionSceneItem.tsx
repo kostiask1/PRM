@@ -101,7 +101,7 @@ function SessionSceneItem({
 					onImageChange(scene.id, imageUrl)
 				}
 				campaignSlug={campaignSlug}
-				hasEncounter={Boolean(scene.encounterId)}
+				hasEncounter={scene.encounterId !== null && scene.encounterId !== undefined}
 				encounterName={getEncounterName(scene)}
 				onUpdateField={(field, value) =>
 					onUpdateField(scene.id, field, value)

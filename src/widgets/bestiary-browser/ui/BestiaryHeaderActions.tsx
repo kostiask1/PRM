@@ -14,6 +14,7 @@ interface BestiaryHeaderActionsProps {
 	canExport: boolean;
 	canRedo: boolean;
 	canUndo: boolean;
+	onCreate: () => void;
 	onExport: () => void;
 	onImport: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
 	onRedo: () => Promise<void>;
@@ -24,6 +25,7 @@ export default function BestiaryHeaderActions({
 	canExport,
 	canRedo,
 	canUndo,
+	onCreate,
 	onExport,
 	onImport,
 	onRedo,
@@ -87,9 +89,14 @@ export default function BestiaryHeaderActions({
 				icon="menu"
 				className="Bestiary__header_actionsToggle"
 				onClick={toggleActions}
+				aria-label={lang.t("Bestiary actions")}
+				aria-expanded={isHeaderActionsOpen}
 				title={lang.t("Bestiary actions")}
 			/>
 			<div className="Bestiary__header_actionsMenu">
+				<Button variant="primary" size={Button.SIZES.MEDIUM} icon="plus" onClick={() => { closeActions(); onCreate(); }}>
+					{lang.t("Create custom creature")}
+				</Button>
 				<Button
 					variant="ghost"
 					size={Button.SIZES.MEDIUM}
@@ -115,6 +122,7 @@ export default function BestiaryHeaderActions({
 					icon="undo"
 					onClick={handleUndo}
 					disabled={!canUndo}
+					aria-label={lang.t("Undo (Ctrl+Z)")}
 					title={lang.t("Undo (Ctrl+Z)")}
 				/>
 				<Button
@@ -123,6 +131,7 @@ export default function BestiaryHeaderActions({
 					icon="redo"
 					onClick={handleRedo}
 					disabled={!canRedo}
+					aria-label={lang.t("Redo (Ctrl+Y)")}
 					title={lang.t("Redo (Ctrl+Y)")}
 				/>
 			</div>

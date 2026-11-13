@@ -39,7 +39,7 @@ function AiResponseChangedField({
 	if (field === "notes" && (Array.isArray(before) || Array.isArray(after))) {
 		return renderNoteArrayDiff(resource, before, after);
 	}
-	return <AiResponseValueComparison before={before} after={after} />;
+	return <AiResponseValueComparison field={wholeSnapshot ? undefined : field} before={before} after={after} />;
 }
 
 export default function AiResponseGenericDiff({

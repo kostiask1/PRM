@@ -539,6 +539,7 @@ export function useSettingsModalController(
 		},
 		sources: {
 			isGlobalScope: sourceSelection.isGlobalScope,
+			isInherited: !sourceSelection.isGlobalScope && !Object.hasOwn(campaignIgnoreSourcesLists, selectedScope),
 			status: sourceStatus,
 			options: sourceOptions,
 			selectedSources,

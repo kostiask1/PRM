@@ -13,7 +13,6 @@ import {
 	backupApi,
 	type BackupImportStrategy,
 } from "../../../features/backup/index.js";
-import { ImageGallery } from "../../../features/images/index.js";
 import { downloadBlob, lang } from "../../../shared/lib/index.js";
 import { Button, Icon } from "../../../shared/ui/index.js";
 import {
@@ -53,6 +52,8 @@ export interface SidebarProps {
 	isMobileOpen?: boolean;
 	onClose?: () => void;
 	onOpenDiceCalculator: () => void;
+	onOpenGallery: () => void;
+	isGalleryActive: boolean;
 	onSelectCampaign: (campaignSlug: string) => void;
 	onCreateCampaign: () => void;
 	onToggleCampaignStatus: (campaign: SidebarCampaign) => void;
@@ -64,6 +65,8 @@ export default function Sidebar({
 	isMobileOpen = false,
 	onClose,
 	onOpenDiceCalculator,
+	onOpenGallery,
+	isGalleryActive,
 	onSelectCampaign,
 	onCreateCampaign,
 	onToggleCampaignStatus,
@@ -85,7 +88,6 @@ export default function Sidebar({
 		useState<BackupImportStrategy | null>(null);
 	const [localCampaigns, setLocalCampaigns] =
 		useState<SidebarCampaign[]>(campaigns);
-	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isExportingBackup, setIsExportingBackup] = useState(false);
 	const [isCompletedCampaignsCollapsed, setIsCompletedCampaignsCollapsed] =
 		useState(true);
@@ -256,7 +258,7 @@ export default function Sidebar({
 
 	const handleOpenGallery = () => {
 		onClose?.();
-		setIsGalleryOpen(true);
+		onOpenGallery();
 	};
 
 	const handleExport = async () => {
@@ -331,6 +333,7 @@ export default function Sidebar({
 				/>
 				<SidebarLinks
 					onOpenGallery={handleOpenGallery}
+					isGalleryActive={isGalleryActive}
 					onOpenBestiary={() =>
 						handleOpenRulesReference("bestiary", { forceTab: true })
 					}
@@ -358,10 +361,6 @@ export default function Sidebar({
 					<span>{lang.t("Settings")}</span>
 				</button>
 			</aside>
-			<ImageGallery
-				isOpen={isGalleryOpen}
-				onClose={() => setIsGalleryOpen(false)}
-			/>
 		</>
 	);
 }

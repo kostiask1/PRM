@@ -62,7 +62,7 @@ function AiResponseSingleNoteDiff({
 }) {
 	return (
 		<>
-		<AiResponseSingleSnapshotComparison before={resource.before} after={resource.after} />
+		<AiResponseSingleSnapshotComparison before={resource.before} after={resource.after} ignoredFields={["collapsed"]} />
 		<div className="AiAssistantPanel__preview_card_stack">
 			<div className="AiAssistantPanel__preview_card_frame">
 				<div className="AiAssistantPanel__preview_column_title">

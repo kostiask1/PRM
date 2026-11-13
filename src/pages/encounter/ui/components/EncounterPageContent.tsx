@@ -7,6 +7,7 @@ import {
 	type AiHistoryResource,
 } from "../../../../features/ai/index.js";
 import { lang } from "../../../../shared/lib/index.js";
+import { Button } from "../../../../shared/ui/index.js";
 import type { EncounterViewParticipant } from "../../model/contracts.ts";
 import type { useEncounterPageController } from "../../model/useEncounterPageController.ts";
 import EncounterBestiaryAiModals from "./EncounterBestiaryAiModals.tsx";
@@ -89,6 +90,14 @@ export default function EncounterPageContent({ controller }: Props) {
 				onDisplayMode={displaySettings.updateViewMode}
 				onGridColumns={displaySettings.updateGridColumns}
 			/>
+			{view.saveFailed && <div className="EncounterView__saveError" role="alert">
+				<span>{lang.t("Encounter changes could not be saved.")}</span>
+				<Button variant="ghost" disabled={view.isSaving} onClick={view.retryEncounterSave}>{lang.t("Retry saving")}</Button>
+			</div>}
+			<div className="EncounterView__turnBar">
+				<span>{encounter.currentTurnId == null ? lang.t("Turn tracking has not started") : lang.t("Round {round} · Turn: {name}", { round: String(encounter.round || 1), name: encounter.monsters.find((item) => String(item.instanceId) === String(encounter.currentTurnId))?.name || lang.t("Participant unavailable") })}</span>
+				<Button variant="primary" disabled={view.isSaving || !encounter.monsters.some((item) => item.instanceId != null && String(item.instanceId) !== "")} onClick={view.advanceTurn}>{encounter.currentTurnId == null ? lang.t("Start turns") : lang.t("Next turn")}</Button>
+			</div>
 			<div className="Panel__body EncounterView__body">
 				<div className="EncounterView__main">
 					<EncounterParticipantList

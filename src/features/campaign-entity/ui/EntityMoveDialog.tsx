@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { campaignApi, type CampaignRecord } from "../../../entities/campaign/index.js";
 import { sessionApi, type SessionRecord } from "../../../entities/session/index.js";
 import { lang } from "../../../shared/lib/index.js";
@@ -19,6 +19,16 @@ export interface EntityMoveDialogProps {
 	onMove: (destination: EntityMoveDestination) => Promise<void>;
 }
 
+function findDuplicateNames(items: Array<{ name: string }>): Set<string> {
+	const seen = new Set<string>();
+	const duplicates = new Set<string>();
+	for (const item of items) {
+		if (seen.has(item.name)) duplicates.add(item.name);
+		else seen.add(item.name);
+	}
+	return duplicates;
+}
+
 export default function EntityMoveDialog({ campaignSlug, currentSession, entityName, onCancel, onMove }: EntityMoveDialogProps) {
 	const [campaigns, setCampaigns] = useState<CampaignRecord[]>([]);
 	const [loadingCampaigns, setLoadingCampaigns] = useState(true);
@@ -30,6 +40,8 @@ export default function EntityMoveDialog({ campaignSlug, currentSession, entityN
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState("");
 	const [sessionError, setSessionError] = useState(false);
+	const duplicateCampaignNames = useMemo(() => findDuplicateNames(campaigns), [campaigns]);
+	const duplicateSessionNames = useMemo(() => findDuplicateNames(sessions), [sessions]);
 
 	useEffect(() => {
 		let active = true;
@@ -61,9 +73,9 @@ export default function EntityMoveDialog({ campaignSlug, currentSession, entityN
 	return <Modal title={lang.t("Move entity")} type="custom" showFooter={false} cancelDisabled={saving} onCancel={onCancel} onConfirm={submit}>
 		<div className="EntityMoveDialog">
 			<p>{lang.t("Choose where to move {name}.", { name: entityName })}</p>
-			<label><span>{lang.t("Campaign")}</span><Select aria-label={lang.t("Campaign")} value={destinationCampaign} disabled={loadingCampaigns || campaigns.length === 0} onChange={(event) => { if (event.target.value === destinationCampaign) return; setError(""); setLoading(true); setSessions([]); setFileName(""); setDestinationCampaign(event.target.value); }}>{campaigns.map((campaign) => <option key={campaign.slug} value={campaign.slug}>{campaign.name}</option>)}</Select></label>
-			<label><span>{lang.t("Destination")}</span><Select aria-label={lang.t("Destination")} value={scope} onChange={(event) => setScope(event.target.value as "campaign" | "session")}><option value="campaign">{lang.t("Campaign level")}</option><option value="session">{lang.t("Session")}</option></Select></label>
-			{scope === "session" && <label><span>{lang.t("Session")}</span><Select aria-label={lang.t("Session")} value={fileName} disabled={loading || sessions.length === 0} onChange={(event) => setFileName(event.target.value)}>{sessions.length === 0 && <option value="">{lang.t("No sessions available")}</option>}{sessions.map((session) => <option key={session.fileName} value={session.fileName || ""}>{session.name}</option>)}</Select></label>}
+			<label><span>{lang.t("Campaign")}</span><Select aria-label={lang.t("Campaign")} value={destinationCampaign} disabled={saving || loadingCampaigns || campaigns.length === 0} onChange={(event) => { if (event.target.value === destinationCampaign) return; setError(""); setLoading(true); setSessions([]); setFileName(""); setDestinationCampaign(event.target.value); }}>{campaigns.map((campaign) => <option key={campaign.slug} value={campaign.slug}>{duplicateCampaignNames.has(campaign.name) ? `${campaign.name} · ${campaign.slug}` : campaign.name}</option>)}</Select></label>
+			<label><span>{lang.t("Destination")}</span><Select aria-label={lang.t("Destination")} value={scope} disabled={saving} onChange={(event) => { if (campaigns.length > 0) setError(""); setScope(event.target.value as "campaign" | "session"); }}><option value="campaign">{lang.t("Campaign level")}</option><option value="session">{lang.t("Session")}</option></Select></label>
+			{scope === "session" && <label><span>{lang.t("Session")}</span><Select aria-label={lang.t("Session")} value={fileName} disabled={saving || loading || sessions.length === 0} onChange={(event) => { if (campaigns.length > 0) setError(""); setFileName(event.target.value); }}>{sessions.length === 0 && <option value="">{lang.t("No sessions available")}</option>}{sessions.map((session) => <option key={session.fileName} value={session.fileName || ""}>{duplicateSessionNames.has(session.name) ? `${session.name} · ${session.fileName}` : session.name}</option>)}</Select></label>}
 			{sameCampaignScope && <p className="muted">{lang.t("This item is already at campaign level.")}</p>}
 			{scope === "session" && sessionError && <p role="alert" className="EntityMoveDialog__error">{lang.t("Failed to load destinations.")}</p>}
 			{error && <p role="alert" className="EntityMoveDialog__error">{error}</p>}

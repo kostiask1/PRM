@@ -550,12 +550,14 @@ function AiResponseModal({
 		);
 		const beforeOrder = beforeList.map(getNoteDiffKey).filter((key) => afterByKey.has(key));
 		const afterOrder = afterList.map(getNoteDiffKey).filter((key) => beforeByKey.has(key));
+		const beforePositions = new Map(beforeList.map((note, index) => [getNoteDiffKey(note, index), index + 1]));
+		const afterPositions = new Map(afterList.map((note, index) => [getNoteDiffKey(note, index), index + 1]));
 		const uniqueOrder = new Set(beforeOrder).size === beforeOrder.length && new Set(afterOrder).size === afterOrder.length;
 		const orderChanged = uniqueOrder && beforeOrder.some((key, index) => key !== afterOrder[index]);
-		const noteOrderLabel = (key: string) => {
-			const note = afterByKey.get(key) ?? beforeByKey.get(key);
+		const noteOrderLabel = (key: string, notes: Map<string, unknown>, positions: Map<string, number>) => {
+			const note = notes.get(key);
 			const title = isObjectSnapshot(note) ? String(note.title || note.text || "").trim().slice(0, 60) : "";
-			return `${beforeOrder.indexOf(key) + 1}. ${title || lang.t("Note")}`;
+			return `${positions.get(key)}. ${title || lang.t("Note")}`;
 		};
 		const keys = [
 			...new Set([...beforeByKey.keys(), ...afterByKey.keys()]),
@@ -567,7 +569,7 @@ function AiResponseModal({
 				{orderChanged && (
 					<div className="AiAssistantPanel__preview_field">
 						<div className="AiAssistantPanel__preview_field_label">{lang.t("Note order")}</div>
-						<AiResponseValueComparison before={beforeOrder.map(noteOrderLabel).join("\n")} after={afterOrder.map(noteOrderLabel).join("\n")} />
+						<AiResponseValueComparison before={beforeOrder.map((key) => noteOrderLabel(key, beforeByKey, beforePositions)).join("\n")} after={afterOrder.map((key) => noteOrderLabel(key, afterByKey, afterPositions)).join("\n")} />
 					</div>
 				)}
 				{keys.map((key, index) => {
@@ -609,6 +611,7 @@ function AiResponseModal({
 						resource={resource}
 						isDraft={isDraft}
 						renderEntityCard={renderEntityCard}
+						renderNoteArrayDiff={renderNoteArrayDiff}
 					/>
 				</div>
 			);

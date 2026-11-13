@@ -5,6 +5,7 @@ import {
 	type MonsterAiActionModalProps,
 } from "../../../features/ai-edit-monster/index.js";
 import { isCustomSource } from "../model.js";
+import { lang } from "../../../shared/lib/index.js";
 import type {
 	BestiaryAiModalsSlot,
 	BestiaryAiModalsSlotProps,
@@ -22,11 +23,13 @@ export interface BestiaryBrowserModalsProps
 	MonsterEditorModal: ComponentType<
 		Pick<
 			MonsterFieldEditModalProps,
-			"editingMonster" | "onCancel" | "onSave"
+			"editingMonster" | "title" | "onCancel" | "onSave"
 		>
 	>;
 	aiActionMonster: MonsterAiActionModalProps["aiActionMonster"];
 	fieldEditingMonster: MonsterFieldEditModalProps["editingMonster"];
+	fieldEditingMode: "edit" | "create-based";
+	isCreatingBlankMonster: boolean;
 	onCancelEditCustomMonster: MonsterFieldEditModalProps["onCancel"];
 	onCancelMonsterAiAction: MonsterAiActionModalProps["onCancel"];
 	onChooseMonsterAiAction: MonsterAiActionModalProps["onChoose"];
@@ -43,6 +46,8 @@ export function BestiaryBrowserModals({
 	MonsterEditorModal,
 	aiActionMonster,
 	fieldEditingMonster,
+	fieldEditingMode,
+	isCreatingBlankMonster,
 	onCancelEditCustomMonster,
 	onCancelMonsterAiAction,
 	onChooseMonsterAiAction,
@@ -54,6 +59,7 @@ export function BestiaryBrowserModals({
 		<>
 			<MonsterEditorModal
 				editingMonster={fieldEditingMonster}
+				title={lang.t(isCreatingBlankMonster ? "Create custom creature" : fieldEditingMode === "create-based" ? "Create custom creature based on this" : "Edit custom creature")}
 				onCancel={onCancelEditCustomMonster}
 				onSave={onSaveEditedCustomMonster}
 			/>

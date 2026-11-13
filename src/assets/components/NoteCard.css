@@ -84,7 +84,7 @@
 
 .NoteCard__title .MarkdownView,
 .NoteCard__title .Input {
-    padding-right: 46px;
+    padding-right: calc(var(--size-9) + var(--space-1-5));
 }
 
 .NoteCard__title .Input {

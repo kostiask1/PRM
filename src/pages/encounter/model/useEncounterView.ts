@@ -60,6 +60,7 @@ import {
 	getEncounterRenamePlan,
 	getEncounterSessionEncounters,
 	getEncounterUpdatePlan,
+	advanceEncounterTurn,
 	getSelectedEncounterParticipant,
 	isEncounterEditableTarget,
 	parseEncounterImport,
@@ -119,22 +120,46 @@ export default function useEncounterView(): EncounterViewModel {
 	const [showBestiary, setShowBestiary] = useState(false);
 	const [showCharacterPicker, setShowCharacterPicker] = useState(false);
 	const [notification, setNotification] = useState<string | null>(null);
+	const [saveFailed, setSaveFailed] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const processedDiceResultIdRef = useRef<string | number | null>(null);
 	const encounterRef = useRef<EncounterViewState | null>(null);
 	const encounterLoadRequestRef = useRef(0);
 	const encounterLoadRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const reorderStartRef = useRef<EncounterViewState | null>(null);
+	const pendingTurnRef = useRef<{ before: EncounterViewState; after: EncounterViewState } | null>(null);
+	const encounterMountedRef = useRef(true);
+	useEffect(() => {
+		encounterMountedRef.current = true;
+		return () => { encounterMountedRef.current = false; };
+	}, []);
 	const handleEncounterSaved = useCallback(
-		(result: EncounterUpdateResult) => {
+		(result: EncounterUpdateResult, hasNewer: boolean) => {
+			const pendingTurn = pendingTurnRef.current;
+			if (pendingTurn && result.encounter.currentTurnId === pendingTurn.after.currentTurnId && result.encounter.round === pendingTurn.after.round) pendingTurnRef.current = null;
+			if (!hasNewer) setSaveFailed(false);
 			setActiveSession(result.session);
 			requestCampaignReload();
 		},
 		[requestCampaignReload, setActiveSession],
 	);
-	const reportEncounterSaveError = useCallback((error: unknown) => {
+	const reportEncounterSaveError = useCallback((error: unknown, failed: EncounterEditorState, hasNewer: boolean) => {
+		if (!encounterMountedRef.current) {
+			if (!hasNewer) showMessage({ title: lang.t("Error"), message: lang.t("Encounter changes could not be saved after leaving. Reopen the encounter and enter them again.") });
+			return;
+		}
+		const pendingTurn = pendingTurnRef.current;
+		if (!hasNewer && pendingTurn && failed.currentTurnId === pendingTurn.after.currentTurnId && failed.round === pendingTurn.after.round) {
+			pendingTurnRef.current = null;
+			setEncounter((current) => {
+				if (!current || current.currentTurnId !== pendingTurn.after.currentTurnId || current.round !== pendingTurn.after.round) return current;
+				return { ...current, currentTurnId: pendingTurn.before.currentTurnId, round: pendingTurn.before.round };
+			});
+		}
 		console.error("Failed to save encounter updates", error);
-	}, []);
+		setSaveFailed(true);
+		setNotification(lang.t("Encounter changes could not be saved."));
+	}, [showMessage]);
 	const {
 		flush: flushEncounterSave,
 		hasPendingSave,
@@ -340,6 +365,20 @@ export default function useEncounterView(): EncounterViewModel {
 		},
 		[saveEncounterState, syncSelectedInstance],
 	);
+
+	const retryEncounterSave = useCallback(() => {
+		if (encounterRef.current) saveEncounterState(encounterRef.current);
+	}, [saveEncounterState]);
+
+	const advanceTurn = useCallback(() => {
+		const current = encounterRef.current;
+		if (!current) return;
+		const next = advanceEncounterTurn(current);
+		if (next !== current) {
+			pendingTurnRef.current = { before: current, after: next };
+			applyEncounterUpdate(next);
+		}
+	}, [applyEncounterUpdate]);
 
 	const reportParticipantSyncError = useCallback((error: unknown, operation: string) => {
 		console.error(`Failed encounter participant operation: ${operation}`, error);
@@ -756,6 +795,9 @@ export default function useEncounterView(): EncounterViewModel {
 		fileInputRef,
 		averageInitiative: initiativeStats.average,
 		initiativeStats,
+		advanceTurn,
+		saveFailed,
+		retryEncounterSave,
 		handleFileChange,
 		handleExport,
 		handleRename,

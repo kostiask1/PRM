@@ -458,6 +458,7 @@ import {
 	executeEncounterLoadPlan,
 	executeEncounterMonsterDropPlan,
 	executeEncounterUpdatePlan,
+	advanceEncounterTurn,
 	getEncounterGridMonsterKey,
 	getEncounterGridProjection,
 	getEncounterAddCharacterPlan,
@@ -2663,7 +2664,7 @@ await run(
 		);
 		assert.match(
 			bestiarySource,
-			/export interface BestiaryBrowserProps\s*\{[\s\S]*?\bResponseModal: AiResponseModalComponent;\s*MonsterEditorModal: ComponentType<\s*Pick<\s*MonsterFieldEditModalProps,\s*"editingMonster"\s*\|\s*"onCancel"\s*\|\s*"onSave"\s*>\s*>;/,
+			/export interface BestiaryBrowserProps\s*\{[\s\S]*?\bResponseModal: AiResponseModalComponent;\s*MonsterEditorModal: ComponentType<\s*Pick<\s*MonsterFieldEditModalProps,\s*"editingMonster"\s*\|\s*"title"\s*\|\s*"onCancel"\s*\|\s*"onSave"\s*>\s*>;/,
 		);
 
 		assert.match(
@@ -3328,7 +3329,7 @@ await run(
 		);
 		assert.match(
 			mainContentSource,
-			/const aiAssistantRouteKey = \[\s*location\.pathname,\s*activeSessionFileName \|\| "",\s*activeEncounterId \|\| "",\s*\]\.join\(":"\);/,
+			/const aiAssistantRouteKey = \[\s*location\.pathname,\s*activeSessionFileName \|\| "",\s*activeEncounterId \?\? "",\s*\]\.join\(":"\);/,
 		);
 		const mainAssistantGuard = mainContentSource.match(
 			/\{showAiAssistant && \(\s*<AiAssistantPanel(?=\s|>)[\s\S]*?\/>\s*\)\}/,
@@ -4013,7 +4014,7 @@ await run(
 				"const after = getFieldValue(resource.after, field, wholeSnapshot);",
 				'field === "notes" && (Array.isArray(before) || Array.isArray(after))',
 				"return renderNoteArrayDiff(resource, before, after);",
-				"<AiResponseValueComparison before={before} after={after} />",
+				"<AiResponseValueComparison field={wholeSnapshot ? undefined : field} before={before} after={after} />",
 				"export default function AiResponseGenericDiff({",
 				"const isSingleSnapshot = resource.before === null || resource.after === null;",
 				"const fieldKeys = getPreviewFieldKeys(",
@@ -5649,7 +5650,7 @@ await run(
 				"onOpenEncounter={(event) => onOpenEncounter(scene, event)}",
 				"onImageChange(scene.id, imageUrl)",
 				"campaignSlug={campaignSlug}",
-				"hasEncounter={Boolean(scene.encounterId)}",
+				"hasEncounter={scene.encounterId !== null && scene.encounterId !== undefined}",
 				"encounterName={getEncounterName(scene)}",
 				"onUpdateField(scene.id, field, value)",
 				"onNotesReorder(scene.id, notes)",
@@ -6183,7 +6184,7 @@ await run(
 				"onOpenEncounter={(event) => onOpenEncounter(scene, event)}",
 				"onImageChange(scene.id, imageUrl)",
 				"campaignSlug={campaignSlug}",
-				"hasEncounter={Boolean(scene.encounterId)}",
+				"hasEncounter={scene.encounterId !== null && scene.encounterId !== undefined}",
 				"encounterName={getEncounterName(scene)}",
 				"onUpdateField(scene.id, field, value)",
 				"onNotesReorder(scene.id, notes)",
@@ -8251,7 +8252,7 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sceneNotesSource,
-			["getNotesForRender(scene.notes,", "simplifiedNotesEnabled", 'lang.t("Scene notes")', "renderSceneNotesList({", "<DraggableList", "items={notes}", "onReorder={onSceneNotesReorder}", "getAiIgnoredNoteListProps(onSceneNoteAiIgnoredChange)", "renderNoteCard("],
+			["getNotesForRender(scene.notes,", "simplifiedNotesEnabled", "useHashItemSelection(", 'lang.t("Scene notes")', "<DraggableList", "items={notes}", "keyboardReorder", "onReorder={onSceneNotesReorder}", "getAiIgnoredNoteListProps(onSceneNoteAiIgnoredChange)", "renderNoteCard("],
 			"Session scene notes stay visible and retain reorder and AI controls",
 		);
 		assert.doesNotMatch(sceneNotesSource, /CollapseToggleButton|onToggleNotesCollapse|scene\.isNotesCollapsed/);
@@ -21287,8 +21288,16 @@ await run("note helpers maintain trailing empty note slot", () => {
 
 await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 	assert.equal(getNoteListLabel({ title: "  Назва  ", text: "Текст" }), "Назва");
-	assert.equal(getNoteListLabel({ title: "  ", text: "  " + "Ї".repeat(31) }), "Ї".repeat(30));
-	assert.equal(getNoteListLabel({ text: "🐉".repeat(31) }), "🐉".repeat(30));
+	assert.equal(getNoteListLabel({ title: "  ", text: "  " + "Ї".repeat(31) }), "Ї".repeat(30) + "...");
+	assert.equal(getNoteListLabel({ text: "🐉".repeat(31) }), "🐉".repeat(30) + "...");
+	assert.equal(getNoteListLabel({ text: "# **Важлива** [нотатка](https://example.test)" }), "Важлива нотатка");
+	assert.equal(getNoteListLabel({ text: "- [x] Знайти _ключ_\n> У старій вежі" }), "Знайти ключ У старій вежі");
+	assert.equal(getNoteListLabel({ text: "```js\nconst value = 2;\n```" }), "const value = 2;");
+	assert.equal(getNoteListLabel({ text: "# Заголовок ###" }), "Заголовок");
+	assert.equal(getNoteListLabel({ text: "\\*буквально\\* та слово_з_рисками" }), "*буквально* та слово_з_рисками");
+	assert.equal(getNoteListLabel({ text: "123456789012345678901234567[Taran Stone] lives here" }), "123456789012345678901234567Tar...");
+	assert.equal(getNoteListLabel({ title: "Meet [Taran Stone]", text: "ignored" }), "Meet Taran Stone");
+	assert.equal(getNoteListLabel({ text: "Ї".repeat(30) }), "Ї".repeat(30));
 	assert.equal(getNoteListLabel({ text: "  " }), "");
 	const emptyNote = createModelEmptyNote();
 	assert.equal(isNoteEmpty(emptyNote), true);
@@ -26719,6 +26728,13 @@ await run(
 				session: null,
 				encounter: null,
 			});
+			global.window = { location: { pathname: "/gallery" } };
+			assert.deepEqual(parseUrl(), {
+				campaign: null,
+				session: null,
+				encounter: null,
+			});
+			assert.equal(parseUrl("/campaign/gallery").campaign, "gallery");
 		} finally {
 			global.window = originalWindow;
 		}
@@ -26739,6 +26755,7 @@ await run(
 		assert.equal(buildNavigationUrl(null), "/");
 		assert.equal(buildNavigationUrl("bestiary"), "/campaign/bestiary");
 		assert.equal(buildNavigationUrl("spells"), "/campaign/spells");
+		assert.equal(buildNavigationUrl("gallery"), "/campaign/gallery");
 		assert.equal(
 			buildNavigationUrl("camp", "sess 1", "enc-1"),
 			"/campaign/camp/session/sess%201/encounter/enc-1",
@@ -27753,6 +27770,25 @@ await run("campaign graph scene projection preserves text identity and mention s
 		graph.nodes.some((node) => node.id === "scene-note:projection.json:0:note"),
 		true,
 	);
+});
+
+await run("campaign graph displays named scenes and retains numbered aliases", () => {
+	const graph = buildCampaignGraph({
+		campaign: { slug: "named-scenes", name: "Кампанія" },
+		notes: [{ id: "mention", text: "[Засідка] та [Сесія Scene 1]" }],
+		sessions: [{ fileName: "session.json", name: "Сесія" }],
+		sessionDetails: { "session.json": { data: { scenes: [
+			{ id: "a", name: "  Засідка  ", title: "Інша назва", texts: {} },
+			{ id: "b", name: " ", title: "Брама", texts: {} },
+		] } } },
+	});
+	const first = graph.nodes.find((node) => node.id === "scene:session.json:a");
+	const second = graph.nodes.find((node) => node.id === "scene:session.json:b");
+	assert.equal(first?.label, "Сесія: Засідка");
+	assert.deepEqual(first?.aliases, ["Scene 1", "Сесія Scene 1", "Засідка", "Сесія Засідка"]);
+	assert.equal(second?.label, "Сесія: Брама");
+	assert.equal(graph.nodes.some((node) => node.type === "unresolved" && node.label === "Засідка"), false);
+	assert.equal(graph.edges.find((edge) => edge.target === first?.id && edge.relation === "mentions")?.count, 2);
 });
 
 await run("campaign graph recursive text collection preserves paths and ignored keys", () => {
@@ -52368,6 +52404,29 @@ await run("AI assistant context projection preserves route-specific contracts", 
 });
 
 await run("AI assistant route state preserves falsy and bestiary target semantics", () => {
+	const zeroEncounterRoute = getAiAssistantRouteState({
+			isBestiary: false,
+			navigation: {
+				activeCampaignSlug: "кампанія",
+				activeSessionFileName: "session.json",
+				activeEncounterId: 0,
+			},
+		});
+	assert.equal(zeroEncounterRoute.isEncounter, true);
+	assert.equal(zeroEncounterRoute.route.encounter, "0");
+	const zeroEncounterTarget = buildAiGenerationRequestTarget({
+		initialRoute: zeroEncounterRoute.route,
+	});
+	assert.equal(
+		resolveAiRequest({
+			language: "uk",
+			session: zeroEncounterTarget.path.session,
+			encounterId: zeroEncounterTarget.path.encounter,
+			editEncounterCreatures: true,
+			parseAIResponse: true,
+		}).encounterCreatureEditingEnabled,
+		true,
+	);
 	assert.deepEqual(
 		getAiAssistantRouteState({
 			isBestiary: false,
@@ -52636,6 +52695,39 @@ await run("AI response modal policies preserve nested draft and preview identity
 		() => parseAiResponseSnapshotText("", false, "Чернетка порожня"),
 		/Чернетка порожня/,
 	);
+});
+
+await run("encounter turns follow participant identity and wrap rounds", () => {
+	const empty = { name: "Бій", monsters: [] };
+	assert.equal(advanceEncounterTurn(empty), empty);
+	const encounter = { name: "Бій", monsters: [{ instanceId: "a" }, { instanceId: "b" }] };
+	const first = advanceEncounterTurn(encounter);
+	assert.equal(first.currentTurnId, "a");
+	assert.equal(first.round, 1);
+	const second = advanceEncounterTurn(first);
+	assert.equal(second.currentTurnId, "b");
+	const wrapped = advanceEncounterTurn(second);
+	assert.equal(wrapped.currentTurnId, "a");
+	assert.equal(wrapped.round, 2);
+	const reordered = advanceEncounterTurn({ ...first, monsters: [...first.monsters].reverse() });
+	assert.equal(reordered.currentTurnId, "b");
+	assert.equal(reordered.round, 2);
+	const removed = advanceEncounterTurn({ ...first, monsters: [{ instanceId: "b" }] });
+	assert.equal(removed.currentTurnId, "b");
+	assert.equal(removed.round, 1);
+});
+
+await run("AI nested note edits follow identity after reordering", () => {
+	const first = { id: "first", title: "Перша", text: "А" };
+	const zero = { id: 0, title: "Друга", text: "До" };
+	const parent = { id: "npc", kind: "entity", after: { notes: [first, zero] } };
+	const child = { id: "npc:note:id:0", parentResourceId: "npc", kind: "entity", after: zero, listIndex: 0 };
+	assert.deepEqual(getEditedResourceAfterFromParent(parent, child), zero);
+	const result = updateDraftResourceCollection([parent], child, { ...zero, text: "Після" });
+	assert.deepEqual(result[0].after.notes, [first, { ...zero, text: "Після" }]);
+	assert.deepEqual(parent.after.notes, [first, zero]);
+	const missing = { ...child, after: { ...zero, id: "missing" } };
+	assert.deepEqual(updateDraftResourceCollection([parent], missing, { id: "missing", text: "Новий" })[0].after.notes, [first, zero]);
 });
 
 await run("AI assistant presentation preserves history and entity contracts", () => {
@@ -71789,11 +71881,40 @@ await run("AI value comparison highlights changes and bounds large inputs", asyn
 	assert.deepEqual(compareText("однаково", "однаково").before, [{ text: "однаково", changed: false }]);
 	const large = "слово ".repeat(300);
 	assert.deepEqual(compareText(large, "інше").before, [{ text: large, changed: true }]);
+	const largeOldMiddle = "old ".repeat(150);
+	const largeNewMiddle = "new ".repeat(150);
+	assert.deepEqual(compareText(`Context: ${largeOldMiddle}end.`, `Context: ${largeNewMiddle}end.`), {
+		before: [{ text: "Context: ", changed: false }, { text: largeOldMiddle.trimEnd(), changed: true }, { text: " end.", changed: false }],
+		after: [{ text: "Context: ", changed: false }, { text: largeNewMiddle.trimEnd(), changed: true }, { text: " end.", changed: false }],
+	});
+	const prefix = "Опис пригоди. ".repeat(100);
+	const suffix = " Продовження історії.".repeat(100);
+	assert.deepEqual(compareText(`${prefix}стара${suffix}`, `${prefix}нова${suffix}`), {
+		before: [{ text: prefix, changed: false }, { text: "стара", changed: true }, { text: suffix, changed: false }],
+		after: [{ text: prefix, changed: false }, { text: "нова", changed: true }, { text: suffix, changed: false }],
+	});
+	const veryLongPrefix = "Довгий опис. ".repeat(1100);
+	const veryLong = compareText(`${veryLongPrefix}🐉 старий`, `${veryLongPrefix}🐲 новий`);
+	assert.deepEqual(veryLong.before, [{ text: veryLongPrefix, changed: false }, { text: "🐉", changed: true }, { text: " ", changed: false }, { text: "старий", changed: true }]);
+	assert.deepEqual(veryLong.after, [{ text: veryLongPrefix, changed: false }, { text: "🐲", changed: true }, { text: " ", changed: false }, { text: "новий", changed: true }]);
 });
 
 await run("AI comparison distinguishes a value field from a scalar snapshot", async () => {
-	const { getFieldValue, getPreviewFieldKeys } = await import("../src/widgets/ai-response-modal/model/aiResponseModal.ts");
+	const { formatComparisonFieldValue, formatFieldValue, getFieldValue, getPreviewFieldKeys } = await import("../src/widgets/ai-response-modal/model/aiResponseModal.ts");
+	const { compareText } = await import("../src/widgets/ai-response-modal/model/compareText.ts");
 	const before = { name: "Здоров'я", value: 12 };
+	assert.equal(formatComparisonFieldValue("hp", { average: 12, formula: "2d8+3" }), "12 (2d8+3)");
+	assert.equal(formatComparisonFieldValue("ac", [13]), "13");
+	const armorBefore = [{ ac: 13, from: ["natural armor"] }];
+	const armorAfter = [{ ac: 15, from: ["natural armor"] }];
+	assert.equal(formatComparisonFieldValue("ac", armorBefore), "13 (natural armor)");
+	const armorDiff = compareText(formatComparisonFieldValue("ac", armorBefore), formatComparisonFieldValue("ac", armorAfter));
+	assert.deepEqual(armorDiff.before.filter((part) => part.changed).map((part) => part.text), ["13"]);
+	assert.deepEqual(armorDiff.after.filter((part) => part.changed).map((part) => part.text), ["15"]);
+	const conditionalArmor = [{ ac: 15, condition: "while armored" }];
+	assert.equal(formatComparisonFieldValue("ac", conditionalArmor), formatFieldValue(conditionalArmor));
+	const complexHp = { average: 12, special: "лише вночі" };
+	assert.equal(formatComparisonFieldValue("hp", complexHp), formatFieldValue(complexHp));
 	const after = { name: "Здоров'я", value: 15 };
 	assert.deepEqual(getPreviewFieldKeys(before, after), ["value"]);
 	assert.equal(getFieldValue(before, "value"), 12);
@@ -71801,6 +71922,29 @@ await run("AI comparison distinguishes a value field from a scalar snapshot", as
 	assert.equal(getFieldValue("стара назва", "value"), "стара назва");
 	assert.equal(getFieldValue(after, "value", true), after);
 	assert.equal(getFieldValue(null, "name"), undefined);
+	const hpBefore = { average: 12, formula: "2d8 + 3" };
+	const hpAfter = { average: 15, formula: "2d8 + 3" };
+	const hpDiff = compareText(formatFieldValue(hpBefore), formatFieldValue(hpAfter));
+	assert.deepEqual(hpDiff.before.filter((part) => part.changed).map((part) => part.text), ["12"]);
+	assert.deepEqual(hpDiff.after.filter((part) => part.changed).map((part) => part.text), ["15"]);
+	assert.ok(hpDiff.before.some((part) => !part.changed && part.text.includes("2d8 + 3")));
+});
+
+await run("AI note comparison preserves a zero-valued note ID", async () => {
+	const { buildNoteHighlightMap, getNoteDiffKey } = await import("../src/widgets/ai-response-modal/model/aiResponseModal.ts");
+	const before = [{ id: 0, title: "", text: "Старий текст" }];
+	const after = [{ id: 0, title: "", text: "Новий текст" }];
+	assert.equal(getNoteDiffKey(before[0], 0), "id:0");
+	assert.equal(getNoteDiffKey(after[0], 0), "id:0");
+	assert.deepEqual(buildNoteHighlightMap(before, after), { "0": ["text"] });
+});
+
+await run("history labels identify cross-campaign entity transfers", async () => {
+	const { formatHistoryOperationLabel } = await import("../src/entities/history/model/historyLabels.ts");
+	const params = { path: "/api/campaigns/one/entities/locations/transfer" };
+	const move = formatHistoryOperationLabel({ operation: "entity.move", params });
+	assert.equal(formatHistoryOperationLabel({ operation: "entity.transfer", params }), move);
+	assert.notEqual(move, formatHistoryOperationLabel({ operation: "unknown", params }));
 });
 
 await run("application history undoes and redoes a cross-campaign entity transfer", async () => {

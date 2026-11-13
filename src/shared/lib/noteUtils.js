@@ -35,10 +35,31 @@ export function getNoteRenderKey(note = {}, fallback) {
 	return note._renderKey ?? note.id ?? fallback;
 }
 
-export function getNoteListLabel(note = {}) {
+export function getNoteListPreview(note = {}) {
 	const title = String(note.title || "").trim();
-	if (title) return title;
-	return Array.from(String(note.text || "").trim()).slice(0, 30).join("");
+	if (title) return { text: title, maxLength: undefined };
+	const text = String(note.text || "")
+		.replace(/^\s{0,3}(?:`{3,}|~{3,})[^\n]*$/gm, "")
+		.replace(/(?<!\\)!?\[([^\]]*)\]\([^\n)]*\)/g, "$1")
+		.replace(/^(\s{0,3}#{1,6}\s+.*?)\s+#+\s*$/gm, "$1")
+		.replace(/^\s{0,3}(?:#{1,6}\s+|>\s?|[-+*]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)/gm, "")
+		.replace(/^\s{0,3}[-*_]{3,}\s*$/gm, "")
+		.replace(/(?<!\\)(`+)([^`]+)(?<!\\)\1/g, "$2")
+		.replace(/(?<!\\)(\*\*|__|~~)(?=\S)([\s\S]*?\S)(?<!\\)\1/g, "$2")
+		.replace(/(^|[^\p{L}\p{N}_])(?<!\\)([*_])(?=\S)([^\n]*?\S)(?<!\\)\2(?=$|[^\p{L}\p{N}_])/gu, "$1$3")
+		.replace(/\\([\\`*_{}[\]()#+\-.!>~])/g, "$1")
+		.replace(/\s+/g, " ")
+		.trim();
+	return { text, maxLength: 30 };
+}
+
+export function getNoteListLabel(note = {}) {
+	const { text, maxLength } = getNoteListPreview(note);
+	const visible = text.replace(/\[([^\]]+)\]/g, (_, name) => name.trim());
+	const characters = Array.from(visible);
+	return maxLength !== undefined && characters.length > maxLength
+		? `${characters.slice(0, maxLength).join("").trimEnd()}...`
+		: visible;
 }
 
 export function isNoteEmpty(note = {}, simplifiedMode = false) {

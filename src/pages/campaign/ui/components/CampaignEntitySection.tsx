@@ -41,7 +41,7 @@ export default function CampaignEntitySection({
 	onReorderDrop,
 }: CampaignEntitySectionProps) {
 	const kind = dropType === "characters" ? "character" : dropType === "npc" ? "npc" : "location";
-	const { selected, setSelectedKey } = useHashItemSelection(items, (entity, index) => String(getCampaignEntityRenderKey(entity, index)), (entity, hash) => matchesHistoryTargetId(hash, "campaign", kind, entity.id) || hash === `#${makeDomId("campaign", kind, entity.id)}`, undefined, selectionRequest);
+	const { selected, setSelectedKey } = useHashItemSelection(items, (entity, index) => String(getCampaignEntityRenderKey(entity, index)), (entity, hash) => matchesHistoryTargetId(hash, "campaign", kind, entity.id) || matchesHistoryTargetId(hash, "campaign", `${kind}-note`, entity.id) || hash === `#${makeDomId("campaign", kind, entity.id)}`, undefined, selectionRequest);
 	return (
 		<div
 			className="CampaignEntitySection"

@@ -46,6 +46,7 @@ export interface SettingsNotesViewProps {
 
 export interface SettingsSourcesViewProps {
 	isGlobalScope: boolean;
+	isInherited: boolean;
 	status: SettingsSaveStatus;
 	options: string[];
 	selectedSources: string[];
@@ -145,6 +146,7 @@ function SettingsGeneralGroup({
 
 function SettingsSourcesGroup({
 	isGlobalScope,
+	isInherited,
 	status,
 	options,
 	selectedSources,
@@ -163,6 +165,16 @@ function SettingsSourcesGroup({
 							"Unchecked sources are hidden in Bestiary, Spells, and official tokens.",
 						)}
 					</div>
+					{!isGlobalScope && (
+						<>
+							<div className="SettingsModal__hint">
+								{lang.t(isInherited ? "This campaign follows the global source selection." : "This campaign has its own source selection.")}
+							</div>
+							<div className="SettingsModal__hint">
+								{lang.t("Copying global sources creates a campaign selection; later global changes will not update it.")}
+							</div>
+						</>
+					)}
 				</div>
 				{status === "saving" && (
 					<span className="SettingsModal__saveStatus" role="status">
@@ -201,7 +213,7 @@ function SettingsSourcesGroup({
 								size={Button.SIZES.SMALL}
 								onClick={onUseGlobal}
 							>
-								{lang.t("Use global sources")}
+								{lang.t("Copy global sources")}
 							</Button>
 						</div>
 					)}
@@ -237,6 +249,7 @@ function SettingsAiGroup({
 					</div>
 					<EditableField
 						type="textarea"
+						aria-label={lang.t("AI base prompt")}
 						className="SettingsModal__promptField"
 						value={basePrompt}
 						onChange={(event) => onBasePromptChange(event.target.value)}
@@ -268,6 +281,7 @@ function SettingsAiGroup({
 					</div>
 					<EditableField
 						type="textarea"
+						aria-label={lang.t("Image prompt base style")}
 						className="SettingsModal__promptField"
 						value={imagePrompt}
 						onChange={(event) => onImagePromptChange(event.target.value)}

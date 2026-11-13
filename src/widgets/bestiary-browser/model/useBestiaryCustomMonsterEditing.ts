@@ -72,6 +72,14 @@ export function useBestiaryCustomMonsterEditing({
 		useState<BestiaryFieldEditMode>("edit");
 	const [fieldEditingOriginalMonster, setFieldEditingOriginalMonster] =
 		useState<BestiaryMonster | null>(null);
+	const [isCreatingBlankMonster, setIsCreatingBlankMonster] = useState(false);
+
+	const openCreateMonster = () => {
+		setIsCreatingBlankMonster(true);
+		setFieldEditingMode("create-based");
+		setFieldEditingOriginalMonster(null);
+		setFieldEditingMonster({ name: lang.t("Creature"), source: "CUSTOM" });
+	};
 
 	const openEditMonster = (monster: BestiaryMonster) => {
 		const plan = getBestiaryFieldEditStartPlan(
@@ -80,6 +88,7 @@ export function useBestiaryCustomMonsterEditing({
 			(target) => new MonsterStatBlockModel(target).localTokenSrc,
 		);
 		if (plan.kind === "skip") return;
+		setIsCreatingBlankMonster(false);
 		setFieldEditingMode(plan.mode);
 		setFieldEditingOriginalMonster(plan.originalMonster);
 		setFieldEditingMonster(plan.draftMonster);
@@ -124,14 +133,14 @@ export function useBestiaryCustomMonsterEditing({
 		const storedCustomMonsters = getMonsterListFromResponse(
 			await bestiaryApi.getCustomBestiaryData(),
 		);
-		const originalModel = new MonsterStatBlockModel(
-			fieldEditingOriginalMonster ?? {},
-		);
+		const fallbackImageUrl = fieldEditingOriginalMonster
+			? new MonsterStatBlockModel(fieldEditingOriginalMonster).localTokenSrc
+			: "";
 		const plan = getCreateBasedMonsterPlan(
 			storedCustomMonsters,
 			draftMonster,
 			fieldEditingOriginalMonster,
-			originalModel.localTokenSrc,
+			fallbackImageUrl,
 		);
 		if (plan.duplicate) {
 			throw new Error(lang.t("Custom creature with this name already exists."));
@@ -264,10 +273,12 @@ export function useBestiaryCustomMonsterEditing({
 		closeEditCustomMonster,
 		fieldEditingMode,
 		fieldEditingMonster,
+		isCreatingBlankMonster,
 		handleDeleteCustomMonster,
 		handleExportCustomMonsters,
 		handleImportCustomMonsters,
 		openEditMonster,
+		openCreateMonster,
 		saveEditedCustomMonster,
 	};
 }

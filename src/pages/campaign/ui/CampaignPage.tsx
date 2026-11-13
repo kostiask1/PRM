@@ -309,6 +309,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 				onOpenPartialArchive={() => setIsPartialArchiveOpen(true)}
 			/>
 			<div className="Panel__body">
+				<div className="CampaignView__navigation">
 				<SectionTabs<CampaignSection> idPrefix={tabsId} label={lang.t("Campaign sections")} value={activeSection} onChange={setActiveSection} items={[
 					{ id: "overview", label: lang.t("Overview") },
 					{ id: "sessions", label: lang.t("Sessions"), count: view.sessions.length },
@@ -318,6 +319,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 					{ id: "notes", label: lang.t("Notes") },
 					{ id: "story", label: lang.t("Campaign story") },
 				]} />
+				<Button size={Button.SIZES.SMALL} icon="notes-graph" onClick={() => { handleNotesViewModeChange("graph"); setActiveSection("notes"); }}>
+					{lang.t("Notes graph")}
+				</Button>
+				</div>
 				<div role="tabpanel" id={`${tabsId}-panel-overview`} aria-labelledby={`${tabsId}-tab-overview`} hidden={activeSection !== "overview"}>
 					<CampaignOverview sessions={allSessions} characters={view.characters} notes={view.notes}
 						description={view.description} onSelectSection={setActiveSection} onCreateSession={view.handleCreateSession}

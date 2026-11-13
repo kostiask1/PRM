@@ -68,6 +68,9 @@ export interface EncounterViewModel {
 	fileInputRef: RefObject<HTMLInputElement | null>;
 	averageInitiative: number | string;
 	initiativeStats: InitiativeStats;
+	advanceTurn: () => void;
+	saveFailed: boolean;
+	retryEncounterSave: () => void;
 	handleFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
 	handleExport: () => void;
 	handleRename: () => Promise<void>;

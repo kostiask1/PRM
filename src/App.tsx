@@ -189,6 +189,11 @@ export default function App() {
 							campaigns={campaigns}
 							activeCampaignId={activeCampaignSlug}
 							isMobileOpen={isMobileSidebarOpen}
+							isGalleryActive={location.pathname === "/gallery"}
+							onOpenGallery={() => {
+								setMobileSidebarOpen(false);
+								routerNavigate("/gallery");
+							}}
 							onOpenDiceCalculator={() => {
 								setMobileSidebarOpen(false);
 								openDicePanel();

@@ -22,12 +22,14 @@ export interface EntityLinkProps {
 	name: string;
 	children?: ReactNode;
 	className?: string;
+	ariaLabel?: string;
 }
 
 export default function EntityLink({
 	name,
 	children,
 	className = "",
+	ariaLabel,
 }: EntityLinkProps) {
 	const [modalState, setModalState] =
 		useState<EntityLinkModalState | null>(null);
@@ -66,7 +68,8 @@ export default function EntityLink({
 		<>
 			<a
 				href="#"
-			className={classNames("EntityLink", className)}
+				className={classNames("EntityLink", className)}
+				aria-label={ariaLabel}
 				onClick={handleOpenModal}
 			>
 				{children || name}

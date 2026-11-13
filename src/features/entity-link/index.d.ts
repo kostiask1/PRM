@@ -1,4 +1,5 @@
 export { renderMentionText } from "./ui/renderMentionText.tsx";
+export { EntityLinkedListItem } from "./ui/EntityLinkedListItem.tsx";
 export { default as EntityModal, type EntityModalProps } from "./ui/EntityModal.tsx";
 export {
 	EntityLinkContext,

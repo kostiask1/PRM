@@ -1,4 +1,5 @@
 import {
+	useMemo,
 	useRef,
 	type Dispatch,
 	type ReactNode,
@@ -12,6 +13,7 @@ import type {
 } from "../../../entities/bestiary/index.js";
 import {
 	getMonsterItemKey,
+	isSameMonsterIdentity,
 	type BestiarySortOrder,
 } from "../model.js";
 import type {
@@ -103,6 +105,10 @@ export default function BestiaryContent({
 	toggleSort,
 }: BestiaryContentProps) {
 	const listContainerRef = useRef<HTMLDivElement>(null);
+	const selectedHiddenByFilters = useMemo(
+		() => !loading && Boolean(selectedMonster) && !displayedMonsters.some((monster) => isSameMonsterIdentity(monster, selectedMonster)),
+		[displayedMonsters, loading, selectedMonster],
+	);
 	const { detailRef, handleSelectMonster } = useBestiaryMobileSelection({
 		displayedMonsters,
 		listRef,
@@ -169,6 +175,7 @@ export default function BestiaryContent({
 						onSelectMonster={onSelectMonster}
 						searchHighlight={searchHighlight}
 						selectedMonster={selectedMonster}
+						selectedHiddenByFilters={selectedHiddenByFilters}
 					/>
 				</div>
 			</div>

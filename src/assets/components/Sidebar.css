@@ -82,6 +82,10 @@
 .Sidebar .ListCard__title { font-size: 13px; line-height: 20px; color: var(--sidebar-title); }
 .Sidebar .ListCard__meta { font-size: 12px; line-height: 19px; }
 .Sidebar .StatusBadge { font-size: 10px; padding: var(--space-0-5) var(--space-1-5); }
+.Sidebar .StatusBadge:not(.StatusBadge__done),
+.Sidebar .StatusBadge:not(.StatusBadge__done):hover { color: var(--sidebar-utility-text); }
+.Sidebar .StatusBadge__done,
+.Sidebar .StatusBadge__done:hover { color: var(--sidebar-title); background: var(--sidebar-hover); }
 .Sidebar .ListCard__actions { padding-right: var(--space-1); }
 .Sidebar .Button__create { font-size: 12px; background: transparent; color: var(--sidebar-text); border-color: var(--sidebar-hover); }
 .Sidebar .Button__create:hover { background: var(--sidebar-hover); color: var(--sidebar-title); }
@@ -108,7 +112,7 @@
 @keyframes SidebarBackupLoaderSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .Sidebar__backupLoader { animation-duration: 1.5s; } }
 @media (max-width: 767px) {
- .Sidebar { width: min(86vw, 320px); transform: translateX(-105%); transition: transform 0.18s ease; padding-top: 64px; z-index: 1200; }
+ .Sidebar { width: min(86vw, 320px); transform: translateX(-105%); transition: transform 0.18s ease; padding-top: calc(var(--space-7) * 2); z-index: 1200; }
  .Sidebar.Sidebar__mobile_open { transform: translateX(0); }
  .Sidebar__link { min-height: 44px; }
 }

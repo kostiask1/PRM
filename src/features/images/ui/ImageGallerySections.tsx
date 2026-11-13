@@ -1,6 +1,7 @@
 import {
 	Fragment,
 	useId,
+	useRef,
 	useState,
 	type Dispatch,
 	type DragEvent,
@@ -407,21 +408,26 @@ function ImageGalleryUploadControl({
 	onUpload: (files: FileList) => void;
 	presentation: GalleryStatsAndActionsPresentation;
 }) {
+	const inputRef = useRef<HTMLInputElement>(null);
 	if (!presentation.showUpload) return null;
 	return (
-		<label className="ImageGallery__uploadButton">
-			<Icon name="plus" size={14} />
-			<span>{lang.t("Upload")}</span>
+		<>
+			<button type="button" className="ImageGallery__uploadButton" onClick={() => inputRef.current?.click()}>
+				<Icon name="plus" size={14} />
+				<span>{lang.t("Upload")}</span>
+			</button>
 			<input
+				ref={inputRef}
 				type="file"
 				multiple
 				accept="image/*"
 				hidden
 				onChange={(event) => {
 					if (event.target.files) onUpload(event.target.files);
+					event.target.value = "";
 				}}
 			/>
-		</label>
+		</>
 	);
 }
 

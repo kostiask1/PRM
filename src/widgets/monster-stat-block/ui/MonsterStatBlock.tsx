@@ -143,7 +143,9 @@ export default function MonsterStatBlock({
 	);
 	const effectiveName = model.effectiveName;
 	const source = getStringField(monster, "source");
-	const sourceLabel = formatSourceLabel(source);
+	const sourceLabel = source.trim().toUpperCase() === "CUSTOM"
+		? `${lang.t("Custom creatures")} (CUSTOM)`
+		: formatSourceLabel(source);
 	const referenceRenderOptions = useMemo(() => ({ creatureSourceFallback: source }), [source]);
 	const helpers: RenderHelpers = {
 		highlight: (value) => highlightText(String(value ?? ""), searchHighlight),

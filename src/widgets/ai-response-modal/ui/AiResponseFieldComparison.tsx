@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
+
 import { lang } from "../../../shared/lib/index.js";
-import { formatFieldValue, getFieldValue, getPreviewFieldKeys, isObjectSnapshot } from "../model/aiResponseModal.ts";
+import { formatComparisonFieldValue, getFieldValue, getPreviewFieldKeys, isObjectSnapshot } from "../model/aiResponseModal.ts";
 import { compareText, type ComparedTextPart } from "../model/compareText.ts";
 import { getAiResponseFieldLabel } from "./aiResponseFieldLabel.ts";
 
@@ -13,10 +15,10 @@ function ComparedValue({ parts, kind }: { parts: ComparedTextPart[]; kind: "remo
 	);
 }
 
-export function AiResponseValueComparison({ before, after }: { before: unknown; after: unknown }) {
+export function AiResponseValueComparison({ before, after, field }: { before: unknown; after: unknown; field?: string }) {
 	const beforeEmpty = before === null || before === undefined || before === "";
 	const afterEmpty = after === null || after === undefined || after === "";
-	const comparison = compareText(beforeEmpty ? "" : formatFieldValue(before), afterEmpty ? "" : formatFieldValue(after));
+	const comparison = compareText(beforeEmpty ? "" : formatComparisonFieldValue(field, before), afterEmpty ? "" : formatComparisonFieldValue(field, after));
 	const beforeParts = beforeEmpty
 		? [{ text: "—", changed: false }]
 		: comparison.before;
@@ -37,7 +39,18 @@ export function AiResponseValueComparison({ before, after }: { before: unknown; 
 	);
 }
 
-export function AiResponseFieldComparison({ before, after }: { before: unknown; after: unknown }) {
+type RenderNotes = (before: unknown, after: unknown) => ReactNode;
+
+function FieldComparisonValue({ field, before, after, wholeSnapshot, renderNotes }: { field: string; before: unknown; after: unknown; wholeSnapshot: boolean; renderNotes?: RenderNotes }) {
+	const previous = getFieldValue(before, field, wholeSnapshot);
+	const next = getFieldValue(after, field, wholeSnapshot);
+	if (!wholeSnapshot && field === "notes" && renderNotes && (Array.isArray(previous) || Array.isArray(next))) {
+		return renderNotes(previous, next);
+	}
+	return <AiResponseValueComparison field={wholeSnapshot ? undefined : field} before={previous} after={next} />;
+}
+
+export function AiResponseFieldComparison({ before, after, renderNotes }: { before: unknown; after: unknown; renderNotes?: RenderNotes }) {
 	const fields = getPreviewFieldKeys(before, after);
 	const wholeSnapshot = !isObjectSnapshot(before) || !isObjectSnapshot(after);
 	return (
@@ -45,25 +58,25 @@ export function AiResponseFieldComparison({ before, after }: { before: unknown; 
 			{fields.map((field) => (
 				<div className="AiAssistantPanel__preview_field" key={field}>
 					<div className="AiAssistantPanel__preview_field_label">{getAiResponseFieldLabel(field)}</div>
-					<AiResponseValueComparison before={getFieldValue(before, field, wholeSnapshot)} after={getFieldValue(after, field, wholeSnapshot)} />
+					<FieldComparisonValue field={field} before={before} after={after} wholeSnapshot={wholeSnapshot} renderNotes={renderNotes} />
 				</div>
 			))}
 		</div>
 	);
 }
 
-export function AiResponseSingleSnapshotComparison({ before, after }: { before: unknown; after: unknown }) {
+export function AiResponseSingleSnapshotComparison({ before, after, renderNotes, ignoredFields = [] }: { before: unknown; after: unknown; renderNotes?: RenderNotes; ignoredFields?: readonly string[] }) {
 	const snapshot = before === null ? after : before;
 	const wholeSnapshot = !isObjectSnapshot(snapshot);
 	const fields = isObjectSnapshot(snapshot)
-		? Object.keys(snapshot).filter((key) => !["id", "slug", "source", "createdAt"].includes(key))
+		? Object.keys(snapshot).filter((key) => !["id", "slug", "source", "createdAt", ...ignoredFields].includes(key))
 		: ["value"];
 	return (
 		<div className="AiAssistantPanel__field_comparisons">
 			{fields.map((field) => (
 				<div className="AiAssistantPanel__preview_field" key={field}>
 					<div className="AiAssistantPanel__preview_field_label">{getAiResponseFieldLabel(field)}</div>
-					<AiResponseValueComparison before={getFieldValue(before, field, wholeSnapshot)} after={getFieldValue(after, field, wholeSnapshot)} />
+					<FieldComparisonValue field={field} before={before} after={after} wholeSnapshot={wholeSnapshot} renderNotes={renderNotes} />
 				</div>
 			))}
 		</div>

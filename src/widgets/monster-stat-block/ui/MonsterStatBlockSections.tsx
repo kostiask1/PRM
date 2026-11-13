@@ -464,7 +464,7 @@ function MonsterMetadata({ monster, model, sourceLabel, helpers }: Pick<HeaderDe
 	return (
 		<>
 			<MonsterOriginalName presentation={presentation} helpers={helpers} />
-			<div className={classNames("MonsterStatBlock__metaLine", helpers.changedClass("size", "type", "alignment"))}>{helpers.highlight(model.size)} {helpers.highlight(model.typeLabel)}, {helpers.highlight(model.alignment)}</div>
+			<div className={classNames("MonsterStatBlock__metaLine", helpers.changedClass("size", "type", "alignment"))}>{helpers.highlight(model.size ? lang.t(model.size) : "")} {helpers.highlight(model.typeLabel)}, {helpers.highlight(lang.t(model.alignment))}</div>
 			<MonsterSourceLine
 				presentation={presentation}
 				sourceLabel={sourceLabel}

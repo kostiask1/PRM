@@ -4,7 +4,8 @@ import "../../../../assets/components/CampaignEntitySection.css";
 import {
 	getAiIgnoredNoteListProps,
 } from "../../../../features/notes/ui/index.js";
-import { getNoteListLabel, lang, makeDomId, type SharedNote } from "../../../../shared/lib/index.js";
+import { getNoteListLabel, getNoteListPreview, lang, makeDomId, type SharedNote } from "../../../../shared/lib/index.js";
+import { EntityLinkedListItem } from "../../../../features/entity-link/index.js";
 import { DraggableList, useHashItemSelection } from "../../../../shared/ui/index.js";
 import { matchesHistoryTargetId } from "../../../../entities/history/index.js";
 import TodoSection from "./TodoSection.tsx";
@@ -50,7 +51,7 @@ export default function SessionNotesSection({
 					{...getAiIgnoredNoteListProps(onToggleAiIgnored, {
 						isolateDragEvents: false,
 					})}
-					renderItem={(note) => <button type="button" className="CampaignEntitySection__item" aria-pressed={note === selected} onClick={() => setSelectedKey(String(note.id))}><span>{getNoteListLabel(note) || lang.t("New note")}</span></button>}
+					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); return <EntityLinkedListItem text={preview.text || label} label={label} maxLength={preview.maxLength} selected={note === selected} onSelect={() => setSelectedKey(String(note.id))} />; }}
 				/>
 				<div className="CampaignEntitySection__detail">{selected && renderItem(selected, false, renderableNotes.indexOf(selected))}</div>
 			</div>

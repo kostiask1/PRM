@@ -20,6 +20,7 @@ export interface BestiaryDetailProps {
 	onSelectMonster?: ((monster: BestiaryMonster) => void) | null;
 	searchHighlight: string;
 	selectedMonster: BestiaryMonster | null;
+	selectedHiddenByFilters: boolean;
 }
 
 export function BestiaryDetail({
@@ -34,6 +35,7 @@ export function BestiaryDetail({
 	onSelectMonster,
 	searchHighlight,
 	selectedMonster,
+	selectedHiddenByFilters,
 }: BestiaryDetailProps) {
 	const presentation = getBestiaryDetailPresentation(
 		selectedMonster,
@@ -46,6 +48,11 @@ export function BestiaryDetail({
 	if (!presentation) return null;
 	return (
 		<div className="Bestiary__detail_container" ref={detailRef}>
+			{selectedHiddenByFilters && (
+				<p className="Bestiary__filterNotice" role="status">
+					{lang.t("This creature is hidden from the list by the current filters.")}
+				</p>
+			)}
 			{presentation.insertAction && (
 				<div className="Bestiary__select_actions">
 					<Button

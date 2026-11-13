@@ -751,14 +751,19 @@ function createSessionSceneProjection(
 	context: SessionGraphProjectionContext,
 ): SessionSceneProjection {
 	const texts = getTruthyCampaignGraphValue(scene.texts, {});
-	const name = `Scene ${sceneIndex + 1}`;
+	const fallbackName = `Scene ${sceneIndex + 1}`;
+	const name = [scene.name, scene.title].find(
+		(value): value is string => typeof value === "string" && Boolean(value.trim()),
+	)?.trim() || fallbackName;
 	return {
 		id: `scene:${encodedPart(context.fileName)}:${encodedPart(scene.id ?? sceneIndex)}`,
 		name,
 		label: `${context.label}: ${name}`,
 		summary: excerpt([texts.summary, texts.goal, texts.location, texts.stakes].filter(Boolean).join(" ")),
 		detailText: Object.values(texts).filter(Boolean).join("\n\n"),
-		aliases: [name, `${context.label} ${name}`],
+		aliases: name === fallbackName
+			? [fallbackName, `${context.label} ${fallbackName}`]
+			: [fallbackName, `${context.label} ${fallbackName}`, name, `${context.label} ${name}`],
 		meta: {
 			fileName: context.fileName,
 			parentId: context.sessionId,

@@ -7,18 +7,23 @@ function SidebarLink({
 	icon,
 	label,
 	onClick,
+	active = false,
+	href = "#",
 }: {
 	icon: IconName;
 	label: ReactNode;
 	onClick: () => void;
+	active?: boolean;
+	href?: string;
 }) {
 	const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+		if (href !== "#" && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0)) return;
 		event.preventDefault();
 		onClick();
 	};
 
 	return (
-		<a href="#" className="Sidebar__link" onClick={handleClick}>
+		<a href={href} className={`Sidebar__link${active ? " Sidebar__link__active" : ""}`} aria-current={active ? "page" : undefined} onClick={handleClick}>
 			<Icon name={icon} />
 			<span>{label}</span>
 		</a>
@@ -27,6 +32,7 @@ function SidebarLink({
 
 interface SidebarLinksProps {
 	onOpenGallery: () => void;
+	isGalleryActive: boolean;
 	onOpenBestiary: () => void;
 	onOpenSpells: () => void;
 	onOpenRulesReference: () => void;
@@ -34,6 +40,7 @@ interface SidebarLinksProps {
 
 export default function SidebarLinks({
 	onOpenGallery,
+	isGalleryActive,
 	onOpenBestiary,
 	onOpenSpells,
 	onOpenRulesReference,
@@ -59,6 +66,8 @@ export default function SidebarLinks({
 			<SidebarLink
 				icon="image"
 				label={lang.t("Gallery")}
+				href="/gallery"
+				active={isGalleryActive}
 				onClick={onOpenGallery}
 			/>
 		</div>

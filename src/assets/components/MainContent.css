@@ -21,7 +21,7 @@
 
 @media (max-width: 767px) {
  :root { --content-padding: var(--space-5); }
- .WorkspaceHeader { flex-basis: 64px; padding: var(--space-5); padding-left: 54px; }
+ .WorkspaceHeader { flex-basis: 64px; padding: var(--space-5); padding-left: calc(var(--size-10) + var(--space-0-5)); }
  .WorkspaceHeader__brand { display: block; font-weight: 700; font-size: 16px; }
  .WorkspaceHeader__breadcrumbs, .WorkspaceHeader__storage { display: none; }
  .CampaignView > .Panel__header, .SessionView > .Panel__header { flex-wrap: wrap; }

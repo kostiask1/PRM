@@ -5,6 +5,8 @@ const FIELD_LABELS: Record<string, string> = {
 	lastName: "Last name",
 	hit_points: "HP",
 	armor_class: "AC",
+	hp: "HP",
+	ac: "AC",
 	currentHp: "Current HP",
 	imageUrl: "Image",
 };

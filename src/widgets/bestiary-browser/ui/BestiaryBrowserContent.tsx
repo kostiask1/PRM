@@ -9,6 +9,7 @@ export interface BestiaryBrowserContentProps
 	canExport: boolean;
 	canRedo: boolean;
 	canUndo: boolean;
+	onCreate: () => void;
 	onExport: () => void;
 	onImport: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
 	onRedo: () => Promise<void>;
@@ -19,6 +20,7 @@ export function BestiaryBrowserContent({
 	canExport,
 	canRedo,
 	canUndo,
+	onCreate,
 	onExport,
 	onImport,
 	onRedo,
@@ -33,6 +35,7 @@ export function BestiaryBrowserContent({
 					canExport={canExport}
 					canRedo={canRedo}
 					canUndo={canUndo}
+					onCreate={onCreate}
 					onExport={onExport}
 					onImport={onImport}
 					onRedo={onRedo}

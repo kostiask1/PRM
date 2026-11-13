@@ -30,6 +30,7 @@ export {
 	createEmptyNote,
 	getNoteRenderKey,
 	getNoteListLabel,
+	getNoteListPreview,
 	getNotesForRender,
 	isNoteEmpty,
 	isVirtualNoteId,

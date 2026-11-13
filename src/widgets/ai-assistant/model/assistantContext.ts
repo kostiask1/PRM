@@ -68,7 +68,10 @@ function getAiAssistantRoute(
 			? "bestiary"
 			: navigation.activeCampaignSlug || "",
 		session: navigation.activeSessionFileName,
-		encounter: navigation.activeEncounterId,
+		encounter:
+			navigation.activeSessionFileName && navigation.activeEncounterId === 0
+				? "0"
+				: navigation.activeEncounterId,
 	};
 }
 

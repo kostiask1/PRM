@@ -82,6 +82,8 @@ export function BestiaryToolbar({
 						variant={isDetailedSearch ? "primary" : "ghost"}
 						icon="search-detailed"
 						onClick={() => setIsDetailedSearch((value) => !value)}
+						aria-label={lang.t("Detailed search")}
+						aria-pressed={isDetailedSearch}
 						title={lang.t("Detailed search")}
 						className="DetailedSearchButton Bestiary__detailed_search_btn"
 					/>
@@ -91,6 +93,8 @@ export function BestiaryToolbar({
 				variant={onlyFavorites ? "primary" : "ghost"}
 				icon="star"
 				onClick={() => setOnlyFavorites(!onlyFavorites)}
+				aria-label={lang.t("Only favorites")}
+				aria-pressed={onlyFavorites}
 				title={lang.t("Only favorites")}
 			/>
 			<Button

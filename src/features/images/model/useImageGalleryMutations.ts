@@ -166,11 +166,12 @@ export function useImageGalleryMutations({
 						file,
 					);
 				}
-				void loadImages();
-				void loadStorageStats();
 			} catch (error) {
 				console.error("Upload failed:", error);
+				showAlert({ title: lang.t("Error"), message: getErrorMessage(error) });
 			} finally {
+				void loadImages();
+				void loadStorageStats();
 				setLoading(false);
 			}
 		},
@@ -182,6 +183,7 @@ export function useImageGalleryMutations({
 			selectedSource,
 			selectedSub,
 			setLoading,
+			showAlert,
 		],
 	);
 

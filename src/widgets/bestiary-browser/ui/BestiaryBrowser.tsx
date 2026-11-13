@@ -38,7 +38,7 @@ export interface BestiaryBrowserProps {
 	MonsterEditorModal: ComponentType<
 		Pick<
 			MonsterFieldEditModalProps,
-			"editingMonster" | "onCancel" | "onSave"
+			"editingMonster" | "title" | "onCancel" | "onSave"
 		>
 	>;
 	onAddMonster?: ((monster: BestiaryMonster) => void) | null;
@@ -147,10 +147,13 @@ export default function BestiaryBrowser({
 	const {
 		closeEditCustomMonster,
 		fieldEditingMonster,
+		fieldEditingMode,
+		isCreatingBlankMonster,
 		handleDeleteCustomMonster,
 		handleExportCustomMonsters,
 		handleImportCustomMonsters,
 		openEditMonster,
+		openCreateMonster,
 		saveEditedCustomMonster,
 	} = useBestiaryCustomMonsterEditing({
 		customMonsters,
@@ -285,6 +288,7 @@ export default function BestiaryBrowser({
 				canExport={customMonsters.length > 0}
 				canRedo={redoStack.length > 0}
 				canUndo={undoStack.length > 0}
+				onCreate={openCreateMonster}
 				displayedMonsters={displayedMonsters}
 				favorites={favorites}
 				hideSearchInput={hideSearchInput}
@@ -338,6 +342,8 @@ export default function BestiaryBrowser({
 				aiEditMode={aiEditMode}
 				aiModels={aiModels}
 				fieldEditingMonster={fieldEditingMonster}
+				fieldEditingMode={fieldEditingMode}
+				isCreatingBlankMonster={isCreatingBlankMonster}
 				getDiffResourceState={getDiffResourceState}
 				getHistoryChangeSummary={getHistoryChangeSummary}
 				isAiEditingMonster={isAiEditingMonster}

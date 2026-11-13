@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
 	CardNoteModel,
 	type CardEntity,
@@ -9,16 +9,17 @@ import {
 	createNoteCardComponent,
 	getAiIgnoredNoteListProps,
 } from "../../../features/notes/ui/index.js";
-import { renderMentionText } from "../../../features/entity-link/index.js";
-import { makeDomId, sanitizeNotesForSave } from "../../../shared/lib/index.js";
-import { DraggableList } from "../../../shared/ui/index.js";
+import { EntityLinkedListItem, renderMentionText } from "../../../features/entity-link/index.js";
+import { getNoteListLabel, getNoteListPreview, lang, makeDomId, sanitizeNotesForSave } from "../../../shared/lib/index.js";
+import { DraggableList, useHashItemSelection } from "../../../shared/ui/index.js";
+import "../../../assets/components/CampaignEntitySection.css";
 import {
 	getCampaignNoteHighlightFields,
 	setCampaignNoteAiIgnored,
 	type CampaignCardEntityId,
 	type CampaignEntityHighlightFields,
 } from "../model/campaignEntityCard.ts";
-import { makeHistoryTargetId } from "../../../entities/history/index.js";
+import { makeHistoryTargetId, matchesHistoryTargetId } from "../../../entities/history/index.js";
 
 const CampaignEntityNoteCard = createNoteCardComponent({
 	EditableField,
@@ -55,14 +56,26 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 	onReorderDrop,
 }: CampaignEntityCardNotesProps<Entity>) {
 	const updateNotes = (notes: CardNote[]) => onChange(entityId, model.withField("notes", notes));
+	const highlightedId = notesForRender.find((note) => getCampaignNoteHighlightFields(highlightFields, note)?.length)?.id;
+	const highlightedSelection = useMemo(() => highlightedId == null ? null : { id: highlightedId }, [entityId, highlightedId]);
+	const { selected, setSelectedKey } = useHashItemSelection(
+		notesForRender,
+		(note) => String(note.id),
+		(note, hash) => matchesHistoryTargetId(hash, historyScope, `${historyKind}-note`, entityId, note.id) || hash === `#${makeDomId("campaign", "entity", entityId, "note", note.id)}`,
+		(note, key) => note._renderKey != null && String(note._renderKey) === key,
+		highlightedSelection,
+	);
 	return (
 		<div className={`${classPrefix}__notes`}>
 			<div className={`${classPrefix}__notesHeader`}>
 				<label>{label}</label>
 			</div>
+			<div className="CampaignEntitySection__workspace">
 				<DraggableList<CardNote>
 					items={notesForRender}
-					className={`${classPrefix}__notesList NoteCardList`}
+					className={`${classPrefix}__notesList CampaignEntitySection__list NoteSelectionList`}
+					keyboardReorder
+					getKeyboardReorderLabel={(note) => lang.t("Reorder note: {name} (arrow keys)", { name: getNoteListLabel(note) || lang.t("New note") })}
 					onReorder={(notes) =>
 						onChange(
 							entityId,
@@ -71,7 +84,13 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 					}
 					onDrop={onReorderDrop}
 					{...getAiIgnoredNoteListProps((noteId, ignored) => updateNotes(setCampaignNoteAiIgnored(model.notes, noteId, ignored)))}
-					renderItem={(note, _isDragging, index) => (
+					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); const changed = Boolean(getCampaignNoteHighlightFields(highlightFields, note)?.length); return <EntityLinkedListItem text={preview.text || label} label={changed ? `${label} — ${lang.t("Changed")}` : label} maxLength={preview.maxLength} selected={note === selected} changed={changed} onSelect={() => setSelectedKey(String(note.id))} />; }}
+				/>
+				<div className="CampaignEntitySection__detail">
+					{selected && (() => {
+						const note = selected;
+						const index = notesForRender.indexOf(note);
+						return (
 						<div
 							id={makeDomId("campaign", "entity", entityId, "note", note.id)}
 							data-history-focus-id={makeHistoryTargetId(
@@ -94,8 +113,10 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 							highlightFields={getCampaignNoteHighlightFields(highlightFields, note)}
 						/>
 						</div>
-					)}
-				/>
+						);
+					})()}
+				</div>
+			</div>
 		</div>
 	);
 }

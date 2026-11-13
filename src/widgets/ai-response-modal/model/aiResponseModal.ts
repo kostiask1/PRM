@@ -61,6 +61,26 @@ export function formatFieldValue(value: unknown): string {
 	return JSON.stringify(value, null, 2);
 }
 
+export function formatComparisonFieldValue(field: string | undefined, value: unknown): string {
+	if (field === "hp" && isObjectSnapshot(value)) {
+		const keys = Object.keys(value);
+		if (keys.every((key) => key === "average" || key === "formula") && typeof value.average === "number" && (value.formula === undefined || (typeof value.formula === "string" && value.formula.length > 0))) {
+			return value.formula === undefined ? String(value.average) : `${value.average} (${value.formula})`;
+		}
+	}
+	if (field === "ac" && Array.isArray(value) && value.length === 1) {
+		const entry = value[0];
+		if (typeof entry === "number") return String(entry);
+		if (isObjectSnapshot(entry) && Object.keys(entry).every((key) => key === "ac" || key === "from") && typeof entry.ac === "number") {
+			if (entry.from === undefined) return String(entry.ac);
+			if (Array.isArray(entry.from) && entry.from.length > 0 && entry.from.every((source) => typeof source === "string" && source.length > 0)) {
+				return `${entry.ac} (${entry.from.join(", ")})`;
+			}
+		}
+	}
+	return formatFieldValue(value);
+}
+
 const PREVIEW_IGNORED_KEYS = new Set(["id", "slug", "source", "createdAt"]);
 const CARD_IGNORED_KEYS = new Set([
 	...PREVIEW_IGNORED_KEYS,
@@ -267,7 +287,7 @@ export function encounterMonsterStatsChanged(before: unknown, after: unknown): b
 
 export function getNoteDiffKey(note: unknown, index: number): string {
 	if (isObjectSnapshot(note)) {
-		const id = String(note.id || "").trim();
+		const id = String(note.id ?? "").trim();
 		if (id) return `id:${id}`;
 		const signature = `${String(note.title || "").trim()}\n${String(note.text || "").trim()}`;
 		if (signature.trim()) return `content:${signature}`;
@@ -295,7 +315,7 @@ export function buildNoteHighlightMap(
 				),
 		);
 		if (changedFields.length === 0 || !isObjectSnapshot(note)) return;
-		const id = String(note.id || "").trim();
+		const id = String(note.id ?? "").trim();
 		if (id) highlights[id] = changedFields;
 		const title = String(note.title || "").trim();
 		if (title) highlights[title] = changedFields;
@@ -336,36 +356,16 @@ export const isResourceApplied = (resource: PreviewResource): boolean =>
 export const isResourceUndone = (resource: PreviewResource): boolean =>
 	resource?.applyState === "undone";
 
-function listItemMatches(
-	item: unknown,
-	originalItem: unknown,
-	itemIndex: number,
-	index: number | null,
-): boolean {
-	if (Number.isInteger(index) && itemIndex === index) return true;
-	return listItemIdentityMatches(item, originalItem);
-}
-
-function matchingIdentity(
-	current: SnapshotRecord,
-	original: SnapshotRecord,
-	key: "id" | "instanceId",
-): boolean | null {
-	const currentValue = String(current[key] || "");
-	const originalValue = String(original[key] || "");
-	return currentValue.length > 0 && originalValue.length > 0
-		? currentValue === originalValue
-		: null;
-}
-
-function listItemIdentityMatches(item: unknown, originalItem: unknown): boolean {
-	const itemRecord = isObjectSnapshot(item) ? item : {};
+function findListItemIndex(list: unknown[], originalItem: unknown, index: number | null): number {
 	const original = isObjectSnapshot(originalItem) ? originalItem : {};
-	const idMatches = matchingIdentity(itemRecord, original, "id");
-	if (idMatches !== null) return idMatches;
-	const instanceIdMatches = matchingIdentity(itemRecord, original, "instanceId");
-	if (instanceIdMatches !== null) return instanceIdMatches;
-	return snapshotsEqual(item, originalItem);
+	for (const key of ["id", "instanceId"] as const) {
+		const originalValue = original[key];
+		if (originalValue === null || originalValue === undefined || String(originalValue) === "") continue;
+		const match = list.findIndex((item) => isObjectSnapshot(item) && item[key] !== null && item[key] !== undefined && String(item[key]) === String(originalValue));
+		return match;
+	}
+	if (Number.isInteger(index) && index !== null && index >= 0 && index < list.length) return index;
+	return list.findIndex((item) => snapshotsEqual(item, originalItem));
 }
 
 export function findEditedListItem(
@@ -373,9 +373,8 @@ export function findEditedListItem(
 	originalItem: unknown,
 	index: number | null = null,
 ): unknown {
-	return (Array.isArray(list) ? list : []).find((item, itemIndex) =>
-		listItemMatches(item, originalItem, itemIndex, index),
-	);
+	const items = Array.isArray(list) ? list : [];
+	return items[findListItemIndex(items, originalItem, index)];
 }
 
 export function findDraftResourceForPreview(
@@ -472,9 +471,9 @@ export function replaceItemInList(
 	nextItem: unknown,
 	index: number | null = null,
 ): unknown[] {
-	return (Array.isArray(list) ? list : []).map((item, itemIndex) =>
-		listItemMatches(item, beforeItem, itemIndex, index) ? nextItem : item,
-	);
+	const items = Array.isArray(list) ? list : [];
+	const targetIndex = findListItemIndex(items, beforeItem, index);
+	return items.map((item, itemIndex) => itemIndex === targetIndex ? nextItem : item);
 }
 
 function updateSessionDraftAfter(

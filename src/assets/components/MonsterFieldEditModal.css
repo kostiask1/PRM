@@ -14,7 +14,7 @@
 	gap: var(--space-4);
 	max-height: 72vh;
 	overflow: auto;
-	padding-right: 2px;
+	padding-right: var(--space-0-5);
 }
 
 .MonsterFieldEditModal__mode_switch {
@@ -44,7 +44,7 @@
 }
 
 .MonsterFieldEditModal__name_row .MonsterFieldEditModal__field {
-	gap: 0;
+	gap: var(--space-0);
 }
 
 .MonsterFieldEditModal__name_row .MonsterFieldEditModal__field_label {
@@ -726,7 +726,7 @@
 
 .MonsterFieldEditModal__actions {
 	display: grid;
-	gap: 0;
+	gap: var(--space-0);
 }
 
 .MonsterFieldEditModal__action_section {
@@ -884,7 +884,7 @@
 	}
 
 	.MonsterFieldEditModal__ability_field {
-		padding: var(--space-1) 2px;
+		padding: var(--space-1) var(--space-0-5);
 	}
 
 	.MonsterFieldEditModal__ability_label {
@@ -898,7 +898,7 @@
 	.MonsterFieldEditModal__ability_input.Input {
 		width: min(46px, 100%);
 		min-height: 28px;
-		padding-inline: 1px;
+		padding-inline: var(--space-0-25);
 		font-size: 0.7rem;
 	}
 

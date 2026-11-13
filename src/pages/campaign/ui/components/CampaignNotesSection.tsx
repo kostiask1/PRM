@@ -6,12 +6,13 @@ import {
 	getAiIgnoredNoteListProps,
 } from "../../../../features/notes/ui/index.js";
 import { EditableField } from "../../../../features/editor/ui/index.js";
-import { renderMentionText } from "../../../../features/entity-link/index.js";
+import { EntityLinkedListItem, renderMentionText } from "../../../../features/entity-link/index.js";
 import type { DomainId } from "../../../../entities/campaign/index.js";
 import { makeHistoryTargetId, matchesHistoryTargetId } from "../../../../entities/history/index.js";
 import {
 	getNotesForRender,
 	getNoteListLabel,
+	getNoteListPreview,
 	lang,
 	makeDomId,
 } from "../../../../shared/lib/index.js";
@@ -60,7 +61,7 @@ function CampaignNotesList({
 			{...getAiIgnoredNoteListProps(onToggleIgnored, {
 				isolateDragEvents: false,
 			})}
-			renderItem={(note) => <button type="button" className="CampaignEntitySection__item" aria-pressed={note === selected} onClick={() => setSelectedKey(String(note.id))}><span>{getNoteListLabel(note) || lang.t("New note")}</span></button>}
+			renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); return <EntityLinkedListItem text={preview.text || label} label={label} maxLength={preview.maxLength} selected={note === selected} onSelect={() => setSelectedKey(String(note.id))} />; }}
 		/>
 		<div className="CampaignEntitySection__detail">
 			{selected && (() => {

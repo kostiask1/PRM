@@ -15,8 +15,8 @@ interface EncounterPersistenceOptions {
 	campaignSlug: string;
 	sessionId: string;
 	encounterId: SessionDomainId;
-	onSaved?: (result: EncounterUpdateResult) => void;
-	onError?: (error: unknown) => void;
+	onSaved?: (result: EncounterUpdateResult, hasNewer: boolean) => void;
+	onError?: (error: unknown, encounter: EncounterEditorState, hasNewer: boolean) => void;
 }
 
 export interface EncounterPersistence {
@@ -38,6 +38,9 @@ export function useEncounterPersistence({
 	const [isSaving, setIsSaving] = useState(false);
 	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const pendingEncounterRef = useRef<EncounterEditorState | null>(null);
+	const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+	const queuedCountRef = useRef(0);
+	const lastSaveFailureRef = useRef<{ error: unknown } | null>(null);
 
 	const clearTimer = useCallback(() => {
 		if (!saveTimeoutRef.current) return;
@@ -53,24 +56,31 @@ export function useEncounterPersistence({
 			clearTimer();
 			const pendingEncounter = pendingEncounterRef.current;
 			pendingEncounterRef.current = null;
-			if (!pendingEncounter) return null;
-			if (updateUi) setIsSaving(true);
-			try {
-				const result = await sessionApi.updateEncounter(
-					campaignSlug,
-					sessionId,
-					encounterId,
-					pendingEncounter,
-				);
-				if (result) onSaved?.(result);
-				return result;
-			} catch (error) {
-				onError?.(error);
-				if (throwOnError) throw error;
+			if (!pendingEncounter) {
+				await saveQueueRef.current;
+				if (throwOnError && lastSaveFailureRef.current) throw lastSaveFailureRef.current.error;
 				return null;
-			} finally {
-				if (updateUi) setIsSaving(false);
 			}
+			queuedCountRef.current += 1;
+			if (updateUi) setIsSaving(true);
+			const save = saveQueueRef.current.then(async () => {
+				try {
+					const result = await sessionApi.updateEncounter(campaignSlug, sessionId, encounterId, pendingEncounter);
+					lastSaveFailureRef.current = null;
+					if (result) onSaved?.(result, queuedCountRef.current > 1 || Boolean(pendingEncounterRef.current));
+					return result;
+				} catch (error) {
+					lastSaveFailureRef.current = { error };
+					onError?.(error, pendingEncounter, queuedCountRef.current > 1 || Boolean(pendingEncounterRef.current));
+					if (throwOnError) throw error;
+					return null;
+				} finally {
+					queuedCountRef.current -= 1;
+					if (updateUi && queuedCountRef.current === 0 && !pendingEncounterRef.current) setIsSaving(false);
+				}
+			});
+			saveQueueRef.current = save.catch(() => null);
+			return save;
 		},
 		[campaignSlug, clearTimer, encounterId, onError, onSaved, sessionId],
 	);
@@ -90,7 +100,7 @@ export function useEncounterPersistence({
 	);
 
 	const hasPendingSave = useCallback(
-		() => Boolean(saveTimeoutRef.current || pendingEncounterRef.current),
+		() => Boolean(saveTimeoutRef.current || pendingEncounterRef.current || queuedCountRef.current),
 		[],
 	);
 

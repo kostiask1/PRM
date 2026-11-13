@@ -1,7 +1,7 @@
 import "../../../assets/components/ImageGallery.css";
 
 import type { ImageAsset } from "../api/imageApi.ts";
-import { ImageGalleryView } from "./ImageGalleryView.tsx";
+import { ImageGalleryView, ImageGalleryWorkspaceView } from "./ImageGalleryView.tsx";
 import { useImageGalleryUiController } from "./useImageGalleryUiController.ts";
 
 export interface ImageGalleryProps {
@@ -39,3 +39,8 @@ function ImageGallery({
 }
 
 export default ImageGallery;
+
+export function ImageGalleryWorkspace() {
+	const controller = useImageGalleryUiController({ isOpen: true, isSelectionMode: false });
+	return <ImageGalleryWorkspaceView controller={controller} />;
+}

@@ -20,9 +20,10 @@
     padding: var(--space-2) var(--space-4);
     gap: var(--space-3);
     min-height: 60px;
-    cursor: pointer;
     background: color-mix(in srgb, var(--text-bright), transparent 98%);
 }
+
+.CharacterCard__header:has(> .CollapseToggleButton) { cursor: pointer; }
 
 .CharacterCard.is_collapsed .CharacterCard__header {
     background: unset;
@@ -266,7 +267,7 @@
     font-size: 0.8rem;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 6px;
+    margin-bottom: var(--space-1-5);
 }
 
 .CharacterCard__body .CharacterCard__field {
@@ -283,13 +284,12 @@
 
 .CharacterCard__notesHeader {
     display: flex;
-    cursor: pointer;
     align-items: center;
     width: 100%;
     gap: var(--space-3);
     padding-bottom: var(--space-2);
     border-bottom: 1px solid var(--border);
-    margin-bottom: 10px;
+    margin-bottom: var(--space-2-5);
 }
 
 .CharacterCard__notes label {
@@ -297,7 +297,6 @@
     font-size: 0.8rem;
     width: 100%;
     text-transform: uppercase;
-    cursor: pointer;
     color: var(--muted);
 }
 
@@ -348,14 +347,6 @@
     flex-direction: column;
     flex-grow: 1;
     gap: var(--space-2);
-}
-
-.CharacterCard__notesList > div:last-child {
-    flex-grow: 1;
-}
-
-.CharacterCard__notesList .NoteCard {
-    height: 100%;
 }
 
 .CharacterCard__modal {

@@ -4,7 +4,7 @@
 	gap: var(--space-3);
 	color: var(--muted);
 	font-size: 0.82rem;
-	margin-bottom: 6px;
+	margin-bottom: var(--space-1-5);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
@@ -12,7 +12,7 @@
 .SessionChecklistOverlay__progressWrap {
 	display: grid;
 	gap: var(--space-1);
-	margin-bottom: 40px;
+	margin-bottom: var(--size-9);
 }
 
 .SessionChecklistOverlay__modal {
