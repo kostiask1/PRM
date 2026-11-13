@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
 	CardNoteModel,
 	type CardEntity,
@@ -11,7 +11,7 @@ import {
 } from "../../../features/notes/ui/index.js";
 import { EntityLinkedListItem, renderMentionText } from "../../../features/entity-link/index.js";
 import { getNoteListLabel, getNoteListPreview, lang, makeDomId, sanitizeNotesForSave } from "../../../shared/lib/index.js";
-import { DraggableList, useHashItemSelection } from "../../../shared/ui/index.js";
+import { Button, DraggableList, useHashItemSelection } from "../../../shared/ui/index.js";
 import "../../../assets/components/CampaignEntitySection.css";
 import {
 	getCampaignNoteHighlightFields,
@@ -55,6 +55,9 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 	onChange,
 	onReorderDrop,
 }: CampaignEntityCardNotesProps<Entity>) {
+	const [showAll, setShowAll] = useState(true);
+	const detailRef = useRef<HTMLDivElement>(null);
+	const stream = historyKind !== "character" && showAll;
 	const updateNotes = (notes: CardNote[]) => onChange(entityId, model.withField("notes", notes));
 	const highlightedId = notesForRender.find((note) => getCampaignNoteHighlightFields(highlightFields, note)?.length)?.id;
 	const highlightedSelection = useMemo(() => highlightedId == null ? null : { id: highlightedId }, [entityId, highlightedId]);
@@ -69,6 +72,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 		<div className={`${classPrefix}__notes`}>
 			<div className={`${classPrefix}__notesHeader`}>
 				<label>{label}</label>
+				{historyKind !== "character" && <Button variant="ghost" size="sm" onClick={() => setShowAll((value) => !value)}>{lang.t(showAll ? "Show one item" : "Show all items")}</Button>}
 			</div>
 			<div className="CampaignEntitySection__workspace">
 				<DraggableList<CardNote>
@@ -84,14 +88,19 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 					}
 					onDrop={onReorderDrop}
 					{...getAiIgnoredNoteListProps((noteId, ignored) => updateNotes(setCampaignNoteAiIgnored(model.notes, noteId, ignored)))}
-					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); const changed = Boolean(getCampaignNoteHighlightFields(highlightFields, note)?.length); return <EntityLinkedListItem text={preview.text || label} label={changed ? `${label} — ${lang.t("Changed")}` : label} maxLength={preview.maxLength} selected={note === selected} changed={changed} onSelect={() => setSelectedKey(String(note.id))} />; }}
+					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); const changed = Boolean(getCampaignNoteHighlightFields(highlightFields, note)?.length); return <EntityLinkedListItem text={preview.text || label} label={changed ? `${label} — ${lang.t("Changed")}` : label} maxLength={preview.maxLength} selected={note === selected} changed={changed} onSelect={() => { setSelectedKey(String(note.id)); if (stream) detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-note-index]")[notesForRender.indexOf(note)]?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }} />; }}
 				/>
-				<div className="CampaignEntitySection__detail">
-					{selected && (() => {
-						const note = selected;
+				<div ref={detailRef} className={`CampaignEntitySection__detail${stream ? " CampaignEntitySection__detail_stream" : ""}`} onScroll={(event) => {
+					if (!stream) return;
+					const top = event.currentTarget.getBoundingClientRect().top;
+					const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(":scope > [data-note-index]"));
+					const active = cards.reduce<HTMLElement | null>((current, card) => card.getBoundingClientRect().top <= top + 24 ? card : current, cards[0] || null);
+					if (active) setSelectedKey(String(notesForRender[Number(active.dataset.noteIndex)]?.id));
+				}}>
+					{(stream ? notesForRender : selected ? [selected] : []).map((note) => {
 						const index = notesForRender.indexOf(note);
 						return (
-						<div
+						<div key={String(note.id)} data-note-index={index}
 							id={makeDomId("campaign", "entity", entityId, "note", note.id)}
 							data-history-focus-id={makeHistoryTargetId(
 								historyScope,
@@ -114,7 +123,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 						/>
 						</div>
 						);
-					})()}
+					})}
 				</div>
 			</div>
 		</div>

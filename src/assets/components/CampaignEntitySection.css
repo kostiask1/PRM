@@ -115,3 +115,8 @@
 	.CampaignEntitySection__workspace { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
 	:is(.CampaignEntitySection__list, .NoteSelectionList) { max-height: 30dvh; overflow-y: auto; }
 }
+
+.CampaignEntitySection__detail_stream { max-height: 65dvh; overflow-y: auto; display: grid; gap: var(--space-4); }
+
+
+:is(.CharacterCard__notes, .LocationCard__notes) .CampaignEntitySection__detail_stream { max-height: 400px; }
