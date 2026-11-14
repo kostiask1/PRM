@@ -36,7 +36,7 @@ export default function CampaignHeader({
 	return (
 		<div className="Panel__header">
 			<div className="CampaignHeader">
-				<p className="WorkspaceEyebrow">{lang.t("Campaign")} / DUNGEONS &amp; DRAGONS 5E</p>
+				{/* <p className="WorkspaceEyebrow">{lang.t("Campaign")} / DUNGEONS &amp; DRAGONS 5E</p> */}
 				<Tooltip content={lang.t("Click to rename")}>
 					<h2 className="editable_title" onClick={view.handleRename}>
 						{viewModel.name}

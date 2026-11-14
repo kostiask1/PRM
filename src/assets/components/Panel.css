@@ -16,7 +16,7 @@
  gap: var(--space-6);
  align-items: flex-start;
  position: relative;
- padding: var(--space-6);
+ padding: var(--space-3) var(--space-6);
  border-bottom: 1px solid var(--border);
  background: var(--panel);
  flex-shrink: 0;

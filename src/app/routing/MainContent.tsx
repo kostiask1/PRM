@@ -74,7 +74,7 @@ function MainContentLayout({
 	return (
 		<main className={classNames("MainContent", className)}>
 			<AiAssistantRuntimeHost>
-				<WorkspaceHeader />
+				{/* <WorkspaceHeader /> */}
 				<BestiaryBrowserRuntimeHost>
 					<CampaignSearchRuntimeHost>
 						<Outlet />

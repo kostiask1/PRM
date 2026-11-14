@@ -15,7 +15,6 @@ export default function WorkspaceHeader() {
 				<span aria-hidden="true">/</span>
 				<span className="WorkspaceHeader__current">{campaignName || lang.t("Campaigns")}</span>
 			</nav>
-			<span className="WorkspaceHeader__storage">{lang.t("Local workspace")}</span>
 		</header>
 	);
 }
