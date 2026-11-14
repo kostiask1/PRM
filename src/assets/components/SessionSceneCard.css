@@ -141,8 +141,11 @@
 }
 
 .SessionSceneCard__notesHeader {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
+	width: 100%;
+	min-width: 0;
 	gap: var(--space-3);
 }
 

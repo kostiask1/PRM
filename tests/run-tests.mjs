@@ -5386,15 +5386,8 @@ await run(
 				"function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {",
 				"const view = useCampaignView({ campaign });",
 				"const {",
-				"hasDescriptionData,",
-				"isDescriptionCollapsed,",
 				"const {",
 				"} = useCampaignNotesControls({",
-				"const toggleCampaignDescription = () => {",
-				"if (!hasDescriptionData) return;",
-				"const next = !isDescriptionCollapsed;",
-				"view.setIsDescriptionCollapsed(next);",
-				"view.triggerSave({ isDescriptionCollapsed: next });",
 				"const renderCampaignDescriptionEditor = () => (",
 				"<EditableField",
 				'type="textarea"',
@@ -5404,13 +5397,10 @@ await run(
 				"value={view.description}",
 				"onChange={view.handleDescriptionChange}",
 				"<CampaignDescriptionSection",
-				"hasData={hasDescriptionData}",
-				"isCollapsed={isDescriptionCollapsed}",
-				"onToggle={toggleCampaignDescription}",
 				"renderEditor={renderCampaignDescriptionEditor}",
 				"<CampaignNotesSection",
 			],
-			"Campaign raw description state, save order, and expanded-only editor ownership",
+			"Campaign description editor ownership",
 		);
 		assert.doesNotMatch(
 			campaignSource,
@@ -5424,26 +5414,15 @@ await run(
 			sectionSource,
 			[
 				'import type { ReactNode } from "react";',
-				'import { Button, CollapseToggleButton } from "../../../../shared/ui/index.js";',
 				'import { lang, makeDomId } from "../../../../shared/lib/index.js";',
 				"interface CampaignDescriptionSectionProps {",
-				"hasData: boolean;",
-				"isCollapsed: boolean;",
-				"onToggle: () => void;",
 				"renderEditor: () => ReactNode;",
 				"export default function CampaignDescriptionSection({",
 				'"CampaignDescriptionSection"',
 				'id={makeDomId("campaign", "description")}',
 				'"CampaignDescriptionSection__row"',
-				'"CampaignDescriptionSection__titleGroup"',
-				"onClick={onToggle}",
-				"{hasData && (",
-				"<CollapseToggleButton",
-				"size={Button.SIZES.MEDIUM}",
-				"collapsed={isCollapsed}",
-				"onClick={onToggle}",
 				'{lang.t("Campaign story")}',
-				"{!isCollapsed && renderEditor()}",
+				"{renderEditor()}",
 			],
 			"Campaign private description-section chrome",
 		);
@@ -5451,6 +5430,7 @@ await run(
 			sectionSource,
 			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|CampaignViewController|\bview\b|triggerSave|setIsDescriptionCollapsed|handleDescriptionChange|EditableField|CampaignPageRuntime|campaignApi|app\/model|shared\/model/,
 		);
+		assert.doesNotMatch(sectionSource, /CollapseToggleButton|isCollapsed|onToggle/);
 	},
 );
 
@@ -5579,13 +5559,13 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sectionSource,
-			["interface CampaignEntitySectionProps {", "onReorder:", "onReorderDrop:", "export default function CampaignEntitySection({", "useHashItemSelection(", 'className="CampaignEntitySection__workspace"', "<DraggableList", "onReorder={onReorder}", "onDrop={onReorderDrop}", "renderItemControl={renderItemControl}", "setSelectedKey(", "renderItem(selected)"],
+			["interface CampaignEntitySectionProps {", "onReorder:", "onReorderDrop:", "export default function CampaignEntitySection({", "useHashItemSelection(", 'className="CampaignEntitySection__workspace"', "<DraggableList", "onReorder={onReorder}", "onDrop={onReorderDrop}", "renderItemControl={renderItemControl}", "setSelectedKey(", "items.map((item, index)", "renderItem(item)"],
 			"Campaign entity list, selection, and persistence boundaries",
 		);
 		assert.doesNotMatch(sectionSource, /CollapseToggleButton|BulkCollapseButton/);
 		assert.doesNotMatch(
 			sectionSource,
-			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|useCampaignPageRuntime|CampaignViewController|\bview\b|triggerSave|persistEntitiesReorder|setIs(?:Characters|Npcs|Locations)Collapsed|campaignApi|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+			/useState|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|useCampaignPageRuntime|CampaignViewController|\bview\b|triggerSave|persistEntitiesReorder|setIs(?:Characters|Npcs|Locations)Collapsed|campaignApi|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
 		);
 	},
 );
@@ -5711,7 +5691,7 @@ await run(
 		assertSourceTokensInOrder(
 			sectionSource,
 			[
-				'import type { ReactNode } from "react";',
+				'import { useRef, type ReactNode } from "react";',
 				"interface SessionScenesSectionProps {",
 				"onAddScene: () => void;",
 				"onReorder: (scenes: SessionScene[]) => void;",
@@ -5723,16 +5703,16 @@ await run(
 				'className="SessionWorkspace"',
 				'className="SessionWorkspace__outline"',
 				"<DraggableList items={scenes} onReorder={onReorder}",
-				"onClick={() => onOpenScene(scene)}",
-				'className="SessionWorkspace__editor"',
-				"renderScene(selectedScene)",
+				"onOpenScene(scene);",
+				'className="SessionWorkspace__editor SessionWorkspace__editor_stream"',
+				"renderScene(scene)",
 				'className="SessionWorkspace__reference"',
 			],
 			"Session scene workspace receives selection and mutations from its owner",
 		);
 		assert.doesNotMatch(
 			sectionSource,
-			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|SessionViewModel|SceneCard|SessionSceneItem|makeDomId|findIndex|updateData|handleScene|toggleSceneCollapse|removeScene|addScene|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+			/useState|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|SessionViewModel|SceneCard|SessionSceneItem|makeDomId|findIndex|updateData|handleScene|toggleSceneCollapse|removeScene|addScene|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
 		);
 	},
 );
@@ -5902,13 +5882,13 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sectionSource,
-			["interface SessionNotesSectionProps {", "onToggleAiIgnored:", "onReorder:", "renderItem:", "useHashItemSelection(", "<TodoSection", '<div className="CampaignEntitySection__workspace">', "<DraggableList", "items={renderableNotes}", "onReorder={onReorder}", "getAiIgnoredNoteListProps(onToggleAiIgnored", "setSelectedKey(", "renderItem(selected, false"],
+			["interface SessionNotesSectionProps {", "onToggleAiIgnored:", "onReorder:", "renderItem:", "useHashItemSelection(", "<TodoSection", '<div className="CampaignEntitySection__workspace">', "<DraggableList", "items={renderableNotes}", "onReorder={onReorder}", "getAiIgnoredNoteListProps(onToggleAiIgnored", "setSelectedKey(", "renderItem(note, false, index)"],
 			"Session note selection and persistence boundaries",
 		);
 		assert.doesNotMatch(sectionSource, /BulkCollapseButton|CollapseToggleButton/);
 		assert.doesNotMatch(
 			sectionSource,
-			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|updateData|sanitizeNotesForSave|getNoteRenderKey|SessionNoteCard|AiContextIgnoreButton|handleToggleSectionCollapse|toggleSessionNoteAiIgnored|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+			/useState|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|updateData|sanitizeNotesForSave|getNoteRenderKey|SessionNoteCard|AiContextIgnoreButton|handleToggleSectionCollapse|toggleSessionNoteAiIgnored|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
 		);
 		assertSourceTokensInOrder(
 			aiIgnoredListPropsSource,
@@ -6110,14 +6090,14 @@ await run(
 		);
 		assertSourceTokensInOrder(
 			sectionSource,
-			["interface SessionEntitySectionProps", "onReorder:", "onToggleAiIgnored:", "renderItem:", "useHashItemSelection(", "<TodoSection", "{actions}", "<DraggableList", "onReorder={onReorder}", "AiContextIgnoreButton", "onToggleAiIgnored(entity.id, ignored)", "setSelectedKey(", "renderItem(selected)"],
+			["interface SessionEntitySectionProps", "onReorder:", "onToggleAiIgnored:", "renderItem:", "useHashItemSelection(", "<TodoSection", "{actions}", "<DraggableList", "onReorder={onReorder}", "AiContextIgnoreButton", "onToggleAiIgnored(entity.id, ignored)", "setSelectedKey(", "renderItem(item)"],
 			"Session entity selection and persistence boundaries",
 		);
 		assert.doesNotMatch(sectionSource, /BulkCollapseButton|CollapseToggleButton/);
 		assert.doesNotMatch(sectionSource, /isolateDragEvents/);
 		assert.doesNotMatch(
 			sectionSource,
-			/useState|useRef|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|SessionViewModel|SessionEntityType|SessionPageEntity|CharacterCard|LocationCard|CreateCharacterButton|CreateLocationButton|<Button\b|updateData|handleSession|openCampaignScopeImport|moveSessionEntityToCampaign|toggleSessionEntityAiIgnored|handleBulkSessionEntitiesCollapse|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|widgets\/campaign-entity-card|features\/campaign-entity|\.\.\/model/,
+			/useState|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|SessionViewModel|SessionEntityType|SessionPageEntity|CharacterCard|LocationCard|CreateCharacterButton|CreateLocationButton|<Button\b|updateData|handleSession|openCampaignScopeImport|moveSessionEntityToCampaign|toggleSessionEntityAiIgnored|handleBulkSessionEntitiesCollapse|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model|widgets\/campaign-entity-card|features\/campaign-entity|\.\.\/model/,
 		);
 	},
 );
@@ -8258,7 +8238,7 @@ await run(
 		assert.doesNotMatch(sceneNotesSource, /CollapseToggleButton|onToggleNotesCollapse|scene\.isNotesCollapsed/);
 		assert.doesNotMatch(
 			sceneNotesSource,
-			/createNoteCardComponent|SessionNoteCard|useState|useEffect|useSessionView|useSessionPageRuntime|<Modal\b|handleScene|onSceneNoteTitleChange|onSceneNoteChange|onSceneNoteDelete/,
+			/createNoteCardComponent|SessionNoteCard|useEffect|useSessionView|useSessionPageRuntime|<Modal\b|handleScene|onSceneNoteTitleChange|onSceneNoteChange|onSceneNoteDelete/,
 		);
 	},
 );
@@ -27057,24 +27037,20 @@ await run("campaign page presentation narrows routes, sessions, and card notes",
 	assert.equal(hasCampaignNoteContent([{ title: "Нотатка" }]), true);
 	assert.deepEqual(
 		getCampaignSectionState({
-			description: "",
 			notes: [{ id: 1, title: "Нотатка" }],
 			characters: [],
 			npcs: [{ id: "npc-1" }],
 			locations: [],
-			isDescriptionCollapsed: true,
 			isNotesCollapsed: true,
 			isCharactersCollapsed: true,
 			isNpcsCollapsed: true,
 			isLocationsCollapsed: true,
 		}),
 		{
-			hasDescriptionData: false,
 			hasNotesData: true,
 			hasCharactersData: false,
 			hasNpcsData: true,
 			hasLocationsData: false,
-			isDescriptionCollapsed: false,
 			isNotesCollapsed: true,
 			isCharactersCollapsed: false,
 			isNpcsCollapsed: true,
@@ -37485,6 +37461,12 @@ await run("Campaign commands own lifecycle rename references and ordering", asyn
 	assert.deepEqual(updated.ignoreSourcesList, ["PHB", "XGE"]);
 	assert.equal(updated.simplifiedNotes, true);
 	assert.deepEqual(renames, [["demo", "renamed"]]);
+	campaigns.set("legacy-slug", { ...created, slug: "legacy-slug", name: "Інша назва" });
+	const settingsUpdate = await commands.update({ slug: "legacy-slug", patch: { showAllCardNotes: false } });
+	assert.equal(settingsUpdate.slug, "legacy-slug");
+	assert.equal(settingsUpdate.showAllCardNotes, false);
+	assert.equal(campaigns.has("legacy-slug"), true);
+
 	assert.deepEqual(await commands.getImageStatus({ slug: "renamed" }), {
 		hasImages: true,
 	});
@@ -42879,12 +42861,10 @@ await run("campaign view orchestration preserves state, sync, delete, and AI flo
 	});
 	assert.equal(projection.description, "Опис");
 	assert.equal(projection.notes, notes);
-	assert.equal(projection.isDescriptionCollapsed, true);
 	assert.equal(projection.isNotesCollapsed, false);
 	assert.deepEqual(getCampaignViewStateProjection({}), {
 		description: "",
 		notes: [],
-		isDescriptionCollapsed: false,
 		isNotesCollapsed: false,
 		isCharactersCollapsed: false,
 		isNpcsCollapsed: false,
@@ -53950,6 +53930,7 @@ await run(
 				encounterViewMode: "grid",
 				encounterGridColumns: 4,
 				simplifiedNotes: true,
+				showAllCardNotes: true,
 				aiBasePrompt: "",
 				imagePromptBasePrompt: "",
 				campaignAiBasePrompts: {
@@ -53974,6 +53955,9 @@ await run(
 				}),
 			});
 			const fallbacks = await storage.readSettings();
+			assert.equal(fallbacks.showAllCardNotes, true);
+			state.reset({ content: JSON.stringify({ ...fallbacks, showAllCardNotes: false }) });
+			assert.equal((await storage.readSettings()).showAllCardNotes, false);
 			assert.equal(fallbacks.language, "en");
 			assert.equal(fallbacks.theme, "light");
 			assert.equal(fallbacks.encounterViewMode, "single");

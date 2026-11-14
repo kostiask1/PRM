@@ -43,7 +43,7 @@ export type {
 
 export {
 	default as ImageGallery,
-	ImageGalleryWorkspace,
+	EmbeddedImageGallery,
 	type ImageGalleryProps,
 } from "./ui/ImageGallery.tsx";
 export {

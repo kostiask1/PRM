@@ -25,6 +25,8 @@ export interface SettingsGeneralViewProps {
 	availableLanguages: string[];
 	autoApplyAiChanges: boolean;
 	useSearchDebounce: boolean;
+	showAllCardNotes: boolean;
+	onCardNotesChange: (enabled: boolean) => void;
 	onThemeToggle: () => void;
 	onLanguageChange: (language: string) => void;
 	onAutoApplyAiChangesChange: (enabled: boolean) => void;
@@ -83,6 +85,8 @@ function SettingsGeneralGroup({
 	availableLanguages,
 	autoApplyAiChanges,
 	useSearchDebounce,
+	showAllCardNotes,
+	onCardNotesChange,
 	onThemeToggle,
 	onLanguageChange,
 	onAutoApplyAiChangesChange,
@@ -124,6 +128,7 @@ function SettingsGeneralGroup({
 				</Select>
 			</div>
 
+			<Switch checked={showAllCardNotes} onChange={onCardNotesChange} label={lang.t("Show all notes in cards and scenes")} />
 			<Switch
 				checked={useSearchDebounce}
 				onChange={onUseSearchDebounceChange}

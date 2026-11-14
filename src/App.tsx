@@ -10,6 +10,7 @@ import BestiaryBrowserRuntimeHost from "./app/ui/BestiaryBrowserRuntimeHost.tsx"
 import CampaignEntityCreationRuntimeHost from "./app/ui/CampaignEntityCreationRuntimeHost.tsx";
 import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
 import ImageGalleryRuntimeHost from "./app/ui/ImageGalleryRuntimeHost.tsx";
+import { ImageGallery } from "./features/images/index.js";
 import HistoryFocusRuntimeHost from "./app/ui/HistoryFocusRuntimeHost.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
 import MentionPickerModalHost from "./app/ui/MentionPickerModalHost.tsx";
@@ -66,6 +67,8 @@ import { useMobileSidebar } from "./app/model/useMobileSidebar.ts";
 import { useAppRuntimes } from "./app/model/useAppRuntimes.ts";
 import { useAppModifierKey } from "./app/model/useAppModifierKey.ts";
 import { useDicePanelRequest } from "./app/model/useDicePanelRequest.ts";
+import { setCardNotesViewMode } from "./app/model/cardNotesSetting.ts";
+import { useGalleryModal } from "./app/model/useGalleryModal.ts";
 
 const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 	EntityLinkContext,
@@ -78,6 +81,7 @@ export default function App() {
 	const { request: dicePanelRequest, openDicePanel } = useDicePanelRequest();
 	const location = useLocation();
 	const routerNavigate = useNavigate();
+	const { isOpen: isGalleryOpen, setOpen: setGalleryOpen } = useGalleryModal();
 	const isCTRLPressed = useAppModifierKey();
 	const {
 		dispatch,
@@ -88,6 +92,7 @@ export default function App() {
 		currentLanguage,
 		currentTheme,
 		simplifiedNotesEnabled,
+		showAllCardNotes,
 		syncEvent,
 		rulesReferenceRuntime,
 		aiAttachmentAlertRuntime,
@@ -150,6 +155,8 @@ export default function App() {
 					<SpellsBrowserRuntimeProvider runtime={spellsBrowserRuntime}>
 					<SimplifiedNotesProvider
 						simplifiedNotesEnabled={simplifiedNotesEnabled}
+						showAllCardNotes={showAllCardNotes}
+						onShowAllCardNotesChange={setCardNotesViewMode}
 				>
 						<EditableFieldEntityLinkProvider
 							runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
@@ -189,10 +196,10 @@ export default function App() {
 							campaigns={campaigns}
 							activeCampaignId={activeCampaignSlug}
 							isMobileOpen={isMobileSidebarOpen}
-							isGalleryActive={location.pathname === "/gallery"}
+							isGalleryActive={isGalleryOpen}
 							onOpenGallery={() => {
 								setMobileSidebarOpen(false);
-								routerNavigate("/gallery");
+								setGalleryOpen(true);
 							}}
 							onOpenDiceCalculator={() => {
 								setMobileSidebarOpen(false);
@@ -210,6 +217,7 @@ export default function App() {
 							onToggleCampaignStatus={handleToggleCampaignStatus}
 						/>
 						<MainContent />
+						{isGalleryOpen && <ImageGallery isOpen onClose={() => setGalleryOpen(false)} />}
 
 						{modalState.config && (
 							<Modal

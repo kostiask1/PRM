@@ -6,18 +6,13 @@
 	overflow: hidden;
 }
 
-.ImageGalleryWorkspace {
-	display: flex;
-	flex: 1 1 auto;
-	flex-direction: column;
-	min-height: 0;
-	gap: var(--space-4);
-	padding: var(--content-padding);
+.ImageGallery__embedded {
+	height: clamp(520px, 68dvh, 900px);
+	min-width: 0;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	overflow: hidden;
 }
-
-.ImageGalleryWorkspace__heading h1 { margin: 0; }
-.ImageGalleryWorkspace__heading p { margin: var(--space-1) 0 0; color: var(--muted); }
-.ImageGalleryWorkspace > .ImageGallery { flex: 1 1 auto; min-height: 0; height: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
 .Modal__body:has(.ImageGallery) {
 	flex-grow: 1;
@@ -146,6 +141,7 @@
 }
 
 .ImageGallery__searchArea {
+	position: relative;
 	flex: 1 1 440px;
 	min-width: 0;
 	display: grid;
@@ -159,12 +155,18 @@
 }
 
 .ImageGallery__searchScopes {
+	position: absolute;
+	top: calc(100% + var(--space-2));
+	right: 0;
+	z-index: 3;
+	width: min(440px, 100%);
 	display: grid;
 	gap: var(--space-2);
 	padding: var(--space-3);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
 	background: var(--panel);
+	box-shadow: var(--shadow);
 }
 
 .ImageGallery__searchScopesLabel {
@@ -243,6 +245,8 @@
 }
 
 .ImageGallery__toolbar {
+	position: relative;
+	z-index: 2;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -754,10 +758,7 @@
 
 	.ImageGallery__toolbar {
 		align-items: stretch;
-		flex: 0 1 auto;
-		max-height: 36dvh;
-		overflow-y: auto;
-		overscroll-behavior: contain;
+		flex: 0 0 auto;
 	}
 
 	.ImageGallery__subtabs,
@@ -772,6 +773,11 @@
 
 	.ImageGallery__searchRow {
 		flex-wrap: wrap;
+	}
+
+	.ImageGallery__searchScopes {
+		max-height: min(50dvh, 320px);
+		overflow-y: auto;
 	}
 
 	.ImageGallery__search {

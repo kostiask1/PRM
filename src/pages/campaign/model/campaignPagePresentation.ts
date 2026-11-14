@@ -47,12 +47,10 @@ export interface CampaignSessionItem extends SessionRecord {
 }
 
 export interface CampaignSectionStateInput {
-	description: unknown;
 	notes: unknown;
 	characters?: CampaignPageEntity[];
 	npcs?: CampaignPageEntity[];
 	locations?: CampaignPageEntity[];
-	isDescriptionCollapsed: boolean;
 	isNotesCollapsed: boolean;
 	isCharactersCollapsed: boolean;
 	isNpcsCollapsed: boolean;
@@ -60,12 +58,10 @@ export interface CampaignSectionStateInput {
 }
 
 export interface CampaignSectionState {
-	hasDescriptionData: boolean;
 	hasNotesData: boolean;
 	hasCharactersData: boolean;
 	hasNpcsData: boolean;
 	hasLocationsData: boolean;
-	isDescriptionCollapsed: boolean;
 	isNotesCollapsed: boolean;
 	isCharactersCollapsed: boolean;
 	isNpcsCollapsed: boolean;
@@ -174,10 +170,6 @@ export function getCampaignPageCampaign(
 	return value as CampaignPageCampaign;
 }
 
-export function hasCampaignDescription(description: unknown): boolean {
-	return String(description || "").trim().length > 0;
-}
-
 export function hasCampaignNoteContent(notes: unknown): boolean {
 	return (Array.isArray(notes) ? notes : []).some((note) => {
 		if (!isRecord(note)) return false;
@@ -196,21 +188,15 @@ function getStoredCollapseState(hasData: boolean, collapsed: boolean): boolean {
 export function getCampaignSectionState(
 	input: CampaignSectionStateInput,
 ): CampaignSectionState {
-	const hasDescriptionData = hasCampaignDescription(input.description);
 	const hasNotesData = hasCampaignNoteContent(input.notes);
 	const hasCharactersData = hasCampaignItems(input.characters);
 	const hasNpcsData = hasCampaignItems(input.npcs);
 	const hasLocationsData = hasCampaignItems(input.locations);
 	return {
-		hasDescriptionData,
 		hasNotesData,
 		hasCharactersData,
 		hasNpcsData,
 		hasLocationsData,
-		isDescriptionCollapsed: getStoredCollapseState(
-			hasDescriptionData,
-			input.isDescriptionCollapsed,
-		),
 		isNotesCollapsed: getStoredCollapseState(
 			hasNotesData,
 			input.isNotesCollapsed,

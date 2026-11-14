@@ -9,7 +9,7 @@ import {
 	type RefObject,
 	type SetStateAction,
 } from "react";
-import { Button, Icon, Modal, Tooltip } from "../../../shared/ui/index.js";
+import { Button, Icon, Modal, Tooltip, usePointerDownOutsideDismissal } from "../../../shared/ui/index.js";
 import { classNames, formatBytes, lang } from "../../../shared/lib/index.js";
 import type { ImageLocation } from "../api/imageApi.ts";
 import { imageApi as api } from "../api/imageApi.ts";
@@ -79,6 +79,7 @@ export function ImageGalleryNavigation({
 		dragOverTarget,
 		handleCreateSub,
 		handleDrop,
+		isAllCategory,
 		isCreatingSub,
 		isReadonlyCurrentFolder,
 		isReadonlyPath,
@@ -116,7 +117,7 @@ export function ImageGalleryNavigation({
 					className="ImageGallery__nav_btn"
 				/>
 			</div>
-			<div className="ImageGallery__breadcrumbs">
+			{!isAllCategory && <div className="ImageGallery__breadcrumbs">
 				<button
 					type="button"
 					aria-label={lang.t("Root folder")}
@@ -228,7 +229,7 @@ export function ImageGalleryNavigation({
 						)}
 					</div>
 				)}
-			</div>
+			</div>}
 		</>
 	);
 }
@@ -295,9 +296,12 @@ export function ImageGallerySearch({
 	controller: ImageGalleryController;
 }) {
 	const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+	const searchAreaRef = useRef<HTMLDivElement>(null);
+	usePointerDownOutsideDismissal({ containerRef: searchAreaRef, isOpen: isAdvancedOpen, setIsOpen: setIsAdvancedOpen });
 	const searchScopesId = useId();
 	const {
 		contentScope,
+		isAllCategory,
 		searchQuery,
 		selectedSource,
 		setContentScope,
@@ -317,7 +321,12 @@ export function ImageGallerySearch({
 				? "Search official database tokens by name."
 				: "Search by name in this folder and its subfolders.";
 	return (
-		<div className="ImageGallery__searchArea">
+		<div ref={searchAreaRef} className="ImageGallery__searchArea" onKeyDown={(event) => {
+			if (event.key !== "Escape" || !isAdvancedOpen) return;
+			event.stopPropagation();
+			setIsAdvancedOpen(false);
+			searchAreaRef.current?.querySelector<HTMLButtonElement>("[aria-expanded]")?.focus();
+		}}>
 			<div className="ImageGallery__searchRow">
 				<div className="ImageGallery__search">
 					<ImageGallerySearchInput
@@ -328,19 +337,19 @@ export function ImageGallerySearch({
 				</div>
 				<Button variant={isAdvancedOpen ? "primary" : "ghost"} size={Button.SIZES.SMALL} icon="search-detailed" onClick={() => setIsAdvancedOpen((open) => !open)} aria-expanded={isAdvancedOpen} aria-controls={isAdvancedOpen ? searchScopesId : undefined}>
 					{lang.t("Advanced search")}
-					{!isAdvancedOpen && contentScope !== "local" && ` · ${lang.t(contentScope === "source" ? "Current library" : contentScope === "all" ? "Entire gallery" : "Database tokens")}`}
+					{!isAdvancedOpen && contentScope !== "local" && !(isAllCategory && contentScope === "source") && ` · ${lang.t(contentScope === "source" ? "Current library" : contentScope === "all" ? "Entire gallery" : "Database tokens")}`}
 				</Button>
 			</div>
 			{isAdvancedOpen && (
 				<div id={searchScopesId} className="ImageGallery__searchScopes" role="group" aria-label={lang.t("Search scope")}>
 					<div className="ImageGallery__searchScopesHeader">
 						<span className="ImageGallery__searchScopesLabel">{lang.t("Search scope")}</span>
-						<Button variant="ghost" size={Button.SIZES.SMALL} onClick={() => { setSearchQuery(""); setContentScope("local"); }} disabled={!searchQuery && contentScope === "local"}>{lang.t("Reset")}</Button>
+						<Button variant="ghost" size={Button.SIZES.SMALL} onClick={() => { setSearchQuery(""); setContentScope("local"); }} disabled={!searchQuery && contentScope === (isAllCategory ? "source" : "local")}>{lang.t("Reset")}</Button>
 					</div>
 					<div className="ImageGallery__scopeButtons">
-						<Button className="ImageGallery__scopeBtn" variant={contentScope === "local" ? "primary" : "ghost"} size={Button.SIZES.SMALL} onClick={() => setContentScope("local")} aria-pressed={contentScope === "local"}>
+						{!isAllCategory && <Button className="ImageGallery__scopeBtn" variant={contentScope === "local" ? "primary" : "ghost"} size={Button.SIZES.SMALL} onClick={() => setContentScope("local")} aria-pressed={contentScope === "local"}>
 							{lang.t("This folder")}
-						</Button>
+						</Button>}
 						{presentation.scopeControls.map((control) => (
 							<ImageGalleryScopeButton key={control.scope} control={control} setContentScope={setContentScope} />
 						))}
@@ -443,6 +452,7 @@ export function ImageGalleryStatsAndActions({
 		handleFileUpload,
 		hasSelection,
 		isReadonlyCurrentFolder,
+		isAllCategory,
 		selectedFilenames,
 		selectedSubs,
 		storageStats,
@@ -452,7 +462,7 @@ export function ImageGalleryStatsAndActions({
 		isReadonlyCurrentFolder,
 		selectedFilenameCount: selectedFilenames.size,
 		selectedSubfolderCount: selectedSubs.size,
-		storageStats,
+		storageStats: isAllCategory && storageStats ? { ...storageStats, categoryBytes: storageStats.sourceBytes } : storageStats,
 	});
 	return (
 		<>

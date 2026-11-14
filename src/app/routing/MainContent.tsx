@@ -22,7 +22,6 @@ import EncounterPageRuntimeHost from "../ui/EncounterPageRuntimeHost.tsx";
 import SessionPageRuntimeHost from "../ui/SessionPageRuntimeHost.tsx";
 import WorkspaceHeader from "../ui/WorkspaceHeader.tsx";
 import { lang } from "../../shared/lib/index.js";
-import { ImageGalleryWorkspace } from "../../features/images/index.js";
 import { classNames } from "../../shared/lib/index.js";
 import "../../assets/components/MainContent.css";
 import type { CampaignRecord } from "../../entities/campaign/index.js";
@@ -138,9 +137,6 @@ export default function MainContent() {
 	return (
 		<Routes>
 			<Route path="/" element={<EmptyState />} />
-			<Route element={<MainContentLayout />}>
-				<Route path="/gallery" element={<ImageGalleryWorkspace />} />
-			</Route>
 			<Route element={<MainContentLayout showAiAssistant />}>
 				<Route path="/campaign/:slug" element={<CampaignRoute />} />
 				<Route

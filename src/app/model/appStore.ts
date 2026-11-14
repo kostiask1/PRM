@@ -52,6 +52,7 @@ function getInitialUiSettings(): UiSettingsState {
 		encounterViewMode: "grid",
 		encounterGridColumns: 3,
 		simplifiedNotes: false,
+		showAllCardNotes: true,
 		aiBasePrompt: "",
 		imagePromptBasePrompt: DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 		campaignAiBasePrompts: {},

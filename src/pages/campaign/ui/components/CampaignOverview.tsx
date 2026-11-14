@@ -6,7 +6,7 @@ import type { CampaignPageEntity } from "../../model/contracts.ts";
 import { getCampaignEntityRenderKey, type CampaignSessionItem } from "../../model/campaignPagePresentation.ts";
 import type { DomainId } from "../../../../entities/campaign/index.js";
 
-export type CampaignSection = "overview" | "story" | "sessions" | "characters" | "npc" | "locations" | "notes";
+export type CampaignSection = "overview" | "story" | "sessions" | "characters" | "npc" | "locations" | "notes" | "gallery";
 
 interface CampaignOverviewProps {
 	sessions: CampaignSessionItem[];

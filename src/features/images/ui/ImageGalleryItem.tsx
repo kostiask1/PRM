@@ -270,6 +270,7 @@ function ImageGalleryImageItem({
 		handleRenameImage,
 		isReadonlyImage,
 		isSearchResults,
+		isAllCategory,
 		selectedFilenames,
 		toggleSelect,
 	} = controller;
@@ -304,9 +305,9 @@ function ImageGalleryImageItem({
 					event.preventDefault();
 					setPreviewImage(image);
 				}}
-				draggable={!imageReadonly && !image.globalSearch}
+				draggable={!imageReadonly && (!image.globalSearch || isAllCategory)}
 				onDragStart={(event) => {
-					if (image.globalSearch) {
+					if (image.globalSearch && !isAllCategory) {
 						event.preventDefault();
 						return;
 					}

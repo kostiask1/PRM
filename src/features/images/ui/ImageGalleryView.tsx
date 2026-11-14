@@ -7,6 +7,7 @@ import { Icon, Modal, type IconName } from "../../../shared/ui/index.js";
 import type { ImageAsset } from "../api/imageApi.ts";
 import type { GalleryPresentationItem } from "../model/imageGalleryPresentation.ts";
 import { useImageGalleryRuntime } from "../model/ImageGalleryRuntime.tsx";
+import { ALL_GALLERY_CATEGORY } from "../imageGalleryConfig.js";
 import ImageGalleryItem from "./ImageGalleryItem.tsx";
 import {
 	ImageGalleryDialogs,
@@ -170,6 +171,13 @@ function ImageGalleryTabs({ controller }: { controller: ImageGalleryUiController
 	} = galleryController;
 	return (
 		<header className="ImageGallery__tabs">
+			<button type="button" aria-pressed={selectedCat.id === ALL_GALLERY_CATEGORY.id}
+				className={classNames("ImageGallery__tabButton", { is_active: selectedCat.id === ALL_GALLERY_CATEGORY.id })}
+				onClick={() => { resetContentScope(); setSelectedCat(ALL_GALLERY_CATEGORY); setSelectedSub(""); }}
+				onDragOver={(event) => event.stopPropagation()}
+				onDrop={(event) => { event.preventDefault(); event.stopPropagation(); }}>
+				<Icon name="layers" size={14} /><span>{lang.t(ALL_GALLERY_CATEGORY.label)}</span>
+			</button>
 			{categories.map((category) => (
 				<button
 					key={category.id}
@@ -311,7 +319,7 @@ function ImageGalleryItems({
 			controller={galleryController}
 			viewportRef={galleryViewportRef}
 		>
-			{galleryRowCount === 0 && (
+			{(galleryController.loading || galleryRowCount === 0) && (
 				<p className="ImageGallery__empty" role="status">
 					{galleryController.loading
 						? lang.t("Loading...")
@@ -320,7 +328,7 @@ function ImageGalleryItems({
 							: lang.t("This folder is empty.")}
 				</p>
 			)}
-			{galleryRowCount > 0 && (
+			{!galleryController.loading && galleryRowCount > 0 && (
 				<ReactList
 					ref={galleryListRef}
 					itemRenderer={renderGalleryRow}
@@ -358,17 +366,6 @@ function ImageGalleryLayout({
 	);
 }
 
-export function ImageGalleryWorkspaceView({ controller }: { controller: ImageGalleryUiController }) {
-	return <section className="ImageGalleryWorkspace">
-		<header className="ImageGalleryWorkspace__heading">
-			<h1>{lang.t("Gallery")}</h1>
-			<p>{lang.t("Organize images by group and move them between campaigns.")}</p>
-		</header>
-		<ImageGalleryLayout controller={controller} />
-		<GalleryDialogs controller={controller} />
-	</section>;
-}
-
 function GalleryDialogs({ controller }: { controller: ImageGalleryUiController }) {
 	return <ImageGalleryDialogs
 		availableSources={controller.availableSources}
@@ -380,6 +377,13 @@ function GalleryDialogs({ controller }: { controller: ImageGalleryUiController }
 		setMoveTarget={controller.setMoveTarget}
 		setPreviewImage={controller.setPreviewImage}
 	/>;
+}
+
+export function ImageGalleryEmbeddedView({ controller }: { controller: ImageGalleryUiController }) {
+	return <div className="ImageGallery__embedded">
+		<ImageGalleryLayout controller={controller} />
+		<GalleryDialogs controller={controller} />
+	</div>;
 }
 
 export function ImageGalleryView({

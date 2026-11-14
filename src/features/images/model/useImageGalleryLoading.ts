@@ -3,6 +3,7 @@ import {
 	type SetStateAction,
 	useCallback,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 
@@ -72,6 +73,7 @@ export function useImageGalleryLoading({
 	const [images, setImages] = useState<GalleryImage[]>([]);
 	const [storageStats, setStorageStats] = useState<ImageGalleryStats | null>(null);
 	const [loading, setLoading] = useState(false);
+	const imageRequestVersion = useRef(0);
 
 	const resetSubcategories = useCallback(() => {
 		setDynamicSubs([]);
@@ -116,10 +118,10 @@ export function useImageGalleryLoading({
 	]);
 
 	const loadImages = useCallback(async () => {
+		const requestVersion = ++imageRequestVersion.current;
 		setLoading(true);
 		try {
-			setImages(
-				await loadGalleryImages({
+			const nextImages = await loadGalleryImages({
 					activeSearchQuery,
 					api,
 					categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
@@ -132,13 +134,13 @@ export function useImageGalleryLoading({
 					search: debouncedSearchQuery,
 					selectedSub,
 					selectedSource,
-				}),
-			);
+				});
+			if (requestVersion === imageRequestVersion.current) setImages(nextImages);
 		} catch (error) {
 			console.error("Failed to load images:", error);
-			setImages([]);
+			if (requestVersion === imageRequestVersion.current) setImages([]);
 		} finally {
-			setLoading(false);
+			if (requestVersion === imageRequestVersion.current) setLoading(false);
 		}
 	}, [
 		activeSearchQuery,

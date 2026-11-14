@@ -124,9 +124,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	);
 	const [npcs, setNpcs] = useState<CampaignPageEntity[]>([]);
 	const [locations, setLocations] = useState<CampaignPageEntity[]>([]);
-	const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(
-		initialCampaignState.isDescriptionCollapsed,
-	);
 	const [isNotesCollapsed, setIsNotesCollapsed] = useState(
 		initialCampaignState.isNotesCollapsed,
 	);
@@ -160,7 +157,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		const nextState = getCampaignViewStateProjection(nextCampaign);
 		setDescription(nextState.description);
 		setNotes(nextState.notes);
-		setIsDescriptionCollapsed(nextState.isDescriptionCollapsed);
 		setIsNotesCollapsed(nextState.isNotesCollapsed);
 		setIsCharactersCollapsed(nextState.isCharactersCollapsed);
 		setIsNpcsCollapsed(nextState.isNpcsCollapsed);
@@ -217,7 +213,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 			applyCampaignState({
 				description: campaign.description,
 				notes: campaign.notes,
-				isDescriptionCollapsed: campaign.isDescriptionCollapsed,
 				isNotesCollapsed: campaign.isNotesCollapsed,
 				isCharactersCollapsed: campaign.isCharactersCollapsed,
 				isNpcsCollapsed: campaign.isNpcsCollapsed,
@@ -233,7 +228,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	}, [
 		campaign.description,
 		campaign.isCharactersCollapsed,
-		campaign.isDescriptionCollapsed,
 		campaign.isLocationsCollapsed,
 		campaign.isNotesCollapsed,
 		campaign.isNpcsCollapsed,
@@ -249,7 +243,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		applyCampaignState({
 			description: campaign.description,
 			notes: campaign.notes,
-			isDescriptionCollapsed: campaign.isDescriptionCollapsed,
 			isNotesCollapsed: campaign.isNotesCollapsed,
 			isCharactersCollapsed: campaign.isCharactersCollapsed,
 			isNpcsCollapsed: campaign.isNpcsCollapsed,
@@ -258,7 +251,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	}, [
 		campaign.description,
 		campaign.isCharactersCollapsed,
-		campaign.isDescriptionCollapsed,
 		campaign.isLocationsCollapsed,
 		campaign.isNotesCollapsed,
 		campaign.isNpcsCollapsed,
@@ -942,8 +934,6 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		setNpcs,
 		locations,
 		setLocations,
-		isDescriptionCollapsed,
-		setIsDescriptionCollapsed,
 		isNotesCollapsed,
 		setIsNotesCollapsed,
 		isCharactersCollapsed,

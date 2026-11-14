@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import "../../../../assets/components/SessionEntitySection.css";
 import "../../../../assets/components/CampaignEntitySection.css";
 import {
@@ -45,6 +45,7 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 	onToggleAiIgnored,
 	renderItem,
 }: SessionEntitySectionProps<Item>) {
+	const detailRef = useRef<HTMLDivElement>(null);
 	const kind = listVariant === "location" ? "location" : "npc";
 	const { selected, setSelectedKey } = useHashItemSelection(items, (item) => String(item.id), (item, hash) => matchesHistoryTargetId(hash, "session", kind, item.id) || matchesHistoryTargetId(hash, "session", `${kind}-note`, item.id) || hash === `#${makeDomId("session", kind, item.id)}`, undefined, selectionRequest);
 	return (
@@ -79,10 +80,15 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 					)}
 					renderItem={(item) => {
 						const name = listVariant === "location" ? item.name || item.title : [item.firstName, item.lastName].filter(Boolean).join(" ") || item.name;
-						return <button type="button" className="CampaignEntitySection__item" aria-pressed={item === selected} onClick={() => setSelectedKey(String(item.id))}>{typeof item.imageUrl === "string" && item.imageUrl && <img src={item.imageUrl} alt="" />}<span>{String(name || lang.t("Untitled"))}</span></button>;
+						return <button type="button" className="CampaignEntitySection__item" aria-pressed={item === selected} onClick={() => { setSelectedKey(String(item.id)); detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-entity-index]")[items.indexOf(item)]?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }}>{typeof item.imageUrl === "string" && item.imageUrl && <img src={item.imageUrl} alt="" />}<span>{String(name || lang.t("Untitled"))}</span></button>;
 					}}
 				/>
-				<div className="CampaignEntitySection__detail">{selected && renderItem(selected)}</div></div>
+				<div ref={detailRef} className="CampaignEntitySection__detail CampaignEntitySection__detail_stream" onScroll={(event) => {
+					const top = event.currentTarget.getBoundingClientRect().top;
+					const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(":scope > [data-entity-index]"));
+					const active = cards.reduce<HTMLElement | null>((current, card) => card.getBoundingClientRect().top <= top + 24 ? card : current, cards[0] || null);
+					if (active) setSelectedKey(String(items[Number(active.dataset.entityIndex)]?.id));
+				}}>{items.map((item, index) => <div key={String(item.id)} data-entity-index={index}>{renderItem(item)}</div>)}</div></div>
 			) : (
 				<div className="muted SessionEntitySection__empty">{emptyText}</div>
 			)}

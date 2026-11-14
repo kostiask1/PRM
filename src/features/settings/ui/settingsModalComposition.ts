@@ -19,6 +19,8 @@ export interface SettingsModalRuntime {
 	availableLanguages: string[];
 	currentTheme: Theme;
 	simplifiedNotesEnabled: boolean;
+	showAllCardNotes: boolean;
+	setCardNotesViewMode(showAll: boolean): void;
 	storedCampaigns: unknown[];
 	activeCampaignSlug: string | null;
 	storedAiBasePrompt: string | undefined;

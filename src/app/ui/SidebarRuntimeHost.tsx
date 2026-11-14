@@ -1,4 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from "react";
+import { setCardNotesViewMode } from "../model/cardNotesSetting.ts";
 
 import {
 	SidebarRuntimeProvider,
@@ -43,6 +44,7 @@ export default function SidebarRuntimeHost({
 		ignoreSourcesList: storedIgnoreSourcesList,
 		imagePromptBasePrompt: storedImagePromptBasePrompt,
 		simplifiedNotes: simplifiedNotesEnabled,
+		showAllCardNotes,
 		theme: currentTheme,
 		useSearchDebounce,
 	} = useAppSelector((state) => state.ui);
@@ -112,6 +114,8 @@ export default function SidebarRuntimeHost({
 			setCampaigns,
 			setLanguage,
 			simplifiedNotesEnabled,
+			showAllCardNotes,
+			setCardNotesViewMode,
 			storedAiBasePrompt,
 			storedCampaignAiBasePrompts,
 			storedCampaignImagePromptBasePrompts,
@@ -146,6 +150,7 @@ export default function SidebarRuntimeHost({
 			setCampaigns,
 			setLanguage,
 			simplifiedNotesEnabled,
+			showAllCardNotes,
 			storedAiBasePrompt,
 			storedCampaignAiBasePrompts,
 			storedCampaignImagePromptBasePrompts,

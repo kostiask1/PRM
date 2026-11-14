@@ -1,5 +1,7 @@
 import type { ImageGalleryCategory } from "./model/contracts.ts";
 
+export const ALL_GALLERY_CATEGORY: ImageGalleryCategory = { id: "__all__", label: "All images", icon: "layers" };
+
 export const IMAGE_GALLERY_CATEGORIES: ImageGalleryCategory[] = [
 	{ id: "maps", label: "Maps", icon: "map" },
 	{ id: "scenes", label: "Scenes", icon: "image" },

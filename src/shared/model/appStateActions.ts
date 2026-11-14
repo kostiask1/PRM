@@ -20,6 +20,7 @@ export interface UiSettingsInput extends Record<string, unknown> {
 	encounterViewMode?: unknown;
 	encounterGridColumns?: unknown;
 	simplifiedNotes?: unknown;
+	showAllCardNotes?: unknown;
 	aiBasePrompt?: unknown;
 	imagePromptBasePrompt?: unknown;
 	campaignAiBasePrompts?: unknown;
@@ -34,6 +35,7 @@ export interface NormalizedUiSettingsPatch {
 	encounterViewMode?: "grid" | "single";
 	encounterGridColumns?: number;
 	simplifiedNotes?: boolean;
+	showAllCardNotes?: boolean;
 	aiBasePrompt?: string;
 	imagePromptBasePrompt?: string;
 	campaignAiBasePrompts?: Record<string, string>;
@@ -133,6 +135,7 @@ const UI_SETTINGS_FIELD_POLICIES: UiSettingsFieldPolicies = {
 	encounterViewMode: (value) => (value === "grid" ? "grid" : "single"),
 	encounterGridColumns: normalizeEncounterGridColumns,
 	simplifiedNotes: Boolean,
+	showAllCardNotes: (value) => value !== false,
 	aiBasePrompt: normalizePromptValue,
 	imagePromptBasePrompt: normalizePromptValue,
 	campaignAiBasePrompts: normalizePromptMap,

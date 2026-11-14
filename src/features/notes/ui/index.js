@@ -6,3 +6,5 @@ export {
 	SimplifiedNotesProvider,
 	useSimplifiedNotesEnabled,
 } from "./SimplifiedNotesRuntime.tsx";
+export { useCardNotesViewMode } from "./SimplifiedNotesRuntime.tsx";
+export { useRestoreNoteStreamPosition } from "./useRestoreNoteStreamPosition.ts";

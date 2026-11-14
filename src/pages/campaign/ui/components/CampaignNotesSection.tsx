@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Button, DraggableList, useHashItemSelection } from "../../../../shared/ui/index.js";
 import "../../../../assets/components/CampaignNotesSection.css";
 import "../../../../assets/components/CampaignEntitySection.css";
@@ -48,6 +49,7 @@ function CampaignNotesList({
 	notes,
 	onToggleIgnored,
 }: CampaignNotesListProps) {
+	const detailRef = useRef<HTMLDivElement>(null);
 	const { selected, setSelectedKey } = useHashItemSelection(notes, (note) => String(note.id), (note, hash) => matchesHistoryTargetId(hash, "campaign", "note", note.id) || hash === `#${makeDomId("campaign", "note", note.id)}`, (note, key) => note._renderKey != null && String(note._renderKey) === key);
 	return (
 		<div className="CampaignEntitySection__workspace">
@@ -61,14 +63,16 @@ function CampaignNotesList({
 			{...getAiIgnoredNoteListProps(onToggleIgnored, {
 				isolateDragEvents: false,
 			})}
-			renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); return <EntityLinkedListItem text={preview.text || label} label={label} maxLength={preview.maxLength} selected={note === selected} onSelect={() => setSelectedKey(String(note.id))} />; }}
+			renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); return <EntityLinkedListItem text={preview.text || label} label={label} maxLength={preview.maxLength} selected={note === selected} onSelect={() => { setSelectedKey(String(note.id)); detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-note-index]")[notes.indexOf(note)]?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }} />; }}
 		/>
-		<div className="CampaignEntitySection__detail">
-			{selected && (() => {
-				const note = selected;
-				const index = notes.indexOf(note);
-				return (
-				<div
+		<div ref={detailRef} className="CampaignEntitySection__detail CampaignEntitySection__detail_stream" onScroll={(event) => {
+			const top = event.currentTarget.getBoundingClientRect().top;
+			const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(":scope > [data-note-index]"));
+			const active = cards.reduce<HTMLElement | null>((current, card) => card.getBoundingClientRect().top <= top + 24 ? card : current, cards[0] || null);
+			if (active) setSelectedKey(String(notes[Number(active.dataset.noteIndex)]?.id));
+		}}>
+			{notes.map((note, index) => (
+				<div key={String(note.id)} data-note-index={index}
 					id={makeDomId("campaign", "note", note.id)}
 					data-history-focus-id={makeHistoryTargetId(
 						"campaign",
@@ -88,8 +92,7 @@ function CampaignNotesList({
 						onDelete={view.handleDeleteNote}
 					/>
 				</div>
-				);
-			})()}
+			))}
 		</div>
 		</div>
 	);

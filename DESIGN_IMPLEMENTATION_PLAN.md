@@ -6,6 +6,22 @@ This plan translates the accepted Figma redesign into the existing React applica
 
 Design source: [GM workspace redesign](https://www.figma.com/design/7sh6Lf9cuSxgbso7xyaorb/Untitled?node-id=84-106065). Ukrainian remains the interface language.
 
+## Latest requested work
+
+- Open the gallery as a modal from the sidebar and as an embedded tab inside a campaign, initially showing that campaign's library. Present advanced search in a compact panel near the search field. The former `/gallery` link opens the modal from the home page for compatibility.
+- Show all campaign and session entities, campaign/session notes, scene notes, and scene editors in scrollable detail streams; synchronize the active list item with scrolling and retain note ordering and entity links.
+- Notes inside NPC and location cards and scenes offer the All / One switch. The latest request makes this a single global setting: changing it from any card, scene, or General settings updates all of them and persists the value. Old campaign-specific overrides no longer affect this setting.
+- Keep the inner card-note stream at a maximum height of 400px; do not impose that height on the outer entity stream.
+- Verify both modes, global synchronization, scrolling, history links, saving, and responsive behavior on the site without changing user-owned data.
+
+Scene-note All / One controls were checked in the in-app browser using an isolated backend: the single mode selected the second note correctly, the all mode restored the full list, and the 400px scroll limit and a 320px viewport were checked. Campaign story is always expanded, including when legacy data contains a collapsed flag; an isolated browser check edited and saved that story. Campaign and session tabs now use the URL and have been checked for reload, browser history, and history-target links.
+
+On an isolated backend, changing the global note mode in an NPC card updated the setting and a session scene, changing it in one scene updated a second scene, and changing it in General settings updated the open scene and survived reload. A legacy campaign override did not supersede the global value. Rapid changes saved the final value; a simulated settings error restored the prior value in both scenes and displayed an error.
+
+The gallery now opens above the current page without changing its URL. In-app browser checks covered the sidebar action, the legacy `/gallery` link, closing the modal, a full-gallery search, Escape dismissing the search panel without closing the modal, and 390 × 844 and 320 × 600 layouts. Earlier references below to the gallery workspace describe the superseded implementation.
+
+The campaign Gallery tab uses the same gallery controls inline, initially selects the current campaign, and participates in URL tab navigation. In-app checks covered a populated category, the active campaign source, reload, the sidebar modal above the embedded gallery, and the 390px layout without document-level horizontal overflow.
+
 ## Current status and how to use this plan
 
 The baseline above is historical: the current project already contains substantial redesign work across the shell, shared styles, campaign and session views, encounter, reference browsers, gallery, AI, settings, graph, and dice. Treat the phases below as an acceptance and remaining-work checklist, not as an instruction to start those changes again. Inspect the current worktree and compare each feature against its Figma reference before editing; preserve existing changes and user data.
@@ -40,6 +56,10 @@ A variable-reference scan of changed component styles found three tokens without
 Read-only in-app review of a populated campaign graph confirmed visible type-colored nodes, matching legend and type filters, node/link totals, zoom controls, and a minimap on real data.
 
 In-app browser review of the real gallery exposed a blank empty folder. The gallery now shows loading, empty-folder, and no-search-results states; an empty folder, an unmatched search, and a populated campaign folder were checked without modifying files.
+
+An isolated-backend encounter check reopened the conditions reference, selected Prone without applying it until the Add action, retained it after reload, showed the condition card on focus, and removed it. A 320px viewport showed no document-level horizontal overflow. The reference data and campaign used for this check were copies outside the user's data directory.
+
+At 390 × 844, opening advanced gallery search previously clipped the upload action in the toolbar. The toolbar now expands enough to show it at that size; at 320 × 600 the workspace scrolls and retains a usable results area instead of shrinking it to 24px. The 720 × 450 and 1440 × 900 layouts showed no document-level horizontal overflow. The Ukrainian clear-search label was also verified in the running gallery. Short screens still require scrolling the toolbar when advanced search is open.
 
 Read-only in-app browser review of a saved campaign AI response confirmed that changed description text is highlighted on both sides. Note arrays in entity-card comparisons now use the existing per-note comparison instead of raw JSON; a saved response was inspected in the in-app browser, including an added empty note. Nested apply/undo actions are hidden because the parent card owns the change. A regression test verifies nested draft edits after reordering, including ID zero and a missing target. In the in-app browser with isolated mock API data, a changed note and its reordered position appeared in comparison; editing it, reordering it with the keyboard, editing it again, and selecting the other note preserved both texts and updated the comparison. No response was applied or reverted during this review.
 

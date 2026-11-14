@@ -26,6 +26,7 @@ export {
 	rollDiceFormula,
 } from "./dice.js";
 export { default as useDebounce } from "./useDebounce.js";
+export { useUrlSection } from "./useUrlSection.ts";
 export {
 	createEmptyNote,
 	getNoteRenderKey,

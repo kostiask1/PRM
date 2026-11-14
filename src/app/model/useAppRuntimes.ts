@@ -64,6 +64,7 @@ export function useAppRuntimes() {
 	const simplifiedNotesEnabled = useAppSelector(
 		(store) => store.ui.simplifiedNotes,
 	);
+	const showAllCardNotes = useAppSelector((store) => store.ui.showAllCardNotes);
 	const syncEvent = useAppSelector((store) => store.sync.event);
 	const spellsBrowserUseSearchDebounce = useAppSelector(
 		(store) => store.ui.useSearchDebounce !== false,
@@ -257,6 +258,7 @@ export function useAppRuntimes() {
 		currentLanguage,
 		currentTheme,
 		simplifiedNotesEnabled: effectiveSimplifiedNotesEnabled,
+		showAllCardNotes,
 		syncEvent,
 		rulesReferenceRuntime,
 		aiAttachmentAlertRuntime,

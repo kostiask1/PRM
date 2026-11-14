@@ -213,6 +213,7 @@
 	align-items: center;
 	cursor: pointer;
 	transition: all 0.2s ease;
+	width: stretch;
 }
 
 .MonsterStatBlock__ability_box:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

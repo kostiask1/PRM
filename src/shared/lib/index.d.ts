@@ -148,3 +148,4 @@ export {
 } from "./searchRanking.ts";
 export function makeDomId(...parts: unknown[]): string;
 export function scrollToHashTarget(hash?: string): boolean;
+export { useUrlSection } from "./useUrlSection.ts";

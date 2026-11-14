@@ -12,6 +12,7 @@ import {
 } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { EntityMoveDialog } from "../../../features/campaign-entity/ui/index.js";
+import { EmbeddedImageGallery } from "../../../features/images/index.js";
 import { ListCard } from "../../../shared/ui/index.js";
 import {
 	AiContextIgnoreButton,
@@ -42,6 +43,7 @@ import { CampaignViewModel } from "../../../entities/campaign/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { getNotesForRender } from "../../../shared/lib/index.js";
 import { makeDomId } from "../../../shared/lib/index.js";
+import { useUrlSection } from "../../../shared/lib/index.js";
 import type { DomainId } from "../../../entities/campaign/index.js";
 import {
 	makeHistoryTargetId,
@@ -63,7 +65,9 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const view = useCampaignView({ campaign });
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
-	const [activeSection, setActiveSection] = useState<CampaignSection>("overview");
+	const [activeSection, setActiveSection, revealSection] = useUrlSection<CampaignSection>(
+		["overview", "sessions", "characters", "npc", "locations", "notes", "story", "gallery"], "overview",
+	);
 	const lastRevealedHash = useRef("");
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);
@@ -71,8 +75,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const [requestedEntity, setRequestedEntity] = useState<{ type: "characters" | "npc" | "locations"; id: DomainId } | null>(null);
 	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const {
-		hasDescriptionData,
-		isDescriptionCollapsed,
 		isNotesCollapsed,
 		isCharactersCollapsed,
 		isNpcsCollapsed,
@@ -141,17 +143,10 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		if (hash !== lastRevealedHash.current) {
 			lastRevealedHash.current = hash;
 			const target = getCampaignHashTarget(hash);
-			if (target) setActiveSection(target);
-			else if (hash.includes("campaign-sessions")) setActiveSection("sessions");
-			else if (hash.includes("campaign-description")) setActiveSection("story");
+			if (target) revealSection(target);
+			else if (hash.includes("campaign-sessions")) revealSection("sessions");
+			else if (hash.includes("campaign-description")) revealSection("story");
 		}
-		if (
-			isDescriptionCollapsed &&
-			matchesHistoryTargetId(hash, "campaign", "description")
-		) {
-			view.setIsDescriptionCollapsed(false);
-		}
-
 		const campaignNote = view.notes.find((note) =>
 			matchesHistoryTargetId(hash, "campaign", "note", note.id),
 		);
@@ -215,7 +210,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 			}
 		}
 	}, [
-		isDescriptionCollapsed,
+		revealSection,
 		view.characters,
 		view.handleCharacterChange,
 		view.handleLocationChange,
@@ -224,7 +219,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		view.locations,
 		view.notes,
 		view.npcs,
-		view.setIsDescriptionCollapsed,
 	]);
 
 	useCampaignHashNavigation({
@@ -247,12 +241,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		onCharacterTypeDrop: view.handleCharacterTypeDrop,
 	});
 
-	const toggleCampaignDescription = () => {
-		if (!hasDescriptionData) return;
-		const next = !isDescriptionCollapsed;
-		view.setIsDescriptionCollapsed(next);
-		view.triggerSave({ isDescriptionCollapsed: next });
-	};
 	const renderCampaignDescriptionEditor = () => (
 		<EditableField
 			data-history-field="description"
@@ -318,6 +306,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 					{ id: "locations", label: lang.t("Locations/Factions"), count: view.locations.length },
 					{ id: "notes", label: lang.t("Notes") },
 					{ id: "story", label: lang.t("Campaign story") },
+					{ id: "gallery", label: lang.t("Gallery") },
 				]} />
 				<Button size={Button.SIZES.SMALL} icon="notes-graph" onClick={() => { handleNotesViewModeChange("graph"); setActiveSection("notes"); }}>
 					{lang.t("Notes graph")}
@@ -344,11 +333,11 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 					</div>
 
 					<div className="CampaignView__contentPanel">
+						<div role="tabpanel" id={`${tabsId}-panel-gallery`} aria-labelledby={`${tabsId}-tab-gallery`} hidden={activeSection !== "gallery"}>
+							{activeSection === "gallery" && <EmbeddedImageGallery campaignSlug={campaign.slug} />}
+						</div>
 						<div role="tabpanel" id={`${tabsId}-panel-story`} aria-labelledby={`${tabsId}-tab-story`} hidden={activeSection !== "story"}>
 						<CampaignDescriptionSection
-							hasData={hasDescriptionData}
-							isCollapsed={isDescriptionCollapsed}
-							onToggle={toggleCampaignDescription}
 							renderEditor={renderCampaignDescriptionEditor}
 						/>
 						</div>

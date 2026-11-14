@@ -42,10 +42,9 @@ function createCampaignCommands(
 				? repository.sanitizeName(patch.name)
 				: current.name;
 			if (!name) fail("Campaign name cannot be empty.", 400);
-			const nextSlug = await repository.ensureUniqueSlug(
-				repository.toSlug(name),
-				slug,
-			);
+			const nextSlug = patch.name && name !== current.name
+				? await repository.ensureUniqueSlug(repository.toSlug(name), slug)
+				: slug;
 			if (nextSlug !== slug) await repository.rename(slug, nextSlug);
 			let updated = {
 				...current,

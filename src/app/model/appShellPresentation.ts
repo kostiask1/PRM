@@ -35,6 +35,7 @@ const UI_SETTING_KEYS = [
 	"encounterViewMode",
 	"encounterGridColumns",
 	"simplifiedNotes",
+	"showAllCardNotes",
 	"aiBasePrompt",
 	"imagePromptBasePrompt",
 	"campaignAiBasePrompts",

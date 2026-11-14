@@ -12,9 +12,11 @@ export {
 	type AiIgnoredNoteListOptions,
 } from "./aiIgnoredNoteListProps.tsx";
 export { createNoteCardComponent } from "./NoteCard.tsx";
+export { useRestoreNoteStreamPosition } from "./useRestoreNoteStreamPosition.ts";
 export {
 	SimplifiedNotesProvider,
 	useSimplifiedNotesEnabled,
+	useCardNotesViewMode,
 	type SimplifiedNotesProviderProps,
 } from "./SimplifiedNotesRuntime.tsx";
 export type {

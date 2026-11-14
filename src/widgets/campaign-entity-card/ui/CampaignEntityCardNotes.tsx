@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
 	CardNoteModel,
 	type CardEntity,
@@ -8,6 +8,8 @@ import { EditableField } from "../../../features/editor/ui/index.js";
 import {
 	createNoteCardComponent,
 	getAiIgnoredNoteListProps,
+	useCardNotesViewMode,
+	useRestoreNoteStreamPosition,
 } from "../../../features/notes/ui/index.js";
 import { EntityLinkedListItem, renderMentionText } from "../../../features/entity-link/index.js";
 import { getNoteListLabel, getNoteListPreview, lang, makeDomId, sanitizeNotesForSave } from "../../../shared/lib/index.js";
@@ -55,8 +57,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 	onChange,
 	onReorderDrop,
 }: CampaignEntityCardNotesProps<Entity>) {
-	const [showAll, setShowAll] = useState(true);
-	const detailRef = useRef<HTMLDivElement>(null);
+	const { showAll, setShowAll } = useCardNotesViewMode();
 	const stream = historyKind !== "character" && showAll;
 	const updateNotes = (notes: CardNote[]) => onChange(entityId, model.withField("notes", notes));
 	const highlightedId = notesForRender.find((note) => getCampaignNoteHighlightFields(highlightFields, note)?.length)?.id;
@@ -68,6 +69,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 		(note, key) => note._renderKey != null && String(note._renderKey) === key,
 		highlightedSelection,
 	);
+	const { detailRef, restoringRef } = useRestoreNoteStreamPosition(stream, notesForRender.indexOf(selected));
 	return (
 		<div className={`${classPrefix}__notes`}>
 			<div className={`${classPrefix}__notesHeader`}>
@@ -95,6 +97,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 				/>
 				<div ref={detailRef} className={`CampaignEntitySection__detail${stream ? " CampaignEntitySection__detail_stream" : ""}`} onScroll={(event) => {
 					if (!stream) return;
+					if (restoringRef.current) { restoringRef.current = false; return; }
 					const top = event.currentTarget.getBoundingClientRect().top;
 					const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(":scope > [data-note-index]"));
 					const active = cards.reduce<HTMLElement | null>((current, card) => card.getBoundingClientRect().top <= top + 24 ? card : current, cards[0] || null);

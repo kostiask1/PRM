@@ -43,6 +43,7 @@ import {
 	type SessionScene,
 } from "../../../entities/session/index.js";
 import { lang } from "../../../shared/lib/index.js";
+import { useUrlSection } from "../../../shared/lib/index.js";
 import {
 	getNotesForRender,
 	sanitizeNotesForSave,
@@ -177,7 +178,9 @@ function SessionView() {
 	const [createdEntity, setCreatedEntity] = useState<{ type: "npc" | "locations"; id: string | number; campaign: string; session: string | null } | null>(null);
 	const [moveTarget, setMoveTarget] = useState<{ type: "npc" | "locations"; entity: SessionPageEntity } | null>(null);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
-	const [activeSection, setActiveSection] = useState<"scenes" | "notes" | "entities" | "result">("scenes");
+	const [activeSection, setActiveSection, revealSection] = useUrlSection(
+		["scenes", "notes", "entities", "result"] as const, "scenes",
+	);
 	const lastRevealedHash = useRef("");
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
 	const session = view.session;
@@ -218,10 +221,10 @@ function SessionView() {
 	const revealSessionHistoryTarget = useCallback((hash: string) => {
 		if (hash !== lastRevealedHash.current) {
 			lastRevealedHash.current = hash;
-			if (hash.includes("session-scene")) setActiveSection("scenes");
-			else if (hash.includes("session-note")) setActiveSection("notes");
-			else if (hash.includes("session-npc") || hash.includes("session-location")) setActiveSection("entities");
-			else if (hash.includes("session-result")) setActiveSection("result");
+			if (hash.includes("session-scene")) revealSection("scenes");
+			else if (hash.includes("session-note")) revealSection("notes");
+			else if (hash.includes("session-npc") || hash.includes("session-location")) revealSection("entities");
+			else if (hash.includes("session-result")) revealSection("result");
 		}
 		const sessionNote = sessionNotes.find((note) =>
 			matchesHistoryTargetId(hash, "session", "note", note.id),
@@ -348,6 +351,7 @@ function SessionView() {
 		);
 	}, [
 		isSessionNotesCollapsed,
+		revealSection,
 		scenes,
 		sessionData,
 		sessionNotes,

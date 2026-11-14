@@ -66,7 +66,6 @@ export default function SidebarLinks({
 			<SidebarLink
 				icon="image"
 				label={lang.t("Gallery")}
-				href="/gallery"
 				active={isGalleryActive}
 				onClick={onOpenGallery}
 			/>

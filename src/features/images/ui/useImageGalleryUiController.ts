@@ -25,6 +25,7 @@ import {
 	type GalleryPendingSelection,
 } from "../model/imageGalleryPresentation.ts";
 import useImageGallery from "../model/useImageGallery.ts";
+import { ALL_GALLERY_CATEGORY } from "../imageGalleryConfig.js";
 
 function isEditableTarget(target: EventTarget | null): boolean {
 	if (!(target instanceof HTMLElement)) return false;
@@ -284,7 +285,7 @@ export function useImageGalleryUiController({
 	const applyNavigationEntry = React.useCallback(
 		(entry: GalleryPathEntry) => {
 			if (!entry) return;
-			const nextCategory = categories.find(
+			const nextCategory = [ALL_GALLERY_CATEGORY, ...categories].find(
 				(category) => category.id === entry.category,
 			);
 			if (!nextCategory) return;
@@ -351,7 +352,7 @@ export function useImageGalleryUiController({
 	const openMoveModal = () => {
 		setMoveTarget({
 			slug: selectedSource,
-			category: selectedCat.id,
+			category: selectedCat.id === ALL_GALLERY_CATEGORY.id ? categories[0].id : selectedCat.id,
 			subcategory: selectedSub,
 		});
 		setIsMoveModalOpen(true);

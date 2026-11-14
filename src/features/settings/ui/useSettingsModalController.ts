@@ -521,6 +521,8 @@ export function useSettingsModalController(
 			availableLanguages,
 			autoApplyAiChanges,
 			useSearchDebounce,
+			showAllCardNotes: runtime.showAllCardNotes,
+			onCardNotesChange: runtime.setCardNotesViewMode,
 			onThemeToggle: handleThemeToggle,
 			onLanguageChange: handleLanguageChange,
 			onAutoApplyAiChangesChange: handleAutoApplyAiChangesChange,

@@ -21,22 +21,10 @@
 	z-index: 1;
 }
 
-.CampaignDescriptionSection__titleGroup {
-	display: flex;
-	align-items: center;
-	gap: var(--space-2);
-	user-select: none;
-	cursor: pointer;
-}
-
 @media (max-width: 767px) {
 	.CampaignDescriptionSection__row {
 		align-items: flex-start;
 		padding: var(--space-1) 0;
 		gap: var(--space-2);
-	}
-
-	.CampaignDescriptionSection__titleGroup {
-		width: 100%;
 	}
 }

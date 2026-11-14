@@ -11,7 +11,7 @@ export default function useImageGallery({
 	initialCategory,
 	initialSubcategory,
 }: UseImageGalleryOptions) {
-	const location = useImageGalleryLocation();
+	const location = useImageGalleryLocation({ initialSource, initialCategory, initialSubcategory });
 	const loadingState = useImageGalleryLoading({
 		activeSearchQuery: location.activeSearchQuery,
 		contentScope: location.contentScope,
@@ -48,7 +48,7 @@ export default function useImageGallery({
 		contentScope: location.contentScope,
 		getMovableSelectedItems: selection.getMovableSelectedItems,
 		isOpen,
-		isReadonlyCurrentFolder: selection.isReadonlyCurrentFolder,
+		isReadonlyCurrentFolder: selection.isReadonlyCurrentFolder || location.isAllCategory,
 		isReadonlyImage: selection.isReadonlyImage,
 		isReadonlySub: selection.isReadonlySub,
 		loadImages: loadingState.loadImages,
@@ -78,10 +78,11 @@ export default function useImageGallery({
 		searchQuery: location.searchQuery,
 		setSearchQuery: location.setSearchQuery,
 		contentScope: location.contentScope,
+		isAllCategory: location.isAllCategory,
 		setContentScope: location.setContentScope,
 		isGlobalSearch: location.isGlobalSearch,
 		isSearchResults: location.isSearchResults,
-		isReadonlyCurrentFolder: selection.isReadonlyCurrentFolder,
+		isReadonlyCurrentFolder: selection.isReadonlyCurrentFolder || location.isAllCategory,
 		isReadonlyPath: selection.isReadonlyPath,
 		storageStats: loadingState.storageStats,
 		selectedFilenames: selection.selectedFilenames,

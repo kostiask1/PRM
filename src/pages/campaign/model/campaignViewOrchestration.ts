@@ -14,7 +14,6 @@ import type {
 export interface CampaignViewStateProjection {
 	description: string;
 	notes: SharedNote[];
-	isDescriptionCollapsed: boolean;
 	isNotesCollapsed: boolean;
 	isCharactersCollapsed: boolean;
 	isNpcsCollapsed: boolean;
@@ -27,7 +26,6 @@ export function getCampaignViewStateProjection(
 	return {
 		description: getCampaignViewText(campaign.description),
 		notes: getCampaignViewNotes(campaign.notes),
-		isDescriptionCollapsed: getCampaignViewCollapsed(campaign.isDescriptionCollapsed),
 		isNotesCollapsed: getCampaignViewCollapsed(campaign.isNotesCollapsed),
 		isCharactersCollapsed: getCampaignViewCollapsed(campaign.isCharactersCollapsed),
 		isNpcsCollapsed: getCampaignViewCollapsed(campaign.isNpcsCollapsed),

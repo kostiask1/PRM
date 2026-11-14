@@ -31,6 +31,8 @@ export interface SidebarRuntime extends Pick<
 		| "setCampaigns"
 		| "setLanguage"
 		| "simplifiedNotesEnabled"
+		| "showAllCardNotes"
+		| "setCardNotesViewMode"
 		| "storedAiBasePrompt"
 		| "storedCampaignAiBasePrompts"
 		| "storedCampaignImagePromptBasePrompts"

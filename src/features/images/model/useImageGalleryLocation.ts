@@ -4,7 +4,7 @@ import {
 	getCampaignIgnoreSourcesList,
 } from "../../../entities/reference/index.js";
 import { useDebounce } from "../../../shared/lib/index.js";
-import { IMAGE_GALLERY_CATEGORIES } from "../imageGalleryConfig.js";
+import { ALL_GALLERY_CATEGORY, IMAGE_GALLERY_CATEGORIES } from "../imageGalleryConfig.js";
 import type {
 	ImageGalleryCategory,
 	ImageGalleryContentScope,
@@ -30,7 +30,11 @@ function deriveGallerySearchState(
 	};
 }
 
-export function useImageGalleryLocation() {
+export function useImageGalleryLocation({ initialSource, initialCategory, initialSubcategory }: {
+	initialSource?: string;
+	initialCategory?: string;
+	initialSubcategory?: string;
+} = {}) {
 	const {
 		activeCampaign,
 		globalIgnoreSourcesList,
@@ -44,14 +48,16 @@ export function useImageGalleryLocation() {
 			),
 		[activeCampaign, globalIgnoreSourcesList],
 	);
-	const [selectedSource, setSelectedSource] = useState("general");
+	const [selectedSource, setSelectedSource] = useState(initialSource || "general");
 	const [selectedCat, setSelectedCat] = useState<ImageGalleryCategory>(
-		IMAGE_GALLERY_CATEGORIES[0],
+		IMAGE_GALLERY_CATEGORIES.find((category) => category.id === initialCategory) || IMAGE_GALLERY_CATEGORIES[0],
 	);
-	const [selectedSub, setSelectedSub] = useState("");
+	const [selectedSub, setSelectedSub] = useState(initialCategory && IMAGE_GALLERY_CATEGORIES.some((category) => category.id === initialCategory) ? initialSubcategory || "" : "");
 	const [searchQuery, setSearchQuery] = useState("");
-	const [contentScope, setContentScope] =
+	const [requestedContentScope, setContentScope] =
 		useState<ImageGalleryContentScope>("local");
+	const isAllCategory = selectedCat.id === ALL_GALLERY_CATEGORY.id;
+	const contentScope = isAllCategory && requestedContentScope === "local" ? "source" : requestedContentScope;
 	const debouncedSearchQuery = useDebounce(
 		searchQuery,
 		useSearchDebounce ? 250 : 0,
@@ -69,6 +75,7 @@ export function useImageGalleryLocation() {
 		debouncedSearchQuery,
 		ignoreSourcesList,
 		isGeneralTokens,
+		isAllCategory,
 		searchQuery,
 		selectedCat,
 		selectedSource,
