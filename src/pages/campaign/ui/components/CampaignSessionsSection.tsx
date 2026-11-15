@@ -46,7 +46,9 @@ export default function CampaignSessionsSection({
 			</div>
 			<div className="CampaignSessionsSection__controls">
 				<input
+					type="search"
 					className="CampaignSessionsSection__search"
+					aria-label={lang.t("Search sessions...")}
 					placeholder={lang.t("Search sessions...")}
 					value={sessionSearch}
 					onChange={(event) => onSessionSearchChange(event.target.value)}
@@ -67,7 +69,7 @@ export default function CampaignSessionsSection({
 					</div>
 				)}
 				{filteredSessions.length === 0 && (
-					<div className="muted CampaignSessionsSection__empty">
+					<div className="muted CampaignSessionsSection__empty" role="status">
 						{lang.t("No sessions found.")}
 					</div>
 				)}

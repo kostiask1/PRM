@@ -235,12 +235,13 @@
 
 	.RulesReferenceModalContent__main {
 		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: minmax(0, auto) minmax(0, 1fr);
 		gap: var(--space-2);
 	}
 
 	.RulesReferenceModalContent__sidebar {
-		max-height: 34dvh;
-		overflow-y: auto;
+		max-height: 24dvh;
+		overflow: hidden;
 	}
 
 	.RulesReferenceModalContent__list {

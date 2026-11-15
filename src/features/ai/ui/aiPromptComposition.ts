@@ -30,6 +30,7 @@ export interface AiPromptComposerEditableFieldChangeEvent {
 
 export interface AiPromptComposerEditableFieldSlotProps {
 	type: "textarea";
+	"aria-label": string;
 	className: string;
 	placeholder?: string;
 	value: string;

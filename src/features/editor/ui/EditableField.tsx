@@ -27,7 +27,6 @@ import {
 	ORDERED_LIST,
 	QUOTE,
 	UNORDERED_LIST,
-	type TextMatchTransformer,
 	type Transformer,
 } from "@lexical/markdown";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -49,18 +48,15 @@ import {
 	$createTextNode,
 	$getRoot,
 	$getSelection,
+	$setSelection,
 	$isRangeSelection,
-	$applyNodeReplacement,
 	COMMAND_PRIORITY_HIGH,
 	FORMAT_TEXT_COMMAND,
 	KEY_DOWN_COMMAND,
 	OUTDENT_CONTENT_COMMAND,
-	TextNode,
-	type EditorConfig,
 	type EditorState,
 	type LexicalEditor,
 	type LexicalNode,
-	type SerializedTextNode,
 } from "lexical";
 import {
 	$createHeadingNode,
@@ -93,6 +89,7 @@ import { requestMentionSelection } from "../model/mentionPicker.ts";
 import { applyHistoryCaretSourceOffset } from "../model/historyCaret.ts";
 import {
 	createMentionBoundaryNode,
+	handleTextAfterMention,
 	handleSpaceAfterMention,
 } from "../model/mentionEditor.ts";
 import {
@@ -101,6 +98,7 @@ import {
 	useEditableFieldEntityLinkRuntime,
 } from "./EditableFieldEntityLinkRuntime.tsx";
 import { useEditorMentionPickerRuntime } from "./EditorMentionPickerRuntime.tsx";
+import { MentionNode, MENTION_TRANSFORMER, MENTION_TOOLTIP_KEY, $createMentionNode, $isMentionNode } from "./mentionNode.ts";
 import {
 	createEditableFieldChangeEvent,
 	getEditableClickPlan,
@@ -127,8 +125,6 @@ import {
 
 export type { EditableFieldChangeEvent } from "./editorPresentation.ts";
 
-const MENTION_CLASS = "EntityLink EditableField__mention";
-const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const TAB_CLASS = "EditableField__tab";
 const EDITOR_NAMESPACE = "EditableField";
 const EXTERNAL_UPDATE_TAG = "editable-field:external";
@@ -169,70 +165,6 @@ function isTextareaType(type: EditableFieldType): boolean {
 	return type === TEXTAREA_TYPE;
 }
 
-function setMentionDomAttributes(
-	element: HTMLElement,
-	mentionName: string,
-) {
-	element.dataset.mention = mentionName;
-	element.setAttribute("data-mention-tooltip", lang.t(MENTION_TOOLTIP_KEY));
-}
-
-class MentionNode extends TextNode {
-	static getType() {
-		return "mention";
-	}
-
-	static clone(node: MentionNode): MentionNode {
-		return new MentionNode(node.__text, node.__key);
-	}
-
-	static importJSON(serializedNode: SerializedTextNode): MentionNode {
-		return $createMentionNode(serializedNode.text)
-			.updateFromJSON(serializedNode)
-			.setMode("token") as MentionNode;
-	}
-
-	createDOM(config: EditorConfig): HTMLElement {
-		const element = super.createDOM(config);
-		element.className = `${element.className} ${MENTION_CLASS}`.trim();
-		setMentionDomAttributes(element, this.getTextContent());
-		element.spellcheck = false;
-		return element;
-	}
-
-	updateDOM(
-		prevNode: this,
-		dom: HTMLElement,
-		config: EditorConfig,
-	): boolean {
-		const shouldReplace = super.updateDOM(prevNode, dom, config);
-		if (!shouldReplace) {
-			setMentionDomAttributes(dom, this.getTextContent());
-		}
-		return shouldReplace;
-	}
-
-	exportJSON() {
-		return {
-			...super.exportJSON(),
-			type: "mention",
-			version: 1,
-		};
-	}
-
-	canInsertTextBefore() {
-		return false;
-	}
-
-	canInsertTextAfter() {
-		return false;
-	}
-
-	isTextEntity() {
-		return true;
-	}
-}
-
 const EDITOR_NODES = [
 	HeadingNode,
 	QuoteNode,
@@ -240,41 +172,6 @@ const EDITOR_NODES = [
 	ListItemNode,
 	MentionNode,
 ];
-
-function $createMentionNode(name = ""): MentionNode {
-	return $applyNodeReplacement(new MentionNode(String(name).trim())).setMode(
-		"token",
-	);
-}
-
-function $isMentionNode(
-	node: LexicalNode | null | undefined,
-): node is MentionNode {
-	return node instanceof MentionNode;
-}
-
-const MENTION_TRANSFORMER: TextMatchTransformer = {
-	dependencies: [MentionNode],
-	export: (node) => {
-		if (!$isMentionNode(node)) return null;
-		const mentionName = normalizeEditableText(node.getTextContent()).trim();
-		return mentionName ? `[${mentionName}]` : "";
-	},
-	importRegExp: /\[([^\]\n]+)\]/,
-	regExp: /\[([^\]\n]+)\]$/,
-	replace: (textNode, match) => {
-		const mentionName = normalizeEditableText(match[1]).trim();
-		if (!mentionName) return;
-
-		const mentionNode = $createMentionNode(mentionName);
-		mentionNode.setFormat(textNode.getFormat());
-		textNode.replace(mentionNode);
-		mentionNode.insertAfter(createMentionBoundaryNode());
-		return mentionNode;
-	},
-	trigger: "]",
-	type: "text-match",
-};
 
 const MARKDOWN_TRANSFORMERS: Transformer[] = [
 	HEADING,
@@ -346,7 +243,7 @@ function $selectEditorEnd() {
 	return $getSelection();
 }
 
-function $insertMentionAtSelection(name: string) {
+function $insertMentionAtSelection(name: string, label = name) {
 	const mentionName = normalizeEditableText(name).trim();
 	let selection = $getSelection();
 
@@ -356,7 +253,7 @@ function $insertMentionAtSelection(name: string) {
 	if (!mentionName || !$isRangeSelection(selection)) return;
 
 	const boundaryNode = createMentionBoundaryNode();
-	selection.insertNodes([$createMentionNode(mentionName), boundaryNode]);
+	selection.insertNodes([$createMentionNode(label, mentionName), boundaryNode]);
 	boundaryNode.select(1, 1);
 }
 
@@ -624,18 +521,16 @@ function useCommandHandlers({
 			event.preventDefault();
 			event.stopPropagation();
 
-			const selectedText = getEditableSelectedMentionText($getSelection());
-			if (selectedText) {
-				$insertMentionAtSelection(selectedText);
-				return;
-			}
-
-			const result = await requestMentionSelection(openMentionPicker);
+			const selection = $getSelection();
+			const savedSelection = $isRangeSelection(selection) ? selection.clone() : null;
+			const selectedText = getEditableSelectedMentionText(selection);
+			const result = await requestMentionSelection(openMentionPicker, selectedText);
 			if (!shouldInsertEditableMentionResult(result)) return;
 
 			editor.focus();
 			editor.update(() => {
-				$insertMentionAtSelection(result.name);
+				if (savedSelection) $setSelection(savedSelection);
+				$insertMentionAtSelection(result.name, result.label || result.name);
 			});
 		},
 		[editor, openMentionPicker],
@@ -653,7 +548,9 @@ function useCommandHandlers({
 				delegateKeyDown(event);
 				return;
 			}
+			const editedMention = handleTextAfterMention(event, $isMentionNode);
 			event.stopPropagation();
+			if (editedMention) return;
 			if (plan.kind === "delegate") {
 				delegateKeyDown(event);
 				return;

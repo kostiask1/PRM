@@ -4,8 +4,9 @@ export const OPEN_MENTION_PICKER = "mentionPicker/open";
 export const CLOSE_MENTION_PICKER = "mentionPicker/close";
 
 export interface MentionPickerRequest {
-	select: (name: string) => void;
+	select: (name: string, label?: string) => void;
 	cancel: () => void;
+	query?: string;
 }
 
 export interface ActiveMentionPickerRequest extends MentionPickerRequest {

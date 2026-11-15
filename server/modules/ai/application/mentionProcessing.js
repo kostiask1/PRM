@@ -83,11 +83,27 @@ function canonicalizeBracketedMentions(text, names) {
 	});
 }
 
+function moveMentionSuffixIntoVisibleText(text, names) {
+	if (!text || !names.length) return text;
+	return String(text).replace(
+		/\[([^\[\]\n]+)\]([\p{L}\p{M}]+)/gu,
+		(full, rawName, suffix) => {
+			const canonical = resolveCanonicalName(rawName, names);
+			if (!canonical) return full;
+			return `[${canonical}]{${canonical}${suffix}}`;
+		},
+	);
+}
+
 function processGeneratedTextMentions(text, names) {
 	if (typeof text !== "string") return text;
-	const wrapped = wrapMentionsInText(text, names);
-	const canonicalized = canonicalizeBracketedMentions(wrapped, names);
-	return collapseNestedMentionBrackets(canonicalized);
+	return text.split(/(\[[^\]\n]+\]\{(?:\\.|[^}\\\n])+\})/g).map((part) => {
+		if (/^\[[^\]\n]+\]\{(?:\\.|[^}\\\n])+\}$/.test(part)) return part;
+		const wrapped = wrapMentionsInText(part, names);
+		const canonicalized = canonicalizeBracketedMentions(wrapped, names);
+		const inflected = moveMentionSuffixIntoVisibleText(canonicalized, names);
+		return collapseNestedMentionBrackets(inflected);
+	}).join("");
 }
 
 const AI_OPERATION_TEXT_KEYS = new Set([

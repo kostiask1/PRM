@@ -15,7 +15,42 @@ export { MENTION_BOUNDARY } from "./mentionSelectionPolicy.ts";
 export interface MentionKeyboardEvent {
 	key: string;
 	code: string;
+	altKey?: boolean;
+	ctrlKey?: boolean;
+	metaKey?: boolean;
 	preventDefault: () => void;
+}
+
+function getEditableMentionAtCursor(isMentionNode: IsMentionNode) {
+	const mentionNode = getMentionBeforeCollapsedSelection(
+		$getSelection(),
+		isMentionNode,
+	);
+	return $isTextNode(mentionNode) ? mentionNode : null;
+}
+
+export function handleTextAfterMention(
+	event: MentionKeyboardEvent,
+	isMentionNode: IsMentionNode,
+): boolean {
+	if (
+		event.key.length !== 1 ||
+		event.key === " " ||
+		event.altKey ||
+		event.ctrlKey ||
+		event.metaKey
+	) {
+		return false;
+	}
+
+	const mentionNode = getEditableMentionAtCursor(isMentionNode);
+	if (!mentionNode) return false;
+
+	const nextText = `${mentionNode.getTextContent()}${event.key}`;
+	mentionNode.setTextContent(nextText);
+	mentionNode.select(nextText.length, nextText.length);
+	event.preventDefault();
+	return true;
 }
 
 export function createMentionBoundaryNode(text = ""): TextNode {
@@ -28,12 +63,20 @@ export function handleSpaceAfterMention(
 ): boolean {
 	if (event.key !== " " && event.code !== "Space") return false;
 
-	const selection = $getSelection();
-	const mentionNode = getMentionBeforeCollapsedSelection(
-		selection,
-		isMentionNode,
-	);
+	const mentionNode = getEditableMentionAtCursor(isMentionNode);
 	if (!mentionNode) return false;
+
+	const mentionText = mentionNode.getTextContent();
+	if (!mentionText.endsWith(" ")) {
+		const nextText = `${mentionText} `;
+		mentionNode.setTextContent(nextText);
+		mentionNode.select(nextText.length, nextText.length);
+		event.preventDefault();
+		return true;
+	}
+
+	const trimmedMentionText = mentionText.trimEnd();
+	mentionNode.setTextContent(trimmedMentionText);
 
 	const nextSibling = mentionNode.getNextSibling();
 	if ($isTextNode(nextSibling)) {

@@ -3,3 +3,4 @@ export { EditableFieldEntityLinkProvider } from "./EditableFieldEntityLinkRuntim
 export { EditorMentionPickerRuntimeProvider } from "./EditorMentionPickerRuntime.tsx";
 export { default as Input } from "./Input.tsx";
 export { default as MentionPickerModalContent } from "./MentionPickerModalContent.tsx";
+export { getAmbiguousMentionNames } from "./editorPresentation.ts";

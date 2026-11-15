@@ -367,6 +367,12 @@
 	overflow-wrap: anywhere;
 }
 
+@media (max-width: 767px) {
+	.EncounterView__header {
+		padding-left: var(--size-9);
+	}
+}
+
 @media (max-width: 600px) {
 	.EncounterView__turnBar {
 		margin-inline: var(--space-3);

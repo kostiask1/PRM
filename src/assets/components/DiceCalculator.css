@@ -447,6 +447,11 @@ body:has(.Modal__overlay) .DiceCalculator:not(.is_open) {
 	cursor: pointer;
 }
 
+.DiceCalculator__clearHistoryBtn:disabled {
+	color: var(--muted);
+	cursor: default;
+}
+
 .DiceCalculator__historyList {
 	height: 140px;
 	overflow-y: scroll;

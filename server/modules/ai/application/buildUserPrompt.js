@@ -7,11 +7,11 @@ If selectedMonster exists and selectedMonsterMode is not "create-based", update 
 const NPC_MIXED_TASK =
 	'TASK: Create or update NPC operations for the current session and campaign as requested. Use entity "npc" only, identify existing targets by id, and choose "scope": "campaign" or "scope": "session" separately for each NPC operation. Default new NPCs to "scope": "session"; use "scope": "campaign" only for clearly recurring or campaign-important NPCs.\n';
 const NPC_SESSION_RULE =
-	"Do not create session copies of campaign-scoped NPCs. If an existing campaign NPC is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the NPC's logical use means that campaign NPC should become session-only, use moveScope from campaign to session.\n";
+	"Do not create session copies of campaign-scoped NPCs. If an existing campaign NPC is only referenced in session content, use [Exact Entity Name] when its visible name is unchanged or [Exact Entity Name]{Visible text} for a declined form. Never append a grammatical suffix outside the link. If the user request or the NPC's logical use means that campaign NPC should become session-only, use moveScope from campaign to session.\n";
 const LOCATION_MIXED_TASK =
 	'TASK: Create or update location/faction operations for the current session and campaign as requested. Use entity "location" only, identify existing targets by id, and choose "scope": "campaign" or "scope": "session" separately for each location/faction operation. Default new locations/factions to "scope": "session"; use "scope": "campaign" only for major reusable places, factions, regions, organizations, or campaign hubs.\n';
 const LOCATION_SESSION_RULE =
-	"Do not create session copies of campaign-scoped locations/factions. If an existing campaign location/faction is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the location/faction's logical use means that campaign entity should become session-only, use moveScope from campaign to session.\n";
+	"Do not create session copies of campaign-scoped locations/factions. If an existing campaign location/faction is only referenced in session content, use [Exact Entity Name] when its visible name is unchanged or [Exact Entity Name]{Visible text} for a declined form. Never append a grammatical suffix outside the link. If the user request or the location/faction's logical use means that campaign entity should become session-only, use moveScope from campaign to session.\n";
 const ENCOUNTER_CUSTOM_MONSTER_RULE =
 	"Custom monster creation is allowed only when existing official or custom monsters do not fit well.\n";
 const ENCOUNTER_CREATURE_EDITING_RULE =
@@ -19,7 +19,7 @@ const ENCOUNTER_CREATURE_EDITING_RULE =
 const SCENE_TASK =
 	"TASK: Based on current session and context, apply the user's requested session changes.\n";
 const SCENE_SCOPE_RULE =
-	'When existing campaign NPCs, locations, or factions are used in this session, write them as [Exact Entity Name] mentions in scene text or notes instead of creating copied session entities. For new NPCs/locations/factions, choose "scope": "session" by default; use "scope": "campaign" only for reusable campaign entities. Use moveScope whenever the entity\'s logical role shows it belongs in the other scope.\n';
+	'When existing campaign NPCs, locations, or factions are used in this session, write them as [Exact Entity Name] when visible text is unchanged or [Exact Entity Name]{Visible text} for a declined form in scene text or notes instead of creating copied session entities. Never append grammatical letters outside the link. For new NPCs/locations/factions, choose "scope": "session" by default; use "scope": "campaign" only for reusable campaign entities. Use moveScope whenever the entity\'s logical role shows it belongs in the other scope.\n';
 const SCENE_ENCOUNTER_RULE =
 	"Encounter generation is enabled: any combat encounter you create must be connected to exactly one scene with encounterClientId in the same JSON response. Never create orphan encounters.\n";
 const CAMPAIGN_TASK =

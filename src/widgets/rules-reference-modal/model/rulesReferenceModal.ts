@@ -465,6 +465,15 @@ export function applyReferenceTabOnlySelection(
 	return { ...selectedByTab, [tabId]: "" };
 }
 
+export function rememberEmbeddedReferenceSelection(
+	selectedByTab: ReferenceSelectionsByTab,
+	tabId: ReferenceTabId,
+	name: string,
+): ReferenceSelectionsByTab {
+	if (selectedByTab[tabId] === name) return selectedByTab;
+	return { ...selectedByTab, [tabId]: name };
+}
+
 export function getReferenceLoadErrorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error ? error.message : fallback;
 }

@@ -6,6 +6,7 @@ export { downloadBlob, downloadJsonFile } from "./download.js";
 export { formatBytes } from "./formatBytes.js";
 export { isJsonObject, isJsonString } from "./json.js";
 export { lang } from "./localization.js";
+export { decodeEntityMentionLabel, ENTITY_MENTION_PATTERN, formatEntityMention, splitEntityMentions } from "./entityMentions.ts";
 export { makeDomId, scrollToHashTarget } from "./domNavigation.js";
 export { rankSearchResultsByName } from "./searchRanking.ts";
 export {

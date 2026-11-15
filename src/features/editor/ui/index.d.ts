@@ -26,3 +26,4 @@ export type {
 	EditorMentionEntity as MentionPickerEntity,
 	InputSelectionPreview,
 } from "./editorPresentation.ts";
+export { getAmbiguousMentionNames } from "./editorPresentation.ts";

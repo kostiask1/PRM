@@ -495,6 +495,7 @@ export default function DiceCalculator({
 							variant="danger"
 							size={Button.SIZES.MEDIUM}
 							onClick={clearFormula}
+							aria-label={lang.t("Clear formula")}
 						>
 							{lang.t("Clear")}
 						</Button>
@@ -522,7 +523,10 @@ export default function DiceCalculator({
 						<div className="DiceCalculator__historyHeader">
 							<span>{lang.t("History")}</span>
 							<button
+								type="button"
 								onClick={clearHistory}
+								disabled={history.length === 0}
+								aria-label={lang.t("Clear roll history")}
 								className="DiceCalculator__clearHistoryBtn"
 							>
 								{lang.t("Clear")}

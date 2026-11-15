@@ -166,7 +166,7 @@ Supported formatting in editable textarea fields:
 - Quotes: "> text" at the beginning of a line.
 - Indentation: real tab characters "\\t"; preserve existing tabs and use "\\t" for intentional nested/indented text.
 - Paragraphs and line breaks: preserve meaningful blank lines and existing line breaks.
-- Entity mentions: "[Exact Entity Name]" only, following the separate mention rules.
+- Entity mentions: use "[Exact Entity Name]" when the visible text is unchanged, or "[Exact Entity Name]{Visible text}" for a declined or otherwise different visible form, following the separate mention rules.
 When returning parsed JSON, Markdown must be inside JSON string values only. Escape newlines/tabs as normal JSON string content; do not output HTML, rich-text objects, code fences, Markdown tables, markdown links, or raw React/HTML tags.
 Preserve existing Markdown markers exactly in unchanged text. When editing text, keep the user's existing formatting style and change only the requested content.
 For notes, Markdown belongs in the note object's "text" field. A line starting with "#" is a Markdown heading inside "text"; never convert it into the note "title" and never remove the "#" marker unless the user explicitly asks to change that heading.`;
@@ -178,7 +178,9 @@ The image prompt must be detailed and ready to paste into an image generator.`;
 const entityMentionContract = `APP ENTITY MENTION RULE:
 Use [Exact Entity Name] only for actual existing entities from INPUT DATA or for new entities created in this same JSON response. Do not bracket ordinary nouns, species, terrain, concepts, JSON keys, or structured name fields.
 Existing character/NPC/location/faction names must keep their exact spelling and alphabet. Do not translate, transliterate, decline, or rename them unless USER INSTRUCTIONS explicitly ask for it.
-When session content needs an existing campaign NPC/location/faction, mention it as [Exact Entity Name] in scene texts or note text. Do not create a copied session entity just to use it in session content.`;
+When the sentence needs a declined, inflected, shortened, or otherwise different visible form, use [Exact Entity Name]{Visible text}. The square brackets always contain the exact unchanged entity name; the braces contain the complete text that the user must see. Example: [Бастіон]{Бастіона} and [Джордж]{Джорджем}.
+Never append grammatical letters outside the link: output [Бастіон]{Бастіона}, never [Бастіон]а. Do not add an entity id or linkId to this syntax.
+When session content needs an existing campaign NPC/location/faction, mention it with one of these forms in scene texts or note text. Do not create a copied session entity just to use it in session content.`;
 
 const sessionEntityScopeDecisionContract = `SESSION ENTITY SCOPE DECISION RULE:
 In session planning, new NPCs and locations/factions are session-scoped by default.
@@ -268,7 +270,7 @@ const ENCOUNTER_COMPOSITION_DISABLED_CONTRACT = `Encounter generation is disable
 
 const SESSION_CAMPAIGN_ENTITY_OUTPUT_CONTRACT = `SESSION/CAMPAIGN ENTITY OUTPUT RULE:
 Do not create session copies of campaign-scoped NPCs or campaign-scoped locations/factions.
-If existing INPUT DATA.campaign.npcs or INPUT DATA.campaign.locations are needed in scenes, notes, goals, stakes, or location text, refer to them with [Exact Entity Name] mentions inside text fields instead of creating "npc" or "location" operations.
+If existing INPUT DATA.campaign.npcs or INPUT DATA.campaign.locations are needed in scenes, notes, goals, stakes, or location text, refer to them with [Exact Entity Name] or [Exact Entity Name]{Visible text} mentions inside text fields instead of creating "npc" or "location" operations.
 Set "scope" explicitly on every "npc" and "location" operation. Use only "campaign" or "session"; never use "mixed" as an operation scope.
 Use "scope": "session" for genuinely new NPCs/locations/factions that are only needed in the current session.
 Use "scope": "campaign" only for reusable NPCs/locations/factions that should remain available across the campaign.

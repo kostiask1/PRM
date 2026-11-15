@@ -31,6 +31,12 @@ import {
 	UNORDERED_LIST,
 } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
+import { getTopModal } from "../src/shared/ui/useModalController.ts";
+import {
+	$isMentionNode,
+	MentionNode,
+	MENTION_TRANSFORMER,
+} from "../src/features/editor/ui/mentionNode.ts";
 
 import {
 	idsEqual,
@@ -278,6 +284,7 @@ import {
 	REFERENCE_TAB_POLICIES,
 	applyLoadedReferenceSelection,
 	applyReferenceTabOnlySelection,
+	rememberEmbeddedReferenceSelection,
 	applyReferenceSelectionReconciliationPlan,
 	combineBestiaryLists,
 	createReferenceSelection,
@@ -378,6 +385,9 @@ import {
 	createEmptyNote as createModelEmptyNote,
 	getNoteRenderKey,
 	getNoteListLabel,
+	getNoteListPreview,
+	formatEntityMention,
+	splitEntityMentions,
 	getNotesForRender,
 	isNoteEmpty,
 	isVirtualNoteId,
@@ -388,6 +398,7 @@ import {
 	MENTION_BOUNDARY,
 	createMentionBoundaryNode,
 	getMentionBeforeCollapsedSelection,
+	handleTextAfterMention,
 	handleSpaceAfterMention,
 	isMentionBoundaryPosition,
 } from "../src/features/editor/model.js";
@@ -395,6 +406,7 @@ import {
 	applyInputBlockEdit,
 	createEditableFieldChangeEvent,
 	filterMentionEntities,
+	getAmbiguousMentionNames,
 	getEditableClickPlan,
 	getEditableCopyRequest,
 	getEditableFieldCopyPresentation,
@@ -703,6 +715,7 @@ import {
 	normalizeGalleryBulkDeleteConfirmation,
 } from "../src/features/images/model/imageGalleryInteraction.ts";
 import {
+	getGalleryEffectiveScope,
 	getScopedGallerySearchQuery,
 	hasNonEmptyGalleryFolders,
 	loadGalleryImages,
@@ -4068,7 +4081,7 @@ await run(
 				"if (cardType) {",
 				"key={resource.id}",
 				'"AiAssistantPanel__preview_resource_cards"',
-				"{renderPreviewResourceHeader(resource)}",
+				"{renderPreviewResourceHeader(resource, displayName || resource.label)}",
 				"<AiResponseCardDiff",
 				"resource={resource}",
 				"isDraft={isDraft}",
@@ -9884,15 +9897,14 @@ await run(
 			mentionSource,
 			/export function renderMentionText\(text: unknown\): ReactNode\[\]/,
 		);
-		assert.ok(mentionSource.includes(".split(/(\\[[^\\]]+\\])/g)"));
+		assert.match(mentionSource, /splitEntityMentions\(text\)/);
 		assertSourceTokensInOrder(
 			mentionSource,
 			[
-				'String(text || "")',
-				'if (!part.startsWith("[") || !part.endsWith("]")) return part;',
-				"const name = part.slice(1, -1).trim();",
-				"<EntityLink key={index} name={name}>",
-				"{name}",
+				"splitEntityMentions(text)",
+				'typeof part === "string"',
+				"<EntityLink key={index} name={part.name}>",
+				"{part.text}",
 			],
 			"entity mention rendering",
 		);
@@ -15802,8 +15814,8 @@ await run(
 				"export type OpenMentionPicker",
 				"export function requestMentionSelection(",
 				"openMentionPicker({",
-				"select: (name) =>",
-				'resolve({ status: "selected", name: name || "" })',
+				"select: (name, label) =>",
+				'resolve({ status: "selected", name: name || ""',
 				"cancel: () => resolve({ status: \"cancelled\" })",
 			],
 			"Editor mention selection promise adapter",
@@ -15820,7 +15832,7 @@ await run(
 				"const { openMentionPicker } = useEditorMentionPickerRuntime();",
 				"const insertMentionWithoutSelection = async (",
 				"getInputSelectionState(event.currentTarget)",
-				"await requestMentionSelection(openMentionPicker)",
+				"await requestMentionSelection(openMentionPicker, value.substring(cursorStart, cursorEnd))",
 				"const insertion = getInputMentionInsertion(",
 				"if (!insertion) return",
 				"props.onChange?.(createInputChangeEvent(event, insertion.value))",
@@ -15840,15 +15852,13 @@ await run(
 			[
 				"event.preventDefault()",
 				"event.stopPropagation()",
-				"getEditableSelectedMentionText($getSelection())",
-				"if (selectedText)",
-				"$insertMentionAtSelection(selectedText)",
-				"return",
-				"await requestMentionSelection(openMentionPicker)",
+				"const selection = $getSelection()",
+				"getEditableSelectedMentionText(selection)",
+				"await requestMentionSelection(openMentionPicker, selectedText)",
 				"if (!shouldInsertEditableMentionResult(result)) return",
 				"editor.focus()",
 				"editor.update(() =>",
-				"$insertMentionAtSelection(result.name)",
+				"$insertMentionAtSelection(result.name, result.label || result.name)",
 				"[editor, openMentionPicker]",
 			],
 			"EditableField mention picker selection lifecycle",
@@ -15958,7 +15968,7 @@ await run(
 				"const dispatch = useAppDispatch();",
 				"const mentionPickerRequest = useAppSelector(",
 				"(state) => state.mentionPickerRequest",
-				"const { activeCampaignSlug } = useAppSelector((state) => state.navigation);",
+				"const { activeCampaignSlug, activeSessionFileName } = useAppSelector((state) => state.navigation);",
 				"const currentLanguage = useAppSelector(",
 				"useEffect(() => {",
 				"void runMentionPickerModalRequest(",
@@ -15966,7 +15976,7 @@ await run(
 				"activeCampaignSlug,",
 				"currentLanguage,",
 				"dispatch,",
-				"}, [activeCampaignSlug, currentLanguage, dispatch, mentionPickerRequest]);",
+				"}, [activeCampaignSlug, activeSessionFileName, currentLanguage, dispatch, mentionPickerRequest]);",
 				"return null;",
 			],
 			"app-owned mention picker host lifecycle",
@@ -15981,7 +15991,7 @@ await run(
 			[
 				"const context = prepareMentionPickerModal(request, campaignSlug, dispatch);",
 				"if (!context) return;",
-				"return runMentionPickerModalWorkflow(context, currentLanguage, dispatch);",
+				"return runMentionPickerModalWorkflow({ ...context, sessionFileName }, currentLanguage, dispatch);",
 			],
 			"async mention picker request boundary",
 		);
@@ -16011,9 +16021,9 @@ await run(
 		assertSourceTokensInOrder(
 			callbacksSource,
 			[
-				"const { select, cancel } = request as AppMentionPickerCallbacks;",
+				"const { select, cancel, query } = request as AppMentionPickerCallbacks;",
 				"if (!hasValidMentionPickerCallbacks(request)) return null;",
-				"return { select, cancel };",
+				"return { select, cancel, query };",
 			],
 			"mention picker callback validation",
 		);
@@ -16077,8 +16087,8 @@ await run(
 				'campaignApi.getEntities(campaignSlug, "locations").catch(() => []),',
 				"return buildAppMentionOptions(",
 				"characters: characters || [],",
-				"npc: npcs || [],",
-				"locations: locations || [],",
+				"npc: [...(npcs || []),",
+				"locations: [...(locations || []),",
 				"currentLanguage,",
 			],
 			"mention picker entity loading",
@@ -16098,8 +16108,8 @@ await run(
 				"onCancelAction: () => {",
 				"cancelMentionPicker(callbacks, dispatch);",
 				"<MentionPickerModalContent",
-				"onSelect={(name) => {",
-				"select(name);",
+				"onSelect={(name, label) => {",
+				"select(name, label);",
 				"closeMentionPicker(dispatch);",
 				"closeActiveModal();",
 				"onCancel={() => {",
@@ -21277,6 +21287,16 @@ await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 	assert.equal(getNoteListLabel({ text: "\\*буквально\\* та слово_з_рисками" }), "*буквально* та слово_з_рисками");
 	assert.equal(getNoteListLabel({ text: "123456789012345678901234567[Taran Stone] lives here" }), "123456789012345678901234567Tar...");
 	assert.equal(getNoteListLabel({ title: "Meet [Taran Stone]", text: "ignored" }), "Meet Taran Stone");
+	assert.equal(getNoteListLabel({ text: "Розмова з [Джордж]{Джорджем} у місті" }), "Розмова з Джорджем у місті");
+	const labelWithEscapes = "Джорджем } \\";
+	const escapedMention = formatEntityMention("Джордж", labelWithEscapes);
+	assert.equal(escapedMention, "[Джордж]{Джорджем \\} \\\\}");
+	assert.deepEqual(splitEntityMentions(escapedMention), [
+		{ name: "Джордж", text: labelWithEscapes, raw: escapedMention },
+	]);
+	assert.equal(getNoteListPreview({ text: `# Розмова з ${escapedMention}` }).text, `Розмова з ${escapedMention}`);
+	assert.equal(getNoteListLabel({ text: `# Розмова з ${escapedMention}` }), `Розмова з ${labelWithEscapes}`);
+	assert.equal(formatEntityMention("Джордж", "Джордж"), "[Джордж]");
 	assert.equal(getNoteListLabel({ text: "Ї".repeat(30) }), "Ї".repeat(30));
 	assert.equal(getNoteListLabel({ text: "  " }), "");
 	const emptyNote = createModelEmptyNote();
@@ -21342,7 +21362,53 @@ await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 	]);
 });
 
-await run("mention editor inserts Space after a link in the active command", async () => {
+await run("entity mentions survive Lexical markdown and JSON round trips", () => {
+	const transformers = [
+		HEADING, QUOTE, UNORDERED_LIST, ORDERED_LIST,
+		BOLD_STAR, BOLD_UNDERSCORE, ITALIC_STAR, ITALIC_UNDERSCORE,
+		MENTION_TRANSFORMER,
+	];
+	const createMentionEditor = () => createEditor({
+		namespace: "mention-round-trip",
+		nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, MentionNode],
+		onError(error) { throw error; },
+	});
+	const label = "Джорджем } \\";
+	const source = `Зустріч із ${formatEntityMention("Джордж", label)} та [Ілара].`;
+	const editor = createMentionEditor();
+	let mentionDetails;
+	let output;
+	editor.update(() => {
+		$convertFromMarkdownString(source, transformers, undefined, true, false);
+		const mentions = $getRoot().getAllTextNodes().filter($isMentionNode);
+		mentionDetails = mentions.map((mention) => [mention.__mentionName, mention.getTextContent()]);
+		assert.ok(mentions.every((mention) => mention.getMode() === "normal"));
+		output = $convertToMarkdownString(transformers, undefined, true).replace(/\u200B/g, "");
+	}, { discrete: true });
+	assert.deepEqual(mentionDetails, [["Джордж", label], ["Ілара", "Ілара"]]);
+	assert.equal(output, source);
+
+	const restored = createMentionEditor();
+	restored.setEditorState(restored.parseEditorState(JSON.stringify(editor.getEditorState().toJSON())));
+	restored.getEditorState().read(() => {
+		const mentions = $getRoot().getAllTextNodes().filter($isMentionNode);
+		assert.deepEqual(mentions.map((mention) => [mention.__mentionName, mention.getTextContent()]), mentionDetails);
+		assert.equal($convertToMarkdownString(transformers, undefined, true).replace(/\u200B/g, ""), source);
+	});
+	for (const value of ["**Джордж**", "Джордж_[старший]", "перший } другий \\"]) {
+		const next = createMentionEditor();
+		const expected = `Про ${formatEntityMention("Джордж", value)}.`;
+		next.update(() => {
+			$convertFromMarkdownString(expected, transformers, undefined, true, false);
+			const mentions = $getRoot().getAllTextNodes().filter($isMentionNode);
+			assert.equal(mentions.length, 1);
+			assert.equal(mentions[0].getTextContent(), value);
+			assert.equal($convertToMarkdownString(transformers, undefined, true).replace(/\u200B/g, ""), expected);
+		}, { discrete: true });
+	}
+});
+
+await run("mention editor edits a link until a second trailing Space exits it", async () => {
 	class TestMentionNode extends TextNode {
 		static getType() {
 			return "test-mention";
@@ -21468,20 +21534,34 @@ await run("mention editor inserts Space after a link in the active command", asy
 
 	editor.registerCommand(
 		KEY_DOWN_COMMAND,
-		(event) => handleSpaceAfterMention(event, isMentionNode),
+		(event) =>
+			handleTextAfterMention(event, isMentionNode) ||
+			handleSpaceAfterMention(event, isMentionNode),
 		COMMAND_PRIORITY_HIGH,
 	);
 
-	const spaceEvent = {
-		key: " ",
-		code: "Space",
+	const keyboardEvent = (key, code = key) => ({
+		key,
+		code,
 		defaultPrevented: false,
-		preventDefault() {
-			this.defaultPrevented = true;
-		},
-	};
-	assert.equal(editor.dispatchCommand(KEY_DOWN_COMMAND, spaceEvent), true);
-	assert.equal(spaceEvent.defaultPrevented, true);
+		preventDefault() { this.defaultPrevented = true; },
+	});
+	const letterEvent = keyboardEvent("а", "KeyF");
+	assert.equal(editor.dispatchCommand(KEY_DOWN_COMMAND, letterEvent), true);
+	assert.equal(letterEvent.defaultPrevented, true);
+	const firstSpaceEvent = keyboardEvent(" ", "Space");
+	assert.equal(editor.dispatchCommand(KEY_DOWN_COMMAND, firstSpaceEvent), true);
+	assert.equal(firstSpaceEvent.defaultPrevented, true);
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	assert.equal(
+		editor.getEditorState().read(() => $getRoot().getTextContent()),
+		`Linkа ${MENTION_BOUNDARY}`,
+		"the first Space remains inside the editable link label",
+	);
+
+	const secondSpaceEvent = keyboardEvent(" ", "Space");
+	assert.equal(editor.dispatchCommand(KEY_DOWN_COMMAND, secondSpaceEvent), true);
+	assert.equal(secondSpaceEvent.defaultPrevented, true);
 	await new Promise((resolve) => setTimeout(resolve, 0));
 
 	let textAfterSpace = "";
@@ -21495,7 +21575,7 @@ await run("mention editor inserts Space after a link in the active command", asy
 	});
 	assert.equal(
 		textAfterSpace,
-		`Link${MENTION_BOUNDARY} ${MENTION_BOUNDARY}`,
+		`Linkа${MENTION_BOUNDARY} ${MENTION_BOUNDARY}`,
 	);
 	assert.equal(selectionOffset, 2);
 
@@ -21512,7 +21592,7 @@ await run("mention editor inserts Space after a link in the active command", asy
 			.getEditorState()
 			.read(() => $getRoot().getTextContent())
 			.replaceAll(MENTION_BOUNDARY, ""),
-		"Link x",
+		"Linkа x",
 	);
 });
 
@@ -21647,6 +21727,24 @@ await run("editor presentation preserves mention grouping and cursor mapping", (
 		{ id: 3, type: "locations", name: "Срібна гавань" },
 	];
 	assert.deepEqual(filterMentionEntities(entities, "коваль"), [entities[0]]);
+	const fuzzyEntities = [
+		{ id: "george", type: "npc", name: "Джордж" },
+		{ id: "other", type: "npc", name: "Вартовий" },
+	];
+	assert.deepEqual(filterMentionEntities(fuzzyEntities, "Джорджа"), [fuzzyEntities[0]]);
+	assert.deepEqual(filterMentionEntities(fuzzyEntities, "зовсім інше"), []);
+	const ambiguous = getAmbiguousMentionNames([
+		{ name: "Ілара", type: "locations" },
+		{ name: "Ілара Вельн", firstName: "Ілара", lastName: "Вельн", type: "npc" },
+		{ name: "Соліс", type: "locations" },
+		{ name: "соліс", type: "npc" },
+		{ name: "Коваль", alternateName: "Сірий", type: "npc" },
+		{ name: "Сірий", type: "npc" },
+	]);
+	assert.equal(ambiguous.has("ілара"), true);
+	assert.equal(ambiguous.has("соліс"), true);
+	assert.equal(ambiguous.has("сірий"), true);
+	assert.equal(ambiguous.has("ілара вельн"), false);
 	const relevanceEntities = [
 		{ id: "secondary", name: "Dragoon", firstName: "Dragon" },
 		{ id: "contains", name: "Pseudodragon" },
@@ -23726,15 +23824,13 @@ await run(
 		const handlerTokens = [
 			"event.preventDefault()",
 			"event.stopPropagation()",
-			"getEditableSelectedMentionText($getSelection())",
-			"if (selectedText)",
-			"$insertMentionAtSelection(selectedText)",
-			"return",
-			"await requestMentionSelection(openMentionPicker)",
+			"const selection = $getSelection()",
+			"getEditableSelectedMentionText(selection)",
+			"await requestMentionSelection(openMentionPicker, selectedText)",
 			"if (!shouldInsertEditableMentionResult(result)) return",
 			"editor.focus()",
 			"editor.update(() =>",
-			"$insertMentionAtSelection(result.name)",
+			"$insertMentionAtSelection(result.name, result.label || result.name)",
 			"[editor, openMentionPicker]",
 		];
 		previousIndex = -1;
@@ -23748,16 +23844,16 @@ await run(
 		}
 		assert.equal((handler.match(/\$getSelection\(\)/g) ?? []).length, 1);
 		assert.equal(
-			(handler.match(/requestMentionSelection\(openMentionPicker\)/g) ?? []).length,
+			(handler.match(/requestMentionSelection\(openMentionPicker, selectedText\)/g) ?? []).length,
 			1,
 		);
 		assert.equal(
 			(handler.match(/\$insertMentionAtSelection\(/g) ?? []).length,
-			2,
+			1,
 		);
 		assert.doesNotMatch(
 			handler,
-			/\$isRangeSelection|\.isCollapsed\(|normalizeEditableText|\.getTextContent\(|result\.status|!\s*result\.name/,
+			/\.isCollapsed\(|normalizeEditableText|\.getTextContent\(|result\.status|!\s*result\.name/,
 		);
 	},
 );
@@ -24733,7 +24829,7 @@ await run("Input keyboard execution preserves controller effect ownership", asyn
 		"const { value, selectionStart, selectionEnd } = getInputSelectionState(",
 		"event.currentTarget",
 		"const execution = getInputShortcutExecutionPlan(",
-		'if (execution.kind === "mention-picker")',
+		'if (action.kind === "mention" || execution.kind === "mention-picker")',
 		"void insertMentionWithoutSelection(event)",
 		"applyTextEdit(event, execution.edit)",
 	];
@@ -24744,7 +24840,7 @@ await run("Input keyboard execution preserves controller effect ownership", asyn
 		previousIndex = index;
 	}
 	assert.equal((handler.match(/event\.preventDefault\(\)/g) ?? []).length, 1);
-	assert.doesNotMatch(handler, /action\.kind ===/);
+	assert.match(handler, /action\.kind === "mention"/);
 	const firstLayoutEffectStart = source.indexOf("useLayoutEffect(() => {");
 	const initialSelectionEffectStart = source.indexOf(
 		"useLayoutEffect(() => {",
@@ -24819,7 +24915,7 @@ await run("Input keyboard execution preserves controller effect ownership", asyn
 	const mentionHandler = source.slice(mentionHandlerStart, mentionHandlerEnd);
 	const mentionHandlerTokens = [
 		"getInputSelectionState(event.currentTarget)",
-		"await requestMentionSelection(openMentionPicker)",
+		"await requestMentionSelection(openMentionPicker, value.substring(cursorStart, cursorEnd))",
 		"const insertion = getInputMentionInsertion(",
 		"if (!insertion) return",
 		"props.onChange?.(createInputChangeEvent(event, insertion.value))",
@@ -26778,6 +26874,17 @@ await run("app shell policies normalize settings, mentions, and campaign complet
 			{ id: "kyiv", type: "locations", name: "Київ" },
 		],
 	);
+	const [sessionOption] = buildAppMentionOptions(
+		{
+			characters: [],
+			npc: [{ id: 0, firstName: "Ілара", lastName: "Вельн", name: "Агентка", _mentionScope: "session" }],
+			locations: [],
+		},
+		"uk",
+	);
+	assert.equal(sessionOption.scope, "session");
+	assert.equal(sessionOption.id, 0);
+	assert.equal(sessionOption.alternateName, "Агентка");
 
 	const now = new Date("2026-07-20T09:00:00.000Z");
 	const completion = getCampaignCompletionPlan(
@@ -27414,6 +27521,10 @@ await run("campaign graph builds nodes and mention edges", () => {
 	assert.deepEqual(extractBracketMentions(null), []);
 	assert.deepEqual(extractBracketMentions(17), []);
 	assert.deepEqual(extractBracketMentions("Без дужок"), []);
+	assert.deepEqual(
+		extractBracketMentions(formatEntityMention("Джордж", "Джорджем [старим] } \\") + " і [Ілара]"),
+		["Джордж", "Ілара"],
+	);
 	assert.deepEqual(
 		extractBracketMentions("[] [   ] [ Один   Два ] [Один   Два] [Рядок\nдалі]"),
 		["Один Два", "Один Два"],
@@ -28524,6 +28635,36 @@ await run("note presentation preserves collapse and virtual-item decisions", () 
 	);
 	assert.equal(isRealNote({ _isVirtual: true }), false);
 	assert.equal(isRealNote({ _isVirtual: false }), true);
+});
+
+await run("modal keyboard ownership follows visual stacking and DOM order", () => {
+	const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+	const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+	let dialogs = [];
+	const card = (zIndex) => {
+		const overlay = zIndex === null ? null : { zIndex };
+		return { closest: () => overlay };
+	};
+	try {
+		Object.defineProperty(globalThis, "document", { configurable: true, value: { querySelectorAll: () => dialogs } });
+		Object.defineProperty(globalThis, "window", { configurable: true, value: { getComputedStyle: (overlay) => overlay } });
+		const confirmation = card("3300");
+		const lower = card("1300");
+		const sameLayerLater = card("3300");
+		dialogs = [confirmation, lower];
+		assert.equal(getTopModal(), confirmation);
+		dialogs.push(sameLayerLater);
+		assert.equal(getTopModal(), sameLayerLater);
+		dialogs = [card("auto"), card(null)];
+		assert.equal(getTopModal(), dialogs[0]);
+		dialogs = [];
+		assert.equal(getTopModal(), null);
+	} finally {
+		if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
+		else delete globalThis.document;
+		if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+		else delete globalThis.window;
+	}
 });
 
 await run("shared modal model preserves focus, keyboard, and close contracts", () => {
@@ -31017,13 +31158,13 @@ If INPUT DATA.customBestiary.selectedMonster exists and selectedMonsterMode is "
 When creating a monster based on an existing one, give the new monster a distinct "name" unless USER INSTRUCTIONS explicitly ask to replace or keep the same name.
 If selectedMonster exists and selectedMonsterMode is not "create-based", update that monster by id and return only changed fields in patch.\n`;
 	const npcSessionRule =
-		"Do not create session copies of campaign-scoped NPCs. If an existing campaign NPC is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the NPC's logical use means that campaign NPC should become session-only, use moveScope from campaign to session.\n";
+		"Do not create session copies of campaign-scoped NPCs. If an existing campaign NPC is only referenced in session content, use [Exact Entity Name] when its visible name is unchanged or [Exact Entity Name]{Visible text} for a declined form. Never append a grammatical suffix outside the link. If the user request or the NPC's logical use means that campaign NPC should become session-only, use moveScope from campaign to session.\n";
 	const locationSessionRule =
-		"Do not create session copies of campaign-scoped locations/factions. If an existing campaign location/faction is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the location/faction's logical use means that campaign entity should become session-only, use moveScope from campaign to session.\n";
+		"Do not create session copies of campaign-scoped locations/factions. If an existing campaign location/faction is only referenced in session content, use [Exact Entity Name] when its visible name is unchanged or [Exact Entity Name]{Visible text} for a declined form. Never append a grammatical suffix outside the link. If the user request or the location/faction's logical use means that campaign entity should become session-only, use moveScope from campaign to session.\n";
 	const sceneBase =
 		"TASK: Based on current session and context, apply the user's requested session changes.\n";
 	const sceneScopeRule =
-		'When existing campaign NPCs, locations, or factions are used in this session, write them as [Exact Entity Name] mentions in scene text or notes instead of creating copied session entities. For new NPCs/locations/factions, choose "scope": "session" by default; use "scope": "campaign" only for reusable campaign entities. Use moveScope whenever the entity\'s logical role shows it belongs in the other scope.\n';
+		'When existing campaign NPCs, locations, or factions are used in this session, write them as [Exact Entity Name] when visible text is unchanged or [Exact Entity Name]{Visible text} for a declined form in scene text or notes instead of creating copied session entities. Never append grammatical letters outside the link. For new NPCs/locations/factions, choose "scope": "session" by default; use "scope": "campaign" only for reusable campaign entities. Use moveScope whenever the entity\'s logical role shows it belongs in the other scope.\n';
 	const sceneEncounterRule =
 		"Encounter generation is enabled: any combat encounter you create must be connected to exactly one scene with encounterClientId in the same JSON response. Never create orphan encounters.\n";
 	const campaignTask =
@@ -31400,6 +31541,9 @@ await run("AI system instruction composes mode contracts and generation toggles"
 	assert.match(instruction, /Character generation is disabled/);
 	assert.match(instruction, /Location\/faction generation is disabled/);
 	assert.match(instruction, /Never output "scope": "mixed"/);
+	assert.match(instruction, /\[Бастіон\]\{Бастіона\}/);
+	assert.match(instruction, /never \[Бастіон\]а/i);
+	assert.match(instruction, /Do not add an entity id or linkId/);
 	assert.match(instruction, /GLOBAL BASE PROMPT:\nDark fantasy/);
 	assert.match(instruction, /CAMPAIGN BASE PROMPT:\nLow magic/);
 
@@ -40645,6 +40789,12 @@ await run("AI diff expands session resources and preserves line metadata", () =>
 await run("AI mention processing preserves existing entity links", () => {
 	const { processGeneratedTextMentions } = aiRouter.__test;
 	assert.equal(
+		processGeneratedTextMentions("Зустріч із [Джордж]{Джорджем} та Джордж", ["Джордж", "Джорджем"]),
+		"Зустріч із [Джордж]{Джорджем} та [Джордж]",
+	);
+	const escapedAiMention = formatEntityMention("Джордж", "Джорджем } і Джордж");
+	assert.equal(processGeneratedTextMentions(escapedAiMention, ["Джордж"]), escapedAiMention);
+	assert.equal(
 		processGeneratedTextMentions("Meet [Session NPC] near Old Gate.", [
 			"Old Gate",
 		]),
@@ -40653,6 +40803,10 @@ await run("AI mention processing preserves existing entity links", () => {
 	assert.equal(
 		processGeneratedTextMentions("Meet [ old gate ] again.", ["Old Gate"]),
 		"Meet [Old Gate] again.",
+	);
+	assert.equal(
+		processGeneratedTextMentions("Стіни [Бастіон]а пошкоджені.", ["Бастіон"]),
+		"Стіни [Бастіон]{Бастіона} пошкоджені.",
 	);
 	const generated = {
 		operations: [{
@@ -46389,6 +46543,20 @@ await run("mention picker helper resolves selected and cancelled states", async 
 		status: "selected",
 		name: "NPC Name",
 	});
+	const aliasPromise = requestMentionSelection((request) => {
+		payload = request;
+	}, "Джорджа");
+	assert.equal(payload.query, "Джорджа");
+	payload.select("Джордж", "Джорджем");
+	assert.deepEqual(await aliasPromise, {
+		status: "selected",
+		name: "Джордж",
+		label: "Джорджем",
+	});
+	assert.deepEqual(
+		getInputMentionInsertion("бачу Джорджа!", 5, 12, { status: "selected", name: "Джордж", label: "Джорджа" }),
+		{ value: "бачу [Джордж]{Джорджа}!", mention: "[Джордж]{Джорджа}" },
+	);
 
 	const cancelledPromise = requestMentionSelection((request) => {
 		payload = request;
@@ -51452,6 +51620,11 @@ await run("rules reference modal orchestration plans preserve request, load, and
 	const cleared = { conditions: "" };
 	assert.equal(applyReferenceTabOnlySelection(cleared, "conditions"), cleared);
 	assert.deepEqual(applyReferenceTabOnlySelection({}, "conditions"), { conditions: "" });
+	const embeddedSelections = { spells: "Acid Splash|PHB", bestiary: "Мавка|CUSTOM" };
+	const updatedSelections = rememberEmbeddedReferenceSelection(embeddedSelections, "spells", "Acid Splash|XPHB");
+	assert.deepEqual(updatedSelections, { spells: "Acid Splash|XPHB", bestiary: "Мавка|CUSTOM" });
+	assert.equal(rememberEmbeddedReferenceSelection(updatedSelections, "spells", "Acid Splash|XPHB"), updatedSelections);
+	assert.equal(embeddedSelections.spells, "Acid Splash|PHB");
 	assert.equal(getReferenceLoadErrorMessage(new Error("Помилка завантаження"), "Fallback"), "Помилка завантаження");
 	assert.equal(getReferenceLoadErrorMessage({ message: "unsafe" }, "Невідома помилка"), "Невідома помилка");
 
@@ -51963,6 +52136,11 @@ await run("campaign search text and snippet policies preserve recursive boundari
 	assert.equal(buildCampaignSearchSnippet("Ключ зберігає РЕГІСТР", "ключ"), "Ключ зберігає РЕГІСТР");
 	assert.equal(buildCampaignSearchSnippet("x".repeat(180), "відсутній"), "x".repeat(180));
 	assert.equal(buildCampaignSearchSnippet("x".repeat(181), "відсутній"), `${"x".repeat(180)}...`);
+	const linkedSnippet = `${"x".repeat(175)}[Джордж]{Джорджем} ще текст`;
+	assert.equal(buildCampaignSearchSnippet(linkedSnippet, ""), `${"x".repeat(175)}[Джордж]{Джорджем}...`);
+	const beginningLink = `передмова [Джордж]{${"я".repeat(90)} ключ} після`;
+	const beginningSnippet = buildCampaignSearchSnippet(beginningLink, "ключ");
+	assert.ok(beginningSnippet.includes(`[Джордж]{${"я".repeat(90)} ключ}`));
 	const centeredMatch = `${"a".repeat(80)}КЛЮЧ${"b".repeat(105)}`;
 	assert.equal(buildCampaignSearchSnippet(centeredMatch, "ключ"), `...${centeredMatch.slice(10)}`);
 });
@@ -65306,6 +65484,10 @@ await run(
 		"src/features/editor/ui/EditableField.tsx",
 			"utf8",
 		);
+		const mentionNodeSource = await fs.readFile(
+			"src/features/editor/ui/mentionNode.ts",
+			"utf8",
+		);
 		const projectGuideSource = await fs.readFile(
 			"src/app/routing/ProjectGuide.tsx",
 			"utf8",
@@ -65419,7 +65601,7 @@ await run(
 			assert.equal(typeof uk[key], "string", `${key} is translated`);
 		}
 
-		assert.match(editableFieldSource, /data-mention-tooltip/);
+		assert.match(mentionNodeSource, /data-mention-tooltip/);
 		assert.match(editableFieldSource, /onMouseMove=\{handleMouseMove\}/);
 		assert.match(
 			editableFieldSource,
@@ -65430,11 +65612,11 @@ await run(
 		assert.match(editableFieldSource, /LexicalComposer/);
 		assert.match(editableFieldSource, /MarkdownShortcutPlugin/);
 		assert.match(editableFieldSource, /\$readMarkdownValue/);
-		assert.match(editableFieldSource, /MentionNode extends TextNode/);
+		assert.match(mentionNodeSource, /MentionNode extends TextNode/);
 		assert.equal(editableFieldSource.includes("$replaceMentionWithText"), false);
 		assert.match(
 			editableFieldSource,
-			/requestMentionSelection\(openMentionPicker\)/,
+			/requestMentionSelection\(openMentionPicker, selectedText\)/,
 		);
 		assert.match(
 			mentionSelectionPolicySource,
@@ -69752,6 +69934,13 @@ await run("image gallery loaders normalize metadata and official token paths", a
 		selectedSub: "герої",
 		selectedSource: "кампанія",
 	};
+	assert.equal(getGalleryEffectiveScope("__all__", "local"), "source");
+	assert.equal(getGalleryEffectiveScope("__all__", "all"), "all");
+	assert.equal(getGalleryEffectiveScope("maps", "local"), "local");
+	assert.equal(IMAGE_GALLERY_CATEGORIES.some((category) => category.id === "__all__"), false);
+	assert.deepEqual(getScopedGallerySearchQuery({ ...scopedBase, category: "__all__", contentScope: getGalleryEffectiveScope("__all__", "local") }), {
+		search: "ірина", source: "кампанія", category: "", subcategory: "", categories: ["tokens", "characters"], ignoreSourcesList: ["UA"],
+	});
 	assert.deepEqual(
 		getScopedGallerySearchQuery({ ...scopedBase, contentScope: "all" }),
 		{

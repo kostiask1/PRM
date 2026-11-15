@@ -36,6 +36,26 @@
 	flex-direction: column;
 }
 
+@media (max-width: 767px) {
+	.Bestiary__inner > .AiAssistant {
+		display: flex;
+		flex: 0 0 auto;
+		justify-content: flex-end;
+		padding: var(--space-1) var(--space-3);
+		border-top: 1px solid var(--border);
+		background: var(--panel);
+	}
+
+	.Bestiary__inner > .AiAssistant .AiAssistantPanel__toggle {
+		position: static;
+	}
+
+	.Bestiary__inner > .AiAssistant .AiAssistantPanel__toggle button {
+		width: var(--size-9);
+		height: var(--size-9);
+	}
+}
+
 .Bestiary__search {
 	margin-bottom: var(--space-3);
 	display: flex;
@@ -187,6 +207,7 @@
 
 .Bestiary__list .ListCard__main {
 	min-width: 0;
+	padding-block: var(--space-1);
 }
 
 .Bestiary__item_info {
@@ -340,7 +361,7 @@
 }
 
 .Bestiary .ListCard {
-	height: 76px;
+	height: 84px;
 	margin-bottom: var(--space-1-5);
 }
 
@@ -555,10 +576,6 @@
 		overflow-wrap: anywhere;
 	}
 
-
-	.Bestiary .ListCard {
-		min-height: 76px;
-	}
 
 	.Bestiary__edit_actions,
 	.Bestiary__ai_action_buttons {

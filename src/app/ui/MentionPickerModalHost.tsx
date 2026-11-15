@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 
 import { campaignApi } from "../../entities/campaign/index.js";
+import { sessionApi } from "../../entities/session/index.js";
 import "../../assets/components/MentionPickerModalHost.css";
-import { MentionPickerModalContent } from "../../features/editor/ui/index.js";
+import { getAmbiguousMentionNames, MentionPickerModalContent } from "../../features/editor/ui/index.js";
 import { lang } from "../../shared/lib/index.js";
 import { closeMentionPickerAction } from "../../shared/model/index.js";
 import type { AppDispatch } from "../../shared/model/index.js";
@@ -24,7 +25,7 @@ export default function MentionPickerModalHost() {
 	const mentionPickerRequest = useAppSelector(
 		(state) => state.mentionPickerRequest,
 	);
-	const { activeCampaignSlug } = useAppSelector((state) => state.navigation);
+	const { activeCampaignSlug, activeSessionFileName } = useAppSelector((state) => state.navigation);
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
 	);
@@ -33,35 +34,38 @@ export default function MentionPickerModalHost() {
 		void runMentionPickerModalRequest(
 			mentionPickerRequest,
 			activeCampaignSlug,
+			activeSessionFileName,
 			currentLanguage,
 			dispatch,
 		);
-	}, [activeCampaignSlug, currentLanguage, dispatch, mentionPickerRequest]);
+	}, [activeCampaignSlug, activeSessionFileName, currentLanguage, dispatch, mentionPickerRequest]);
 
 	return null;
 }
 
 interface MentionPickerModalContext {
 	campaignSlug: string;
+	sessionFileName: string | null;
 	callbacks: AppMentionPickerCallbacks;
 }
 
 async function runMentionPickerModalRequest(
 	request: unknown,
 	campaignSlug: string | null,
+	sessionFileName: string | null,
 	currentLanguage: string,
 	dispatch: AppDispatch,
 ): Promise<void> {
 	const context = prepareMentionPickerModal(request, campaignSlug, dispatch);
 	if (!context) return;
-	return runMentionPickerModalWorkflow(context, currentLanguage, dispatch);
+	return runMentionPickerModalWorkflow({ ...context, sessionFileName }, currentLanguage, dispatch);
 }
 
 function prepareMentionPickerModal(
 	request: unknown,
 	campaignSlug: string | null,
 	dispatch: AppDispatch,
-): MentionPickerModalContext | null {
+): Omit<MentionPickerModalContext, "sessionFileName"> | null {
 	if (!request) return null;
 	const callbacks = getMentionPickerCallbacks(request);
 	if (!callbacks) {
@@ -78,9 +82,9 @@ function prepareMentionPickerModal(
 function getMentionPickerCallbacks(
 	request: unknown,
 ): AppMentionPickerCallbacks | null {
-	const { select, cancel } = request as AppMentionPickerCallbacks;
+	const { select, cancel, query } = request as AppMentionPickerCallbacks;
 	if (!hasValidMentionPickerCallbacks(request)) return null;
-	return { select, cancel };
+	return { select, cancel, query };
 }
 
 function closeMentionPicker(dispatch: AppDispatch): void {
@@ -105,9 +109,17 @@ async function runMentionPickerModalWorkflow(
 		const entities = await loadMentionPickerEntities(
 			context.campaignSlug,
 			currentLanguage,
+			context.sessionFileName,
 		);
 		if (entities.length === 0) {
 			cancelMentionPicker(context.callbacks, dispatch);
+			return;
+		}
+		const query = context.callbacks.query?.trim().toLocaleLowerCase();
+		const exact = query ? entities.filter((entity) => entity.name.trim().toLocaleLowerCase() === query) : [];
+		if (exact.length === 1 && !getAmbiguousMentionNames(entities).has(exact[0].name.trim().toLowerCase())) {
+			context.callbacks.select(exact[0].name, context.callbacks.query);
+			closeMentionPicker(dispatch);
 			return;
 		}
 		openMentionPickerModal(entities, context.callbacks, dispatch);
@@ -120,17 +132,20 @@ async function runMentionPickerModalWorkflow(
 async function loadMentionPickerEntities(
 	campaignSlug: string,
 	currentLanguage: string,
+	sessionFileName: string | null,
 ): Promise<AppMentionEntityOption[]> {
 	const [characters, npcs, locations] = await Promise.all([
 		campaignApi.getEntities(campaignSlug, "characters"),
 		campaignApi.getEntities(campaignSlug, "npc").catch(() => []),
 		campaignApi.getEntities(campaignSlug, "locations").catch(() => []),
 	]);
+	const session = sessionFileName ? await sessionApi.getSession(campaignSlug, sessionFileName) : null;
+	const data = session?.data && typeof session.data === "object" ? session.data as Record<string, unknown> : {};
 	return buildAppMentionOptions(
 		{
 			characters: characters || [],
-			npc: npcs || [],
-			locations: locations || [],
+			npc: [...(npcs || []), ...(Array.isArray(data.npcs) ? data.npcs.map((entity) => ({ ...entity, _mentionScope: "session" })) : [])],
+			locations: [...(locations || []), ...(Array.isArray(data.locations) ? data.locations.map((entity) => ({ ...entity, _mentionScope: "session" })) : [])],
 		},
 		currentLanguage,
 	);
@@ -153,8 +168,9 @@ function openMentionPickerModal(
 		children: (
 			<MentionPickerModalContent
 				entities={entities}
-				onSelect={(name) => {
-					select(name);
+				initialQuery={callbacks.query}
+				onSelect={(name, label) => {
+					select(name, label);
 					closeMentionPicker(dispatch);
 					closeActiveModal();
 				}}

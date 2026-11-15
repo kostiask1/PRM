@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { MarkerType } from "@xyflow/react";
 
-import { classNames } from "../../../../shared/lib/index.js";
+import { classNames, lang } from "../../../../shared/lib/index.js";
 import type { CampaignGraphEdge } from "../../graph.js";
 import {
 	getCampaignGraphEdgeColor,
@@ -40,6 +40,7 @@ export function useCampaignGraphFlowEdges({
 }: UseCampaignGraphFlowEdgesOptions): CampaignGraphFlowEdge[] {
 	return useMemo<CampaignGraphFlowEdge[]>(() => {
 		const positions = new Map(flowNodes.map((node) => [node.id, node.position]));
+		const labels = new Map(flowNodes.map((node) => [node.id, node.ariaLabel || node.id]));
 		const hasFocus = Boolean(focusedNodeId);
 		return edges.map<CampaignGraphFlowEdge>((edge) => {
 			const isVisible = visibleEdgeIds.has(edge.id);
@@ -54,6 +55,10 @@ export function useCampaignGraphFlowEdges({
 				id: edge.id,
 				source: edge.source,
 				target: edge.target,
+				ariaLabel: lang.t("Connection from {source} to {target}", {
+					source: labels.get(edge.source) || edge.source,
+					target: labels.get(edge.target) || edge.target,
+				}),
 				...handles,
 				type: presentation.type,
 				hidden: !isVisible,

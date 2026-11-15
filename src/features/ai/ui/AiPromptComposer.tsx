@@ -40,6 +40,7 @@ function AiPromptComposer({
 				<div className="AiAssistantPanel__prompt_column">
 					<EditableField
 						type="textarea"
+						aria-label={lang.t("Request")}
 						className="AiAssistantPanel__prompt_input"
 						placeholder={placeholder}
 						value={userInstructions}

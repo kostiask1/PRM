@@ -74,6 +74,7 @@ function AiResponseHistoryRow({
 							icon="retry"
 							onClick={() => onRetry(entry)}
 							title={lang.t("Retry request")}
+							aria-label={`${lang.t("Retry request")}: ${view.title}, ${view.dateLabel}`}
 						/>
 					)}
 					<Button
@@ -82,6 +83,7 @@ function AiResponseHistoryRow({
 						icon="trash"
 						onClick={() => onDelete(entry)}
 						title={lang.t("Delete response")}
+						aria-label={`${lang.t("Delete response")}: ${view.title}, ${view.dateLabel}`}
 					/>
 				</>
 			}
@@ -151,6 +153,7 @@ export default function AiResponseHistory({
 					icon="trash"
 					onClick={onClear}
 					title={lang.t("Clear response history")}
+					aria-label={lang.t("Clear response history")}
 				>
 					{lang.t("Clear")}
 				</Button>

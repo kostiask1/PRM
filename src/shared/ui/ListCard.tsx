@@ -15,6 +15,7 @@ export interface ListCardProps
 	children?: ReactNode;
 	actions?: ReactNode;
 	active?: boolean;
+	selectionState?: boolean;
 	onClick?: () => void;
 	href?: string;
 	className?: string;
@@ -29,6 +30,7 @@ export default function ListCard({
 	children, // Main card content (title, meta)
 	actions, // Right-side actions (status badge, buttons)
 	active = false,
+	selectionState,
 	onClick,
 	href,
 	className = "",
@@ -51,7 +53,7 @@ export default function ListCard({
 			{children}
 		</a>
 	) : (
-		<button className="ListCard__main" onClick={handleClick}>
+		<button className="ListCard__main" onClick={handleClick} aria-pressed={selectionState}>
 			{children}
 		</button>
 	);

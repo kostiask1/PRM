@@ -22,9 +22,25 @@ type ControlledMouseEvent = Pick<
 type OverlayMouseEvent = ControlledMouseEvent &
 	Pick<ReactMouseEvent<HTMLElement>, "currentTarget" | "target">;
 
+export function getTopModal(): HTMLElement | null {
+	const dialogs = document.querySelectorAll<HTMLElement>(".Modal__card[role='dialog']");
+	let top: HTMLElement | null = null;
+	let topLayer = -Infinity;
+	for (const dialog of dialogs) {
+		const overlay = dialog.closest<HTMLElement>(".Modal__overlay");
+		if (!overlay) continue;
+		const layer = Number.parseFloat(window.getComputedStyle(overlay).zIndex);
+		const resolvedLayer = Number.isFinite(layer) ? layer : 0;
+		if (resolvedLayer >= topLayer) {
+			top = dialog;
+			topLayer = resolvedLayer;
+		}
+	}
+	return top;
+}
+
 function isTopModal(card: HTMLElement | null): boolean {
-	const dialogs = document.querySelectorAll(".Modal__card[role='dialog']");
-	return Boolean(card && dialogs[dialogs.length - 1] === card);
+	return Boolean(card && getTopModal() === card);
 }
 
 function useModalFocusBoundary(cardRef: React.RefObject<HTMLDivElement | null>): void {
@@ -32,7 +48,7 @@ function useModalFocusBoundary(cardRef: React.RefObject<HTMLDivElement | null>):
 		const card = cardRef.current;
 		if (!card) return;
 		const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-		if (!card.contains(document.activeElement)) card.focus({ preventScroll: true });
+		if (isTopModal(card) && !card.contains(document.activeElement)) card.focus({ preventScroll: true });
 		const handleTab = (event: KeyboardEvent) => {
 			if (event.key !== "Tab" || event.defaultPrevented || !isTopModal(card)) return;
 			const portals = Array.from(document.querySelectorAll<HTMLElement>("[data-modal-owner]"))
@@ -56,7 +72,20 @@ function useModalFocusBoundary(cardRef: React.RefObject<HTMLDivElement | null>):
 		window.addEventListener("keydown", handleTab);
 		return () => {
 			window.removeEventListener("keydown", handleTab);
-			if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+			queueMicrotask(() => {
+				const top = getTopModal();
+				if (!top) return;
+				const active = document.activeElement;
+				const portal = active instanceof Element ? active.closest("[data-modal-owner]") : null;
+				if (!top.contains(active) && portal?.getAttribute("data-modal-owner") !== top.id) {
+					top.focus({ preventScroll: true });
+				}
+			});
+			if (!previousFocus?.isConnected) return;
+			const top = getTopModal();
+			const previousPortal = previousFocus.closest("[data-modal-owner]");
+			if (top && top !== card && !top.contains(previousFocus) && previousPortal?.getAttribute("data-modal-owner") !== top.id) return;
+			previousFocus.focus({ preventScroll: true });
 		};
 	}, [cardRef]);
 }
@@ -82,13 +111,16 @@ function useModalInitialFocus({
 	showInput,
 	inputRef,
 	confirmButtonRef,
+	cardRef,
 }: {
 	hasChildren: boolean;
 	showInput: boolean;
 	inputRef: React.RefObject<HTMLInputElement | null>;
 	confirmButtonRef: React.RefObject<HTMLButtonElement | null>;
+	cardRef: React.RefObject<HTMLDivElement | null>;
 }): void {
 	useEffect(() => {
+		if (!isTopModal(cardRef.current)) return;
 		const focusTarget = getModalFocusTarget(hasChildren, showInput);
 		if (focusTarget === "input" && inputRef.current) {
 			inputRef.current.focus();
@@ -97,7 +129,7 @@ function useModalInitialFocus({
 		if (focusTarget === "confirm" && confirmButtonRef.current) {
 			confirmButtonRef.current.focus();
 		}
-	}, [confirmButtonRef, hasChildren, inputRef, showInput]);
+	}, [cardRef, confirmButtonRef, hasChildren, inputRef, showInput]);
 }
 
 function useModalKeyboard({
@@ -219,6 +251,7 @@ export function useModalController({
 		showInput: Boolean(showInput),
 		inputRef,
 		confirmButtonRef,
+		cardRef,
 	});
 	useModalKeyboard({
 		hasChildren,

@@ -1,7 +1,7 @@
 import React, { useMemo, type CSSProperties, type HTMLAttributes, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { renderMentionText } from "../../../features/entity-link/index.js";
-import { lang, classNames } from "../../../shared/lib/index.js";
+import { lang, classNames, splitEntityMentions } from "../../../shared/lib/index.js";
 import {
 	buildCampaignSearchSnippet,
 	getCampaignSearchHighlightTerms,
@@ -29,11 +29,18 @@ function renderHighlightedText(text: unknown, terms: string[]): ReactNode {
 	if (!source) return source;
 	if (!terms.length) return renderMentionText(source);
 	const pattern = new RegExp(`(${terms.map(escapeRegExp).join("|")})`, "gi");
-	return source.split(pattern).filter(Boolean).map((part, index) => {
-		const content = renderMentionText(part);
-		return terms.some((term) => part.toLowerCase() === term.toLowerCase())
-			? <mark key={`${part}:${index}`} className="GlobalSearchModal__highlight">{content}</mark>
-			: <React.Fragment key={`${part}:${index}`}>{content}</React.Fragment>;
+	return splitEntityMentions(source).flatMap((part, mentionIndex) => {
+		if (typeof part !== "string") {
+			const content = renderMentionText(part.raw);
+			return [terms.some((term) => part.text.toLowerCase().includes(term.toLowerCase()))
+				? <mark key={`mention:${mentionIndex}`} className="GlobalSearchModal__highlight">{content}</mark>
+				: <React.Fragment key={`mention:${mentionIndex}`}>{content}</React.Fragment>];
+		}
+		return part.split(pattern).filter(Boolean).map((text, index) =>
+			terms.some((term) => text.toLowerCase() === term.toLowerCase())
+				? <mark key={`${mentionIndex}:${index}`} className="GlobalSearchModal__highlight">{text}</mark>
+				: <React.Fragment key={`${mentionIndex}:${index}`}>{text}</React.Fragment>,
+		);
 	});
 }
 

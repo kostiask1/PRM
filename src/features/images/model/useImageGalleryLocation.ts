@@ -10,6 +10,7 @@ import type {
 	ImageGalleryContentScope,
 } from "./contracts.ts";
 import { useImageGalleryRuntime } from "./ImageGalleryRuntime.tsx";
+import { getGalleryEffectiveScope } from "./imageGalleryLoading.ts";
 
 function deriveGallerySearchState(
 	searchQuery: string,
@@ -57,7 +58,7 @@ export function useImageGalleryLocation({ initialSource, initialCategory, initia
 	const [requestedContentScope, setContentScope] =
 		useState<ImageGalleryContentScope>("local");
 	const isAllCategory = selectedCat.id === ALL_GALLERY_CATEGORY.id;
-	const contentScope = isAllCategory && requestedContentScope === "local" ? "source" : requestedContentScope;
+	const contentScope = getGalleryEffectiveScope(selectedCat.id, requestedContentScope);
 	const debouncedSearchQuery = useDebounce(
 		searchQuery,
 		useSearchDebounce ? 250 : 0,

@@ -40,35 +40,147 @@
 	justify-content: flex-end;
 }
 
-.CampaignEntitySection__workspace { display: grid; grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
-.CampaignEntitySection__list { display: grid; gap: var(--space-1); min-width: 0; }
-:is(.CampaignEntitySection__list, .NoteSelectionList) { max-height: 65dvh; overflow-y: auto; }
-.CampaignEntitySection__item { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-width: 0; padding: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-md); background: var(--panel); color: var(--text); text-align: left; cursor: pointer; }
-.CampaignEntitySection__item[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
-.CampaignEntitySection__linkedItem[data-selected="true"] { background: var(--accent-soft); border-color: var(--accent); }
-.CampaignEntitySection__linkedItem { position: relative; }
-.CampaignEntitySection__linkedItemSelect { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
-.CampaignEntitySection__linkedItem:has(.CampaignEntitySection__linkedItemSelect:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
-.CampaignEntitySection__linkedItemText { position: relative; pointer-events: none; }
-.CampaignEntitySection__linkedItemText .EntityLink { pointer-events: auto; }
-.CampaignEntitySection__item img { width: var(--size-9); height: var(--size-9); flex: 0 0 var(--size-9); object-fit: cover; border-radius: var(--radius-md); }
-.CampaignEntitySection__item span { min-width: 0; overflow-wrap: anywhere; }
-.CampaignEntitySection__detail { min-width: 0; }
-
-:is(.CharacterCard__notes, .LocationCard__notes, .SessionSceneCard__notes) { container-type: inline-size; }
-
-@container (max-width: 500px) {
-	.CampaignEntitySection__workspace { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
-	.NoteSelectionList { max-height: 30dvh; overflow-y: auto; }
+.CampaignEntitySection__workspace {
+	display: grid;
+	grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+	gap: var(--space-4);
+	align-items: start;
 }
 
-:is(.NoteSelectionList, .EntitySelectionList) > div { padding-left: var(--size-6); }
-:is(.NoteSelectionList, .EntitySelectionList) > div > .DraggableList__handle { top: var(--space-1); left: 0; width: var(--size-6); height: var(--control-h-sm); transform: none; opacity: 0.75; touch-action: none; }
-:is(.NoteSelectionList, .EntitySelectionList) > div > .DraggableList__handle:focus-visible { opacity: 1; outline: 2px solid var(--accent); outline-offset: 1px; }
-:is(.NoteSelectionList, .EntitySelectionList) > div:has(> .DraggableList__itemControl) > .CampaignEntitySection__item { padding-right: var(--size-7); }
-:is(.NoteSelectionList, .EntitySelectionList) > div > .DraggableList__itemControl,
-:is(.NoteSelectionList, .EntitySelectionList) > div > .DraggableList__handle ~ .DraggableList__itemControl { top: var(--space-2); right: var(--space-1); left: auto; transform: none; opacity: 0.75; }
-:is(.NoteSelectionList, .EntitySelectionList) > div > .DraggableList__itemControl:focus-within { opacity: 1; }
+.CampaignEntitySection__list {
+	display: grid;
+	gap: var(--space-1);
+	min-width: 0;
+}
+
+:is(.CampaignEntitySection__list, .NoteSelectionList) {
+	max-height: 75dvh;
+	overflow-y: auto;
+}
+
+.CampaignEntitySection__item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: 100%;
+	min-width: 0;
+	padding: var(--space-2);
+	border: 1px solid transparent;
+	border-radius: var(--radius-md);
+	background: var(--panel);
+	color: var(--text);
+	text-align: left;
+	cursor: pointer;
+}
+
+.CampaignEntitySection__item[aria-pressed="true"] {
+	background: var(--accent-soft);
+	border-color: var(--accent);
+}
+
+.CampaignEntitySection__linkedItem[data-selected="true"] {
+	background: var(--accent-soft);
+	border-color: var(--accent);
+}
+
+.CampaignEntitySection__linkedItem {
+	position: relative;
+}
+
+.CampaignEntitySection__linkedItemSelect {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	border: 0;
+	border-radius: inherit;
+	background: transparent;
+	cursor: pointer;
+}
+
+.CampaignEntitySection__linkedItem:has(.CampaignEntitySection__linkedItemSelect:focus-visible) {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+.CampaignEntitySection__linkedItemText {
+	position: relative;
+	pointer-events: none;
+}
+
+.CampaignEntitySection__linkedItemText .EntityLink {
+	pointer-events: auto;
+}
+
+.CampaignEntitySection__item img {
+	width: var(--size-9);
+	height: var(--size-9);
+	flex: 0 0 var(--size-9);
+	object-fit: cover;
+	border-radius: var(--radius-md);
+}
+
+.CampaignEntitySection__item span {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.CampaignEntitySection__detail {
+	min-width: 0;
+}
+
+:is(.CharacterCard__notes, .LocationCard__notes, .SessionSceneCard__notes) {
+	container-type: inline-size;
+}
+
+@container (max-width: 500px) {
+	.CampaignEntitySection__workspace {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-3);
+	}
+
+	.NoteSelectionList {
+		max-height: 30dvh;
+		overflow-y: auto;
+	}
+}
+
+:is(.NoteSelectionList, .EntitySelectionList)>div {
+	padding-left: var(--size-6);
+}
+
+:is(.NoteSelectionList, .EntitySelectionList)>div>.DraggableList__handle {
+	top: var(--space-1);
+	left: 0;
+	width: var(--size-6);
+	height: var(--control-h-sm);
+	transform: none;
+	opacity: 0.75;
+	touch-action: none;
+}
+
+:is(.NoteSelectionList, .EntitySelectionList)>div>.DraggableList__handle:focus-visible {
+	opacity: 1;
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+:is(.NoteSelectionList, .EntitySelectionList)>div:has(> .DraggableList__itemControl)>.CampaignEntitySection__item {
+	padding-right: var(--size-7);
+}
+
+:is(.NoteSelectionList, .EntitySelectionList)>div>.DraggableList__itemControl,
+:is(.NoteSelectionList, .EntitySelectionList)>div>.DraggableList__handle~.DraggableList__itemControl {
+	top: var(--space-2);
+	right: var(--space-1);
+	left: auto;
+	transform: none;
+	opacity: 0.75;
+}
+
+:is(.NoteSelectionList, .EntitySelectionList)>div>.DraggableList__itemControl:focus-within {
+	opacity: 1;
+}
 
 @media (max-width: 1024px) {
 	.CampaignEntitySection__actions {
@@ -83,8 +195,15 @@
 }
 
 @media (min-width: 768px) and (max-width: 900px) {
-	.CampaignEntitySection__workspace { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
-	:is(.CampaignEntitySection__list, .NoteSelectionList) { max-height: 30dvh; overflow-y: auto; }
+	.CampaignEntitySection__workspace {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-3);
+	}
+
+	:is(.CampaignEntitySection__list, .NoteSelectionList) {
+		max-height: 30dvh;
+		overflow-y: auto;
+	}
 }
 
 @media (max-width: 767px) {
@@ -112,16 +231,58 @@
 		min-height: 44px;
 	}
 
-	.CampaignEntitySection__workspace { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
-	:is(.CampaignEntitySection__list, .NoteSelectionList) { max-height: 30dvh; overflow-y: auto; }
+	.CampaignEntitySection__workspace {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-3);
+	}
+
+	:is(.CampaignEntitySection__list, .NoteSelectionList) {
+		max-height: 30dvh;
+		overflow-y: auto;
+	}
 }
 
-.CampaignEntitySection__detail_stream { max-height: 65dvh; overflow-y: auto; display: grid; gap: var(--space-4); }
+.CampaignEntitySection__detail_stream {
+	overflow-y: auto;
+	display: grid;
+	gap: var(--space-4);
+}
 
 
-:is(.CharacterCard__notes, .LocationCard__notes, .SessionSceneCard__notes) .CampaignEntitySection__detail_stream { max-height: 400px; }
+:is(.CharacterCard__notes, .LocationCard__notes, .SessionSceneCard__notes) .CampaignEntitySection__detail_stream {
+	max-height: 400px;
+}
 
-.NoteViewMode { display: inline-flex; gap: var(--space-0-5); padding: var(--space-0-5); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--accent-soft); margin-left: auto; }
-.NoteViewMode button { border: 0; border-radius: var(--radius-xs); padding: var(--space-1) var(--space-2); background: transparent; color: var(--muted); font: inherit; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
-.NoteViewMode button[aria-pressed="true"] { color: var(--accent); background: var(--panel); box-shadow: 0 1px 3px color-mix(in srgb, var(--text), transparent 85%); font-weight: 700; }
-.NoteViewMode button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.NoteViewMode {
+	display: inline-flex;
+	gap: var(--space-0-5);
+	padding: var(--space-0-5);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--accent-soft);
+	margin-left: auto;
+}
+
+.NoteViewMode button {
+	border: 0;
+	border-radius: var(--radius-xs);
+	padding: var(--space-1) var(--space-2);
+	background: transparent;
+	color: var(--muted);
+	font: inherit;
+	font-size: 0.75rem;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.NoteViewMode button[aria-pressed="true"] {
+	color: var(--accent);
+	background: var(--panel);
+	box-shadow: 0 1px 3px color-mix(in srgb, var(--text), transparent 85%);
+	font-weight: 700;
+}
+
+.NoteViewMode button:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}

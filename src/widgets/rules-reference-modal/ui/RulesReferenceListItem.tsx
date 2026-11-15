@@ -79,7 +79,7 @@ function GenericListContent({ item, query, meta }: Pick<RulesReferenceListItemPr
 export default function RulesReferenceListItem({ tabId, item, query, meta, active, onSelect, onInsert }: RulesReferenceListItemProps) {
 	return (
 		<div key={getReferenceItemKey(tabId, item)} onDoubleClick={onInsert}>
-			<ListCard onClick={onSelect} active={active}>
+			<ListCard onClick={onSelect} active={active} selectionState={active}>
 				{tabId === "bestiary" ? <CreatureListContent item={item} query={query} /> : <GenericListContent item={item} query={query} meta={meta} />}
 			</ListCard>
 		</div>

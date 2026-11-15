@@ -26,8 +26,9 @@ export interface CampaignCompletionPlan {
 }
 
 export interface AppMentionPickerCallbacks {
-	select: (name: string) => void;
+	select: (name: string, label?: string) => void;
 	cancel: () => void;
+	query?: string;
 }
 
 const UI_SETTING_KEYS = [
@@ -105,8 +106,8 @@ export function toAppMentionOption(
 	const firstName = readTrimmedString(entity.firstName);
 	const lastName = readTrimmedString(entity.lastName);
 	const fullName = `${firstName} ${lastName}`.trim();
-	const name =
-		fullName || readTrimmedString(entity.name) || readTrimmedString(entity.title);
+	const fallbackName = readTrimmedString(entity.name) || readTrimmedString(entity.title);
+	const name = fullName || fallbackName;
 	if (!name) return null;
 	return {
 		id: readEntityId(entity.id) ?? readEntityId(entity.slug) ?? name,
@@ -114,6 +115,8 @@ export function toAppMentionOption(
 		name,
 		firstName,
 		lastName,
+		...(fallbackName && fallbackName !== name ? { alternateName: fallbackName } : {}),
+		...(entity._mentionScope === "session" ? { scope: "session" } : {}),
 	};
 }
 

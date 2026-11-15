@@ -1,4 +1,6 @@
 export function idsEqual(left: unknown, right: unknown): boolean;
+export { decodeEntityMentionLabel, ENTITY_MENTION_PATTERN, formatEntityMention, splitEntityMentions } from "./entityMentions.ts";
+export type { EntityMentionPart } from "./entityMentions.ts";
 export function mapWithConcurrency<TItem, TResult>(
 	items: Iterable<TItem> | ArrayLike<TItem> | null | undefined,
 	concurrency: unknown,

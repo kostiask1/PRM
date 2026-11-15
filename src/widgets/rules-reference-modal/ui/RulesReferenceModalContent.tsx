@@ -18,6 +18,7 @@ import {
 import {
 	REFERENCE_TAB_POLICIES,
 	applyReferenceTabOnlySelection,
+	rememberEmbeddedReferenceSelection,
 	applyReferenceSelectionReconciliationPlan,
 	combineBestiaryLists,
 	createReferenceSelection,
@@ -474,13 +475,7 @@ export default function RulesReferenceModalContent({
 			if (!isReferenceTabId(tabId) || !name) return;
 			pendingNavigationTabRef.current = null;
 			recordNavigation(tabId, name);
-			setSelectedByTab((current) => {
-				if (!current[tabId]) return current;
-				return {
-					...current,
-					[tabId]: "",
-				};
-			});
+			setSelectedByTab((current) => rememberEmbeddedReferenceSelection(current, tabId, name));
 		},
 		[recordNavigation],
 	);

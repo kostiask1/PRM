@@ -1,3 +1,5 @@
+import { ENTITY_MENTION_PATTERN, splitEntityMentions } from "./entityMentions.ts";
+
 const VIRTUAL_NOTE_ID_PREFIX = "__virtual_note__:";
 let lastNoteId = 0;
 
@@ -38,24 +40,36 @@ export function getNoteRenderKey(note = {}, fallback) {
 export function getNoteListPreview(note = {}) {
 	const title = String(note.title || "").trim();
 	if (title) return { text: title, maxLength: undefined };
-	const text = String(note.text || "")
+	const source = String(note.text || "")
 		.replace(/^\s{0,3}(?:`{3,}|~{3,})[^\n]*$/gm, "")
 		.replace(/(?<!\\)!?\[([^\]]*)\]\([^\n)]*\)/g, "$1")
 		.replace(/^(\s{0,3}#{1,6}\s+.*?)\s+#+\s*$/gm, "$1")
 		.replace(/^\s{0,3}(?:#{1,6}\s+|>\s?|[-+*]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)/gm, "")
-		.replace(/^\s{0,3}[-*_]{3,}\s*$/gm, "")
+		.replace(/^\s{0,3}[-*_]{3,}\s*$/gm, "");
+	let prefix = "\uE000";
+	while (source.includes(prefix)) prefix += "\uE000";
+	const mentions = [];
+	const protectedText = source.replace(ENTITY_MENTION_PATTERN, (match) => {
+		const placeholder = `${prefix}${mentions.length}\uE001`;
+		mentions.push(match);
+		return placeholder;
+	});
+	let text = protectedText
 		.replace(/(?<!\\)(`+)([^`]+)(?<!\\)\1/g, "$2")
 		.replace(/(?<!\\)(\*\*|__|~~)(?=\S)([\s\S]*?\S)(?<!\\)\1/g, "$2")
 		.replace(/(^|[^\p{L}\p{N}_])(?<!\\)([*_])(?=\S)([^\n]*?\S)(?<!\\)\2(?=$|[^\p{L}\p{N}_])/gu, "$1$3")
 		.replace(/\\([\\`*_{}[\]()#+\-.!>~])/g, "$1")
 		.replace(/\s+/g, " ")
 		.trim();
+	mentions.forEach((mention, index) => {
+		text = text.replace(`${prefix}${index}\uE001`, mention);
+	});
 	return { text, maxLength: 30 };
 }
 
 export function getNoteListLabel(note = {}) {
 	const { text, maxLength } = getNoteListPreview(note);
-	const visible = text.replace(/\[([^\]]+)\]/g, (_, name) => name.trim());
+	const visible = splitEntityMentions(text).map((part) => typeof part === "string" ? part : part.text).join("");
 	const characters = Array.from(visible);
 	return maxLength !== undefined && characters.length > maxLength
 		? `${characters.slice(0, maxLength).join("").trimEnd()}...`

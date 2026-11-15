@@ -1,4 +1,5 @@
 import {
+	ENTITY_MENTION_PATTERN,
 	makeDomId,
 	mapWithConcurrency,
 	rankSearchResultsByName,
@@ -153,10 +154,16 @@ export function buildCampaignSearchSnippet(text: unknown, query: unknown): strin
 	if (!source) return "";
 	const normalizedQuery = normalizeCampaignSearchText(query);
 	const index = getCampaignSearchSnippetIndex(source, normalizedQuery);
-	const start = Math.max(0, index - 70);
-	const snippet = source.slice(start, start + 180);
+	let start = Math.max(0, index - 70);
+	let end = Math.min(source.length, start + 180);
+	for (const match of source.matchAll(ENTITY_MENTION_PATTERN)) {
+		const matchEnd = match.index + match[0].length;
+		if (match.index < start && matchEnd > start) start = match.index;
+		if (match.index < end && matchEnd > end) end = matchEnd;
+	}
+	const snippet = source.slice(start, end);
 	const prefix = getCampaignSearchEllipsis(start > 0);
-	const suffix = getCampaignSearchEllipsis(start + 180 < source.length);
+	const suffix = getCampaignSearchEllipsis(end < source.length);
 	return `${prefix}${snippet}${suffix}`;
 }
 

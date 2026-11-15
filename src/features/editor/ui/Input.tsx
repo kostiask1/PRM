@@ -135,7 +135,7 @@ const Input = forwardRef<InputElement, InputProps>(function Input(
 			selectionStart: cursorStart,
 			selectionEnd: cursorEnd,
 		} = getInputSelectionState(event.currentTarget);
-		const result = await requestMentionSelection(openMentionPicker);
+		const result = await requestMentionSelection(openMentionPicker, value.substring(cursorStart, cursorEnd));
 		const insertion = getInputMentionInsertion(
 			value,
 			cursorStart,
@@ -178,7 +178,7 @@ const Input = forwardRef<InputElement, InputProps>(function Input(
 			selectionStart,
 			selectionEnd,
 		);
-		if (execution.kind === "mention-picker") {
+		if (action.kind === "mention" || execution.kind === "mention-picker") {
 			void insertMentionWithoutSelection(event);
 			return;
 		}

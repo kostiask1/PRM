@@ -239,6 +239,7 @@ export function BestiaryMonsterListItem(props: MonsterListItemProps) {
 		<div>
 			<ListCard
 				active={presentation.isSelected}
+				selectionState={presentation.isSelected}
 				onClick={() => props.onSelect(presentation.nextSelection)}
 				onDoubleClick={() =>
 					executeMonsterRowPrimaryAction(

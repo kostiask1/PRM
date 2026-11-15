@@ -1,6 +1,7 @@
 export {
 	MENTION_BOUNDARY,
 	createMentionBoundaryNode,
+	handleTextAfterMention,
 	handleSpaceAfterMention,
 } from "./model/mentionEditor.ts";
 export {

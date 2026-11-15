@@ -34,6 +34,7 @@ function SpellListItem({ spell, selected, search, onSelect, onInsert }: SpellLis
 		>
 			<ListCard
 				active={presentation.active}
+				selectionState={presentation.active}
 				onClick={() => onSelect(presentation.nextSelection)}
 			>
 				<div className="ListCard__title" title={presentation.displayName}>

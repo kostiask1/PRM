@@ -12,7 +12,7 @@ import type {
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { createNoteCardComponent } from "../../../features/notes/ui/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
-import { classNames } from "../../../shared/lib/index.js";
+import { classNames, getNoteListLabel } from "../../../shared/lib/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
@@ -159,6 +159,13 @@ function AiResponseModal({
 			isResourceApplied(resource) && "is_applied",
 			isResourceUndone(resource) && "is_undone",
 		);
+	const getReadableResourceName = (resource: PreviewResource) => {
+		const snapshot = isObjectSnapshot(resource.after)
+			? resource.after
+			: isObjectSnapshot(resource.before) ? resource.before : {};
+		const fullName = [snapshot.firstName, snapshot.lastName].filter(Boolean).join(" ").trim();
+		return fullName || String(snapshot.name || snapshot.title || "").trim() || resource.label;
+	};
 	const renderPreviewResourceHeader = (
 		resource: PreviewResource,
 		label: ReactNode = resource.label,
@@ -575,6 +582,11 @@ function AiResponseModal({
 				{keys.map((key, index) => {
 					const before = beforeByKey.get(key) ?? null;
 					const after = afterByKey.get(key) ?? null;
+					const note = isObjectSnapshot(after) ? after : isObjectSnapshot(before) ? before : {};
+					const noteLabel = getNoteListLabel({
+						title: typeof note.title === "string" ? note.title : "",
+						text: typeof note.text === "string" ? note.text : "",
+					}) || `${lang.t("Note")} ${index + 1}`;
 					const listIndex = afterList.findIndex(
 						(note, noteIndex) => getNoteDiffKey(note, noteIndex) === key,
 					);
@@ -582,7 +594,7 @@ function AiResponseModal({
 						...resource,
 						parentResourceId: resource.id,
 						id: `${resource.id}:note:${key}`,
-						label: `${resource.label} / ${lang.t("Note")} ${index + 1}`,
+						label: `${getReadableResourceName(resource)} / ${noteLabel}`,
 						before,
 						after,
 						listIndex: listIndex >= 0 ? listIndex : null,
@@ -598,6 +610,7 @@ function AiResponseModal({
 		if (isEncounterResource(resource)) return renderEncounterDiff(resource);
 		if (isNoteResource(resource)) return renderNoteCardDiff(resource);
 		if (cardType) {
+			const displayName = getReadableResourceName(resource);
 			return (
 				<div
 					key={resource.id}
@@ -606,7 +619,7 @@ function AiResponseModal({
 						"AiAssistantPanel__preview_resource_cards",
 					)}
 				>
-					{renderPreviewResourceHeader(resource)}
+					{renderPreviewResourceHeader(resource, displayName || resource.label)}
 					<AiResponseCardDiff
 						resource={resource}
 						isDraft={isDraft}

@@ -1,3 +1,5 @@
+import { splitEntityMentions } from "../../../shared/lib/index.js";
+
 const IGNORED_TEXT_KEYS = new Set([
 	"id",
 	"slug",
@@ -141,8 +143,11 @@ export function extractBracketMentions(text: unknown): string[] {
 	if (!isBracketMentionText(text)) return [];
 	const mentions: string[] = [];
 	const regex = /\[([^[\]\r\n]+)\]/g;
+	const mentionText = splitEntityMentions(text).map((part) =>
+		typeof part === "string" ? part : part.raw.includes("]{") ? `[${part.name}]` : part.raw,
+	).join("");
 	let match;
-	while ((match = regex.exec(text)) !== null) {
+	while ((match = regex.exec(mentionText)) !== null) {
 		appendBracketMention(match, mentions);
 	}
 	return mentions;

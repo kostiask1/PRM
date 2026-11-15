@@ -1,5 +1,6 @@
 import type { MentionSelectionResult } from "../model/mentionPicker.ts";
-import { rankSearchResultsByName } from "../../../shared/lib/index.js";
+import { formatEntityMention, rankSearchResultsByName } from "../../../shared/lib/index.js";
+import { distance } from "fastest-levenshtein";
 
 export interface EditorMentionEntity extends Record<string, unknown> {
 	id?: string | number;
@@ -46,6 +47,19 @@ export interface MentionEntityGroup {
 	items: EditorMentionEntity[];
 }
 
+export function getAmbiguousMentionNames(entities: EditorMentionEntity[]): Set<string> {
+	const counts = new Map<string, number>();
+	for (const entity of entities) {
+		const names = new Set(
+			[entity.name, entity.firstName, entity.lastName, entity.alternateName]
+				.map((value) => String(value || "").trim().toLowerCase())
+				.filter(Boolean),
+		);
+		for (const name of names) counts.set(name, (counts.get(name) || 0) + 1);
+	}
+	return new Set([...counts].filter(([, count]) => count > 1).map(([name]) => name));
+}
+
 export function filterMentionEntities(
 	entities: EditorMentionEntity[],
 	query: string,
@@ -60,11 +74,22 @@ export function filterMentionEntities(
 			(value) => value.includes(normalizedQuery),
 		);
 	});
-	return rankSearchResultsByName(
+	const exactMatches = rankSearchResultsByName(
 		filtered,
 		normalizedQuery,
 		(entity) => entity.name,
 	);
+	const matching = new Set(filtered);
+	const approximate = entities
+		.filter((entity) => !matching.has(entity))
+		.map((entity) => {
+			const name = String(entity.name || `${entity.firstName || ""} ${entity.lastName || ""}`).trim().toLowerCase();
+			const score = distance(name, normalizedQuery);
+			return { entity, name, score };
+		})
+		.filter(({ name, score }) => name && score <= Math.max(1, Math.floor(Math.max(name.length, normalizedQuery.length) / 3)))
+		.sort((left, right) => left.score - right.score || left.name.localeCompare(right.name));
+	return [...exactMatches, ...approximate.map(({ entity }) => entity)];
 }
 
 export function groupMentionEntities(
@@ -996,7 +1021,7 @@ export function getInputMentionInsertion(
 	result: MentionSelectionResult,
 ): InputMentionInsertion | null {
 	if (result.status === "cancelled") return null;
-	const mention = result.name ? `[${result.name}]` : "[]";
+	const mention = result.name ? formatEntityMention(result.name, result.label) : "[]";
 	return {
 		value:
 			value.substring(0, cursorStart) +

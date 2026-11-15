@@ -67,14 +67,25 @@ function ImageGallerySidebar({
 	const sidebarRef = useRef<HTMLElement>(null);
 	useEffect(() => {
 		const sidebar = sidebarRef.current;
-		const selected = sidebar?.querySelector<HTMLElement>('.ImageGallery__sourceButton[aria-pressed="true"]');
-		if (!sidebar || !selected) return;
-		const container = sidebar.getBoundingClientRect();
-		const item = selected.getBoundingClientRect();
-		if (item.left < container.left) sidebar.scrollLeft += item.left - container.left;
-		else if (item.right > container.right) sidebar.scrollLeft += item.right - container.right;
-		if (item.top < container.top) sidebar.scrollTop += item.top - container.top;
-		else if (item.bottom > container.bottom) sidebar.scrollTop += item.bottom - container.bottom;
+		if (!sidebar) return;
+		const revealSelected = () => {
+			const selected = sidebar.querySelector<HTMLElement>('.ImageGallery__sourceButton[aria-pressed="true"]');
+			if (!selected) return;
+			const container = sidebar.getBoundingClientRect();
+			const item = selected.getBoundingClientRect();
+			if (item.left < container.left) sidebar.scrollLeft += item.left - container.left;
+			else if (item.right > container.right) sidebar.scrollLeft += item.right - container.right;
+			if (item.top < container.top) sidebar.scrollTop += item.top - container.top;
+			else if (item.bottom > container.bottom) sidebar.scrollTop += item.bottom - container.bottom;
+		};
+		revealSelected();
+		const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(revealSelected);
+		observer?.observe(sidebar);
+		window.addEventListener("resize", revealSelected);
+		return () => {
+			observer?.disconnect();
+			window.removeEventListener("resize", revealSelected);
+		};
 	}, [selectedSource, campaigns]);
 	return (
 		<aside ref={sidebarRef} className="ImageGallery__sidebar">

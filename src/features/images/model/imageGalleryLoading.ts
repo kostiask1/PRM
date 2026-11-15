@@ -8,6 +8,7 @@ import type {
 	GallerySubcategoryDetailsMap,
 	ImageGalleryContentScope,
 } from "./contracts.ts";
+import { ALL_GALLERY_CATEGORY } from "../imageGalleryConfig.js";
 import { getGalleryFolderSubcategory } from "./imageGalleryPresentation.ts";
 import { rankSearchResultsByName } from "../../../shared/lib/index.js";
 
@@ -18,6 +19,10 @@ type GalleryLoadingApi = Pick<
 	| "getSubcategories"
 	| "searchImageGallery"
 >;
+
+export function getGalleryEffectiveScope(categoryId: string, scope: ImageGalleryContentScope): ImageGalleryContentScope {
+	return categoryId === ALL_GALLERY_CATEGORY.id && scope === "local" ? "source" : scope;
+}
 
 export interface GallerySubcategoryLoadResult {
 	dynamicSubs: string[];
