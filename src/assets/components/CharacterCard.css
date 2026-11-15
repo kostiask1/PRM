@@ -161,10 +161,6 @@
     min-width: 0;
 }
 
-.CharacterCard__body.has_no_image .CharacterCard__imageSide,
-.CharacterCard__body.has_no_image .CharacterCard__infoSide,
-.CharacterCard__body:has(.ImageAssetField__missing) .CharacterCard__imageSide,
-.CharacterCard__body:has(.ImageAssetField__missing) .CharacterCard__infoSide,
 .CharacterCard__body > .CharacterCard__details,
 .CharacterCard__body > .CharacterCard__field,
 .CharacterCard__body > .CharacterCard__notes {
@@ -185,6 +181,13 @@
 .CharacterCard__portraitContainer .ImageDropzone {
     margin: 0;
     padding: var(--space-3);
+    aspect-ratio: 1;
+    height: auto;
+    min-height: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .CharacterCard__portraitContainer .ImageDropzone .Icon__image {
@@ -373,6 +376,9 @@
 }
 
 @media (max-width: 760px) {
+    .CharacterCard__body {
+        grid-template-columns: minmax(0, min(var(--entity-portrait-size), 38%)) minmax(0, 1fr);
+    }
     .CharacterCard__header {
         align-items: flex-start;
         height: auto;

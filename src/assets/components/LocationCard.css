@@ -101,10 +101,6 @@
     min-width: 0;
 }
 
-.LocationCard__body.has_no_image .LocationCard__imageSide,
-.LocationCard__body.has_no_image .LocationCard__grid,
-.LocationCard__body:has(.ImageAssetField__missing) .LocationCard__imageSide,
-.LocationCard__body:has(.ImageAssetField__missing) .LocationCard__grid,
 .LocationCard__body > .LocationCard__details,
 .LocationCard__body > .LocationCard__notes {
     grid-column: 1 / -1;
@@ -152,6 +148,13 @@
 .LocationCard__imageContainer .ImageDropzone {
     margin: 0;
     padding: var(--space-3);
+    aspect-ratio: 1;
+    height: auto;
+    min-height: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .LocationCard__imageContainer .ImageDropzone__content {
@@ -315,6 +318,9 @@
 }
 
 @media (max-width: 760px) {
+    .LocationCard__body {
+        grid-template-columns: minmax(0, min(var(--entity-portrait-size), 38%)) minmax(0, 1fr);
+    }
     .LocationCard__header {
         align-items: flex-start;
         height: auto;

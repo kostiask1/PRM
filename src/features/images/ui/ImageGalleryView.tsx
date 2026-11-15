@@ -6,6 +6,7 @@ import { classNames, formatBytes, lang } from "../../../shared/lib/index.js";
 import { Icon, Modal, type IconName } from "../../../shared/ui/index.js";
 import type { ImageAsset } from "../api/imageApi.ts";
 import type { GalleryPresentationItem } from "../model/imageGalleryPresentation.ts";
+import { getGalleryImageSelectionKey } from "../model/imageGalleryInteraction.ts";
 import { useImageGalleryRuntime } from "../model/ImageGalleryRuntime.tsx";
 import { ALL_GALLERY_CATEGORY } from "../imageGalleryConfig.js";
 import ImageGalleryItem from "./ImageGalleryItem.tsx";
@@ -231,10 +232,15 @@ function ImageGalleryTabs({ controller }: { controller: ImageGalleryUiController
 
 function ImageGalleryToolbar({
 	controller,
+	onSelect,
 }: {
 	controller: ImageGalleryUiController;
+	onSelect?: (image: ImageAsset | null | undefined) => void;
 }) {
 	const { galleryController } = controller;
+	const selectedImage = galleryController.selectedFilenames.size === 1 && galleryController.selectedSubs.size === 0
+		? controller.galleryItems.find((item) => item.type === "image" && galleryController.selectedFilenames.has(getGalleryImageSelectionKey(item.image)))
+		: undefined;
 	const destination = galleryController.moveFeedback;
 	const destinationSource = destination?.slug === "general"
 		? lang.t("General")
@@ -260,6 +266,8 @@ function ImageGalleryToolbar({
 			<ImageGalleryStatsAndActions
 				controller={controller.galleryController}
 				onOpenMove={controller.openMoveModal}
+				onSelect={onSelect && selectedImage?.type === "image" ? () => onSelect(selectedImage.image) : undefined}
+				isSelectionMode={Boolean(onSelect)}
 			/>
 			{destination && <div className="ImageGallery__moveFeedback" role="status">{lang.t("Items moved to {destination}.", { destination: destinationLabel })}</div>}
 		</div>
@@ -370,7 +378,7 @@ function ImageGalleryLayout({
 			<ImageGallerySidebar controller={controller} />
 			<main className="ImageGallery__main">
 				<ImageGalleryTabs controller={controller} />
-				<ImageGalleryToolbar controller={controller} />
+				<ImageGalleryToolbar controller={controller} onSelect={onSelect} />
 				<ImageGalleryItems controller={controller} onSelect={onSelect} />
 			</main>
 		</div>

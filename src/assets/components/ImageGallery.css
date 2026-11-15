@@ -103,7 +103,8 @@
 	display: flex;
 	align-items: center;
 	margin-left: auto;
-	gap: var(--space-4);
+	gap: var(--space-2);
+	min-height: var(--control-h);
 }
 
 .ImageGallery__upload_actions button span {
@@ -154,7 +155,7 @@
 
 .ImageGallery__searchArea {
 	position: relative;
-	flex: 1 1 440px;
+	flex: 1 1 330px;
 	min-width: 0;
 	display: grid;
 	gap: var(--space-2);
@@ -265,7 +266,7 @@
 	padding: var(--space-2) var(--space-4);
 	background: var(--bg);
 	border-bottom: 1px solid var(--border);
-	gap: var(--space-4);
+	gap: var(--space-3);
 }
 
 .ImageGallery__moveFeedback {
@@ -721,8 +722,13 @@
 
 	.ImageGallery__upload_actions {
 		margin-left: 0;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
+		overflow-x: auto;
 		gap: var(--space-2);
+	}
+
+	.ImageGallery__upload_actions button {
+		flex-shrink: 0;
 	}
 
 	.ImageGallery__grid {

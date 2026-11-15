@@ -396,7 +396,7 @@ function ImageGallerySelectionActions({
 				icon="export"
 				onClick={onOpenMove}
 			>
-				{lang.t("Move")} ({presentation.selectionCount})
+				({presentation.selectionCount})
 			</Button>
 			<Button
 				variant="danger"
@@ -404,7 +404,7 @@ function ImageGallerySelectionActions({
 				icon="trash"
 				onClick={onDelete}
 			>
-				{lang.t("Delete")} ({presentation.selectionCount})
+				({presentation.selectionCount})
 			</Button>
 		</>
 	);
@@ -443,9 +443,13 @@ function ImageGalleryUploadControl({
 export function ImageGalleryStatsAndActions({
 	controller,
 	onOpenMove,
+	onSelect,
+	isSelectionMode = false,
 }: {
 	controller: ImageGalleryController;
 	onOpenMove: () => void;
+	onSelect?: () => void;
+	isSelectionMode?: boolean;
 }) {
 	const {
 		handleBulkDelete,
@@ -467,7 +471,8 @@ export function ImageGalleryStatsAndActions({
 	return (
 		<>
 			<ImageGalleryStorageStats presentation={presentation} />
-			<div className="ImageGallery__upload_actions">
+			<div className={classNames("ImageGallery__upload_actions", { is_selection_mode: isSelectionMode })}>
+				{isSelectionMode && <Button variant="primary" size={Button.SIZES.SMALL} icon="check" disabled={!onSelect} onClick={onSelect}>{lang.t("Choose")}</Button>}
 				<ImageGallerySelectionActions
 					onDelete={handleBulkDelete}
 					onOpenMove={onOpenMove}
