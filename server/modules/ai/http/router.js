@@ -56,6 +56,8 @@ const {
 const {
 	createEnvApiKeyStore,
 } = require("../infrastructure/envApiKeyStore");
+const { geminiGateway } = require("../infrastructure/geminiGateway");
+const { buildImageParts } = require("../infrastructure/attachmentParts");
 
 const ENV_PATH = path.join(__dirname, "..", "..", "..", "..", ".env");
 const envApiKeyStore = createEnvApiKeyStore({
@@ -168,6 +170,37 @@ router.get("/models", async (_req, res, next) => {
 	try {
 		const result = await aiService.listAvailableModels();
 		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post("/generate-image", async (req, res, next) => {
+	try {
+		const { campaign, historyCampaign, modelName, prompt, attachedImages } = req.body || {};
+		const text = String(prompt || "").trim();
+		if (!text || text.length > 10000) return res.status(400).json({ error: "Image prompt must contain 1–10000 characters." });
+		if (!process.env.GEMINI_API_KEY) return res.status(400).json({ error: "Gemini API key is required." });
+		const available = await aiService.listAvailableModels();
+		const model = available.imageModels?.find((item) => item.name === modelName);
+		if (!model) return res.status(400).json({ error: "Select an available image model." });
+		const slug = path.basename(String(campaign || "").trim());
+		if (!slug || slug === ".") return res.status(400).json({ error: "Campaign is required." });
+		const historySlug = path.basename(String(historyCampaign || slug).trim());
+		if (!historySlug || historySlug === "." || historySlug === "..") return res.status(400).json({ error: "Invalid AI history scope." });
+		const attachmentParts = await buildImageParts(Array.isArray(attachedImages) ? attachedImages : []);
+		const result = await geminiGateway.generateImage({ modelName: model.name, prompt: text, attachmentParts });
+		const imageBuffer = Buffer.from(result.data, "base64");
+		if (!imageBuffer.length || imageBuffer.length > 20 * 1024 * 1024) throw new Error("Generated image is empty or too large.");
+		const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[result.mimeType];
+		const fileName = `ai-${Date.now()}-${require("crypto").randomUUID()}.${extension}`;
+		const category = "attachments";
+		const directory = storage.campaignImagesDir(slug, category);
+		await storage.ensureDir(directory);
+		await fs.writeFile(path.join(directory, fileName), imageBuffer, { flag: "wx" });
+		const imageUrl = `/api/images/${encodeURIComponent(slug)}/${category}/${encodeURIComponent(fileName)}`;
+		const aiResponse = await aiHistoryRepository.add({ text: result.text || text, imageUrl, path: { campaign: historySlug }, type: "generated-image", modelName: model.name, userInstructions: text });
+		res.json({ aiResponse, imageUrl });
 	} catch (error) {
 		next(error);
 	}

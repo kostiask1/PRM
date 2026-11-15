@@ -282,6 +282,13 @@ export default function AiResponseModalView(props: AiResponseModalViewProps) {
 						className="AiAssistantPanel__prompt_result"
 						ref={props.generatedPromptRef as RefObject<HTMLDivElement>}
 					>
+						{typeof props.selectedResponseEntry?.imageUrl === "string" && (
+							<div className="AiAssistantPanel__generated_image">
+								<img src={props.selectedResponseEntry.imageUrl} alt={props.generatedPrompt} style={{ display: "block", maxWidth: "100%", maxHeight: "60vh", objectFit: "contain", borderRadius: "12px" }} />
+								<p>Збережено в галереї · Вкладка «Вкладення»</p>
+								<a href={props.selectedResponseEntry.imageUrl} download>Завантажити файл</a>
+							</div>
+						)}
 						<ReactMarkdown components={props.markdownComponents}>
 							{props.generatedPrompt}
 						</ReactMarkdown>

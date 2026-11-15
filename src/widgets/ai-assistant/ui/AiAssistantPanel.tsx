@@ -321,6 +321,7 @@ export default function AiAssistantPanel({
 	});
 	const {
 		aiModels,
+		imageModels,
 		apiKeyInput,
 		isApiKeyMissing,
 		isSavingApiKey,
@@ -578,6 +579,7 @@ export default function AiAssistantPanel({
 			imagePromptNpcs={imagePromptController.npcs}
 			imagePromptScenes={imagePromptController.scenes}
 			aiModels={aiModels}
+			imageModels={imageModels}
 			isBestiary={isBestiary}
 			isCampaign={isCampaign}
 			isDataLoading={isImagePromptDataLoading}
@@ -587,6 +589,22 @@ export default function AiAssistantPanel({
 			onCancel={imagePromptController.onCancel}
 			onContinueWithoutSelection={imagePromptController.onContinueWithoutSelection}
 			onGenerate={imagePromptController.onGenerate}
+			onGenerateImage={async (target, modelName) => {
+			const prompt = [
+				target ? `Create an image of ${target.name}. Context: ${JSON.stringify(target)}.` : imagePromptRequest,
+				imagePromptInstructions,
+			].filter(Boolean).join("\n\n");
+			setIsImagePromptPickerOpen(false);
+			setError("");
+			try {
+				const result = await aiApi.generateImage({ campaign: assetCampaignSlug || "general", historyCampaign: aiHistoryCampaign, modelName, prompt, attachedImages });
+				if (!result?.aiResponse) throw new Error("Не вдалося зберегти зображення в історії ШІ.");
+				upsertResponseHistoryEntry(result.aiResponse);
+				showGeneratedPrompt(result.aiResponse);
+			} catch (failure) {
+				setError(failure instanceof Error ? failure.message : "Не вдалося згенерувати зображення.");
+			}
+		}}
 			onInstructionsChange={setImagePromptInstructions}
 			onRequestChange={setImagePromptRequest}
 			onModelChange={setSelectedModel}

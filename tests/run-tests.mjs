@@ -31799,6 +31799,24 @@ await run("Gemini gateway owns SDK request shaping and refreshes changed keys", 
 		userPrompt: "Changed key",
 	});
 	assert.deepEqual(createdKeys, ["first", "second"]);
+	const imageGateway = createGeminiGateway({
+		getApiKey: () => "image-key",
+		createClient: () => ({
+			getGenerativeModel: ({ model }) => {
+				assert.equal(model, "gemini-3.1-flash-image");
+				return { generateContent: async (parts) => {
+					assert.deepEqual(parts, [{ text: "Намалюй замок" }]);
+					return { response: { candidates: [{ content: { parts: [
+						{ text: "Готово" },
+						{ inlineData: { mimeType: "image/png", data: "aGVsbG8=" } },
+					] } }] } };
+				} };
+			},
+		}),
+	});
+	assert.deepEqual(await imageGateway.generateImage({ modelName: "gemini-3.1-flash-image", prompt: "Намалюй замок" }), {
+		data: "aGVsbG8=", mimeType: "image/png", text: "Готово",
+	});
 });
 
 await run(
@@ -32915,6 +32933,8 @@ await run("AI model discovery filters and ranks current models", async () => {
 							modelRow("gemini-4-pro"),
 							modelRow("gemini-3.1-pro-preview-customtools"),
 							modelRow("nano-banana"),
+							modelRow("gemini-omni-1.1-flash"),
+							modelRow("lyria-3.5"),
 							modelRow("gemini-3.5-flash-preview-tts"),
 							modelRow("gemini-3.1-flash-live-preview"),
 							modelRow("gemini-3-flash-preview"),
@@ -32936,6 +32956,7 @@ await run("AI model discovery filters and ranks current models", async () => {
 			["gemini-4-pro", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-unknown"],
 		);
 		assert.equal(discovered.defaultModel, "gemini-4-pro");
+		assert.deepEqual(discovered.imageModels.map((model) => model.name), ["gemini-3.1-flash-lite-image", "nano-banana"]);
 		assert.equal(discovered.source, "api");
 		assert.equal(
 			discovered.models[0].displayName,

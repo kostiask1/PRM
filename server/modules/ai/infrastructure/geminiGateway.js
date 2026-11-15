@@ -39,7 +39,17 @@ function createGeminiGateway({
 		return response.text();
 	}
 
-	return { generateText };
+	async function generateImage({ modelName, prompt, attachmentParts = [] }) {
+		const model = getClient().getGenerativeModel({ model: modelName });
+		const result = await model.generateContent([{ text: prompt }, ...attachmentParts]);
+		const response = await result.response;
+		const parts = response.candidates?.[0]?.content?.parts || [];
+		const image = parts.find((part) => part.inlineData?.data && /^image\/(?:png|jpeg|webp)$/.test(part.inlineData.mimeType || ""))?.inlineData;
+		if (!image) throw new Error("Gemini did not return an image.");
+		return { data: image.data, mimeType: image.mimeType, text: parts.map((part) => part.text || "").filter(Boolean).join("\n") };
+	}
+
+	return { generateText, generateImage };
 }
 
 const geminiGateway = createGeminiGateway();

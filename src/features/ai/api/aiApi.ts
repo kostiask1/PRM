@@ -12,6 +12,7 @@ export interface AiModelDescriptor {
 
 export interface AiModelListResult {
 	models: AiModelDescriptor[];
+	imageModels?: AiModelDescriptor[];
 	defaultModel: string;
 	source: "gemini" | "fallback" | string;
 }
@@ -95,6 +96,8 @@ const historyPath = (campaign: string, id?: AiHistoryId) =>
 
 export const aiApi = {
 	listAiModels: () => request<AiModelListResult>("/ai/models"),
+	generateImage: (payload: { campaign: string; historyCampaign?: string; modelName: string; prompt: string; attachedImages?: Record<string, unknown>[] }) =>
+		request<{ aiResponse: AiHistoryEntry; imageUrl: string }>("/ai/generate-image", { method: "POST", body: JSON.stringify(payload) }),
 	saveGeminiApiKey: (apiKey: string) =>
 		request<{ ok: true }>("/ai/api-key", {
 			method: "POST",

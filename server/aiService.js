@@ -51,6 +51,21 @@ function modelRank(name) {
 	return 3;
 }
 
+function isImageModel(model) {
+	return /(?:image|nano[\s-]*banana)/i.test(`${model.name || ""} ${model.displayName || ""}`) &&
+		!/(?:preview|tts|omni|lyria)/i.test(`${model.name || ""} ${model.displayName || ""}`);
+}
+
+function toModelDescriptor(model) {
+	return {
+		name: normalizeModelName(model.name),
+		displayName: model.displayName || normalizeModelName(model.name),
+		description: model.description || "",
+		inputTokenLimit: model.inputTokenLimit,
+		outputTokenLimit: model.outputTokenLimit,
+	};
+}
+
 async function listAvailableModels({ forceRefresh = false } = {}) {
 	const now = Date.now();
 	if (!forceRefresh && modelCache.data && modelCache.expiresAt > now) {
@@ -60,6 +75,7 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 	if (!process.env.GEMINI_API_KEY) {
 		const fallback = {
 			models: [],
+			imageModels: [],
 			defaultModel: "",
 			source: "fallback",
 		};
@@ -74,35 +90,30 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 		const params = new URLSearchParams({ pageSize: "1000", key: process.env.GEMINI_API_KEY });
 		if (pageToken) params.set("pageToken", pageToken);
 		const response = await fetch(`${GEMINI_MODELS_ENDPOINT}?${params}`);
-		console.log('response:', response)
 		if (!response.ok) {
 			throw new Error(`Gemini models request failed: ${response.status}`);
 		}
 		const payload = await response.json();
-		console.log('payload:', payload)
 		allModels.push(...(payload.models || []));
-		console.log('allModels:', allModels)
 		pageToken = payload.nextPageToken || "";
 		} while (pageToken);
-		const models = allModels
+		const supported = allModels
 			.filter((model) => Array.isArray(model.supportedGenerationMethods))
 			.filter((model) =>
 				model.supportedGenerationMethods.includes("generateContent"),
-			)
-			.filter((model) => !/(?:preview|tts|image|nano[\s-]*banana)/i.test(`${model.name || ""} ${model.displayName || ""}`))
-			.map((model) => ({
-				name: normalizeModelName(model.name),
-				displayName: model.displayName || normalizeModelName(model.name),
-				description: model.description || "",
-				inputTokenLimit: model.inputTokenLimit,
-				outputTokenLimit: model.outputTokenLimit,
-			}))
+			);
+		const models = supported
+			.filter((model) => !/(?:preview|tts|image|nano[\s-]*banana|omni|lyria)/i.test(`${model.name || ""} ${model.displayName || ""}`))
+			.map(toModelDescriptor)
 			.filter((model) => model.name);
 		const ordered = Array.from(new Map(models.map((model) => [model.name, model])).values())
+			.sort((a, b) => modelRank(a.name) - modelRank(b.name) || b.name.localeCompare(a.name, "en", { numeric: true }));
+		const imageModels = Array.from(new Map(supported.filter(isImageModel).map(toModelDescriptor).map((model) => [model.name, model])).values())
 			.sort((a, b) => modelRank(a.name) - modelRank(b.name) || b.name.localeCompare(a.name, "en", { numeric: true }));
 
 		const result = {
 			models: ordered,
+			imageModels,
 			defaultModel: pickDefaultModel(ordered),
 			source: "api",
 		};
@@ -111,6 +122,7 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 	} catch (error) {
 		const fallback = {
 			models: [],
+			imageModels: [],
 			defaultModel: "",
 			source: "fallback",
 			error: error.message,

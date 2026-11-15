@@ -23,6 +23,7 @@ export function useAiAssistantModelAccess({
 	const [apiKeyInput, setApiKeyInput] = useState("");
 	const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 	const [aiModels, setAiModels] = useState<AiModelDescriptor[]>([]);
+	const [imageModels, setImageModels] = useState<AiModelDescriptor[]>([]);
 	const [selectedModel, setSelectedModel] = useState("");
 
 	useEffect(() => {
@@ -34,6 +35,7 @@ export function useAiAssistantModelAccess({
 				if (!active) return;
 				const models = Array.isArray(result?.models) ? result.models : [];
 				setAiModels(models);
+				setImageModels(Array.isArray(result?.imageModels) ? result.imageModels : []);
 				setSelectedModel((current) => models.some((model) => model.name === current) ? current : result?.defaultModel || models[0]?.name || "");
 				if (!models.length) onError(lang.t("Failed to load AI models"));
 			})
@@ -62,6 +64,7 @@ export function useAiAssistantModelAccess({
 			});
 			if (result.status === "saved" && result.modelSelection) {
 				setAiModels(result.modelSelection.models);
+				setImageModels(result.modelSelection.imageModels || []);
 				setSelectedModel(result.modelSelection.selectedModel);
 			}
 			setApiKeyInput("");
@@ -80,6 +83,7 @@ export function useAiAssistantModelAccess({
 
 	return {
 		aiModels,
+		imageModels,
 		apiKeyInput,
 		isApiKeyMissing,
 		isSavingApiKey,

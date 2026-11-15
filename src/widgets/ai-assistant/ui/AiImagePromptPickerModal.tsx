@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type {
 	AiAttachmentStateSetter,
 	AiModelOption,
@@ -42,6 +43,8 @@ export interface AiImagePromptPickerModalProps {
 	imagePromptRequest: string;
 	imagePromptScenes: ImagePromptEntity[];
 	aiModels?: AiModelOption[] | null;
+	imageModels?: AiModelOption[] | null;
+	onGenerateImage: (target: ImagePromptTarget | null, modelName: string) => void;
 	isBestiary: boolean;
 	isCampaign: boolean;
 	isContextMode: boolean;
@@ -84,6 +87,8 @@ export default function AiImagePromptPickerModal({
 	imagePromptRequest,
 	imagePromptScenes,
 	aiModels,
+	imageModels,
+	onGenerateImage,
 	isBestiary,
 	isCampaign,
 	isContextMode,
@@ -103,6 +108,11 @@ export default function AiImagePromptPickerModal({
 	setAttachedFiles,
 	setAttachedImages,
 }: AiImagePromptPickerModalProps) {
+	const [imageMode, setImageMode] = useState(false);
+	const [imageModel, setImageModel] = useState("");
+	useEffect(() => {
+		setImageModel((current) => imageModels?.some((model) => model.name === current) ? current : imageModels?.[0]?.name || "");
+	}, [imageModels]);
 	if (!isOpen) return null;
 
 	const state = getImagePromptPickerState({
@@ -128,6 +138,12 @@ export default function AiImagePromptPickerModal({
 					attachedImages={attachedImages}
 					campaignSlug={campaignSlug}
 					aiModels={modelOptions}
+					imageModels={imageModels || []}
+					imageMode={imageMode}
+					imageModel={imageModel}
+					onImageModeChange={setImageMode}
+					onImageModelChange={setImageModel}
+					onGenerateImage={onGenerateImage}
 					loading={loading}
 					canGenerate={state.canGenerate}
 					isContextMode={isContextMode}

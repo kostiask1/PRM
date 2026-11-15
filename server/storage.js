@@ -738,6 +738,7 @@ function createNormalizedAiResponse(raw, text, rawRequest, userInstructions) {
 	return {
 		id: normalizeGeneratedId(raw.id),
 		text,
+		...(typeof raw.imageUrl === "string" && raw.imageUrl.startsWith("/api/images/") ? { imageUrl: raw.imageUrl } : {}),
 		status: normalizeAiResponseStatus(raw.status),
 		path: normalizeAiResponsePath(raw.path),
 		type: normalizeNullableAiMetadata(raw.type),

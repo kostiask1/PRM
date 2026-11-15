@@ -9,6 +9,7 @@ export const AI_MODEL_REFRESH_DELAY_MS = 500;
 
 export interface AiApiKeyModelSelection {
 	models: AiModelDescriptor[];
+	imageModels?: AiModelDescriptor[];
 	selectedModel: string;
 }
 
@@ -39,6 +40,7 @@ export function getAiModelSelection(
 	const models = Array.isArray(result.models) ? result.models : [];
 	return {
 		models,
+		...(result.imageModels ? { imageModels: result.imageModels } : {}),
 		selectedModel: result.defaultModel || models[0]?.name || "",
 	};
 }

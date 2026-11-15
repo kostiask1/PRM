@@ -15,6 +15,9 @@ interface AiImagePromptDetailsProps {
 	attachedImages: AiUiAttachment[];
 	campaignSlug?: string | null;
 	aiModels: AiModelOption[];
+	imageModels: AiModelOption[];
+	imageMode: boolean;
+	imageModel: string;
 	loading: boolean;
 	canGenerate: boolean;
 	isContextMode: boolean;
@@ -25,6 +28,9 @@ interface AiImagePromptDetailsProps {
 	getImagePromptTargetTitle: (target: ImagePromptTarget) => string;
 	onBackToSelection: () => void;
 	onGenerate: (target: ImagePromptTarget | null) => void;
+	onGenerateImage: (target: ImagePromptTarget | null, modelName: string) => void;
+	onImageModeChange: (value: boolean) => void;
+	onImageModelChange: (value: string) => void;
 	onInstructionsChange: (value: string) => void;
 	onModelChange: (value: string) => void;
 	onRequestChange: (value: string) => void;
@@ -59,6 +65,9 @@ export default function AiImagePromptDetails({
 	attachedImages,
 	campaignSlug,
 	aiModels,
+	imageModels,
+	imageMode,
+	imageModel,
 	loading,
 	canGenerate,
 	isContextMode,
@@ -69,6 +78,9 @@ export default function AiImagePromptDetails({
 	getImagePromptTargetTitle,
 	onBackToSelection,
 	onGenerate,
+	onGenerateImage,
+	onImageModeChange,
+	onImageModelChange,
 	onInstructionsChange,
 	onModelChange,
 	onRequestChange,
@@ -77,7 +89,11 @@ export default function AiImagePromptDetails({
 }: AiImagePromptDetailsProps) {
 	return (
 		<div className="AiAssistantPanel__image_prompt_details">
-			<p className="AiAssistantPanel__image_prompt_explanation">{lang.t("This creates text for an image generator.")}</p>
+			<p className="AiAssistantPanel__image_prompt_explanation">{imageMode ? "Gemini згенерує зображення й збереже його в історії ШІ." : lang.t("This creates text for an image generator.")}</p>
+			<div className="AiAssistantPanel__image_prompt_actions" role="group" aria-label="Результат генерації">
+				<Button variant={imageMode ? "ghost" : "primary"} onClick={() => onImageModeChange(false)} disabled={loading}>Текстовий промпт</Button>
+				<Button variant={imageMode ? "primary" : "ghost"} onClick={() => onImageModeChange(true)} disabled={loading}>Зображення</Button>
+			</div>
 			<SelectedImagePromptTarget
 				selectedTarget={selectedTarget}
 				getTitle={getImagePromptTargetTitle}
@@ -85,11 +101,11 @@ export default function AiImagePromptDetails({
 			<Select
 				className="AiAssistantPanel__image_prompt_model"
 				aria-label={lang.t("AI model")}
-				value={selectedModel}
-				onChange={(event) => onModelChange(event.target.value)}
-				disabled={loading || aiModels.length === 0}
+				value={imageMode ? imageModel : selectedModel}
+				onChange={(event) => imageMode ? onImageModelChange(event.target.value) : onModelChange(event.target.value)}
+				disabled={loading || (imageMode ? imageModels.length === 0 : aiModels.length === 0)}
 			>
-				{renderAiModelOptions(aiModels)}
+				{renderAiModelOptions(imageMode ? imageModels : aiModels)}
 			</Select>
 			{isContextMode && (
 				<label className="AiAssistantPanel__image_prompt_field">
@@ -137,10 +153,10 @@ export default function AiImagePromptDetails({
 				<Button
 					variant="primary"
 					icon="image"
-					onClick={() => onGenerate(selectedTarget)}
-					disabled={!canGenerate}
+					onClick={() => imageMode ? onGenerateImage(selectedTarget, imageModel) : onGenerate(selectedTarget)}
+					disabled={!canGenerate || (imageMode ? !imageModel : !selectedModel)}
 				>
-					{lang.t("Generate image prompt")}
+					{imageMode ? "Згенерувати зображення" : lang.t("Generate image prompt")}
 				</Button>
 			</div>
 		</div>
