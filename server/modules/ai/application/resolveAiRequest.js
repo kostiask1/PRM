@@ -29,9 +29,12 @@ function normalizeModelName(name) {
 
 function selectAiModel(availableModels, requestedName) {
 	const requestedModel = normalizeModelName(requestedName);
-	return availableModels.models.some((item) => item.name === requestedModel)
-		? requestedModel
-		: availableModels.defaultModel;
+	if (requestedModel && !availableModels.models.some((item) => item.name === requestedModel)) {
+		throw new Error("Selected Gemini model is unavailable. Refresh the model list and select another model.");
+	}
+	const selected = requestedModel || availableModels.defaultModel;
+	if (!selected) throw new Error(availableModels.error || "No Gemini models are available. Check the API key and try again.");
+	return selected;
 }
 
 function isGenerationEnabled(value) {

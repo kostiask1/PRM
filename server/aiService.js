@@ -30,17 +30,6 @@ const {
 const GEMINI_MODELS_ENDPOINT =
 	"https://generativelanguage.googleapis.com/v1beta/models";
 const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
-const TEXT_MODEL_CATALOG = [
-	"gemini-3.8-flash",
-	"gemini-3.7-flash",
-	"gemini-3.6-flash",
-	"gemini-3.5-flash",
-	"gemini-3.5-flash-lite",
-	"gemini-3.1-pro-preview",
-	"gemini-3.1-flash-lite",
-];
-const DEFAULT_TEXT_MODEL = TEXT_MODEL_CATALOG[0];
-const TEXT_MODEL_NAMES = new Set(TEXT_MODEL_CATALOG);
 let modelCache = {
 	expiresAt: 0,
 	data: null,
@@ -52,11 +41,14 @@ function clearModelCache() {
 	};
 }
 function pickDefaultModel(models) {
-	return models[0]?.name || DEFAULT_TEXT_MODEL;
+	return models[0]?.name || "";
 }
 
-function buildFallbackModelCatalog() {
-	return TEXT_MODEL_CATALOG.map((name) => ({ name, displayName: name }));
+function modelRank(name) {
+	if (/(?:^|-)pro(?:-|$)/i.test(name)) return 0;
+	if (/(?:^|-)flash-lite(?:-|$)/i.test(name)) return 2;
+	if (/(?:^|-)flash(?:-|$)/i.test(name)) return 1;
+	return 3;
 }
 
 async function listAvailableModels({ forceRefresh = false } = {}) {
@@ -67,8 +59,8 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 
 	if (!process.env.GEMINI_API_KEY) {
 		const fallback = {
-			models: buildFallbackModelCatalog(),
-			defaultModel: DEFAULT_TEXT_MODEL,
+			models: [],
+			defaultModel: "",
 			source: "fallback",
 		};
 		modelCache = { data: fallback, expiresAt: now + MODEL_CACHE_TTL_MS };
@@ -76,18 +68,28 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 	}
 
 	try {
-		const response = await fetch(
-			`${GEMINI_MODELS_ENDPOINT}?pageSize=1000&key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,
-		);
+		let pageToken = "";
+		const allModels = [];
+		do {
+		const params = new URLSearchParams({ pageSize: "1000", key: process.env.GEMINI_API_KEY });
+		if (pageToken) params.set("pageToken", pageToken);
+		const response = await fetch(`${GEMINI_MODELS_ENDPOINT}?${params}`);
+		console.log('response:', response)
 		if (!response.ok) {
 			throw new Error(`Gemini models request failed: ${response.status}`);
 		}
 		const payload = await response.json();
-		const models = (payload.models || [])
+		console.log('payload:', payload)
+		allModels.push(...(payload.models || []));
+		console.log('allModels:', allModels)
+		pageToken = payload.nextPageToken || "";
+		} while (pageToken);
+		const models = allModels
 			.filter((model) => Array.isArray(model.supportedGenerationMethods))
 			.filter((model) =>
 				model.supportedGenerationMethods.includes("generateContent"),
 			)
+			.filter((model) => !/(?:preview|tts|image|nano[\s-]*banana)/i.test(`${model.name || ""} ${model.displayName || ""}`))
 			.map((model) => ({
 				name: normalizeModelName(model.name),
 				displayName: model.displayName || normalizeModelName(model.name),
@@ -95,21 +97,12 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 				inputTokenLimit: model.inputTokenLimit,
 				outputTokenLimit: model.outputTokenLimit,
 			}))
-			.filter((model) => model.name)
-			.filter((model) => TEXT_MODEL_NAMES.has(model.name));
-
-		const modelsByName = new Map(
-			models.map((model) => [model.name, model]),
-		);
-		const ordered = TEXT_MODEL_CATALOG.flatMap((name) => {
-			const model = modelsByName.get(name);
-			return model ? [model] : [];
-		});
+			.filter((model) => model.name);
+		const ordered = Array.from(new Map(models.map((model) => [model.name, model])).values())
+			.sort((a, b) => modelRank(a.name) - modelRank(b.name) || b.name.localeCompare(a.name, "en", { numeric: true }));
 
 		const result = {
-			models: ordered.length
-				? ordered
-				: buildFallbackModelCatalog(),
+			models: ordered,
 			defaultModel: pickDefaultModel(ordered),
 			source: "api",
 		};
@@ -117,12 +110,11 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 		return result;
 	} catch (error) {
 		const fallback = {
-			models: buildFallbackModelCatalog(),
-			defaultModel: DEFAULT_TEXT_MODEL,
+			models: [],
+			defaultModel: "",
 			source: "fallback",
 			error: error.message,
 		};
-		modelCache = { data: fallback, expiresAt: now + MODEL_CACHE_TTL_MS };
 		return fallback;
 	}
 }

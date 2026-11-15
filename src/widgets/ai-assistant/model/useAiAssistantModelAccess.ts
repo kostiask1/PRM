@@ -26,20 +26,23 @@ export function useAiAssistantModelAccess({
 	const [selectedModel, setSelectedModel] = useState("");
 
 	useEffect(() => {
-		if ((!isOpen && !isImagePromptPickerOpen) || aiModels.length > 0) return;
+		if (!isOpen && !isImagePromptPickerOpen) return;
+		let active = true;
 		aiApi
 			.listAiModels()
 			.then((result) => {
+				if (!active) return;
 				const models = Array.isArray(result?.models) ? result.models : [];
 				setAiModels(models);
-				if (!selectedModel) {
-					setSelectedModel(result?.defaultModel || models[0]?.name || "");
-				}
+				setSelectedModel((current) => models.some((model) => model.name === current) ? current : result?.defaultModel || models[0]?.name || "");
+				if (!models.length) onError(lang.t("Failed to load AI models"));
 			})
 			.catch((error) => {
 				console.error("Failed to load AI models", error);
+				if (active) onError(lang.t("Failed to load AI models"));
 			});
-	}, [isOpen, isImagePromptPickerOpen, aiModels.length, selectedModel]);
+		return () => { active = false; };
+	}, [isOpen, isImagePromptPickerOpen]);
 
 	const saveApiKey = async (): Promise<void> => {
 		const apiKey = apiKeyInput.trim();

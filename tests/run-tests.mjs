@@ -32876,7 +32876,7 @@ await run(
 	},
 );
 
-await run("AI model discovery exposes only ordered current Gemini 3 text models", async () => {
+await run("AI model discovery filters and ranks current models", async () => {
 	const expectedCatalog = [
 		"gemini-3.8-flash",
 		"gemini-3.7-flash",
@@ -32912,7 +32912,9 @@ await run("AI model discovery exposes only ordered current Gemini 3 text models"
 						models: [
 							modelRow("gemini-3.8-flash", ["countTokens"]),
 							modelRow("gemini-3.1-flash-lite-image"),
+							modelRow("gemini-4-pro"),
 							modelRow("gemini-3.1-pro-preview-customtools"),
+							modelRow("nano-banana"),
 							modelRow("gemini-3.5-flash-preview-tts"),
 							modelRow("gemini-3.1-flash-live-preview"),
 							modelRow("gemini-3-flash-preview"),
@@ -32931,13 +32933,13 @@ await run("AI model discovery exposes only ordered current Gemini 3 text models"
 		});
 		assert.deepEqual(
 			discovered.models.map((model) => model.name),
-			expectedCatalog,
+			["gemini-4-pro", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-unknown"],
 		);
-		assert.equal(discovered.defaultModel, "gemini-3.8-flash");
+		assert.equal(discovered.defaultModel, "gemini-4-pro");
 		assert.equal(discovered.source, "api");
 		assert.equal(
 			discovered.models[0].displayName,
-			"Display gemini-3.8-flash",
+			"Display gemini-4-pro",
 		);
 		assert.equal(requestedUrls.length, 1);
 		const modelsUrl = new URL(requestedUrls[0]);
@@ -32946,7 +32948,7 @@ await run("AI model discovery exposes only ordered current Gemini 3 text models"
 		assert.equal(modelsUrl.searchParams.get("key"), "model-test-key");
 		assert.equal(
 			selectAiModel(discovered, "gemini-2.5-flash"),
-			"gemini-3.8-flash",
+			"gemini-2.5-flash",
 		);
 
 		let partialDiscoveryFetches = 0;
@@ -32983,9 +32985,9 @@ await run("AI model discovery exposes only ordered current Gemini 3 text models"
 		});
 		assert.deepEqual(
 			apiFailure.models.map((model) => model.name),
-			expectedCatalog,
+			[],
 		);
-		assert.equal(apiFailure.defaultModel, "gemini-3.8-flash");
+		assert.equal(apiFailure.defaultModel, "");
 		assert.equal(apiFailure.source, "fallback");
 		assert.equal(apiFailure.error, "Gemini models request failed: 503");
 
@@ -33001,9 +33003,9 @@ await run("AI model discovery exposes only ordered current Gemini 3 text models"
 		});
 		assert.deepEqual(
 			noKeyFallback.models.map((model) => model.name),
-			expectedCatalog,
+			[],
 		);
-		assert.equal(noKeyFallback.defaultModel, "gemini-3.8-flash");
+		assert.equal(noKeyFallback.defaultModel, "");
 		assert.equal(noKeyFallback.source, "fallback");
 		assert.equal(noKeyFallback.error, undefined);
 		assert.equal(noKeyFetches, 0);
@@ -33060,12 +33062,12 @@ await run("AI request resolution selects modes scopes and model fallbacks", () =
 		),
 		"gemini-selected",
 	);
-	assert.equal(
-		selectAiModel(
+	assert.throws(
+		() => selectAiModel(
 			{ models: [], defaultModel: "gemini-default" },
 			"missing",
 		),
-		"gemini-default",
+		/unavailable/,
 	);
 });
 
@@ -33129,7 +33131,7 @@ await run("AI request language and model normalization preserve scalar rules", (
 	};
 	assert.equal(selectAiModel(availableModels, "models/gemini"), "gemini");
 	assert.equal(selectAiModel(availableModels, " models/gemini "), "models/gemini");
-	assert.equal(selectAiModel(availableModels, "GEMINI"), "fallback");
+	assert.throws(() => selectAiModel(availableModels, "GEMINI"), /unavailable/);
 });
 
 await run("AI request resolution preserves the complete routing decision matrix", () => {
