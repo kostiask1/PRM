@@ -1,118 +1,369 @@
 .Sidebar {
- --text: var(--sidebar-title);
- --text-bright: var(--sidebar-title);
- --muted: var(--sidebar-text);
- --border: var(--sidebar-hover);
- --panel: var(--sidebar-bg);
- --panel-2: var(--sidebar-hover);
- --input: var(--sidebar-hover);
- position: fixed;
- inset: 0 auto 0 0;
- z-index: 1100;
- display: flex;
- flex-direction: column;
- gap: var(--space-2);
- width: var(--sidebar-expanded);
- height: 100dvh;
- padding: var(--space-4);
- background: var(--sidebar-bg);
- color: var(--sidebar-text);
- overflow-y: auto;
- overscroll-behavior: contain;
+    --text: var(--sidebar-title);
+    --text-bright: var(--sidebar-title);
+    --muted: var(--sidebar-text);
+    --border: var(--sidebar-hover);
+    --panel: var(--sidebar-bg);
+    --panel-2: var(--sidebar-hover);
+    --input: var(--sidebar-hover);
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: var(--sidebar-expanded);
+    height: 100dvh;
+    padding: var(--space-4) var(--space-3);
+    background: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
-.Sidebar__header { display: grid; gap: var(--space-2); padding-bottom: var(--space-3); }
+
+.Sidebar__header {
+    display: grid;
+    gap: var(--space-2);
+    padding-bottom: var(--space-3);
+}
+
 .Sidebar__title {
- display: flex;
- align-items: center;
- gap: var(--space-3);
- min-height: 48px;
- font: 600 20px/28px var(--font-heading);
- color: var(--sidebar-title);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 48px;
+    font: 600 20px/28px var(--font-heading);
+    color: var(--sidebar-title);
 }
+
 .Sidebar__brandIcon {
- display: grid;
- place-items: center;
- width: var(--size-8);
- height: var(--size-8);
- flex-shrink: 0;
- border: 0;
- border-radius: var(--radius-md);
- background: var(--sidebar-brand-bg);
- color: var(--sidebar-utility-text);
- cursor: pointer;
+    display: grid;
+    place-items: center;
+    width: var(--size-8);
+    height: var(--size-8);
+    flex-shrink: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--sidebar-brand-bg);
+    color: var(--sidebar-utility-text);
+    cursor: pointer;
 }
-.Sidebar__brandIcon:focus-visible { outline: 2px solid var(--sidebar-title); outline-offset: 2px; }
-.Sidebar__historyActions { display: flex; align-items: center; gap: var(--space-1); }
-.Sidebar__historyScope { flex: 1; min-width: 0; color: var(--sidebar-text); font-size: 0.68rem; line-height: 1.3; }
-.Sidebar__historyActions .Button { background: transparent; color: var(--sidebar-text); }
-.Sidebar__links, .Sidebar__workspaceLinks { display: grid; gap: var(--space-2); }
+
+.Sidebar__brandIcon:focus-visible {
+    outline: 2px solid var(--sidebar-title);
+    outline-offset: 2px;
+}
+
+.Sidebar__historyActions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.Sidebar__historyScope {
+    flex: 1;
+    min-width: 0;
+    color: var(--sidebar-text);
+    font-size: 0.68rem;
+    line-height: 1.3;
+}
+
+.Sidebar__historyActions .Button {
+    background: transparent;
+    color: var(--sidebar-text);
+}
+
+.Sidebar__links,
+.Sidebar__workspaceLinks {
+    display: grid;
+    gap: var(--space-2);
+}
+
 .Sidebar__link {
- display: flex;
- align-items: center;
- gap: var(--space-3);
- min-height: 40px;
- width: 100%;
- padding: var(--space-2) var(--space-3);
- border-radius: var(--radius-sm);
- color: var(--sidebar-text);
- font-size: 13px;
- font-weight: 600;
- text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-1) var(--space-1);
+    border-radius: var(--radius-sm);
+    color: var(--sidebar-text);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
 }
-.Sidebar__link:hover, .Sidebar__link:focus-visible, .Sidebar__link__active {
- background: var(--sidebar-hover);
- color: var(--sidebar-title);
+
+.Sidebar__link:hover,
+.Sidebar__link:focus-visible,
+.Sidebar__link__active {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-title);
 }
-.Sidebar__section { display: grid; gap: var(--space-2); min-width: 0; }
-.Sidebar__sectionTitle, .Sidebar__workspaceLabel {
- padding: var(--space-1) 0;
- color: var(--sidebar-text);
- font: 700 10px/16px var(--font-body);
- text-transform: uppercase;
+
+.Sidebar__section {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
 }
-.Sidebar__workspaceLinks { padding-bottom: var(--space-3); }
-.Sidebar__list { display: grid; gap: var(--space-1); }
-.Sidebar .ListCard { background: transparent; border-color: transparent; border-radius: var(--radius-sm); }
-.Sidebar .ListCard:hover, .Sidebar .ListCard__active { background: var(--sidebar-hover) !important; border-color: transparent !important; }
-.Sidebar .ListCard__main { min-width: 0; padding: var(--space-3); }
-.ListCard__sidebar_content { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
-.ListCard__sidebar_icon { flex-shrink: 0; color: var(--sidebar-text); }
-.ListCard__sidebar_info { min-width: 0; }
-.Sidebar__campaignTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.Sidebar .ListCard__title { font-size: 13px; line-height: 20px; color: var(--sidebar-title); }
-.Sidebar .ListCard__meta { font-size: 12px; line-height: 19px; }
-.Sidebar .StatusBadge { font-size: 10px; padding: var(--space-0-5) var(--space-1-5); }
+
+.Sidebar__sectionTitle,
+.Sidebar__workspaceLabel {
+    padding: var(--space-1) 0;
+    color: var(--sidebar-text);
+    font: 700 10px/16px var(--font-body);
+    text-transform: uppercase;
+}
+
+.Sidebar__workspaceLinks {
+    padding-bottom: var(--space-3);
+}
+
+.Sidebar__list {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.Sidebar .ListCard {
+    background: transparent;
+    border-color: transparent;
+    border-radius: var(--radius-sm);
+}
+
+.Sidebar .ListCard:hover,
+.Sidebar .ListCard__active {
+    background: var(--sidebar-hover) !important;
+    border-color: transparent !important;
+}
+
+.Sidebar .ListCard__main {
+    min-width: 0;
+    padding: var(--space-2);
+}
+
+.ListCard__sidebar_content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    width: 100%;
+}
+
+.ListCard__sidebar_info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+    width: 100%;
+}
+
+.Sidebar__campaignTitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.Sidebar .ListCard__title {
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--sidebar-title);
+}
+
+.Sidebar .ListCard__meta {
+    font-size: 12px;
+    line-height: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.Sidebar .StatusBadge {
+    font-size: 10px;
+    padding: var(--space-0-5) var(--space-1-5);
+}
+
 .Sidebar .StatusBadge:not(.StatusBadge__done),
-.Sidebar .StatusBadge:not(.StatusBadge__done):hover { color: var(--sidebar-utility-text); }
+.Sidebar .StatusBadge:not(.StatusBadge__done):hover {
+    color: var(--sidebar-utility-text);
+}
+
 .Sidebar .StatusBadge__done,
-.Sidebar .StatusBadge__done:hover { color: var(--sidebar-title); background: var(--sidebar-hover); }
-.Sidebar .ListCard__actions { padding-right: var(--space-1); }
-.Sidebar .Button__create { font-size: 12px; background: transparent; color: var(--sidebar-text); border-color: var(--sidebar-hover); }
-.Sidebar .Button__create:hover { background: var(--sidebar-hover); color: var(--sidebar-title); }
-.Sidebar__completedCampaigns { display: grid; gap: var(--space-1); }
-.Sidebar__completedHeader { display: flex; align-items: center; gap: var(--space-1); cursor: pointer; font-size: 12px; }
-.Sidebar__completedCount { margin-left: auto; }
-.Sidebar__campaignCompleted { opacity: 0.7; }
-.Sidebar__resource_list { display: grid; gap: var(--space-1); }
-.Sidebar__resource_item { display: flex; align-items: center; gap: var(--space-2); min-height: var(--space-6); color: var(--sidebar-text); text-decoration: none; font-size: 12px; }
-.Sidebar button.Sidebar__resource_item { width: 100%; padding: 0; border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; }
-.Sidebar__resource_item:hover, .Sidebar__resource_item:focus-visible { color: var(--sidebar-title); }
-.Sidebar__resource_item:focus-visible { outline: 2px solid var(--sidebar-title); outline-offset: 2px; }
-.Sidebar__footer { display: grid; gap: var(--space-1); padding-top: var(--space-1); margin-top: auto; border-top: 1px solid var(--sidebar-hover); }
-.Sidebar__footerGrid { display: grid; gap: var(--space-1); }
-.Sidebar .Button__footer { min-height: var(--control-h-sm); font-size: 12px; background: var(--sidebar-utility-bg); color: var(--sidebar-utility-text); border-color: var(--sidebar-utility-bg); padding-inline: var(--space-3); }
-.Sidebar .Button__footer:hover { background: color-mix(in srgb, var(--sidebar-utility-bg), var(--sidebar-utility-text) 10%); }
-.Sidebar__settings { border: 0; border-top: 1px solid var(--sidebar-hover); border-radius: 0; background: transparent; text-align: left; cursor: pointer; }
-.Sidebar__backupLoader { width: var(--size-4); height: var(--size-4); border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: SidebarBackupLoaderSpin 0.7s linear infinite; }
-.Sidebar__importStrategyRow { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.Sidebar__importStrategyRow .Button { flex: 1 1 160px; min-width: 0; min-height: var(--control-h); padding-block: var(--space-2); line-height: 1.35; }
-.Sidebar__importStrategyModal { display: grid; gap: var(--space-3); }
-.Sidebar__importStrategyActions { display: flex; justify-content: flex-end; margin-top: var(--space-2); }
-.Sidebar .DraggableList__handle { right: 0; left: auto; }
-@keyframes SidebarBackupLoaderSpin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .Sidebar__backupLoader { animation-duration: 1.5s; } }
+.Sidebar .StatusBadge__done:hover {
+    color: var(--sidebar-title);
+    background: var(--sidebar-hover);
+}
+
+.Sidebar .ListCard__actions {
+    padding-right: var(--space-1);
+}
+
+.Sidebar .Button__create {
+    font-size: 12px;
+    background: transparent;
+    color: var(--sidebar-text);
+    border-color: var(--sidebar-hover);
+}
+
+.Sidebar .Button__create:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-title);
+}
+
+.Sidebar__completedCampaigns {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.Sidebar__completedHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.Sidebar__completedCount {
+    margin-left: auto;
+}
+
+.Sidebar__campaignCompleted {
+    opacity: 0.7;
+}
+
+.Sidebar__resource_list {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.Sidebar__resource_item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--space-6);
+    color: var(--sidebar-text);
+    text-decoration: none;
+    font-size: 12px;
+}
+
+.Sidebar button.Sidebar__resource_item {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.Sidebar__resource_item:hover,
+.Sidebar__resource_item:focus-visible {
+    color: var(--sidebar-title);
+}
+
+.Sidebar__resource_item:focus-visible {
+    outline: 2px solid var(--sidebar-title);
+    outline-offset: 2px;
+}
+
+.Sidebar__footer {
+    display: grid;
+    gap: var(--space-1);
+    padding-top: var(--space-1);
+    margin-top: auto;
+    border-top: 1px solid var(--sidebar-hover);
+}
+
+.Sidebar__footerGrid {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.Sidebar .Button__footer {
+    min-height: var(--control-h-sm);
+    font-size: 12px;
+    background: var(--sidebar-utility-bg);
+    color: var(--sidebar-utility-text);
+    border-color: var(--sidebar-utility-bg);
+    padding-inline: var(--space-3);
+}
+
+.Sidebar .Button__footer:hover {
+    background: color-mix(in srgb, var(--sidebar-utility-bg), var(--sidebar-utility-text) 10%);
+}
+
+.Sidebar__settings {
+    border: 0;
+    border-top: 1px solid var(--sidebar-hover);
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.Sidebar__backupLoader {
+    width: var(--size-4);
+    height: var(--size-4);
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: SidebarBackupLoaderSpin 0.7s linear infinite;
+}
+
+.Sidebar__importStrategyRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.Sidebar__importStrategyRow .Button {
+    flex: 1 1 160px;
+    min-width: 0;
+    min-height: var(--control-h);
+    padding-block: var(--space-2);
+    line-height: 1.35;
+}
+
+.Sidebar__importStrategyModal {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.Sidebar__importStrategyActions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-2);
+}
+
+.Sidebar .DraggableList__handle {
+    right: 0;
+    left: auto;
+}
+
+@keyframes SidebarBackupLoaderSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .Sidebar__backupLoader {
+        animation-duration: 1.5s;
+    }
+}
+
 @media (max-width: 767px) {
- .Sidebar { width: min(86vw, 320px); transform: translateX(-105%); transition: transform 0.18s ease; padding-top: calc(var(--space-7) * 2); z-index: 1200; }
- .Sidebar.Sidebar__mobile_open { transform: translateX(0); }
- .Sidebar__link { min-height: 44px; }
+    .Sidebar {
+        width: min(86vw, 320px);
+        transform: translateX(-105%);
+        transition: transform 0.18s ease;
+        padding-top: calc(var(--space-7) * 2);
+        z-index: 1200;
+    }
+
+    .Sidebar.Sidebar__mobile_open {
+        transform: translateX(0);
+    }
+
+    .Sidebar__link {
+        min-height: 44px;
+    }
 }

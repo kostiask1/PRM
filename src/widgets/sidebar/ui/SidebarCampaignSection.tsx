@@ -92,18 +92,9 @@ export default function SidebarCampaignSection({
 			active={activeCampaignId === campaign.slug}
 			href={`/campaign/${encodeURIComponent(campaign.slug)}`}
 			onClick={() => onSelectCampaign(campaign.slug)}
-			actions={
-				<StatusBadge
-					completed={Boolean(campaign.completed)}
-					onClick={(event: MouseEvent<HTMLSpanElement>) => {
-						event.stopPropagation();
-						onToggleCampaignStatus(campaign);
-					}}
-				/>
-			}
+
 		>
 			<div className="ListCard__sidebar_content">
-				<Icon name="map" className="ListCard__sidebar_icon" />
 				<div className="ListCard__sidebar_info">
 					<div
 						className="ListCard__title Sidebar__campaignTitle"
@@ -115,6 +106,13 @@ export default function SidebarCampaignSection({
 						{lang.t("{count} sessions", {
 							count: campaign.sessionCount || 0,
 						})}
+						<StatusBadge
+							completed={Boolean(campaign.completed)}
+							onClick={(event: MouseEvent<HTMLSpanElement>) => {
+								event.stopPropagation();
+								onToggleCampaignStatus(campaign);
+							}}
+						/>
 					</div>
 				</div>
 			</div>
