@@ -1686,6 +1686,7 @@
       }
     ],
     "classes": [
+      "Cleric",
       "Priest"
     ]
   },
@@ -1984,7 +1985,8 @@
       "You create a pulse of arcane energy in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from yourself. Each creature of your choice within this area makes a Constitution saving throw. On a failed save, it takes {@damage 1d8} Force damage, and its {@variantrule Speed|XPHB} is reduced by 10 feet (to a minimum of 0 feet) until the end of your next turn."
     ],
     "classes": [
-      "Mage"
+      "Mage",
+      "Wizard"
     ]
   },
   {
@@ -2888,12 +2890,13 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+          "The damage increases by {@damage 1d6} for each spell slot level above 1."
         ]
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -2931,7 +2934,8 @@
       "Pure magic sweeps out from you in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation}. Creatures of your choice in the {@variantrule Emanation [Area of Effect]|XPHB|Emanation} make a Constitution saving throw. On a failed save, a creature takes {@damage 7d8} Force damage, and its {@variantrule Speed|XPHB} is reduced by 20 feet for the duration. On a successful save, the target takes half as much damage only."
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -4726,7 +4730,8 @@
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -4805,6 +4810,7 @@
       "Artificer",
       "Evoker",
       "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -5072,7 +5078,8 @@
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -5814,7 +5821,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d10} for each spell slot level above 1."
+          "The damage increases by {@damage 1d10} for each spell slot level above 1."
         ]
       }
     ]
@@ -7102,7 +7109,8 @@
       "At the end of each of your turns, each creature of your choice in a 5-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you takes {@damage 3d8} Fire damage."
     ],
     "classes": [
-      "Mage"
+      "Mage",
+      "Wizard"
     ]
   },
   {
@@ -8953,7 +8961,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d4} for each spell slot level above 1."
+          "The damage increases by {@damage 1d4} for each spell slot level above 1."
         ]
       }
     ]
@@ -10195,6 +10203,7 @@
       "Artificer",
       "Cleric",
       "Death Knight",
+      "Mage",
       "Paladin",
       "Priest"
     ]
@@ -11060,7 +11069,7 @@
       }
     ],
     "entries": [
-      "You curse one creature within range with excruciating pain. The target makes a Constitution saving throw; the spell's damage starts at {@damage 1d4} Psychic damage. On a failed save, the target takes the spell's damage, and the spell's damage die increases: from {@dice 1d4} to {@dice 1d6}, {@dice 1d6} to {@dice 1d8}, {@dice 1d8} to {@dice 1d10}, or {@dice 1d10} to {@dice 1d12} (the maximum). On a successful save, the target takes the spell's damage, and the effect ends. The target repeats the save at the end of each of its turns."
+      "You curse one creature within range with excruciating pain. The target makes a Constitution saving throw; the spell's damage starts at {@damage 1d4} Psychic damage. On a failed save, the target takes the spell's damage, and the spell's damage die increases: from {@damage 1d4} to {@damage 1d6}, {@damage 1d6} to {@damage 1d8}, {@damage 1d8} to {@damage 1d10}, or {@damage 1d10} to {@damage 1d12} (the maximum). On a successful save, the target takes the spell's damage, and the effect ends. The target repeats the save at the end of each of its turns."
     ],
     "classes": [
       "Warlock"
@@ -13837,6 +13846,7 @@
       "Bard",
       "Evoker",
       "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -13945,6 +13955,7 @@
       "Bard",
       "Evoker",
       "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -14384,7 +14395,8 @@
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -14436,7 +14448,8 @@
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -15027,7 +15040,8 @@
       "As you invoke the black dragonflight, draconic might erupts from you. Each creature of your choice in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from you is empowered until the end of your next turn. While a creature is empowered, when it hits a target with an attack roll, the attack deals an extra {@damage 1d4} Force damage."
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -15487,12 +15501,13 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d8} for each spell slot level above 4."
+          "The damage increases by {@damage 1d8} for each spell slot level above 4."
         ]
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -15541,7 +15556,8 @@
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -15665,7 +15681,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The initial damage increases by {@dice 1d8} for each spell slot level above 5."
+          "The initial damage increases by {@damage 1d8} for each spell slot level above 5."
         ]
       }
     ],
@@ -16460,12 +16476,13 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d8} for each spell slot level above 2."
+          "The damage increases by {@damage 1d8} for each spell slot level above 2."
         ]
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -16783,7 +16800,8 @@
       "An {@condition Invisible|XPHB}, intangible trap appears on the ground at a point you choose within range. The first time a creature comes within 5 feet of the trap, the trap explodes in a fiery burst that fills a 20-foot-radius {@variantrule Sphere [Area of Effect]|XPHB|Sphere} centered on the trap. The spell ends, and each creature within the {@variantrule Sphere [Area of Effect]|XPHB|Sphere} makes a Dexterity saving throw. On a failed save, a creature takes {@damage 8d6} Fire damage and, if it is Huge or smaller, is pushed 20 feet straight away from the trap's location."
     ],
     "classes": [
-      "Hunter"
+      "Hunter",
+      "Ranger"
     ]
   },
   {
@@ -16825,7 +16843,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+          "The damage increases by {@damage 1d6} for each spell slot level above 1."
         ]
       }
     ]
@@ -17640,7 +17658,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+          "The damage increases by {@damage 1d6} for each spell slot level above 1."
         ]
       }
     ]
@@ -17721,7 +17739,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The initial damage increases by {@dice 1d10} for each spell slot level above 4."
+          "The initial damage increases by {@damage 1d10} for each spell slot level above 4."
         ]
       }
     ],
@@ -18923,6 +18941,7 @@
     ],
     "classes": [
       "Cleric",
+      "Mage",
       "Priest"
     ]
   },
@@ -19217,7 +19236,8 @@
       }
     ],
     "classes": [
-      "Mage"
+      "Mage",
+      "Wizard"
     ]
   },
   {
@@ -19973,7 +19993,8 @@
       "An {@condition Invisible|XPHB}, intangible trap appears on the ground at a point you choose within range. The first time a creature comes within 5 feet of the trap, the trap explodes in a burst of frost, the spell ends, and the triggering creature makes a Constitution saving throw. On a failed save, the target has the {@condition Restrained|XPHB} condition for 1 minute. If the creature takes any damage, the {@condition Restrained|XPHB} condition from the trap ends."
     ],
     "classes": [
-      "Hunter"
+      "Hunter",
+      "Ranger"
     ]
   },
   {
@@ -20142,12 +20163,13 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+          "The damage increases by {@damage 1d6} for each spell slot level above 1."
         ]
       }
     ],
     "classes": [
-      "Mage"
+      "Mage",
+      "Wizard"
     ]
   },
   {
@@ -20223,7 +20245,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d8} for each spell slot level above 2."
+          "The damage increases by {@damage 1d8} for each spell slot level above 2."
         ]
       }
     ]
@@ -21515,7 +21537,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 5."
+          "The damage increases by {@damage 1d6} for each spell slot level above 5."
         ]
       }
     ],
@@ -23207,6 +23229,7 @@
       "Artificer",
       "Evoker",
       "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -23714,6 +23737,7 @@
       "Bard",
       "Cleric",
       "Druid",
+      "Mage",
       "Priest"
     ]
   },
@@ -24302,6 +24326,7 @@
       }
     ],
     "classes": [
+      "Cleric",
       "Priest"
     ]
   },
@@ -24338,7 +24363,7 @@
     ],
     "entries": [
       "You create a glowing mote of energy that hovers above you for the duration. The mote sheds {@variantrule Bright Light|XPHB} in a 5-foot radius and {@variantrule Dim Light|XPHB} for an additional 5 feet.",
-      "When you cast this spell and as a {@variantrule Bonus Action|XPHB} on later turns, you can unleash a shining bolt from the mote, targeting one creature within 120 feet of yourself. Make a ranged spell attack. On a hit, the target takes Force or Radiant damage (your choice) equal to {@dice 4d10} plus your spellcasting ability modifier.",
+      "When you cast this spell and as a {@variantrule Bonus Action|XPHB} on later turns, you can unleash a shining bolt from the mote, targeting one creature within 120 feet of yourself. Make a ranged spell attack. On a hit, the target takes Force or Radiant damage (your choice) equal to {@damage 4d10} plus your spellcasting ability modifier.",
       "In addition, while the mote is present, you have {@variantrule Cover|XPHB|Three-Quarters Cover}, and if you succeed on a saving throw against a spell of level 7 or lower that targeted only you and didn't create an area of effect, you can take a {@variantrule Reaction|XPHB} to deflect that spell back at the spell's caster; the caster makes a saving throw against that spell using that caster's own spell save DC."
     ],
     "classes": [
@@ -25665,7 +25690,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+          "The damage increases by {@damage 1d6} for each spell slot level above 1."
         ]
       }
     ]
@@ -26920,7 +26945,8 @@
       "You then teleport to an unoccupied space within 5 feet of the end of the {@variantrule Line [Area of Effect]|XPHB|Line}."
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -26957,7 +26983,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d8}, and the {@variantrule Hit Points|XPHB} you regain increase by {@dice 1d4}, for each spell slot level above 3."
+          "The damage increases by {@damage 1d8}, and the {@variantrule Hit Points|XPHB} you regain increase by {@dice 1d4}, for each spell slot level above 3."
         ]
       }
     ]
@@ -27383,6 +27409,7 @@
       "Artificer",
       "Evoker",
       "Mage",
+      "Priest",
       "Sorcerer",
       "Wizard"
     ]
@@ -27924,7 +27951,8 @@
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -29550,7 +29578,8 @@
       "Each target's gear melds into the new form. The creature can't use or otherwise benefit from any of that equipment."
     ],
     "classes": [
-      "Mage"
+      "Mage",
+      "Wizard"
     ]
   },
   {
@@ -30606,6 +30635,7 @@
     "classes": [
       "Evoker",
       "Mage",
+      "Priest",
       "Sorcerer",
       "Warlock",
       "Wizard"
@@ -31472,7 +31502,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "Both the initial and the later damage increase by {@dice 1d8} for each spell slot level above 1."
+          "Both the initial and the later damage increase by {@damage 1d8} for each spell slot level above 1."
         ]
       }
     ],
@@ -32174,7 +32204,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d10} for each spell slot level above 5."
+          "The damage increases by {@damage 1d10} for each spell slot level above 5."
         ]
       }
     ],
@@ -34153,6 +34183,7 @@
       }
     ],
     "classes": [
+      "Cleric",
       "Priest"
     ]
   },
@@ -35303,11 +35334,12 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d10} for each spell slot level above 4."
+          "The damage increases by {@damage 1d10} for each spell slot level above 4."
         ]
       }
     ],
     "classes": [
+      "Cleric",
       "Priest"
     ]
   },
@@ -35559,7 +35591,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The Fire damage increases by {@dice 1d8} for each spell slot level above 3."
+          "The Fire damage increases by {@damage 1d8} for each spell slot level above 3."
         ]
       }
     ],
@@ -36591,7 +36623,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 3."
+          "The damage increases by {@damage 1d6} for each spell slot level above 3."
         ]
       }
     ]
@@ -36701,7 +36733,8 @@
       "You teleport to an unoccupied space you can see within range. One willing creature within 60 feet of the space you left also teleports to an unoccupied space within 5 feet of your destination space."
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -37278,14 +37311,14 @@
       }
     ],
     "entries": [
-      "The target takes an extra {@damage 2d8} Necrotic damage. The damage increases by {@dice 1d8} if the target is a Celestial."
+      "The target takes an extra {@damage 2d8} Necrotic damage. The damage increases by {@damage 1d8} if the target is a Celestial."
     ],
     "entriesHigherLevel": [
       {
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d8} for each spell slot level above 1."
+          "The damage increases by {@damage 1d8} for each spell slot level above 1."
         ]
       }
     ]
@@ -37648,7 +37681,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 1."
+          "The damage increases by {@damage 1d6} for each spell slot level above 1."
         ]
       }
     ]
@@ -38323,7 +38356,8 @@
       "The target takes an extra {@damage 4d6} Poison damage from the attack, and the target has the {@condition Poisoned|XPHB} condition until the spell ends. At the end of each of its turns, the {@condition Poisoned|XPHB} target makes a Constitution saving throw. On a failed save, the creature takes {@damage 2d6} Poison damage. On a successful save, the spell ends."
     ],
     "classes": [
-      "Hunter"
+      "Hunter",
+      "Ranger"
     ]
   },
   {
@@ -38463,6 +38497,7 @@
       }
     ],
     "classes": [
+      "Cleric",
       "Priest"
     ]
   },
@@ -38745,12 +38780,13 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d8} for each spell slot level above 5."
+          "The damage increases by {@damage 1d8} for each spell slot level above 5."
         ]
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -38949,7 +38985,7 @@
       }
     ],
     "entries": [
-      "The wood of a {@item club|phb} or {@item quarterstaff|phb} you are holding is imbued with nature's power. For the duration, you can use your spellcasting ability instead of Strength for the attack and damage rolls of melee attacks using that weapon, and the weapon's damage die becomes a {@dice d8}. The weapon also becomes magical, if it isn't already. The spell ends if you cast it again or if you let go of the weapon."
+      "The wood of a {@item club|phb} or {@item quarterstaff|phb} you are holding is imbued with nature's power. For the duration, you can use your spellcasting ability instead of Strength for the attack and damage rolls of melee attacks using that weapon, and the weapon's damage die becomes a {@damage d8}. The weapon also becomes magical, if it isn't already. The spell ends if you cast it again or if you let go of the weapon."
     ],
     "classes": [
       "Druid"
@@ -38987,7 +39023,7 @@
       }
     ],
     "entries": [
-      "A Club or Quarterstaff you are holding is imbued with nature's power. For the duration, you can use your spellcasting ability instead of Strength for the attack and damage rolls of melee attacks using that weapon, and the weapon's damage die becomes a {@dice d8}. If the attack deals damage, it can be Force damage or the weapon's normal damage type (your choice).",
+      "A Club or Quarterstaff you are holding is imbued with nature's power. For the duration, you can use your spellcasting ability instead of Strength for the attack and damage rolls of melee attacks using that weapon, and the weapon's damage die becomes a {@damage d8}. If the attack deals damage, it can be Force damage or the weapon's normal damage type (your choice).",
       "The spell ends early if you cast it again or if you let go of the weapon."
     ],
     "entriesHigherLevel": [
@@ -39243,7 +39279,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage (both initial and later) increases by {@dice 1d8} for each spell slot level above 2."
+          "The damage (both initial and later) increases by {@damage 1d8} for each spell slot level above 2."
         ]
       }
     ]
@@ -40153,7 +40189,7 @@
     ],
     "entries": [
       "You cast sorcerous energy at one creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes {@damage 1d8} damage of a type you choose: Acid, Cold, Fire, Lightning, Poison, Psychic, or Thunder.",
-      "If you roll an 8 on a {@dice d8} for this spell, you can roll another {@dice d8}, and add it to the damage. When you cast this spell, the maximum number of these d8s you can add to the spell's damage equals your spellcasting ability modifier."
+      "If you roll an 8 on a {@damage d8} for this spell, you can roll another {@damage d8}, and add it to the damage. When you cast this spell, the maximum number of these d8s you can add to the spell's damage equals your spellcasting ability modifier."
     ],
     "entriesHigherLevel": [
       {
@@ -40270,14 +40306,14 @@
       }
     ],
     "entries": [
-      "You cut a hole in the fabric of reality, sending a bolt of cosmic matter toward a creature in range. Make a ranged spell attack against the target, which gains no benefit from {@variantrule Cover|XPHB|Half Cover} or {@variantrule Cover|XPHB|Three-Quarters Cover}. On a hit, you deal {@damage 6d6} Force damage. If you roll a 6 on a {@dice d6} for this spell, you can roll another {@dice d6} and add it to the damage. When you cast this spell, the maximum number of these d6s you can add to the spell's damage equals your spellcasting ability modifier."
+      "You cut a hole in the fabric of reality, sending a bolt of cosmic matter toward a creature in range. Make a ranged spell attack against the target, which gains no benefit from {@variantrule Cover|XPHB|Half Cover} or {@variantrule Cover|XPHB|Three-Quarters Cover}. On a hit, you deal {@damage 6d6} Force damage. If you roll a 6 on a {@damage d6} for this spell, you can roll another {@damage d6} and add it to the damage. When you cast this spell, the maximum number of these d6s you can add to the spell's damage equals your spellcasting ability modifier."
     ],
     "entriesHigherLevel": [
       {
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 3."
+          "The damage increases by {@damage 1d6} for each spell slot level above 3."
         ]
       }
     ]
@@ -43447,6 +43483,7 @@
     ],
     "classes": [
       "Mage",
+      "Priest",
       "Warlock",
       "Wizard"
     ]
@@ -45489,7 +45526,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The Fire damage increases by {@dice 1d8} for each spell slot level above 1. The glaive ricochets a maximum number of times equal to the level of the slot expended; a creature can be targeted only once by each casting of this spell."
+          "The Fire damage increases by {@damage 1d8} for each spell slot level above 1. The glaive ricochets a maximum number of times equal to the level of the slot expended; a creature can be targeted only once by each casting of this spell."
         ]
       }
     ]
@@ -45872,7 +45909,8 @@
       "The target reduces the damage taken by {@dice 4d8}. At the end of each of the target's turns, the target loses {@dice 1d8} {@variantrule Hit Points|XPHB} until it has lost a total of {@dice 4d8} {@variantrule Hit Points|XPHB} (roll these {@dice 4d8} separately from the damage reduction)."
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -46288,7 +46326,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d8} for each spell slot level above 7."
+          "The damage increases by {@damage 1d8} for each spell slot level above 7."
         ]
       }
     ],
@@ -47242,12 +47280,13 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The Bludgeoning damage increases by {@dice 1d12} for each spell slot level above 4."
+          "The Bludgeoning damage increases by {@damage 1d12} for each spell slot level above 4."
         ]
       }
     ],
     "classes": [
-      "Evoker"
+      "Evoker",
+      "Sorcerer"
     ]
   },
   {
@@ -47655,6 +47694,7 @@
       }
     ],
     "classes": [
+      "Cleric",
       "Priest"
     ]
   },
@@ -49551,7 +49591,7 @@
         "type": "entries",
         "name": "Using a Higher-Level Spell Slot",
         "entries": [
-          "The damage increases by {@dice 1d6} for each spell slot level above 2. The number of {@variantrule Hit Point Dice|XPHB} that can be rolled and expended increases by one for each spell slot level above 2. You add your spellcasting modifier to the number of {@variantrule Hit Points|XPHB} regained by this spell only once, regardless of the number of {@variantrule Hit Point Dice|XPHB} rolled and expended."
+          "The damage increases by {@damage 1d6} for each spell slot level above 2. The number of {@variantrule Hit Point Dice|XPHB} that can be rolled and expended increases by one for each spell slot level above 2. You add your spellcasting modifier to the number of {@variantrule Hit Points|XPHB} regained by this spell only once, regardless of the number of {@variantrule Hit Point Dice|XPHB} rolled and expended."
         ]
       }
     ],
@@ -49795,7 +49835,7 @@
         "type": "entries",
         "name": "Cantrip Upgrade",
         "entries": [
-          "The damage increases by {@dice 1d8} when you reach levels 5 ({@dice 2d8}), 11 ({@dice 3d8}), and 17 ({@dice 4d8})."
+          "The damage increases by {@damage 1d8} when you reach levels 5 ({@damage 2d8}), 11 ({@damage 3d8}), and 17 ({@damage 4d8})."
         ]
       }
     ],
