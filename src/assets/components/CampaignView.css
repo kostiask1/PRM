@@ -149,7 +149,6 @@
 
 .CampaignOverview__description {
     color: var(--muted);
-    max-width: 710px;
     max-height: 10em;
     overflow-y: auto;
     overflow-wrap: anywhere;
