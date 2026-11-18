@@ -3,6 +3,9 @@ import { request } from "../../../shared/api/index.ts";
 export interface ReferenceRecord extends Record<string, unknown> {
 	name?: string;
 	source?: string;
+	sources?: string[];
+	versions?: ReferenceRecord[];
+	entries?: unknown[];
 }
 
 export const referenceApi = {

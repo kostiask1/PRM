@@ -7,7 +7,7 @@ let conditionMapCache: Map<string, ReferenceRecord> | null = null;
 let conditionPromise: Promise<Map<string, ReferenceRecord>> | null = null;
 
 export function normalizeConditionName(name: unknown): string {
-	return String(name || "").trim().toLowerCase();
+	return String(name || "").split("|")[0].trim().toLowerCase();
 }
 
 function toConditionMap(

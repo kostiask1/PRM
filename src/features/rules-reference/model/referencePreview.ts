@@ -91,8 +91,27 @@ export async function getCreatureByName(
 export async function getConditionByName(
 	name: unknown,
 ): Promise<ReferenceRecord | null> {
+	const raw = String(name || "");
+	const parts = raw.split("|");
+	const baseName = parts[0]?.trim() || "";
+	const requestedSource = parts[1]?.trim().toUpperCase();
+
 	const map = await loadConditionsMap();
-	return map.get(normalizeConditionName(name)) || null;
+	const record = map.get(normalizeConditionName(baseName)) || null;
+	if (!record) return null;
+
+	if (requestedSource && Array.isArray(record.versions) && record.versions.length > 0) {
+		const match = record.versions.find(
+			(v) => String(v.source || "").toUpperCase() === requestedSource,
+		);
+		if (match) {
+			return {
+				...record,
+				...match,
+			};
+		}
+	}
+	return record;
 }
 
 export async function getDiseaseByName(

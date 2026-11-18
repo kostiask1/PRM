@@ -4,12 +4,14 @@ const CONDITION_PRUNE_KEYS = new Set([
 	"srd52",
 	"basicRules2024",
 	"basicRules",
-	"source",
 	"reprintedAs",
+	"otherSources",
+	"hasFluffImages",
 ]);
-const VARIANT_RULE_PRUNE_KEYS = new Set(CONDITION_PRUNE_KEYS);
-const SKILL_PRUNE_KEYS = new Set(CONDITION_PRUNE_KEYS);
-const SENSE_PRUNE_KEYS = new Set(CONDITION_PRUNE_KEYS);
+const DISEASE_PRUNE_KEYS = new Set([...CONDITION_PRUNE_KEYS, "source"]);
+const VARIANT_RULE_PRUNE_KEYS = new Set([...CONDITION_PRUNE_KEYS, "source"]);
+const SKILL_PRUNE_KEYS = new Set([...CONDITION_PRUNE_KEYS, "source"]);
+const SENSE_PRUNE_KEYS = new Set([...CONDITION_PRUNE_KEYS, "source"]);
 const VARIANT_RULE_NAMES_WITH_INLINE_OBJECTS_TO_REMOVE = new Set([
 	"Customizing Ability Scores",
 ]);
@@ -253,6 +255,65 @@ function compareNamedEntries(left, right) {
 	return String(left.name || "").localeCompare(String(right.name || ""));
 }
 
+export function groupConditionsByName(items = []) {
+	const byName = new Map();
+	for (const rawItem of items) {
+		const item = pruneConditionMeta(rawItem);
+		const key = conditionNameKey(item);
+		if (!key) continue;
+		let group = byName.get(key);
+		if (!group) {
+			group = [];
+			byName.set(key, group);
+		}
+		if (Array.isArray(item.versions) && item.versions.length > 0) {
+			for (const v of item.versions) {
+				group.push(pruneConditionMeta(v));
+			}
+		} else {
+			group.push(item);
+		}
+	}
+
+	const grouped = [];
+	for (const group of byName.values()) {
+		if (group.length === 1) {
+			const single = group[0];
+			const sources = single.source ? [single.source] : undefined;
+			grouped.push({
+				...single,
+				...(sources ? { sources } : {}),
+			});
+			continue;
+		}
+
+		const bySource = new Map();
+		for (const ver of group) {
+			const s = normalizeConditionSource(ver);
+			if (!bySource.has(s)) bySource.set(s, ver);
+		}
+		const uniqueVersions = Array.from(bySource.values());
+
+		uniqueVersions.sort((a, b) => {
+			const priorityDiff = getSourcePriority(b.source) - getSourcePriority(a.source);
+			if (priorityDiff !== 0) return priorityDiff;
+			return String(a.source || "").localeCompare(String(b.source || ""));
+		});
+
+		const primary = uniqueVersions[0];
+		const sources = uniqueVersions.map((v) => v.source).filter(Boolean);
+		const versions = uniqueVersions.map((v) => ({ ...v }));
+
+		grouped.push({
+			...primary,
+			sources,
+			versions,
+		});
+	}
+
+	return grouped.sort(compareNamedEntries);
+}
+
 export function dedupeConditionsByName(items = []) {
 	const byName = new Map();
 	for (const item of items) {
@@ -272,6 +333,10 @@ function pruneMeta(item, pruneKeys) {
 
 export function pruneConditionMeta(item) {
 	return pruneMeta(item, CONDITION_PRUNE_KEYS);
+}
+
+export function pruneDiseaseMeta(item) {
+	return pruneMeta(item, DISEASE_PRUNE_KEYS);
 }
 
 export function pruneVariantRuleMeta(item) {
@@ -333,19 +398,15 @@ export function pruneSenseMeta(item) {
 
 export function normalizeConditionsData(data) {
 	return {
-		condition: dedupeConditionsByName(data.condition || []).map(
-			pruneConditionMeta,
-		),
-		status: dedupeConditionsByName(data.status || []).map(
-			pruneConditionMeta,
-		),
+		condition: groupConditionsByName(data.condition || []),
+		status: groupConditionsByName(data.status || []),
 	};
 }
 
 export function normalizeDiseasesData(data) {
 	return {
 		disease: dedupeConditionsByName(data.disease || []).map(
-			pruneConditionMeta,
+			pruneDiseaseMeta,
 		),
 	};
 }

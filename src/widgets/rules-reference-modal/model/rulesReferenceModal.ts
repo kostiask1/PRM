@@ -530,7 +530,11 @@ export function getReferenceSelectionName(tabId: ReferenceTabId, item: Reference
 type ReferenceNameMatcher = (item: ReferenceItem, selectedName: string) => boolean;
 
 function matchesStandardReferenceName(item: ReferenceItem, selectedName: string): boolean {
-	return stringifyTruthyReferenceValue(item.name) === selectedName;
+	const itemName = stringifyTruthyReferenceValue(item.name).trim().toLowerCase();
+	const selected = stringifyTruthyReferenceValue(selectedName).trim().toLowerCase();
+	if (itemName === selected) return true;
+	const selectedBase = selected.split("|")[0].trim();
+	return itemName === selectedBase;
 }
 
 function matchesQualifiedReferenceName(tabId: ReferenceTabId, item: ReferenceItem, selectedName: string): boolean {

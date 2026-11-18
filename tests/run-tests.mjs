@@ -57997,8 +57997,32 @@ await run(
 				basicRules2024: true,
 				entries: ["kept"],
 			}),
-			{ name: "Blinded", entries: ["kept"] },
+			{ name: "Blinded", source: "XPHB", entries: ["kept"] },
 		);
+
+		// Multi-source condition grouping preserves versions and source priority
+		const groupedConditions = updaterPolicies.groupConditionsByName([
+			{ name: "Blinded", source: "PHB", entries: ["2014"] },
+			{ name: "Blinded", source: "XPHB", entries: ["2024"] },
+			{ name: "Bloodied", source: "XPHB", entries: ["bloodied"] },
+		]);
+		assert.equal(groupedConditions.length, 2);
+		assert.deepEqual(groupedConditions[0], {
+			name: "Blinded",
+			source: "XPHB",
+			sources: ["XPHB", "PHB"],
+			entries: ["2024"],
+			versions: [
+				{ name: "Blinded", source: "XPHB", entries: ["2024"] },
+				{ name: "Blinded", source: "PHB", entries: ["2014"] },
+			],
+		});
+		assert.deepEqual(groupedConditions[1], {
+			name: "Bloodied",
+			source: "XPHB",
+			sources: ["XPHB"],
+			entries: ["bloodied"],
+		});
 		const inlineRule = {
 			name: "Customizing Ability Scores",
 			source: "XPHB",
@@ -58440,10 +58464,26 @@ await run(
 				JSON.parse(await fs.readFile(config.conditionsPath, "utf8")),
 				{
 					condition: [
-						{ name: "Blinded", entries: ["new"] },
-						{ name: "Exhaustion", entries: ["local"] },
+						{
+							name: "Blinded",
+							source: "XPHB",
+							sources: ["XPHB"],
+							entries: ["new"],
+						},
+						{
+							name: "Exhaustion",
+							source: "LOCAL",
+							sources: ["LOCAL"],
+							entries: ["local"],
+						},
 					],
-					status: [{ name: "Invisible" }],
+					status: [
+						{
+							name: "Invisible",
+							source: "PHB",
+							sources: ["PHB"],
+						},
+					],
 				},
 			);
 			assert.deepEqual(
@@ -66537,7 +66577,16 @@ await run(
 			}
 			return [
 				{ name: "Prone", entries: ["..."] },
-				{ name: "Blinded", entries: ["..."] },
+				{
+					name: "Blinded",
+					source: "XPHB",
+					sources: ["XPHB", "PHB"],
+					versions: [
+						{ name: "Blinded", source: "XPHB", entries: ["2024 effects"] },
+						{ name: "Blinded", source: "PHB", entries: ["2014 effects"] },
+					],
+					entries: ["2024 effects"],
+				},
 			];
 		};
 
@@ -66599,6 +66648,17 @@ await run(
 			assert.equal(await resolveSpellInput(123), null);
 
 			assert.equal((await getConditionByName(" prone ")).name, "Prone");
+			const defaultBlinded = await getConditionByName("Blinded");
+			assert.equal(defaultBlinded.name, "Blinded");
+			assert.equal(defaultBlinded.source, "XPHB");
+			assert.deepEqual(defaultBlinded.entries, ["2024 effects"]);
+			const phbBlinded = await getConditionByName("Blinded|PHB");
+			assert.equal(phbBlinded.name, "Blinded");
+			assert.equal(phbBlinded.source, "PHB");
+			assert.deepEqual(phbBlinded.entries, ["2014 effects"]);
+			const xphbBlinded = await getConditionByName("Blinded|XPHB");
+			assert.equal(xphbBlinded.source, "XPHB");
+			assert.equal(normalizeConditionName("Blinded|PHB"), "blinded");
 			assert.equal(
 				(await resolveConditionInput({ name: "Stunned", entries: ["text"] }))
 					.name,

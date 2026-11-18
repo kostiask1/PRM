@@ -38,10 +38,14 @@ function getTruthyReferenceField(item, key, fallback) {
 }
 
 function projectNamedReferenceRecord(item, name, kind, extraFields) {
+	const sources = Array.isArray(item?.sources) ? item.sources : undefined;
+	const versions = Array.isArray(item?.versions) ? item.versions : undefined;
 	return {
 		name,
 		kind: getTruthyReferenceField(item, "kind", kind),
 		source: getTruthyReferenceField(item, "source", null),
+		...(sources ? { sources } : {}),
+		...(versions ? { versions } : {}),
 		page: getTruthyReferenceField(item, "page", null),
 		...getExtraReferenceFields(item, extraFields),
 		entries: getTruthyReferenceField(item, "entries", []),

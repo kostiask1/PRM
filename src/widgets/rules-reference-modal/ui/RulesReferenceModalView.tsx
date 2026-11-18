@@ -1,4 +1,5 @@
-import { useId, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import { formatSourceLabel, getSourceFullName, type ReferenceRecord } from "../../../entities/reference/index.js";
 import ReactList from "react-list";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
 import { RollDice } from "../../../features/dice/index.js";
@@ -91,14 +92,70 @@ function ReferenceTabs({ tabs, activeTab, tabsWithSearchMatches, onSelectTab, id
 	);
 }
 
-function ReferenceDetailsHeader({ activeTab, query, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, onInsertReference }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "selectionActionLabel" | "onInsertReference"> & { selectedItem: ReferenceItem }) {
+interface ReferenceDetailsHeaderProps
+	extends Pick<
+		RulesReferenceModalViewProps,
+		| "activeTab"
+		| "query"
+		| "selectedItem"
+		| "selectedMeta"
+		| "canInsertReference"
+		| "selectionActionLabel"
+		| "onInsertReference"
+	> {
+	selectedItem: ReferenceItem;
+	versions?: ReferenceRecord[] | null;
+	selectedSource?: string;
+	onSelectSource?: (source: string) => void;
+}
+
+function ReferenceDetailsHeader({
+	activeTab,
+	query,
+	selectedItem,
+	selectedMeta,
+	canInsertReference,
+	selectionActionLabel,
+	onInsertReference,
+	versions,
+	selectedSource,
+	onSelectSource,
+}: ReferenceDetailsHeaderProps) {
 	return (
 		<div className="RulesReferenceModalContent__contentHeader">
 			<div className="RulesReferenceModalContent__contentHeading">
 				<h3 className="RulesReferenceModalContent__title">{highlightText(String(selectedItem.name || ""), query)}</h3>
 				{selectedMeta && <div className="muted">{highlightText(selectedMeta, query)}</div>}
+				{versions && versions.length > 1 && onSelectSource && (
+					<div className="RulesReferenceModalContent__sources">
+						<span className="RulesReferenceModalContent__sources-label">{lang.t("Source")}:</span>
+						<div className="RulesReferenceModalContent__source-pills">
+							{versions.map((ver) => {
+								const verSource = String(ver.source || "");
+								const isActive = verSource.toUpperCase() === selectedSource?.toUpperCase();
+								return (
+									<button
+										key={verSource}
+										type="button"
+										className={`RulesReferenceModalContent__source-pill ${isActive ? "RulesReferenceModalContent__source-pill--active" : ""}`}
+										onClick={() => onSelectSource(verSource)}
+										title={getSourceFullName(verSource)}
+									>
+										{formatSourceLabel(verSource)}
+									</button>
+								);
+							})}
+						</div>
+					</div>
+				)}
 			</div>
-			{canInsertReference && <div className="RulesReferenceModalContent__contentActions"><Button variant="primary" icon="plus" onClick={() => onInsertReference(activeTab.id, selectedItem)}>{selectionActionLabel || lang.t("Insert")}</Button></div>}
+			{canInsertReference && (
+				<div className="RulesReferenceModalContent__contentActions">
+					<Button variant="primary" icon="plus" onClick={() => onInsertReference(activeTab.id, selectedItem)}>
+						{selectionActionLabel || lang.t("Insert")}
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 }
@@ -119,14 +176,93 @@ function GenericReferenceEntry({ item, query }: ReferenceEntryProps) {
 	return renderRulesReferenceContent(item.entries, query);
 }
 
-function ReferenceDetails({ activeTab, query, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, onInsertReference, MonsterStatBlock }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "selectionActionLabel" | "onInsertReference" | "MonsterStatBlock">) {
+interface ReferenceDetailsProps
+	extends Pick<
+		RulesReferenceModalViewProps,
+		| "activeTab"
+		| "query"
+		| "selectedItem"
+		| "selectedMeta"
+		| "canInsertReference"
+		| "selectionActionLabel"
+		| "onInsertReference"
+		| "MonsterStatBlock"
+	> {
+	activeSelectedName?: string;
+}
+
+function ReferenceDetails({
+	activeTab,
+	query,
+	selectedItem,
+	selectedMeta,
+	canInsertReference,
+	selectionActionLabel,
+	onInsertReference,
+	MonsterStatBlock,
+	activeSelectedName = "",
+}: ReferenceDetailsProps) {
+	const [selectedSource, setSelectedSource] = useState<string | null>(null);
+
+	useEffect(() => {
+		const requested = activeSelectedName?.includes("|")
+			? activeSelectedName.split("|")[1].trim().toUpperCase()
+			: null;
+		setSelectedSource(requested);
+	}, [selectedItem?.name, activeSelectedName]);
+
+	const versions = useMemo(() => {
+		const rawVersions = (selectedItem as Record<string, unknown> | null)?.versions;
+		if (Array.isArray(rawVersions) && rawVersions.length > 0) {
+			return rawVersions as ReferenceRecord[];
+		}
+		return null;
+	}, [selectedItem]);
+
+	const activeVersion = useMemo(() => {
+		if (!versions || versions.length === 0) return null;
+		if (selectedSource) {
+			const match = versions.find((v) => String(v.source || "").toUpperCase() === selectedSource);
+			if (match) return match;
+		}
+		return (
+			versions.find((v) => String(v.source || "").toUpperCase() === String(selectedItem?.source || "").toUpperCase()) ||
+			versions[0]
+		);
+	}, [versions, selectedSource, selectedItem?.source]);
+
+	const displayedItem = useMemo(() => {
+		if (!selectedItem) return null;
+		if (!activeVersion) return selectedItem;
+		return {
+			...selectedItem,
+			...activeVersion,
+		};
+	}, [selectedItem, activeVersion]);
+
 	if (!selectedItem) return <div className="RulesReferenceModalContent__content" />;
+	const targetItem: ReferenceItem = displayedItem || selectedItem;
+
 	const Entry = activeTab.id === "bestiary" ? BestiaryReferenceEntry : GenericReferenceEntry;
 	return (
 		<div className="RulesReferenceModalContent__content">
-			<ReferenceDetailsHeader {...{ activeTab, query, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, onInsertReference }} />
-			<div key={getReferenceItemKey(activeTab.id, selectedItem)} className="RulesReferenceModalContent__entryContent">
-				<Entry MonsterStatBlock={MonsterStatBlock} item={selectedItem} query={query} />
+			<ReferenceDetailsHeader
+				activeTab={activeTab}
+				query={query}
+				selectedItem={targetItem}
+				selectedMeta={selectedMeta}
+				canInsertReference={canInsertReference}
+				selectionActionLabel={selectionActionLabel}
+				onInsertReference={onInsertReference}
+				versions={versions}
+				selectedSource={String(targetItem.source || "")}
+				onSelectSource={setSelectedSource}
+			/>
+			<div
+				key={getReferenceItemKey(activeTab.id, targetItem) + (targetItem.source ? `:${targetItem.source}` : "")}
+				className="RulesReferenceModalContent__entryContent"
+			>
+				<Entry MonsterStatBlock={MonsterStatBlock} item={targetItem} query={query} />
 			</div>
 		</div>
 	);
@@ -162,7 +298,7 @@ function ReferenceSidebar({ activeTab, isDetailedSearch, isLoading, normalizedQu
 	return <ReactList key={`${activeTab.id}:${normalizedQuery}:${searchMode}`} ref={listRef} itemRenderer={renderReferenceItem} length={filteredItems.length} type="uniform" />;
 }
 
-function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "selectionActionLabel" | "listRef" | "renderReferenceItem" | "onInsertReference" | "MonsterStatBlock">) {
+function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "activeSelectedName" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "selectionActionLabel" | "listRef" | "renderReferenceItem" | "onInsertReference" | "MonsterStatBlock">) {
 	return (
 		<div className="RulesReferenceModalContent__main">
 			<div className="RulesReferenceModalContent__sidebar">
@@ -188,7 +324,7 @@ export default function RulesReferenceModalView(props: RulesReferenceModalViewPr
 			) : activeTab.id === "spells" ? (
 				<EmbeddedSpellReference {...{ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell, SpellsBrowser }} />
 			) : (
-				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, listRef, renderReferenceItem, onInsertReference, MonsterStatBlock }} />
+				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, activeSelectedName, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, selectionActionLabel, listRef, renderReferenceItem, onInsertReference, MonsterStatBlock }} />
 			)}
 			</div>
 		</div>
