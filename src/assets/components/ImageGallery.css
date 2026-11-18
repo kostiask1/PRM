@@ -7,11 +7,32 @@
 }
 
 .ImageGallery__embedded {
-	height: clamp(520px, 68dvh, 900px);
+	flex: 1;
+	height: 100%;
+	min-height: 0;
 	min-width: 0;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
 	overflow: hidden;
+}
+
+.CampaignView:has(.ImageGallery__embedded) > .Panel__body {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.CampaignView:has(.ImageGallery__embedded) .CampaignView__navigation {
+	flex-shrink: 0;
+}
+
+.CampaignView:has(.ImageGallery__embedded) .CampaignView__layout,
+.CampaignView:has(.ImageGallery__embedded) .CampaignView__contentPanel,
+.CampaignView:has(.ImageGallery__embedded) [role="tabpanel"]:has(.ImageGallery__embedded) {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
 }
 
 .Modal__body:has(.ImageGallery) {
@@ -688,6 +709,7 @@
 }
 
 .ImageGallery__previewWrap {
+	position: relative;
 	width: 100%;
 	height: 100%;
 	display: flex;
@@ -701,6 +723,55 @@
 	max-height: 100%;
 	min-width: 25vw;
 	object-fit: contain;
+}
+
+.ImageGallery__previewNav {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 2;
+	width: var(--size-10);
+	height: var(--size-10);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.45);
+	color: #fff;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: var(--radius-full, 50%);
+	cursor: pointer;
+	padding: 0;
+	transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+	backdrop-filter: blur(4px);
+}
+
+.ImageGallery__previewNav:hover:not(:disabled) {
+	background: rgba(0, 0, 0, 0.75);
+	color: var(--accent);
+	transform: translateY(-50%) scale(1.08);
+}
+
+.ImageGallery__previewNav:active:not(:disabled) {
+	transform: translateY(-50%) scale(0.95);
+}
+
+.ImageGallery__previewNav:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.ImageGallery__previewNav:disabled {
+	opacity: 0.2;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.ImageGallery__previewNav.is_prev {
+	left: var(--space-4);
+}
+
+.ImageGallery__previewNav.is_next {
+	right: var(--space-4);
 }
 
 .ImageGallery__breadcrumbSeparator {
@@ -827,5 +898,18 @@
 	.ImageGallery__previewModal {
 		width: 100vw;
 		height: 100dvh;
+	}
+
+	.ImageGallery__previewNav {
+		width: var(--size-8);
+		height: var(--size-8);
+	}
+
+	.ImageGallery__previewNav.is_prev {
+		left: var(--space-2);
+	}
+
+	.ImageGallery__previewNav.is_next {
+		right: var(--space-2);
 	}
 }

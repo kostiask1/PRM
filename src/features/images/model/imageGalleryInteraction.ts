@@ -26,6 +26,24 @@ export type GalleryEscapePlan =
 	| { action: "close-preview"; preventDefault: true; stopPropagation: true }
 	| { action: "none"; preventDefault: false; stopPropagation: false };
 
+export type GalleryPreviewDirection = -1 | 1;
+
+export interface GalleryPreviewKeyboardPlan {
+	action: "navigate-preview" | "none";
+	direction?: GalleryPreviewDirection;
+	preventDefault: boolean;
+	stopPropagation: boolean;
+}
+
+export interface GalleryPreviewNavigationState {
+	currentIndex: number;
+	totalCount: number;
+	canNavigatePrev: boolean;
+	canNavigateNext: boolean;
+	prevImage: GalleryImage | null;
+	nextImage: GalleryImage | null;
+}
+
 export type GalleryGridDropPlan =
 	| {
 			action: "delegate";
@@ -725,4 +743,118 @@ export function getGalleryDragPlan({
 	const selected = selectionByType[type].has(image ? getGalleryImageSelectionKey(image) : name);
 	const items = selected ? getMovableSelection() : [name];
 	return items.length > 0 ? { items, src: location } : null;
+}
+
+export function findGalleryPreviewImageIndex(
+	images: readonly GalleryImage[],
+	target: GalleryImage | null,
+): number {
+	if (!target || !images.length) return -1;
+	const refIndex = images.indexOf(target);
+	if (refIndex !== -1) return refIndex;
+	const targetKey = getGalleryImageSelectionKey(target);
+	const keyIndex = images.findIndex(
+		(image) => getGalleryImageSelectionKey(image) === targetKey,
+	);
+	if (keyIndex !== -1) return keyIndex;
+	const urlIndex = images.findIndex(
+		(image) => Boolean(image.url && target.url && image.url === target.url),
+	);
+	if (urlIndex !== -1) return urlIndex;
+	return images.findIndex((image) => image.name === target.name);
+}
+
+export function getAdjacentGalleryPreviewImage({
+	currentImage,
+	direction,
+	images,
+}: {
+	currentImage: GalleryImage | null;
+	direction: GalleryPreviewDirection;
+	images: readonly GalleryImage[];
+}): GalleryImage | null {
+	if (!currentImage || !images.length) return null;
+	const currentIndex = findGalleryPreviewImageIndex(images, currentImage);
+	if (currentIndex === -1) return null;
+	const nextIndex = currentIndex + direction;
+	if (nextIndex < 0 || nextIndex >= images.length) return null;
+	return images[nextIndex] ?? null;
+}
+
+export function getGalleryPreviewNavigationState({
+	currentImage,
+	images,
+}: {
+	currentImage: GalleryImage | null;
+	images: readonly GalleryImage[];
+}): GalleryPreviewNavigationState {
+	const totalCount = images.length;
+	const currentIndex = findGalleryPreviewImageIndex(images, currentImage);
+	if (currentIndex === -1) {
+		return {
+			currentIndex: -1,
+			totalCount,
+			canNavigatePrev: false,
+			canNavigateNext: false,
+			prevImage: null,
+			nextImage: null,
+		};
+	}
+	const canNavigatePrev = currentIndex > 0;
+	const canNavigateNext = currentIndex < totalCount - 1;
+	return {
+		currentIndex,
+		totalCount,
+		canNavigatePrev,
+		canNavigateNext,
+		prevImage: canNavigatePrev ? images[currentIndex - 1] ?? null : null,
+		nextImage: canNavigateNext ? images[currentIndex + 1] ?? null : null,
+	};
+}
+
+export function getGalleryPreviewKeyboardPlan({
+	altKey = false,
+	ctrlKey = false,
+	hasPreview,
+	isEditableTarget = false,
+	key,
+	metaKey = false,
+	shiftKey = false,
+}: {
+	altKey?: boolean;
+	ctrlKey?: boolean;
+	hasPreview: boolean;
+	isEditableTarget?: boolean;
+	key: string;
+	metaKey?: boolean;
+	shiftKey?: boolean;
+}): GalleryPreviewKeyboardPlan {
+	if (!hasPreview || isEditableTarget || altKey || ctrlKey || metaKey || shiftKey) {
+		return {
+			action: "none",
+			preventDefault: false,
+			stopPropagation: false,
+		};
+	}
+	if (key === "ArrowLeft") {
+		return {
+			action: "navigate-preview",
+			direction: -1,
+			preventDefault: true,
+			stopPropagation: true,
+		};
+	}
+	if (key === "ArrowRight") {
+		return {
+			action: "navigate-preview",
+			direction: 1,
+			preventDefault: true,
+			stopPropagation: true,
+		};
+	}
+	return {
+		action: "none",
+		preventDefault: false,
+		stopPropagation: false,
+	};
 }

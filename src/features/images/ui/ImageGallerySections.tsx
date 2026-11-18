@@ -27,8 +27,11 @@ import {
 	getGalleryGridDragOverPlan,
 	getGalleryGridDropPlan,
 	getGalleryGridDropTarget,
+	getGalleryPreviewNavigationState,
 	type GalleryGridDragOverPlan,
 	type GalleryGridDropPlan,
+	type GalleryPreviewDirection,
+	type GalleryPreviewNavigationState,
 } from "../model/imageGalleryInteraction.ts";
 import ImageTargetSettings from "./ImageTargetSettings.tsx";
 
@@ -560,22 +563,37 @@ export interface GalleryDialogSource {
 export function ImageGalleryDialogs({
 	availableSources,
 	controller,
+	displayImages,
 	isMoveOpen,
 	moveTarget,
+	navigatePreview,
 	previewImage,
+	previewNavigation,
 	setIsMoveOpen,
 	setMoveTarget,
 	setPreviewImage,
 }: {
 	availableSources: GalleryDialogSource[];
 	controller: ImageGalleryController;
+	displayImages?: readonly GalleryImage[];
 	isMoveOpen: boolean;
 	moveTarget: ImageLocation;
+	navigatePreview?: (direction: GalleryPreviewDirection) => void;
 	previewImage: GalleryImage | null;
+	previewNavigation?: GalleryPreviewNavigationState;
 	setIsMoveOpen: Dispatch<SetStateAction<boolean>>;
 	setMoveTarget: Dispatch<SetStateAction<ImageLocation>>;
 	setPreviewImage: Dispatch<SetStateAction<GalleryImage | null>>;
 }) {
+	const navigation = previewNavigation ?? getGalleryPreviewNavigationState({
+		currentImage: previewImage,
+		images: displayImages ?? [],
+	});
+	const previewTitle = previewImage
+		? navigation.totalCount > 1 && navigation.currentIndex >= 0
+			? `${previewImage.displayName || previewImage.name} (${navigation.currentIndex + 1} / ${navigation.totalCount})`
+			: (previewImage.displayName || previewImage.name)
+		: "";
 	return (
 		<>
 			{isMoveOpen && (
@@ -618,7 +636,7 @@ export function ImageGalleryDialogs({
 			)}
 			{previewImage && (
 				<Modal
-					title={previewImage.name}
+					title={previewTitle}
 					onConfirm={() => setPreviewImage(null)}
 					type="custom"
 					className="ImageGallery__previewModal"
@@ -629,11 +647,50 @@ export function ImageGalleryDialogs({
 						className="ImageGallery__previewWrap"
 						onClick={() => setPreviewImage(null)}
 					>
+						{navigation.totalCount > 1 && (
+							<button
+								type="button"
+								className="ImageGallery__previewNav is_prev"
+								aria-label={lang.t("Previous image")}
+								title={lang.t("Previous image")}
+								disabled={!navigation.canNavigatePrev}
+								onClick={(event) => {
+									event.stopPropagation();
+									if (navigatePreview) {
+										navigatePreview(-1);
+									} else if (navigation.prevImage) {
+										setPreviewImage(navigation.prevImage);
+									}
+								}}
+							>
+								<Icon name="back" size={24} />
+							</button>
+						)}
 						<img
 							className="ImageGallery__previewImg"
 							src={previewImage.url}
-							alt={previewImage.name}
+							alt={previewImage.displayName || previewImage.name}
+							onClick={(event) => event.stopPropagation()}
 						/>
+						{navigation.totalCount > 1 && (
+							<button
+								type="button"
+								className="ImageGallery__previewNav is_next"
+								aria-label={lang.t("Next image")}
+								title={lang.t("Next image")}
+								disabled={!navigation.canNavigateNext}
+								onClick={(event) => {
+									event.stopPropagation();
+									if (navigatePreview) {
+										navigatePreview(1);
+									} else if (navigation.nextImage) {
+										setPreviewImage(navigation.nextImage);
+									}
+								}}
+							>
+								<Icon name="forward" size={24} />
+							</button>
+						)}
 					</div>
 				</Modal>
 			)}

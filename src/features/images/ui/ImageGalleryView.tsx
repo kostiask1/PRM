@@ -389,9 +389,12 @@ function GalleryDialogs({ controller }: { controller: ImageGalleryUiController }
 	return <ImageGalleryDialogs
 		availableSources={controller.availableSources}
 		controller={controller.galleryController}
+		displayImages={controller.displayImages}
 		isMoveOpen={controller.isMoveModalOpen}
 		moveTarget={controller.moveTarget}
+		navigatePreview={controller.navigatePreview}
 		previewImage={controller.previewImage}
+		previewNavigation={controller.previewNavigation}
 		setIsMoveOpen={controller.setIsMoveModalOpen}
 		setMoveTarget={controller.setMoveTarget}
 		setPreviewImage={controller.setPreviewImage}

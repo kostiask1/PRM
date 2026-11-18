@@ -34,6 +34,8 @@ export type {
 	GalleryImage,
 	GalleryItemType,
 	GalleryMoveGroup,
+	GalleryPreviewDirection,
+	GalleryPreviewNavigationState,
 	GallerySubcategoryDetails,
 	GallerySubcategoryDetailsMap,
 	ImageGalleryCategory,

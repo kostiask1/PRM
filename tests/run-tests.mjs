@@ -708,6 +708,8 @@ import {
 	buildGalleryBulkDeletePayloads,
 	buildGalleryMovePayloads,
 	createGalleryBulkDeleteConfirmation,
+	findGalleryPreviewImageIndex,
+	getAdjacentGalleryPreviewImage,
 	getGalleryBulkDeleteConfirmationPlan,
 	getGalleryBulkDeleteSummary,
 	getGalleryEscapePlan,
@@ -721,6 +723,8 @@ import {
 	getGalleryImageSelectionKey,
 	getGalleryDropPlan,
 	getGalleryKeyboardPlan,
+	getGalleryPreviewKeyboardPlan,
+	getGalleryPreviewNavigationState,
 	getGallerySelectionPlan,
 	getGallerySubcategoryRenamePlan,
 	normalizeGalleryBulkDeleteConfirmation,
@@ -69841,6 +69845,162 @@ await run("image gallery interaction plans validate drops, moves, and selection"
 			selectedSub: "root/герої",
 		})?.selectedSubcategory,
 		null,
+	);
+});
+
+await run("image gallery preview navigation and keyboard plans handle boundaries, direction, and keys", () => {
+	const sampleImages = [
+		{ name: "img1.png", url: "/img1.png", source: "camp", category: "tokens", subcategory: "" },
+		{ name: "img2.png", url: "/img2.png", source: "camp", category: "tokens", subcategory: "" },
+		{ name: "img3.png", url: "/img3.png", source: "camp", category: "tokens", subcategory: "" },
+	];
+
+	// findGalleryPreviewImageIndex
+	assert.equal(findGalleryPreviewImageIndex([], sampleImages[0]), -1);
+	assert.equal(findGalleryPreviewImageIndex(sampleImages, null), -1);
+	assert.equal(findGalleryPreviewImageIndex(sampleImages, sampleImages[1]), 1);
+	assert.equal(
+		findGalleryPreviewImageIndex(sampleImages, {
+			name: "img2.png",
+			url: "/img2.png",
+			source: "camp",
+			category: "tokens",
+			subcategory: "",
+		}),
+		1,
+	);
+	assert.equal(
+		findGalleryPreviewImageIndex(sampleImages, { name: "other.png", url: "/img3.png" }),
+		2,
+	);
+	assert.equal(
+		findGalleryPreviewImageIndex(sampleImages, { name: "img1.png", url: "/different.png" }),
+		0,
+	);
+	assert.equal(
+		findGalleryPreviewImageIndex(sampleImages, { name: "not-found.png", url: "/none.png" }),
+		-1,
+	);
+
+	// getGalleryPreviewNavigationState
+	assert.deepEqual(
+		getGalleryPreviewNavigationState({ currentImage: null, images: [] }),
+		{
+			currentIndex: -1,
+			totalCount: 0,
+			canNavigatePrev: false,
+			canNavigateNext: false,
+			prevImage: null,
+			nextImage: null,
+		},
+	);
+	assert.deepEqual(
+		getGalleryPreviewNavigationState({ currentImage: sampleImages[0], images: [sampleImages[0]] }),
+		{
+			currentIndex: 0,
+			totalCount: 1,
+			canNavigatePrev: false,
+			canNavigateNext: false,
+			prevImage: null,
+			nextImage: null,
+		},
+	);
+	assert.deepEqual(
+		getGalleryPreviewNavigationState({ currentImage: sampleImages[0], images: sampleImages }),
+		{
+			currentIndex: 0,
+			totalCount: 3,
+			canNavigatePrev: false,
+			canNavigateNext: true,
+			prevImage: null,
+			nextImage: sampleImages[1],
+		},
+	);
+	assert.deepEqual(
+		getGalleryPreviewNavigationState({ currentImage: sampleImages[1], images: sampleImages }),
+		{
+			currentIndex: 1,
+			totalCount: 3,
+			canNavigatePrev: true,
+			canNavigateNext: true,
+			prevImage: sampleImages[0],
+			nextImage: sampleImages[2],
+		},
+	);
+	assert.deepEqual(
+		getGalleryPreviewNavigationState({ currentImage: sampleImages[2], images: sampleImages }),
+		{
+			currentIndex: 2,
+			totalCount: 3,
+			canNavigatePrev: true,
+			canNavigateNext: false,
+			prevImage: sampleImages[1],
+			nextImage: null,
+		},
+	);
+
+	// getAdjacentGalleryPreviewImage
+	assert.equal(
+		getAdjacentGalleryPreviewImage({ currentImage: sampleImages[0], direction: -1, images: sampleImages }),
+		null,
+	);
+	assert.equal(
+		getAdjacentGalleryPreviewImage({ currentImage: sampleImages[0], direction: 1, images: sampleImages }),
+		sampleImages[1],
+	);
+	assert.equal(
+		getAdjacentGalleryPreviewImage({ currentImage: sampleImages[1], direction: -1, images: sampleImages }),
+		sampleImages[0],
+	);
+	assert.equal(
+		getAdjacentGalleryPreviewImage({ currentImage: sampleImages[1], direction: 1, images: sampleImages }),
+		sampleImages[2],
+	);
+	assert.equal(
+		getAdjacentGalleryPreviewImage({ currentImage: sampleImages[2], direction: 1, images: sampleImages }),
+		null,
+	);
+	assert.equal(
+		getAdjacentGalleryPreviewImage({ currentImage: null, direction: 1, images: sampleImages }),
+		null,
+	);
+
+	// getGalleryPreviewKeyboardPlan
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: false, key: "ArrowLeft" }),
+		{ action: "none", preventDefault: false, stopPropagation: false },
+	);
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: true, key: "ArrowLeft" }),
+		{ action: "navigate-preview", direction: -1, preventDefault: true, stopPropagation: true },
+	);
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: true, key: "ArrowRight" }),
+		{ action: "navigate-preview", direction: 1, preventDefault: true, stopPropagation: true },
+	);
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: true, key: "ArrowUp" }),
+		{ action: "none", preventDefault: false, stopPropagation: false },
+	);
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: true, isEditableTarget: true, key: "ArrowLeft" }),
+		{ action: "none", preventDefault: false, stopPropagation: false },
+	);
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: true, altKey: true, key: "ArrowLeft" }),
+		{ action: "none", preventDefault: false, stopPropagation: false },
+	);
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: true, ctrlKey: true, key: "ArrowRight" }),
+		{ action: "none", preventDefault: false, stopPropagation: false },
+	);
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: true, metaKey: true, key: "ArrowRight" }),
+		{ action: "none", preventDefault: false, stopPropagation: false },
+	);
+	assert.deepEqual(
+		getGalleryPreviewKeyboardPlan({ hasPreview: true, shiftKey: true, key: "ArrowLeft" }),
+		{ action: "none", preventDefault: false, stopPropagation: false },
 	);
 });
 

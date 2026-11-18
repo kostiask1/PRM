@@ -5,8 +5,12 @@ import { lang } from "../../../shared/lib/index.js";
 import type { ImageLocation } from "../api/imageApi.ts";
 import type { GalleryImage } from "../model/contracts.ts";
 import {
+	getAdjacentGalleryPreviewImage,
 	getGalleryEscapePlan,
+	getGalleryPreviewKeyboardPlan,
+	getGalleryPreviewNavigationState,
 	type GalleryEscapePlan,
+	type GalleryPreviewDirection,
 } from "../model/imageGalleryInteraction.ts";
 import {
 	buildGalleryPresentationItems,
@@ -366,6 +370,51 @@ export function useImageGalleryUiController({
 		};
 		return deduplicateGalleryImages(images, fallbackPath);
 	}, [images, selectedSource, selectedCat.id, selectedSub]);
+	const previewNavigation = React.useMemo(
+		() =>
+			getGalleryPreviewNavigationState({
+				currentImage: previewImage,
+				images: displayImages,
+			}),
+		[previewImage, displayImages],
+	);
+	const navigatePreview = React.useCallback(
+		(direction: GalleryPreviewDirection) => {
+			const nextImage = getAdjacentGalleryPreviewImage({
+				currentImage: previewImage,
+				direction,
+				images: displayImages,
+			});
+			if (nextImage) {
+				setPreviewImage(nextImage);
+			}
+		},
+		[previewImage, displayImages],
+	);
+
+	React.useEffect(() => {
+		if (!previewImage) return undefined;
+		const handlePreviewArrowKeyDown = (event: globalThis.KeyboardEvent) => {
+			const plan = getGalleryPreviewKeyboardPlan({
+				altKey: event.altKey,
+				ctrlKey: event.ctrlKey,
+				hasPreview: true,
+				isEditableTarget: isEditableTarget(event.target),
+				key: event.key,
+				metaKey: event.metaKey,
+				shiftKey: event.shiftKey,
+			});
+			if (plan.action === "navigate-preview" && plan.direction) {
+				if (plan.preventDefault) event.preventDefault();
+				if (plan.stopPropagation) event.stopPropagation();
+				navigatePreview(plan.direction);
+			}
+		};
+		window.addEventListener("keydown", handlePreviewArrowKeyDown, true);
+		return () =>
+			window.removeEventListener("keydown", handlePreviewArrowKeyDown, true);
+	}, [previewImage, navigatePreview]);
+
 	const galleryItems = React.useMemo(
 		() => buildGalleryPresentationItems(allSubs, displayImages),
 		[allSubs, displayImages],
@@ -393,6 +442,7 @@ export function useImageGalleryUiController({
 		canNavigateBack,
 		canNavigateForward,
 		canShowDatabaseTokens,
+		displayImages,
 		galleryColumns,
 		galleryController,
 		galleryItems,
@@ -403,9 +453,11 @@ export function useImageGalleryUiController({
 		isMoveModalOpen,
 		moveTarget,
 		navigateHistory,
+		navigatePreview,
 		openGlobalResultPath,
 		openMoveModal,
 		previewImage,
+		previewNavigation,
 		resetContentScope,
 		setIsMoveModalOpen,
 		setMoveTarget,

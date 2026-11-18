@@ -52,3 +52,14 @@ export interface GalleryMoveGroup {
 }
 
 export type GalleryItemType = "image" | "sub";
+
+export type GalleryPreviewDirection = -1 | 1;
+
+export interface GalleryPreviewNavigationState {
+	currentIndex: number;
+	totalCount: number;
+	canNavigatePrev: boolean;
+	canNavigateNext: boolean;
+	prevImage: GalleryImage | null;
+	nextImage: GalleryImage | null;
+}
