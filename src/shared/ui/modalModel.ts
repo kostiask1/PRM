@@ -24,6 +24,7 @@ export interface ModalProps {
 		checked: boolean,
 	) => unknown;
 	cancelDisabled?: boolean;
+	zIndex?: number;
 }
 
 export function resolveModalConfirmValue({
@@ -149,4 +150,71 @@ export function executeModalKeyboardPlan(
 	if (plan.preventDefault) preventDefault();
 	if (plan.action === "close") onClose();
 	if (plan.action === "confirm") onConfirm();
+}
+
+export const BASE_MODAL_Z_INDEX = 1300;
+export const MODAL_Z_INDEX_STEP = 10;
+
+let nextModalZIndex = BASE_MODAL_Z_INDEX;
+const activeModalIds = new Set<string>();
+
+export function getHighestModalZIndex(): number {
+	if (typeof document === "undefined" || !document.querySelectorAll) {
+		return BASE_MODAL_Z_INDEX;
+	}
+	const overlays = document.querySelectorAll<HTMLElement>(".Modal__overlay");
+	let maxZ = BASE_MODAL_Z_INDEX;
+	for (const overlay of overlays) {
+		const z = Number.parseFloat(
+			overlay.style?.zIndex ||
+				(typeof window !== "undefined" && window.getComputedStyle
+					? window.getComputedStyle(overlay).zIndex
+					: ""),
+		);
+		if (Number.isFinite(z) && z >= maxZ) {
+			maxZ = z;
+		}
+	}
+	return maxZ;
+}
+
+export function acquireModalZIndex(
+	id: string,
+	requestedZIndex?: number,
+): number {
+	activeModalIds.add(id);
+	const highestDom = getHighestModalZIndex();
+	const baseCandidate = Math.max(nextModalZIndex, highestDom);
+	const candidate =
+		typeof requestedZIndex === "number" && Number.isFinite(requestedZIndex)
+			? Math.max(requestedZIndex, baseCandidate)
+			: baseCandidate;
+	nextModalZIndex = candidate + MODAL_Z_INDEX_STEP;
+	return candidate;
+}
+
+export function releaseModalZIndex(id: string): void {
+	activeModalIds.delete(id);
+	if (activeModalIds.size === 0) {
+		nextModalZIndex = BASE_MODAL_Z_INDEX;
+		return;
+	}
+	if (typeof queueMicrotask === "function") {
+		queueMicrotask(() => {
+			if (activeModalIds.size === 0) {
+				nextModalZIndex = BASE_MODAL_Z_INDEX;
+			} else {
+				nextModalZIndex = getHighestModalZIndex() + MODAL_Z_INDEX_STEP;
+			}
+		});
+	}
+}
+
+export function getActiveModalCount(): number {
+	return activeModalIds.size;
+}
+
+export function resetModalZIndexStack(): void {
+	activeModalIds.clear();
+	nextModalZIndex = BASE_MODAL_Z_INDEX;
 }

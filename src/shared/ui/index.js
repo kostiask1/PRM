@@ -16,6 +16,7 @@ export { default as TextInput } from "./TextInput.tsx";
 export { highlightText } from "./SearchHighlight.tsx";
 export { default as Select } from "./Select.tsx";
 export { default as Tooltip } from "./Tooltip.tsx";
+export { closeAllTooltips } from "./tooltipModel.ts";
 export { UndoRedoButtons } from "./UndoRedoButtons.tsx";
 export { usePointerDownOutsideDismissal } from "./usePointerDownOutsideDismissal.ts";
 export { useRevealSelectedTab } from "./useRevealSelectedTab.ts";

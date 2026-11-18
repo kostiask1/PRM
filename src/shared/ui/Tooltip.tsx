@@ -63,6 +63,32 @@ function findParentTooltipId(
 	return parent?.dataset.tooltipId || null;
 }
 
+function matchesHover(element: Element | null): boolean {
+	if (!element) return false;
+	try {
+		return element.matches(":hover");
+	} catch {
+		return false;
+	}
+}
+
+function hasHoveredDescendant(ancestorId: TooltipId): boolean {
+	try {
+		const hoveredElements = document.querySelectorAll<HTMLElement>(
+			"[data-tooltip-id]:hover",
+		);
+		for (const el of hoveredElements) {
+			const id = el.dataset.tooltipId;
+			if (id && isAncestorTooltip(ancestorId, id)) {
+				return true;
+			}
+		}
+	} catch {
+		return false;
+	}
+	return false;
+}
+
 export default function Tooltip({
 	content,
 	children,
@@ -118,10 +144,25 @@ export default function Tooltip({
 		if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
 		closeTimerRef.current = setTimeout(() => {
 			const focused = document.activeElement;
-			if (containsNode(triggerRef.current, focused) || (interactive && containsNode(tooltipRef.current, focused))) return;
+			if (
+				containsNode(triggerRef.current, focused) ||
+				(interactive && containsNode(tooltipRef.current, focused))
+			) {
+				return;
+			}
+			if (
+				matchesHover(triggerRef.current) ||
+				(interactive && matchesHover(tooltipRef.current)) ||
+				(anchorElement && matchesHover(anchorElement))
+			) {
+				return;
+			}
+			if (hasHoveredDescendant(tooltipIdRef.current)) {
+				return;
+			}
 			closeTooltip();
 		}, CLOSE_DELAY);
-	}, [closeTooltip, interactive]);
+	}, [anchorElement, closeTooltip, interactive]);
 
 	const cancelCloseTooltip = useCallback(() => {
 		if (closeTimerRef.current) {
@@ -265,10 +306,24 @@ export default function Tooltip({
 			);
 			const isOverTrigger = containsNode(trigger, hoveredElement);
 			const isOverAnchor = anchor && containsNode(anchor, hoveredElement);
-			const isOverTooltip = interactive && containsNode(tooltipRef.current, hoveredElement);
+			const isOverTooltip =
+				interactive && containsNode(tooltipRef.current, hoveredElement);
+			const hoveredTooltipContainer =
+				hoveredElement?.closest<HTMLElement>("[data-tooltip-id]");
+			const hoveredTooltipId = hoveredTooltipContainer?.dataset.tooltipId;
+			const isOverDescendant = hoveredTooltipId
+				? isAncestorTooltip(tooltipIdRef.current, hoveredTooltipId)
+				: false;
 
-			if (!isOverTrigger && !isOverAnchor && !isOverTooltip) {
+			if (
+				!isOverTrigger &&
+				!isOverAnchor &&
+				!isOverTooltip &&
+				!isOverDescendant
+			) {
 				scheduleCloseTooltip();
+			} else {
+				cancelCloseTooltip();
 			}
 		};
 
@@ -276,7 +331,14 @@ export default function Tooltip({
 		return () => {
 			document.removeEventListener("pointermove", handlePointerMove, true);
 		};
-	}, [anchorElement, closeTooltip, interactive, isOpen, scheduleCloseTooltip]);
+	}, [
+		anchorElement,
+		cancelCloseTooltip,
+		closeTooltip,
+		interactive,
+		isOpen,
+		scheduleCloseTooltip,
+	]);
 
 	useEffect(() => {
 		const tooltipId = tooltipIdRef.current;
@@ -319,12 +381,6 @@ export default function Tooltip({
 		};
 	}, [cancelCloseTooltip, cancelOpenTooltip, closeTooltip]);
 
-	const hiddenByChild =
-		isOpen &&
-		activeId &&
-		activeId !== tooltipIdRef.current &&
-		isAncestorTooltip(tooltipIdRef.current, activeId);
-
 	return (
 		<>
 			<span
@@ -354,8 +410,7 @@ export default function Tooltip({
 							style={{
 								top: `${position.top}px`,
 								left: `${position.left}px`,
-								visibility:
-									position.ready && !hiddenByChild ? "visible" : "hidden",
+								visibility: position.ready ? "visible" : "hidden",
 							}}
 						>
 							{content}

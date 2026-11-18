@@ -33,6 +33,7 @@ export {
 	type NotificationProps,
 } from "./Notification.tsx";
 export { default as Tooltip, type TooltipProps } from "./Tooltip.tsx";
+export { closeAllTooltips } from "./tooltipModel.ts";
 export { UndoRedoButtons } from "./UndoRedoButtons.tsx";
 export { default as Panel, type PanelProps } from "./Panel.tsx";
 export { default as SectionTabs, type SectionTabsProps, type SectionTab } from "./SectionTabs.tsx";

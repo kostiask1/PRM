@@ -1,7 +1,3 @@
-.MonsterFieldEditModal__overlay {
-	z-index: 1200;
-}
-
 .MonsterFieldEditModal__overlay .Modal__card,
 .Modal__card.MonsterFieldEditModal__modal {
 	width: min(1180px, 96vw);

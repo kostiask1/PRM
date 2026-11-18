@@ -171,6 +171,7 @@ export function ModalView({
 	return (
 		<div
 			className={classNames("Modal__overlay", overlayClassName)}
+			style={{ zIndex: controller.zIndex }}
 			onClick={controller.handleOverlayClick}
 			onMouseDown={controller.handleOverlayMouseDown}
 		>

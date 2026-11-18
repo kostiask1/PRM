@@ -839,12 +839,17 @@ import {
 	shouldExpandNoteFromCardClick,
 } from "../src/features/notes/model.ts";
 import {
+	acquireModalZIndex,
+	BASE_MODAL_Z_INDEX,
 	executeModalClose,
 	executeModalKeyboardPlan,
 	getModalCloseAction,
 	getModalFocusTarget,
 	getModalKeyboardPlan,
 	getModalPresentationPlan,
+	MODAL_Z_INDEX_STEP,
+	releaseModalZIndex,
+	resetModalZIndexStack,
 	resolveModalConfirmValue,
 } from "../src/shared/ui/modalModel.ts";
 import {
@@ -28307,6 +28312,25 @@ await run("tooltip model coordinates nesting, timers, and viewport layout", () =
 	removeTooltipTimeoutController("tooltip-child");
 });
 
+await run("nested tooltips preserve ancestor visibility and interactive rules links", async () => {
+	setTooltipParent("tooltip-child", "tooltip-parent");
+	setTooltipParent("tooltip-grandchild", "tooltip-child");
+	assert.equal(isAncestorTooltip("tooltip-parent", "tooltip-child"), true);
+	assert.equal(isAncestorTooltip("tooltip-parent", "tooltip-grandchild"), true);
+	assert.equal(isAncestorTooltip("tooltip-child", "tooltip-grandchild"), true);
+	assert.equal(isAncestorTooltip("tooltip-grandchild", "tooltip-parent"), false);
+
+	removeTooltipParent("tooltip-child");
+	removeTooltipParent("tooltip-grandchild");
+
+	const tooltipSource = await fs.readFile("src/shared/ui/Tooltip.tsx", "utf8");
+	const rulesLinkSource = await fs.readFile("src/features/rules-reference/ui/RulesLink.tsx", "utf8");
+
+	assert.doesNotMatch(tooltipSource, /hiddenByChild/);
+	assert.match(tooltipSource, /isOverDescendant/);
+	assert.match(rulesLinkSource, /<Tooltip content=\{resolvedContent\} interactive>/);
+});
+
 await run("button model preserves sizes, classes, and icon stroke rules", () => {
 	assert.equal(normalizeButtonSize(), BUTTON_SIZES.MEDIUM);
 	assert.equal(normalizeButtonSize("small"), BUTTON_SIZES.SMALL);
@@ -28818,6 +28842,26 @@ await run("modal keyboard ownership follows visual stacking and DOM order", () =
 		if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
 		else delete globalThis.window;
 	}
+});
+
+await run("modal z-index stack allocates incrementing layers and resets when empty", () => {
+	resetModalZIndexStack();
+	const z1 = acquireModalZIndex("modal-1");
+	const z2 = acquireModalZIndex("modal-2");
+	const z3 = acquireModalZIndex("modal-3");
+
+	assert.equal(z1, BASE_MODAL_Z_INDEX);
+	assert.equal(z2, BASE_MODAL_Z_INDEX + MODAL_Z_INDEX_STEP);
+	assert.equal(z3, BASE_MODAL_Z_INDEX + MODAL_Z_INDEX_STEP * 2);
+	assert.ok(z3 > z2 && z2 > z1);
+
+	releaseModalZIndex("modal-3");
+	releaseModalZIndex("modal-2");
+	releaseModalZIndex("modal-1");
+
+	assert.equal(acquireModalZIndex("modal-fresh"), BASE_MODAL_Z_INDEX);
+	releaseModalZIndex("modal-fresh");
+	resetModalZIndexStack();
 });
 
 await run("shared modal model preserves focus, keyboard, and close contracts", () => {

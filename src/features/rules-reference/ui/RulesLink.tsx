@@ -356,7 +356,7 @@ function RulesLink({
 	) : null;
 
 	return (
-		<Tooltip content={resolvedContent} interactive={previewOnly}>
+		<Tooltip content={resolvedContent} interactive>
 			<span
 				className={previewOnly ? undefined : classNames("RulesLink", type && `RulesLink__${type}`)}
 				tabIndex={previewOnly ? 0 : undefined}

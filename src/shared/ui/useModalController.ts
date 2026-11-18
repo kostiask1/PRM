@@ -6,10 +6,12 @@ import {
 	useState,
 } from "react";
 import {
+	acquireModalZIndex,
 	executeModalClose,
 	executeModalKeyboardPlan,
 	getModalFocusTarget,
 	getModalKeyboardPlan,
+	releaseModalZIndex,
 	resolveModalConfirmValue,
 	type ModalProps,
 } from "./modalModel.ts";
@@ -29,7 +31,9 @@ export function getTopModal(): HTMLElement | null {
 	for (const dialog of dialogs) {
 		const overlay = dialog.closest<HTMLElement>(".Modal__overlay");
 		if (!overlay) continue;
-		const layer = Number.parseFloat(window.getComputedStyle(overlay).zIndex);
+		const layer = Number.parseFloat(
+			overlay.style?.zIndex || window.getComputedStyle(overlay).zIndex,
+		);
 		const resolvedLayer = Number.isFinite(layer) ? layer : 0;
 		if (resolvedLayer >= topLayer) {
 			top = dialog;
@@ -172,6 +176,7 @@ export function useModalController({
 	checkboxDefaultChecked,
 	getConfirmValue,
 	cancelDisabled,
+	zIndex: requestedZIndex,
 }: Pick<
 	ModalProps,
 	| "defaultValue"
@@ -182,7 +187,21 @@ export function useModalController({
 	| "checkboxDefaultChecked"
 	| "getConfirmValue"
 	| "cancelDisabled"
+	| "zIndex"
 >) {
+	const [modalId] = useState(
+		() => `modal-${Math.random().toString(36).slice(2)}`,
+	);
+	const [zIndex] = useState(() =>
+		acquireModalZIndex(modalId, requestedZIndex),
+	);
+
+	useEffect(() => {
+		return () => {
+			releaseModalZIndex(modalId);
+		};
+	}, [modalId]);
+
 	const [inputValue, setInputValue] = useState(defaultValue || "");
 	const [checkboxValue, setCheckboxValue] = useState(
 		Boolean(checkboxDefaultChecked),
@@ -261,6 +280,7 @@ export function useModalController({
 	});
 
 	return {
+		zIndex,
 		inputValue,
 		setInputValue,
 		checkboxValue,
