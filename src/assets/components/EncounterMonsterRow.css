@@ -26,16 +26,19 @@
 }
 
 .EncounterMonsterRow.is_current_turn {
-	border-color: color-mix(in srgb, var(--success, #22c55e), transparent 50%);
-	border-left-color: var(--success, #22c55e);
-	background: color-mix(in srgb, var(--success, #22c55e), transparent 90%);
-	box-shadow: 0 0 16px color-mix(in srgb, var(--success, #22c55e), transparent 90%);
+	border-color: color-mix(in srgb, #f59e0b, transparent 40%);
+	border-left-color: #f59e0b;
+	border-left-width: 4px;
+	background: color-mix(in srgb, #f59e0b, transparent 92%);
+	box-shadow: 0 0 16px color-mix(in srgb, #f59e0b, transparent 80%);
 }
 
 .EncounterMonsterRow.is_active.is_current_turn {
-	border-color: color-mix(in srgb, var(--accent), transparent 50%);
-	border-left-color: var(--success, #22c55e);
-	background: color-mix(in srgb, var(--accent), var(--success, #22c55e) 15%);
+	border-color: color-mix(in srgb, var(--accent), transparent 40%);
+	border-left-color: #f59e0b;
+	border-left-width: 4px;
+	background: color-mix(in srgb, var(--accent), transparent 90%);
+	box-shadow: 0 0 18px color-mix(in srgb, #f59e0b, transparent 75%) !important;
 }
 
 .EncounterMonsterRow.is_dragging {
@@ -213,13 +216,15 @@
 .EncounterMonsterRow__condition {
 	display: inline-flex;
 	align-items: center;
-	gap: var(--space-1);
+	gap: 2px;
 	max-width: 100%;
-	padding-left: var(--space-2);
-	border-radius: var(--radius-sm);
-	background: color-mix(in srgb, var(--warning), transparent 88%);
-	color: var(--text);
+	padding: 2px 4px 2px var(--space-2);
+	border-radius: var(--radius-pill);
+	background: color-mix(in srgb, var(--warning), transparent 85%);
+	border: 1px solid color-mix(in srgb, var(--warning), transparent 65%);
+	color: var(--text-bright);
 	font-size: 0.75rem;
+	line-height: 1.2;
 }
 
 .EncounterMonsterRow__condition span {
@@ -227,24 +232,48 @@
 	overflow-wrap: anywhere;
 }
 
-.EncounterMonsterRow__condition button,
-.EncounterMonsterRow__addCondition {
+.EncounterMonsterRow__condition button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	min-width: 18px;
+	min-height: 18px;
+	padding: 0;
 	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--muted);
+	font-size: 13px;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.EncounterMonsterRow__condition button:hover {
+	background: color-mix(in srgb, var(--text), transparent 85%);
+	color: var(--text-bright);
+}
+
+.EncounterMonsterRow__addCondition {
+	display: inline-flex;
+	align-items: center;
+	border: 1px dashed color-mix(in srgb, var(--accent), transparent 60%);
+	border-radius: var(--radius-pill);
 	background: transparent;
 	color: var(--accent);
 	font: inherit;
-	cursor: pointer;
-}
-
-.EncounterMonsterRow__addCondition {
-	min-height: var(--control-h-sm);
-	padding: var(--space-1) var(--space-2);
 	font-size: 0.75rem;
+	line-height: 1.2;
+	padding: 2px var(--space-2);
+	cursor: pointer;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.EncounterMonsterRow__condition button {
-	min-width: var(--control-h-sm);
-	min-height: var(--control-h-sm);
+.EncounterMonsterRow__addCondition:hover {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), transparent 92%);
 }
 
 .EncounterMonsterRow__conditions button:focus-visible {

@@ -357,14 +357,19 @@
 	flex-wrap: wrap;
 	gap: var(--space-3);
 	margin: var(--space-4) var(--space-6) 0;
-	padding: var(--space-3);
-	border: 1px solid var(--border);
+	padding: var(--space-3) var(--space-4);
+	border: 1px solid color-mix(in srgb, var(--accent), transparent 75%);
 	border-radius: var(--radius-md);
+	background: color-mix(in srgb, var(--accent), transparent 96%);
+	box-shadow: var(--shadow-sm);
 }
 
 .EncounterView__turnBar > span {
 	min-width: 0;
 	overflow-wrap: anywhere;
+	font-weight: 600;
+	font-size: 0.95rem;
+	color: var(--text-bright);
 }
 
 .EncounterView__turnBarActions {
