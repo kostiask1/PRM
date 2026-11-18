@@ -4,6 +4,7 @@ import type { SessionScene } from "../../../../entities/session/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import { Button, DraggableList } from "../../../../shared/ui/index.js";
 import { makeHistoryTargetId } from "../../../../entities/history/index.js";
+import { renderMentionText } from "../../../../features/entity-link/index.js";
 
 interface SessionScenesSectionProps {
  scenes: SessionScene[];
@@ -24,7 +25,7 @@ export default function SessionScenesSection({ scenes, selectedScene, onAddScene
     <DraggableList items={scenes} onReorder={onReorder} keyExtractor={(scene) => scene.id} keyboardReorder getKeyboardReorderLabel={(_scene, index) => lang.t("Reorder scene {number} (arrow keys)", { number: index + 1 })} renderItem={(scene, _dragging, index) => (
      <button className="SessionWorkspace__scene" type="button" aria-pressed={selectedScene?.id === scene.id} onClick={() => { onOpenScene(scene); editorRef.current?.querySelectorAll<HTMLElement>(":scope > [data-scene-index]")[index]?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>
       <span className="WorkspaceEyebrow">{lang.t("Scene {number}", { number: String(index + 1).padStart(2, "0") })}</span>
-      <strong>{String(scene.name || scene.title || scene.texts?.summary || lang.t("Untitled")).split("\n")[0]}</strong>
+      <strong>{renderMentionText(String(scene.name || scene.title || scene.texts?.summary || lang.t("Untitled")).split("\n")[0])}</strong>
       <small>{lang.t(scene.encounterId !== null && scene.encounterId !== undefined ? "Combat encounter" : "Preparation")}</small>
      </button>
     )} />
