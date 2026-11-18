@@ -299,6 +299,21 @@
     cursor: pointer;
 }
 
+.Sidebar > .Tooltip__trigger,
+.Sidebar__links > .Tooltip__trigger,
+.Sidebar__section > .Tooltip__trigger,
+.Sidebar__resource_list > .Tooltip__trigger,
+.Sidebar__footerGrid > .Tooltip__trigger {
+    display: grid;
+    width: 100%;
+}
+
+.Sidebar__title > .Tooltip__trigger,
+.Sidebar__historyActions > .Tooltip__trigger {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
 .Sidebar__backupLoader {
     width: var(--size-4);
     height: var(--size-4);

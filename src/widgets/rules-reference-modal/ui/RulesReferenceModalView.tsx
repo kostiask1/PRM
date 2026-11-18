@@ -59,7 +59,7 @@ function ReferenceSearch({ query, isDetailedSearch, canNavigateBack, canNavigate
 				<Button variant="ghost" size={Button.SIZES.SMALL} icon="back" aria-label={lang.t("Back")} onClick={() => onNavigateHistory(-1)} disabled={!canNavigateBack} title={lang.t("Back")} className="RulesReferenceModalContent__nav_btn" />
 				<Button variant="ghost" size={Button.SIZES.SMALL} icon="forward" aria-label={lang.t("Forward")} onClick={() => onNavigateHistory(1)} disabled={!canNavigateForward} title={lang.t("Forward")} className="RulesReferenceModalContent__nav_btn" />
 			</div>
-			<Input aria-label={lang.t("Search")} value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={lang.t("Search")} autoFocus />
+			<Input aria-label={lang.t("Search")} value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={lang.t("Search")} />
 			<Button variant={isDetailedSearch ? "primary" : "ghost"} icon="search-detailed" aria-label={lang.t("Detailed search")} aria-pressed={isDetailedSearch} onClick={onToggleDetailedSearch} title={lang.t("Detailed search")} className="DetailedSearchButton RulesReferenceModalContent__detailed_search_btn" />
 		</div>
 	);

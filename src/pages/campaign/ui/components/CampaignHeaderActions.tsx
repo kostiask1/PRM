@@ -4,6 +4,7 @@ import "../../../../assets/components/CampaignHeaderActions.css";
 import { classNames, lang } from "../../../../shared/lib/index.js";
 import {
 	Button,
+	Tooltip,
 	UndoRedoButtons,
 	usePointerDownOutsideDismissal,
 } from "../../../../shared/ui/index.js";
@@ -53,16 +54,18 @@ export default function CampaignHeaderActions({
 				is_open: isHeaderActionsOpen,
 			})}
 		>
-			<Button
-				variant="ghost"
-				size={Button.SIZES.SMALL}
-				icon="search"
-				aria-label={lang.t("Global search")}
-				onClick={onOpenSearch}
-				title={lang.t("Global search")}
-			>
-				{lang.t("Search")}
-			</Button>
+			<Tooltip delay={1200} content="CTRL+K">
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon="search"
+					aria-label={lang.t("Global search")}
+					data-global-search-trigger="true"
+					onClick={onOpenSearch}
+				>
+					{lang.t("Search")}
+				</Button>
+			</Tooltip>
 			<div className="CampaignHeaderActions__history" role="group" aria-label={lang.t("Campaign history")}>
 			<span className="CampaignHeaderActions__historyScope">{lang.t("Campaign history")}</span>
 			<UndoRedoButtons

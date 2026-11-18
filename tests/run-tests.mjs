@@ -316,9 +316,12 @@ import {
 	getSidebarCampaignSelection,
 	getSidebarClassName,
 	getSidebarErrorMessage,
+	getSidebarShortcutAction,
 	groupSidebarCampaigns,
+	isSidebarEditableTarget,
 	isSidebarToggleKey,
 	mergeSidebarCampaignGroup,
+	SIDEBAR_SHORTCUT_LABELS,
 } from "../src/widgets/sidebar/model.js";
 import {
 	buildAiImagePromptGenerationPlan,
@@ -53422,6 +53425,49 @@ await run("sidebar keeps campaign navigation and ordering policies stable", () =
 		getSidebarErrorMessage({ message: "небезпечне поле" }, "Невідома помилка"),
 		"Невідома помилка",
 	);
+	assert.deepEqual(SIDEBAR_SHORTCUT_LABELS, {
+		bestiary: "CTRL+B",
+		spells: "CTRL+S",
+		rulesReference: "CTRL+/",
+		gallery: "CTRL+G",
+		diceCalculator: "CTRL+D",
+		playerQuestions: "CTRL+P",
+		settings: "CTRL+,",
+		newCampaign: "ALT+N",
+		exportData: "CTRL+SHIFT+E",
+		importData: "CTRL+SHIFT+I",
+		undo: "CTRL+Z",
+		redo: "CTRL+Y",
+		globalSearch: "CTRL+K",
+		aiAssistant: "CTRL+J",
+	});
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "KeyB", key: "b" }), "bestiary");
+	assert.equal(getSidebarShortcutAction({ metaKey: true, key: "и" }), "bestiary");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "KeyS", key: "і" }), "spells");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, key: "ї" }), "spells");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "Slash", key: "." }), "rulesReference");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, key: "/" }), "rulesReference");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "Period", key: "." }), null);
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "KeyG", key: "п" }), "gallery");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "KeyP", key: "з" }), "playerQuestions");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "Comma", key: "б" }), "settings");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, key: "," }), "settings");
+	assert.equal(getSidebarShortcutAction({ altKey: true, code: "KeyN", key: "т" }), "newCampaign");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, shiftKey: true, code: "KeyE", key: "у" }), "exportData");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, shiftKey: true, code: "KeyI", key: "ш" }), "importData");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "KeyK", key: "л" }), "globalSearch");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "KeyJ", key: "о" }), "aiAssistant");
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "KeyB", isEditableTarget: true }), null);
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, code: "KeyB", repeat: true }), null);
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, altKey: true, code: "KeyB" }), null);
+	assert.equal(getSidebarShortcutAction({ ctrlKey: true, shiftKey: true, code: "KeyB" }), null);
+	assert.equal(isSidebarEditableTarget({ tagName: "input" }), true);
+	assert.equal(isSidebarEditableTarget({ tagName: "TEXTAREA" }), true);
+	assert.equal(isSidebarEditableTarget({ tagName: "select" }), true);
+	assert.equal(isSidebarEditableTarget({ tagName: "DIV", isContentEditable: true }), true);
+	assert.equal(isSidebarEditableTarget({ tagName: "SPAN", closest: (s) => (s === "[contenteditable='true']" ? {} : null) }), true);
+	assert.equal(isSidebarEditableTarget({ tagName: "DIV", isContentEditable: false }), false);
+	assert.equal(isSidebarEditableTarget(null), false);
 });
 
 await run("rules reference modal owns spells and bestiary navigation", async () => {
@@ -65620,6 +65666,16 @@ await run(
 			"Ctrl+1-6 — Headings",
 			"Ctrl+Q — Quote",
 			"Ctrl+click to open entity",
+			"Ctrl+B — Bestiary",
+			"Ctrl+S — Spells",
+			"Ctrl+/ — Rules Reference",
+			"Ctrl+G — Gallery",
+			"Ctrl+D — Dice calculator",
+			"Ctrl+P — Player questions",
+			"Ctrl+, — Settings",
+			"Alt+N — New campaign",
+			"Ctrl+K — Global search",
+			"Ctrl+J — AI assistant",
 		]) {
 			assert.equal(typeof uk[key], "string", `${key} is translated`);
 		}

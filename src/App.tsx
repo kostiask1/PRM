@@ -199,7 +199,7 @@ export default function App() {
 							isGalleryActive={isGalleryOpen}
 							onOpenGallery={() => {
 								setMobileSidebarOpen(false);
-								setGalleryOpen(true);
+								setGalleryOpen((isOpen) => !isOpen);
 							}}
 							onOpenDiceCalculator={() => {
 								setMobileSidebarOpen(false);

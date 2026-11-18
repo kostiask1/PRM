@@ -1,5 +1,6 @@
 import { lang } from "../../../shared/lib/index.js";
-import { Icon, type IconName } from "../../../shared/ui/index.js";
+import { Icon, Tooltip, type IconName } from "../../../shared/ui/index.js";
+import { SIDEBAR_SHORTCUT_LABELS } from "../model/sidebar.ts";
 
 const EXTERNAL_RESOURCES: Array<{
 	href: string;
@@ -63,14 +64,16 @@ export default function SidebarResources({
 						</span>
 					</a>
 				))}
-				<button
-					type="button"
-					className="Sidebar__resource_item"
-					onClick={onOpenPlayerQuestions}
-				>
-					<Icon name="help" size={16} />
-					<span>{lang.t("Player questions")}</span>
-				</button>
+				<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.playerQuestions}>
+					<button
+						type="button"
+						className="Sidebar__resource_item"
+						onClick={onOpenPlayerQuestions}
+					>
+						<Icon name="help" size={16} />
+						<span>{lang.t("Player questions")}</span>
+					</button>
+				</Tooltip>
 			</div>
 		</div>
 	);

@@ -11,6 +11,19 @@ const HOTKEYS = [
 	"Ctrl+Q — Quote",
 ] as const;
 
+const NAVIGATION_HOTKEYS = [
+	"Ctrl+B — Bestiary",
+	"Ctrl+S — Spells",
+	"Ctrl+/ — Rules Reference",
+	"Ctrl+G — Gallery",
+	"Ctrl+D — Dice calculator",
+	"Ctrl+P — Player questions",
+	"Ctrl+, — Settings",
+	"Alt+N — New campaign",
+	"Ctrl+K — Global search",
+	"Ctrl+J — AI assistant",
+] as const;
+
 export default function ProjectGuide() {
 	const featureGroups = [
 		{
@@ -88,6 +101,14 @@ export default function ProjectGuide() {
 						<h3>{lang.t("Notes hotkeys:")}</h3>
 						<ul>
 							{HOTKEYS.map((hotkey) => (
+								<li key={hotkey}>{lang.t(hotkey)}</li>
+							))}
+						</ul>
+					</div>
+					<div className="ProjectGuide__hotkeys">
+						<h3>{lang.t("Hotkeys:")}</h3>
+						<ul>
+							{NAVIGATION_HOTKEYS.map((hotkey) => (
 								<li key={hotkey}>{lang.t(hotkey)}</li>
 							))}
 						</ul>

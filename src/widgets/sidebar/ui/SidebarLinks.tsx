@@ -1,18 +1,21 @@
 import type { MouseEvent, ReactNode } from "react";
 
 import { lang } from "../../../shared/lib/index.js";
-import { Icon, type IconName } from "../../../shared/ui/index.js";
+import { Icon, Tooltip, type IconName } from "../../../shared/ui/index.js";
+import { SIDEBAR_SHORTCUT_LABELS } from "../model/sidebar.ts";
 
 function SidebarLink({
 	icon,
 	label,
 	onClick,
+	shortcut,
 	active = false,
 	href = "#",
 }: {
 	icon: IconName;
 	label: ReactNode;
 	onClick: () => void;
+	shortcut?: string;
 	active?: boolean;
 	href?: string;
 }) {
@@ -23,10 +26,12 @@ function SidebarLink({
 	};
 
 	return (
-		<a href={href} className={`Sidebar__link${active ? " Sidebar__link__active" : ""}`} aria-current={active ? "page" : undefined} onClick={handleClick}>
-			<Icon name={icon} />
-			<span>{label}</span>
-		</a>
+		<Tooltip delay={1200} content={shortcut} disabled={!shortcut}>
+			<a href={href} className={`Sidebar__link${active ? " Sidebar__link__active" : ""}`} aria-current={active ? "page" : undefined} onClick={handleClick}>
+				<Icon name={icon} />
+				<span>{label}</span>
+			</a>
+		</Tooltip>
 	);
 }
 
@@ -51,21 +56,25 @@ export default function SidebarLinks({
 			<SidebarLink
 				icon="skull"
 				label={lang.t("Bestiary")}
+				shortcut={SIDEBAR_SHORTCUT_LABELS.bestiary}
 				onClick={onOpenBestiary}
 			/>
 			<SidebarLink
 				icon="magic"
 				label={lang.t("Spells")}
+				shortcut={SIDEBAR_SHORTCUT_LABELS.spells}
 				onClick={onOpenSpells}
 			/>
 			<SidebarLink
 				icon="list"
 				label={lang.t("Rules Reference")}
+				shortcut={SIDEBAR_SHORTCUT_LABELS.rulesReference}
 				onClick={onOpenRulesReference}
 			/>
 			<SidebarLink
 				icon="image"
 				label={lang.t("Gallery")}
+				shortcut={SIDEBAR_SHORTCUT_LABELS.gallery}
 				active={isGalleryActive}
 				onClick={onOpenGallery}
 			/>

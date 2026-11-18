@@ -57,8 +57,9 @@ export default function SessionHeaderActions({
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon="search"
+					data-global-search-trigger="true"
 					onClick={onOpenSearch}
-					title={lang.t("Global search")}
+					title={`${lang.t("Global search")} (Ctrl+K)`}
 				>
 					{lang.t("Search")}
 				</Button>

@@ -7,11 +7,13 @@ import {
 	DraggableList,
 	Icon,
 	ListCard,
+	Tooltip,
 } from "../../../shared/ui/index.js";
 import { StatusBadge } from "../../../features/status-badge/index.js";
 import { makeHistoryTargetId } from "../../../entities/history/index.js";
 import {
 	isSidebarToggleKey,
+	SIDEBAR_SHORTCUT_LABELS,
 	type SidebarCampaign,
 	type SidebarCampaignGroup,
 	type SidebarCampaignGroups,
@@ -130,9 +132,11 @@ export default function SidebarCampaignSection({
 					<span>{lang.t("Campaigns")}</span>
 				</h2>
 			</div>
-			<Button variant="create" onClick={onCreateCampaign} icon="plus">
-				<span>{lang.t("New campaign")}</span>
-			</Button>
+			<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.newCampaign}>
+				<Button variant="create" onClick={onCreateCampaign} icon="plus">
+					<span>{lang.t("New campaign")}</span>
+				</Button>
+			</Tooltip>
 
 			<DraggableList
 				items={groups.active}

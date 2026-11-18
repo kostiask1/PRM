@@ -14,14 +14,17 @@ import {
 	type BackupImportStrategy,
 } from "../../../features/backup/index.js";
 import { downloadBlob, lang } from "../../../shared/lib/index.js";
-import { Button, Icon } from "../../../shared/ui/index.js";
+import { Button, Icon, Tooltip } from "../../../shared/ui/index.js";
 import {
 	buildSidebarCampaignOrder,
 	getSidebarCampaignSelection,
 	getSidebarClassName,
 	getSidebarErrorMessage,
+	getSidebarShortcutAction,
 	groupSidebarCampaigns,
+	isSidebarEditableTarget,
 	mergeSidebarCampaignGroup,
+	SIDEBAR_SHORTCUT_LABELS,
 	type SidebarCampaign,
 	type SidebarCampaignGroup,
 } from "../model/sidebar.ts";
@@ -280,6 +283,85 @@ export default function Sidebar({
 		}
 	};
 
+	const shortcutHandlersRef = useRef({
+		bestiary: () => handleOpenRulesReference("bestiary", { forceTab: true }),
+		spells: () => handleOpenRulesReference("spells", { forceTab: true }),
+		rulesReference: () =>
+			handleOpenRulesReference("conditions", { forceTab: true }),
+		gallery: handleOpenGallery,
+		playerQuestions: handleOpenPlayerQuestions,
+		settings: handleOpenSettings,
+		newCampaign: () => {
+			onClose?.();
+			onCreateCampaign();
+		},
+		exportData: () => {
+			void handleExport();
+		},
+		importData: handleOpenImportDb,
+	});
+	shortcutHandlersRef.current = {
+		bestiary: () => handleOpenRulesReference("bestiary", { forceTab: true }),
+		spells: () => handleOpenRulesReference("spells", { forceTab: true }),
+		rulesReference: () =>
+			handleOpenRulesReference("conditions", { forceTab: true }),
+		gallery: handleOpenGallery,
+		playerQuestions: handleOpenPlayerQuestions,
+		settings: handleOpenSettings,
+		newCampaign: () => {
+			onClose?.();
+			onCreateCampaign();
+		},
+		exportData: () => {
+			void handleExport();
+		},
+		importData: handleOpenImportDb,
+	};
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			const action = getSidebarShortcutAction({
+				key: event.key,
+				code: event.code,
+				ctrlKey: event.ctrlKey,
+				metaKey: event.metaKey,
+				altKey: event.altKey,
+				shiftKey: event.shiftKey,
+				repeat: event.repeat,
+				isEditableTarget: isSidebarEditableTarget(event.target),
+			});
+			if (!action) return;
+
+			if (action === "globalSearch") {
+				if (document.querySelector(".Modal__overlay")) return;
+				const trigger = document.querySelector<HTMLElement>(
+					'[data-global-search-trigger="true"]',
+				);
+				if (!trigger) return;
+				event.preventDefault();
+				trigger.click();
+				return;
+			}
+
+			if (action === "aiAssistant") {
+				const toggles = document.querySelectorAll<HTMLButtonElement>(
+					".AiAssistantPanel__toggle button",
+				);
+				const activeToggle = toggles[toggles.length - 1];
+				if (!activeToggle) return;
+				event.preventDefault();
+				activeToggle.click();
+				return;
+			}
+
+			event.preventDefault();
+			shortcutHandlersRef.current[action]();
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
+
 	return (
 		<>
 			<aside
@@ -287,34 +369,38 @@ export default function Sidebar({
 			>
 				<div className="Sidebar__header">
 					<h1 className="Sidebar__title">
-						<button
-							type="button"
-							className="Sidebar__brandIcon"
-							aria-label={lang.t("Dice calculator")}
-							onClick={onOpenDiceCalculator}
-						><Icon name="dice" size={20} /></button>
+						<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.diceCalculator}>
+							<button
+								type="button"
+								className="Sidebar__brandIcon"
+								aria-label={lang.t("Dice calculator")}
+								onClick={onOpenDiceCalculator}
+							><Icon name="dice" size={20} /></button>
+						</Tooltip>
 						{lang.t("Session notebook")}
 					</h1>
 					<div className="Sidebar__historyActions" role="group" aria-label={lang.t("Application history")}>
 						<span className="Sidebar__historyScope">{lang.t("Application history")}</span>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="undo"
-							aria-label={`${lang.t("Application history")}: ${applicationHistory.undoLabel}`}
-							disabled={!applicationHistory.canUndo || applicationHistory.isRestoring}
-							onClick={() => void applicationHistory.handleUndo()}
-							title={`${lang.t("Application history")}: ${applicationHistory.undoLabel}`}
-						/>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="redo"
-							aria-label={`${lang.t("Application history")}: ${applicationHistory.redoLabel}`}
-							disabled={!applicationHistory.canRedo || applicationHistory.isRestoring}
-							onClick={() => void applicationHistory.handleRedo()}
-							title={`${lang.t("Application history")}: ${applicationHistory.redoLabel}`}
-						/>
+						<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.undo}>
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="undo"
+								aria-label={`${lang.t("Application history")}: ${applicationHistory.undoLabel}`}
+								disabled={!applicationHistory.canUndo || applicationHistory.isRestoring}
+								onClick={() => void applicationHistory.handleUndo()}
+							/>
+						</Tooltip>
+						<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.redo}>
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="redo"
+								aria-label={`${lang.t("Application history")}: ${applicationHistory.redoLabel}`}
+								disabled={!applicationHistory.canRedo || applicationHistory.isRestoring}
+								onClick={() => void applicationHistory.handleRedo()}
+							/>
+						</Tooltip>
 					</div>
 				</div>
 
@@ -352,14 +438,16 @@ export default function Sidebar({
 					onExport={() => void handleExport()}
 					onImport={handleOpenImportDb}
 				/>
-				<button
-					type="button"
-					className="Sidebar__link Sidebar__settings"
-					onClick={handleOpenSettings}
-				>
-					<Icon name="settings" size={20} />
-					<span>{lang.t("Settings")}</span>
-				</button>
+				<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.settings}>
+					<button
+						type="button"
+						className="Sidebar__link Sidebar__settings"
+						onClick={handleOpenSettings}
+					>
+						<Icon name="settings" size={20} />
+						<span>{lang.t("Settings")}</span>
+					</button>
+				</Tooltip>
 			</aside>
 		</>
 	);
