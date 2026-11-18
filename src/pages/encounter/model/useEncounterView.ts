@@ -61,6 +61,7 @@ import {
 	getEncounterSessionEncounters,
 	getEncounterUpdatePlan,
 	advanceEncounterTurn,
+	resetEncounterTurns,
 	getSelectedEncounterParticipant,
 	isEncounterEditableTarget,
 	parseEncounterImport,
@@ -376,8 +377,22 @@ export default function useEncounterView(): EncounterViewModel {
 		const next = advanceEncounterTurn(current);
 		if (next !== current) {
 			pendingTurnRef.current = { before: current, after: next };
-			applyEncounterUpdate(next);
+			const nextTurnParticipant = next.monsters.find(
+				(item) => String(item.instanceId) === String(next.currentTurnId),
+			);
+			const shouldSelect =
+				nextTurnParticipant && !isEncounterCharacterParticipant(nextTurnParticipant);
+			applyEncounterUpdate(next, {
+				preferredId: shouldSelect ? String(nextTurnParticipant.instanceId) : undefined,
+			});
 		}
+	}, [applyEncounterUpdate]);
+
+	const resetTurns = useCallback(() => {
+		const current = encounterRef.current;
+		if (!current || current.currentTurnId == null) return;
+		const next = resetEncounterTurns(current);
+		applyEncounterUpdate(next);
 	}, [applyEncounterUpdate]);
 
 	const reportParticipantSyncError = useCallback((error: unknown, operation: string) => {
@@ -796,6 +811,7 @@ export default function useEncounterView(): EncounterViewModel {
 		averageInitiative: initiativeStats.average,
 		initiativeStats,
 		advanceTurn,
+		resetTurns,
 		saveFailed,
 		retryEncounterSave,
 		handleFileChange,

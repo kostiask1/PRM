@@ -197,6 +197,8 @@ export default function SpellsBrowser({
 		requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
 	};
 
+
+
 	return (
 		<div className="Spells"><div className="Spells__body">
 			<SpellsBrowserControls

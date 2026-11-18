@@ -597,6 +597,7 @@
 	"Participant unavailable": "Учасник недоступний",
 	"Start turns": "Почати ходи",
 	"Next turn": "Наступний хід",
+	"Exit turn mode": "Вийти з покрокового режиму",
 	"Next image": "Наступне зображення",
 	"Retry saving": "Повторити збереження",
 	"Encounter changes could not be saved after leaving. Reopen the encounter and enter them again.": "Не вдалося зберегти зміни бою після виходу. Відкрийте бій і внесіть їх знову.",

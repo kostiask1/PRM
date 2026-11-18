@@ -65,7 +65,86 @@ const SPELL_FIELDS = new Set([
 	"duration",
 	"entries",
 	"entriesHigherLevel",
+	"sources",
+	"versions",
 ]);
+
+const SOURCE_PRIORITIES = new Map([
+	["XPHB", 3],
+	["XDMG", 3],
+	["PHB", 2],
+	["DMG", 2],
+]);
+
+function getSourcePriority(source) {
+	return SOURCE_PRIORITIES.get(normalizeSource(source)) || 1;
+}
+
+function groupSpellsByName(spells) {
+	const byName = new Map();
+	for (const spell of spells) {
+		const key = String(spell.name || "").trim().toLowerCase();
+		let group = byName.get(key);
+		if (!group) {
+			group = [];
+			byName.set(key, group);
+		}
+		if (Array.isArray(spell.versions) && spell.versions.length > 0) {
+			for (const v of spell.versions) {
+				group.push(v);
+			}
+		} else {
+			group.push(spell);
+		}
+	}
+
+	const grouped = [];
+	for (const group of byName.values()) {
+		if (group.length === 1) {
+			const single = group[0];
+			grouped.push(
+				pickFields(
+					{
+						...single,
+						sources: [single.source].filter(Boolean),
+					},
+					SPELL_FIELDS,
+				),
+			);
+			continue;
+		}
+
+		const bySource = new Map();
+		for (const ver of group) {
+			const s = normalizeSource(ver.source);
+			if (!bySource.has(s)) bySource.set(s, ver);
+		}
+		const uniqueVersions = Array.from(bySource.values());
+
+		uniqueVersions.sort((a, b) => {
+			const priorityDiff = getSourcePriority(b.source) - getSourcePriority(a.source);
+			if (priorityDiff !== 0) return priorityDiff;
+			return String(a.source || "").localeCompare(String(b.source || ""));
+		});
+
+		const primary = uniqueVersions[0];
+		const sources = uniqueVersions.map((v) => v.source).filter(Boolean);
+		const versions = uniqueVersions.map((v) => pickFields(v, SPELL_FIELDS));
+
+		grouped.push(
+			pickFields(
+				{
+					...primary,
+					sources,
+					versions,
+				},
+				SPELL_FIELDS,
+			),
+		);
+	}
+
+	return grouped;
+}
 
 if (args.has("--help") || args.has("-h")) {
 	console.log(`Usage: node scripts/build-database-bundles.mjs [--dry-run] [--delete-sources]
@@ -222,9 +301,10 @@ async function buildSpellsBundle() {
 		);
 	}
 
-	spells.sort(sortByNameAndSource);
-	await writeBundle(SPELLS_BUNDLE_PATH, spells);
-	return { count: spells.length, sourceFiles };
+	const bundledSpells = groupSpellsByName(spells);
+	bundledSpells.sort(sortByNameAndSource);
+	await writeBundle(SPELLS_BUNDLE_PATH, bundledSpells);
+	return { count: bundledSpells.length, sourceFiles };
 }
 
 async function deleteSpellSourcesFile() {

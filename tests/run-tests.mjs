@@ -280,6 +280,7 @@ import {
 	getSpellListItemPresentation,
 	getSpellSchoolOptions,
 	getValidSourceFilter,
+	groupSpellsByName,
 	normalizeCampaignSourceSettings,
 	normalizeSpellList,
 	parseSpellReferenceKey,
@@ -480,6 +481,7 @@ import {
 	executeEncounterMonsterDropPlan,
 	executeEncounterUpdatePlan,
 	advanceEncounterTurn,
+	resetEncounterTurns,
 	getEncounterGridMonsterKey,
 	getEncounterGridProjection,
 	getEncounterAddCharacterPlan,
@@ -2805,16 +2807,16 @@ await run(
 
 		assert.match(
 			spellCardSource,
-			/export interface SpellCardProps\s*\{\s*spell\?: SpellData \| null;\s*searchHighlight\?: string;\s*renderOptions\?: RichContentRenderOptions;\s*\}/,
+			/export interface SpellCardProps\s*\{\s*spell\?: SpellData \| null;\s*searchHighlight\?: string;\s*renderOptions\?: RichContentRenderOptions;/,
 		);
 		assert.match(
 			spellCardSource,
-			/function SpellCard\(\{\s*spell,\s*searchHighlight = "",\s*renderOptions = \{\}\s*\}: SpellCardProps\)/,
+			/function SpellCard\(\{\s*spell,\s*searchHighlight = "",\s*renderOptions = \{\}/,
 		);
 		assert.match(spellCardSource, /if \(!spell\) return null;/);
 		assert.match(
 			spellCardSource,
-			/renderSpellCardContent\(spell\.entries, searchHighlight, renderOptions\)/,
+			/renderSpellCardContent\((?:spell|activeSpellData)\.entries, searchHighlight, renderOptions\)/,
 		);
 		assert.match(
 			spellCardSource,
@@ -10072,7 +10074,7 @@ await run(
 		}
 		assert.match(
 			spellCardSource,
-			/renderSpellCardContent\(spell\.entries, searchHighlight, renderOptions\)/,
+			/renderSpellCardContent\((?:spell|activeSpellData)\.entries, searchHighlight, renderOptions\)/,
 		);
 		assert.match(
 			rulesViewSource,
@@ -29872,6 +29874,16 @@ await run("rules tooltip text produces stable interactive roll descriptors", () 
 			},
 		],
 	);
+	const conditionParts = buildTooltipTextParts(
+		"{@action Attack|XPHB} rolls against you have {@variantrule Advantage|XPHB}, and your attack rolls have {@variantrule Disadvantage|XPHB}.",
+	);
+	assert.deepEqual(
+		conditionParts.filter((part) => part.kind === "reference"),
+		[
+			{ kind: "reference", referenceType: "variantrule", name: "Advantage", label: "Advantage" },
+			{ kind: "reference", referenceType: "variantrule", name: "Disadvantage", label: "Disadvantage" },
+		],
+	);
 });
 
 await run("dice calculator model preserves request, formula, and result policies", () => {
@@ -48460,6 +48472,131 @@ await run("spells browser policies preserve references, filters, sorting, and se
 	assert.equal(insertedSpells[0], rowSpell);
 });
 
+await run("spells browser policies group multi-source spells and handle source switching", () => {
+	const multiSpells = [
+		{ name: "Lightning Bolt", source: "PHB", level: 3, school: "V", classes: ["Sorcerer", "Wizard"], entries: ["A stroke of lightning..."] },
+		{ name: "Lightning Bolt", source: "XPHB", level: 3, school: "V", classes: ["Evoker", "Mage", "Sorcerer", "Wizard"], entries: ["A 5-foot-wide line of lightning..."] },
+		{ name: "Fireball", source: "PHB", level: 3, school: "V", classes: ["Sorcerer", "Wizard"], entries: ["A bright streak..."] },
+	];
+
+	// Grouping
+	const grouped = groupSpellsByName(multiSpells);
+	assert.equal(grouped.length, 2);
+	const lbGrouped = grouped.find((s) => s.name === "Lightning Bolt");
+	assert.ok(lbGrouped);
+	assert.equal(lbGrouped.source, "XPHB");
+	assert.deepEqual(lbGrouped.sources, ["XPHB", "PHB"]);
+	assert.equal(lbGrouped.versions?.length, 2);
+
+	// Filtering with sourceFilter = "all"
+	const filteredAll = filterSpells(multiSpells, {
+		search: "",
+		detailedSearch: false,
+		selectedLevel: "all",
+		selectedClass: "all",
+		selectedSchool: "all",
+		selectedSources: ["PHB", "XPHB"],
+		sourceFilter: "all",
+	}, () => true);
+	assert.equal(filteredAll.length, 2);
+	const lbInAll = filteredAll.find((s) => s.name === "Lightning Bolt");
+	assert.ok(lbInAll);
+	assert.equal(lbInAll.source, "XPHB");
+	assert.deepEqual(lbInAll.sources, ["XPHB", "PHB"]);
+
+	// Filtering with sourceFilter = "PHB"
+	const filteredPhb = filterSpells(multiSpells, {
+		search: "",
+		detailedSearch: false,
+		selectedLevel: "all",
+		selectedClass: "all",
+		selectedSchool: "all",
+		selectedSources: ["PHB", "XPHB"],
+		sourceFilter: "PHB",
+	}, () => true);
+	assert.equal(filteredPhb.length, 2);
+	const lbInPhb = filteredPhb.find((s) => s.name === "Lightning Bolt");
+	assert.ok(lbInPhb);
+	assert.equal(lbInPhb.source, "PHB");
+
+	// Filtering with sourceFilter = "TCE" (neither spell has TCE)
+	const filteredTce = filterSpells(multiSpells, {
+		search: "",
+		detailedSearch: false,
+		selectedLevel: "all",
+		selectedClass: "all",
+		selectedSchool: "all",
+		selectedSources: ["PHB", "XPHB", "TCE"],
+		sourceFilter: "TCE",
+	}, () => true);
+	assert.equal(filteredTce.length, 0);
+
+	// Ignore sources: user disabled XPHB
+	const filteredWithoutXphb = filterSpells(multiSpells, {
+		search: "",
+		detailedSearch: false,
+		selectedLevel: "all",
+		selectedClass: "all",
+		selectedSchool: "all",
+		selectedSources: ["PHB"],
+		sourceFilter: "all",
+	}, () => true);
+	const lbWithoutXphb = filteredWithoutXphb.find((s) => s.name === "Lightning Bolt");
+	assert.ok(lbWithoutXphb);
+	assert.equal(lbWithoutXphb.source, "PHB");
+
+	// Ignore sources: user disabled both PHB and XPHB
+	const filteredWithoutBoth = filterSpells(multiSpells, {
+		search: "",
+		detailedSearch: false,
+		selectedLevel: "all",
+		selectedClass: "all",
+		selectedSchool: "all",
+		selectedSources: ["DMG"],
+		sourceFilter: "all",
+	}, () => true);
+	assert.equal(filteredWithoutBoth.length, 0);
+
+	// Filter by class exclusive to XPHB version
+	const filteredEvoker = filterSpells(multiSpells, {
+		search: "",
+		detailedSearch: false,
+		selectedLevel: "all",
+		selectedClass: "Evoker",
+		selectedSchool: "all",
+		selectedSources: ["PHB", "XPHB"],
+		sourceFilter: "all",
+	}, () => true);
+	assert.equal(filteredEvoker.length, 1);
+	assert.equal(filteredEvoker[0].name, "Lightning Bolt");
+	assert.equal(filteredEvoker[0].source, "XPHB");
+
+	// Filter by class with sourceFilter = "PHB" (Evoker is not in PHB)
+	const filteredEvokerPhb = filterSpells(multiSpells, {
+		search: "",
+		detailedSearch: false,
+		selectedLevel: "all",
+		selectedClass: "Evoker",
+		selectedSchool: "all",
+		selectedSources: ["PHB", "XPHB"],
+		sourceFilter: "PHB",
+	}, () => true);
+	assert.equal(filteredEvokerPhb.length, 0);
+
+	// Reference lookup matching multi-source spell
+	assert.equal(spellMatchesReferenceKey(lbGrouped, "Lightning Bolt|PHB"), true);
+	assert.equal(spellMatchesReferenceKey(lbGrouped, "Lightning Bolt|XPHB"), true);
+	assert.equal(spellMatchesReferenceKey(lbGrouped, "Lightning Bolt"), true);
+	assert.equal(spellMatchesReferenceKey(lbGrouped, "Lightning Bolt|TCE"), false);
+
+	const phbRefMatch = findSpellByReference(grouped, "Lightning Bolt|PHB");
+	assert.ok(phbRefMatch);
+	assert.equal(phbRefMatch.source, "PHB");
+	const xphbRefMatch = findSpellByReference(grouped, "Lightning Bolt|XPHB");
+	assert.ok(xphbRefMatch);
+	assert.equal(xphbRefMatch.source, "XPHB");
+});
+
 await run("content tokens parse hit and recharge tags safely", () => {
 	const hitOnly = extractContentTokens("Claw. +6 до влучання.");
 	assert.equal(hitOnly.length, 1);
@@ -53088,6 +53225,9 @@ await run("encounter turns follow participant identity and wrap rounds", () => {
 	const removed = advanceEncounterTurn({ ...first, monsters: [{ instanceId: "b" }] });
 	assert.equal(removed.currentTurnId, "b");
 	assert.equal(removed.round, 1);
+	const reset = resetEncounterTurns(second);
+	assert.equal(reset.currentTurnId, null);
+	assert.equal(reset.round, null);
 });
 
 await run("AI nested note edits follow identity after reordering", () => {

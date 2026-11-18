@@ -81,11 +81,21 @@ function matchesSpellSchool(spell, schoolQuery) {
 }
 
 function matchesSpellSearch(spell, criteria) {
-	return [
+	if ([
 		matchesSpellName(spell, criteria.nameQuery),
 		matchesSpellLevel(spell, criteria.level),
 		matchesSpellSchool(spell, criteria.schoolQuery),
-	].every(Boolean);
+	].every(Boolean)) {
+		return true;
+	}
+	if (Array.isArray(spell.versions)) {
+		return spell.versions.some((v) => [
+			matchesSpellName(spell, criteria.nameQuery),
+			matchesSpellLevel(v, criteria.level),
+			matchesSpellSchool(v, criteria.schoolQuery),
+		].every(Boolean));
+	}
+	return false;
 }
 
 function createSpellSearchCriteria(name, level, school) {
@@ -126,9 +136,21 @@ async function searchSpells(repository, { name = "", level, school = "" }) {
 }
 
 function projectAggregateSpellSources(spells) {
-	return [...new Set(spells.map((spell) => spell.source).filter(Boolean))].sort(
-		(left, right) => left.localeCompare(right),
-	);
+	const sources = new Set();
+	for (const spell of spells) {
+		if (spell.source) sources.add(spell.source);
+		if (Array.isArray(spell.sources)) {
+			for (const s of spell.sources) {
+				if (s) sources.add(s);
+			}
+		}
+		if (Array.isArray(spell.versions)) {
+			for (const v of spell.versions) {
+				if (v?.source) sources.add(v.source);
+			}
+		}
+	}
+	return [...sources].sort((left, right) => left.localeCompare(right));
 }
 
 async function listSpellSources(repository) {
@@ -219,14 +241,34 @@ function projectSkillFields(item) {
 }
 
 function matchesSpellSource(spell, normalizedSource) {
-	return String(spell.source || "").toUpperCase() === normalizedSource;
+	if (String(spell.source || "").toUpperCase() === normalizedSource) return true;
+	if (Array.isArray(spell.sources)) {
+		return spell.sources.some((s) => String(s || "").toUpperCase() === normalizedSource);
+	}
+	if (Array.isArray(spell.versions)) {
+		return spell.versions.some((v) => String(v?.source || "").toUpperCase() === normalizedSource);
+	}
+	return false;
 }
 
 function getAggregateSpellSource(spells, source) {
 	const sourceText = String(source);
 	if (sourceText.toLowerCase() === "all") return spells;
 	const normalizedSource = sourceText.toUpperCase();
-	return spells.filter((spell) => matchesSpellSource(spell, normalizedSource));
+	const results = [];
+	for (const spell of spells) {
+		if (Array.isArray(spell.versions)) {
+			const version = spell.versions.find((v) => String(v?.source || "").toUpperCase() === normalizedSource);
+			if (version) {
+				results.push({ ...spell, ...version, source: version.source || spell.source });
+				continue;
+			}
+		}
+		if (matchesSpellSource(spell, normalizedSource)) {
+			results.push(spell);
+		}
+	}
+	return results;
 }
 
 function createSourceNotFoundError() {

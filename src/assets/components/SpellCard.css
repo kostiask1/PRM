@@ -65,3 +65,46 @@
 	flex-direction: column;
 	gap: var(--space-2);
 }
+.SpellCard__sources {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	margin-bottom: var(--space-3);
+	flex-wrap: wrap;
+}
+
+.SpellCard__sources-label {
+	font-size: 0.85rem;
+	color: var(--muted);
+	font-weight: 500;
+}
+
+.SpellCard__source-pills {
+	display: flex;
+	gap: var(--space-1);
+	flex-wrap: wrap;
+}
+
+.SpellCard__source-pill {
+	background: color-mix(in srgb, var(--text-bright), transparent 93%);
+	color: var(--text);
+	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 85%);
+	border-radius: var(--radius-xxs);
+	padding: var(--space-1) var(--space-2);
+	font-size: 0.8rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.SpellCard__source-pill:hover {
+	background: color-mix(in srgb, var(--text-bright), transparent 85%);
+	color: var(--text-bright);
+}
+
+.SpellCard__source-pill--active {
+	background: color-mix(in srgb, var(--accent), transparent 85%);
+	color: var(--accent);
+	border-color: var(--accent);
+	font-weight: 600;
+}

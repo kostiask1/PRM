@@ -96,7 +96,14 @@ export default function EncounterPageContent({ controller }: Props) {
 			</div>}
 			<div className="EncounterView__turnBar">
 				<span>{encounter.currentTurnId == null ? lang.t("Turn tracking has not started") : lang.t("Round {round} · Turn: {name}", { round: String(encounter.round || 1), name: encounter.monsters.find((item) => String(item.instanceId) === String(encounter.currentTurnId))?.name || lang.t("Participant unavailable") })}</span>
-				<Button variant="primary" disabled={view.isSaving || !encounter.monsters.some((item) => item.instanceId != null && String(item.instanceId) !== "")} onClick={view.advanceTurn}>{encounter.currentTurnId == null ? lang.t("Start turns") : lang.t("Next turn")}</Button>
+				<div className="EncounterView__turnBarActions">
+					{encounter.currentTurnId != null && (
+						<Button variant="ghost" disabled={view.isSaving} onClick={view.resetTurns}>
+							{lang.t("Exit turn mode")}
+						</Button>
+					)}
+					<Button variant="primary" disabled={view.isSaving || !encounter.monsters.some((item) => item.instanceId != null && String(item.instanceId) !== "")} onClick={view.advanceTurn}>{encounter.currentTurnId == null ? lang.t("Start turns") : lang.t("Next turn")}</Button>
+				</div>
 			</div>
 			<div className="Panel__body EncounterView__body">
 				<div className="EncounterView__main">
@@ -118,6 +125,7 @@ export default function EncounterPageContent({ controller }: Props) {
 								onHpBlur={hpEditing.onBlur}
 								onOpenConditionPicker={setConditionTarget}
 								getParticipantInstanceId={getParticipantInstanceId}
+								isCurrentTurn={encounter.currentTurnId != null && String(encounter.currentTurnId) === String(getParticipantInstanceId(monster))}
 							/>
 						)}
 					/>

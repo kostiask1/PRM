@@ -51,6 +51,8 @@ export interface SpellData extends Record<string, unknown> {
 	duration?: SpellDuration[];
 	entries?: unknown[];
 	entriesHigherLevel?: unknown[];
+	sources?: string[];
+	versions?: SpellData[];
 }
 
 export interface SpellCardModelOptions {
@@ -230,5 +232,17 @@ export default class SpellCardModel {
 			return "";
 		}
 		return this.spell.classes.join(", ");
+	}
+
+	get versions(): SpellData[] {
+		return Array.isArray(this.spell.versions) ? (this.spell.versions as SpellData[]) : [];
+	}
+
+	get sources(): string[] {
+		if (Array.isArray(this.spell.sources)) return this.spell.sources as string[];
+		if (this.versions.length > 0) {
+			return this.versions.map((v) => v.source).filter((s): s is string => Boolean(s));
+		}
+		return this.spell.source ? [this.spell.source] : [];
 	}
 }

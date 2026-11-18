@@ -115,7 +115,7 @@ export default function SpellsBrowserContent(props: SpellsBrowserContentProps) {
 	const renderSpellItem = (index: number) => {
 		const spell = props.spells[index];
 		if (!spell) return null;
-		const selected = props.selectedSpell?.name === spell.name && props.selectedSpell?.source === spell.source;
+		const selected = props.selectedSpell?.name === spell.name;
 		return <SpellListItem spell={spell} selected={selected} search={props.search} onSelect={props.onSelect} onInsert={props.onInsert} />;
 	};
 	return (

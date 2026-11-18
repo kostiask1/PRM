@@ -33,6 +33,7 @@ interface EncounterMonsterRowProps {
 	isDragging: boolean;
 	hpDrafts: Record<string, string>;
 	selectedInstanceId?: string;
+	isCurrentTurn?: boolean;
 	view: EncounterMonsterRowView;
 	onSelect: (monster: EncounterViewParticipant) => void;
 	onHpChange: (instanceId: string, value: string) => void;
@@ -165,6 +166,7 @@ export default function EncounterMonsterRow({
 	isDragging,
 	hpDrafts,
 	selectedInstanceId,
+	isCurrentTurn,
 	view,
 	onSelect,
 	onHpChange,
@@ -197,6 +199,7 @@ export default function EncounterMonsterRow({
 			className={classNames("EncounterMonsterRow", {
 				EncounterMonsterRow__character: isCharacter,
 				is_active: selectedInstanceId === instanceId,
+				is_current_turn: isCurrentTurn,
 				is_dragging: isDragging,
 			})}
 			onClick={() => onSelect(monster)}

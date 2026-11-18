@@ -25,6 +25,19 @@
 	box-shadow: 0 0 20px color-mix(in srgb, var(--accent), transparent 92%) !important;
 }
 
+.EncounterMonsterRow.is_current_turn {
+	border-color: color-mix(in srgb, var(--success, #22c55e), transparent 50%);
+	border-left-color: var(--success, #22c55e);
+	background: color-mix(in srgb, var(--success, #22c55e), transparent 90%);
+	box-shadow: 0 0 16px color-mix(in srgb, var(--success, #22c55e), transparent 90%);
+}
+
+.EncounterMonsterRow.is_active.is_current_turn {
+	border-color: color-mix(in srgb, var(--accent), transparent 50%);
+	border-left-color: var(--success, #22c55e);
+	background: color-mix(in srgb, var(--accent), var(--success, #22c55e) 15%);
+}
+
 .EncounterMonsterRow.is_dragging {
 	opacity: 0.4;
 	border: 1px dashed var(--accent);
@@ -193,6 +206,8 @@
 	align-items: center;
 	gap: var(--space-1);
 	margin-top: var(--space-2);
+	width: fit-content;
+	max-width: 100%;
 }
 
 .EncounterMonsterRow__condition {

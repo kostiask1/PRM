@@ -69,6 +69,7 @@ export interface EncounterViewModel {
 	averageInitiative: number | string;
 	initiativeStats: InitiativeStats;
 	advanceTurn: () => void;
+	resetTurns: () => void;
 	saveFailed: boolean;
 	retryEncounterSave: () => void;
 	handleFileChange: (event: ChangeEvent<HTMLInputElement>) => void;

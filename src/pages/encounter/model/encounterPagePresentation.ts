@@ -1124,3 +1124,8 @@ export function advanceEncounterTurn(encounter: EncounterViewState): EncounterVi
 	const nextIndex = index < 0 ? 0 : (index + 1) % participants.length;
 	return { ...encounter, currentTurnId: String(participants[nextIndex].instanceId), round: index >= 0 && nextIndex === 0 ? round + 1 : round };
 }
+
+/** Reset turn tracking state and round counter. */
+export function resetEncounterTurns(encounter: EncounterViewState): EncounterViewState {
+	return { ...encounter, currentTurnId: null, round: null };
+}

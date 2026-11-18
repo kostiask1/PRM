@@ -40,7 +40,13 @@ function medianDuration(run, samples = 9) {
 }
 
 function uniqueSources(records) {
-	return [...new Set(records.map((record) => record?.source).filter(Boolean))];
+	return [
+		...new Set(
+			records
+				.flatMap((record) => [record?.source, ...(record?.sources || [])])
+				.filter(Boolean),
+		),
+	];
 }
 
 function assertBudget(name, duration, budget, context) {

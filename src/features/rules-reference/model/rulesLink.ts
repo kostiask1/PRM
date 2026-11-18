@@ -144,6 +144,12 @@ export type TooltipTextPart =
 				threshold: number;
 				label: string;
 			};
+	  }
+	| {
+			kind: "reference";
+			referenceType: RulesReferenceType;
+			name: string;
+			label: string;
 	  };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -315,12 +321,94 @@ const hitTokenHandler: TooltipTokenHandler = (token) => {
 	}];
 };
 
+function parseTaggedReference(
+	raw: unknown,
+	referenceType: RulesReferenceType,
+): TooltipTextPart {
+	const parts = String(raw || "").split("|");
+	const name = String(parts[0] || "").trim();
+	const label = String(parts[2] || "").trim();
+	return {
+		kind: "reference",
+		referenceType,
+		name,
+		label: capitalizeWords(label || name),
+	};
+}
+
+function parseQuickrefReference(raw: unknown): TooltipTextPart {
+	const parts = String(raw || "").split("|");
+	const label = parts.slice(1).filter(Boolean).at(-1);
+	const name = label && !/^\d+$/.test(label) ? label : parts[0];
+	const displayText = capitalizeWords(name);
+	return {
+		kind: "reference",
+		referenceType: "variantrule",
+		name: displayText,
+		label: displayText,
+	};
+}
+
+const variantRuleTokenHandler: TooltipTokenHandler = (token) =>
+	token.variantRuleValue
+		? [parseTaggedReference(token.variantRuleValue, "variantrule")]
+		: null;
+
+const conditionTokenHandler: TooltipTokenHandler = (token) => {
+	if (token.conditionValue) {
+		const referenceType = token.conditionTag?.toLowerCase().startsWith("{@status")
+			? "status"
+			: "condition";
+		return [parseTaggedReference(token.conditionValue, referenceType)];
+	}
+	if (token.conditionPlain) {
+		const raw = String(token.conditionPlain).replace(/^@condition\s+/i, "").trim();
+		return [{
+			kind: "reference",
+			referenceType: "condition",
+			name: raw,
+			label: capitalizeWords(raw),
+		}];
+	}
+	return null;
+};
+
+const spellTokenHandler: TooltipTokenHandler = (token) =>
+	token.spellValue ? [parseTaggedReference(token.spellValue, "spell")] : null;
+
+const creatureTokenHandler: TooltipTokenHandler = (token) =>
+	token.creatureValue ? [parseTaggedReference(token.creatureValue, "creature")] : null;
+
+const diseaseTokenHandler: TooltipTokenHandler = (token) =>
+	token.diseaseValue ? [parseTaggedReference(token.diseaseValue, "disease")] : null;
+
+const skillTokenHandler: TooltipTokenHandler = (token) =>
+	token.skillValue ? [parseTaggedReference(token.skillValue, "skill")] : null;
+
+const senseTokenHandler: TooltipTokenHandler = (token) =>
+	token.senseValue ? [parseTaggedReference(token.senseValue, "sense")] : null;
+
+const quickrefTokenHandler: TooltipTokenHandler = (token) =>
+	token.quickrefValue ? [parseQuickrefReference(token.quickrefValue)] : null;
+
+const displayTokenHandler: TooltipTokenHandler = (token) =>
+	token.displayValue ? [textPart(token.displayValue)] : null;
+
 const TOOLTIP_TOKEN_HANDLERS: TooltipTokenHandler[] = [
 	rechargeTokenHandler,
 	damageTokenHandler,
 	plainRollTokenHandler,
 	diceTokenHandler,
 	hitTokenHandler,
+	variantRuleTokenHandler,
+	conditionTokenHandler,
+	spellTokenHandler,
+	creatureTokenHandler,
+	diseaseTokenHandler,
+	skillTokenHandler,
+	senseTokenHandler,
+	quickrefTokenHandler,
+	displayTokenHandler,
 ];
 
 function getTooltipTokenParts(token: TooltipToken): TooltipTextPart[] {
@@ -332,7 +420,7 @@ function getTooltipTokenParts(token: TooltipToken): TooltipTextPart[] {
 }
 
 export function buildTooltipTextParts(value: unknown): TooltipTextPart[] {
-	const text = formatRulesTooltipText(value);
+	const text = preprocessTags(String(value || ""));
 	const tokens = extractContentTokens(text);
 	const parts: TooltipTextPart[] = [];
 	let lastIndex = 0;

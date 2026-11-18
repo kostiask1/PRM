@@ -89,19 +89,32 @@ function TooltipTextContent({
 	value,
 	RollDice,
 }: { value: unknown } & TooltipRollDiceSlotProps) {
-	return buildTooltipTextParts(value).map((part, index) =>
-		part.kind === "roll" ? (
-			<RollDice
-				key={`roll-${index}`}
-				formula={part.formula}
-				context={part.context}
-			>
-				{part.label}
-			</RollDice>
-		) : (
-			<span key={`text-${index}`}>{part.value}</span>
-		),
-	);
+	return buildTooltipTextParts(value).map((part, index) => {
+		if (part.kind === "roll") {
+			return (
+				<RollDice
+					key={`roll-${index}`}
+					formula={part.formula}
+					context={part.context}
+				>
+					{part.label}
+				</RollDice>
+			);
+		}
+		if (part.kind === "reference") {
+			return (
+				<RulesLink
+					key={`ref-${index}`}
+					type={part.referenceType}
+					name={part.name}
+					RollDice={RollDice}
+				>
+					{part.label}
+				</RulesLink>
+			);
+		}
+		return <span key={`text-${index}`}>{part.value}</span>;
+	});
 }
 
 function TooltipList({
