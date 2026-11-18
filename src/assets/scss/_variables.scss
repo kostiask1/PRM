@@ -89,6 +89,8 @@
 	--anim-modal-enter-scale: 0.96;
 	--anim-modal-enter-y: 8px;
 	--anim-dice-tumble-scale: 1.15;
+	--skeleton-bg: color-mix(in srgb, var(--border), transparent 50%);
+	--skeleton-shimmer: color-mix(in srgb, var(--panel-2), transparent 20%);
 }
 
 :root[data-theme="light"] {

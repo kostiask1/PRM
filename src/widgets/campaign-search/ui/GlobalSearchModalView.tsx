@@ -49,7 +49,21 @@ function CampaignSearchContentState({ isLoading, error, results, query, onOpen }
 	GlobalSearchModalViewProps,
 	"isLoading" | "error" | "results" | "query" | "onOpen"
 >) {
-	if (isLoading) return <div className="GlobalSearchModal__state">{lang.t("Loading...")}</div>;
+	if (isLoading) {
+		return (
+			<div className="GlobalSearchModal__results" aria-busy="true" aria-label={lang.t("Loading...")}>
+				<span className="sr-only">{lang.t("Loading...")}</span>
+				{Array.from({ length: 4 }).map((_, i) => (
+					<div key={i} className="GlobalSearchModal__result Skeleton--card" style={{ cursor: "default" }}>
+						<div className="Skeleton Skeleton--text" style={{ width: "25%", height: "16px", marginBottom: "4px" }} />
+						<div className="Skeleton Skeleton--title" style={{ width: "60%", height: "18px" }} />
+						<div className="Skeleton Skeleton--text" style={{ width: "90%", height: "14px" }} />
+						<div className="Skeleton Skeleton--text" style={{ width: "75%", height: "14px" }} />
+					</div>
+				))}
+			</div>
+		);
+	}
 	if (error) return <div className="GlobalSearchModal__state is_error">{error}</div>;
 	return <CampaignSearchResults results={results} query={query} onOpen={onOpen} />;
 }

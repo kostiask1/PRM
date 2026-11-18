@@ -115,7 +115,11 @@ export default function AiImagePromptSelection({
 				onContinue={onContinueWithoutSelection}
 			/>
 			{isDataLoading && (
-				<div className="AiAssistantPanel__loading">{lang.t("Loading...")}</div>
+				<div className="AiAssistantPanel__loading Skeleton--card" aria-busy="true">
+					<span className="sr-only">{lang.t("Loading...")}</span>
+					<div className="Skeleton Skeleton--title" style={{ width: "40%", height: "16px", marginBottom: "8px" }} />
+					<div className="Skeleton Skeleton--text" style={{ width: "80%", height: "14px" }} />
+				</div>
 			)}
 			<div className="AiAssistantPanel__image_prompt_columns">
 				{isBestiary ? (

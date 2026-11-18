@@ -29,3 +29,83 @@
 	width: var(--size-9);
 	height: var(--size-9);
 }
+
+/* Skeleton loader animations and states */
+@keyframes SkeletonShimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+.Skeleton {
+	display: inline-block;
+	height: 1em;
+	position: relative;
+	overflow: hidden;
+	background: linear-gradient(
+		90deg,
+		var(--skeleton-bg) 25%,
+		var(--skeleton-shimmer) 50%,
+		var(--skeleton-bg) 75%
+	);
+	background-size: 200% 100%;
+	border-radius: var(--radius-xs);
+	animation: SkeletonShimmer 1.6s infinite linear;
+}
+
+.Skeleton--text {
+	width: 100%;
+	height: 12px;
+	margin: var(--space-1) 0;
+	border-radius: var(--radius-xxs);
+}
+
+.Skeleton--title {
+	width: 60%;
+	height: 16px;
+	margin-bottom: var(--space-1-5);
+	border-radius: var(--radius-xs);
+}
+
+.Skeleton--circle {
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.Skeleton--card {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--panel);
+	min-height: 48px;
+}
+
+.Skeleton--cardContent {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	flex: 1;
+	min-width: 0;
+}
+
+/* Data reveal animation when real data replaces skeleton or arrives */
+@keyframes DataFadeIn {
+	0% {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.data-reveal {
+	animation: DataFadeIn var(--anim-duration-normal) var(--anim-ease-spring) both;
+}

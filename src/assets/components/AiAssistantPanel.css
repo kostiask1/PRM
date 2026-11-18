@@ -177,6 +177,12 @@
 	animation: pulse 1.5s infinite;
 }
 
+.AiAssistantPanel__loading.Skeleton--card {
+	animation: none;
+	padding: var(--space-3);
+	margin-bottom: var(--space-2);
+}
+
 .AiAssistantPanel__error {
 	color: var(--danger);
 	background: color-mix(in srgb, var(--danger), transparent 90%);

@@ -26,7 +26,18 @@ export function BestiaryVirtualizedList({
 	return (
 		<div className="Bestiary__list" ref={listContainerRef}>
 			{loading && displayedMonsters.length === 0 && (
-				<div className="Bestiary__loading muted">{lang.t("Loading...")}</div>
+				<div className="Bestiary__skeleton_list" aria-busy="true" aria-label={lang.t("Loading...")}>
+					<div className="Bestiary__loading muted" style={{ display: "none" }}>{lang.t("Loading...")}</div>
+					{Array.from({ length: 6 }).map((_, index) => (
+						<div key={index} className="Skeleton--card">
+							<span className="Skeleton Skeleton--circle" style={{ width: 44, height: 44 }} />
+							<div className="Skeleton--cardContent">
+								<span className="Skeleton Skeleton--title" style={{ width: index % 2 === 0 ? "70%" : "50%" }} />
+								<span className="Skeleton Skeleton--text" style={{ width: "40%" }} />
+							</div>
+						</div>
+					))}
+				</div>
 			)}
 			<ReactList
 				ref={listRef}

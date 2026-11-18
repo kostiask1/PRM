@@ -174,11 +174,12 @@
 	position: absolute;
 }
 
-.Bestiary__token_skeleton {
-	color: color-mix(in srgb, var(--muted), transparent 65%);
+.Bestiary__skeleton_list {
 	display: flex;
-	align-items: center;
-	justify-content: center;
+	flex-direction: column;
+	gap: var(--space-2);
+	width: 100%;
+	padding-right: var(--space-1);
 }
 
 .Bestiary__detail_container {
@@ -186,6 +187,7 @@
 	flex: 1;
 	overflow-y: auto;
 	min-height: 0;
+	animation: DataFadeIn var(--anim-duration-normal) var(--anim-ease-spring) both;
 }
 
 .Bestiary__filterNotice {

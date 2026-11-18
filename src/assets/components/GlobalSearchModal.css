@@ -59,6 +59,7 @@
 	color: var(--text);
 	text-align: left;
 	cursor: pointer;
+	animation: DataFadeIn var(--anim-duration-fast) var(--anim-ease-spring) both;
 }
 
 .GlobalSearchModal__result:hover {
