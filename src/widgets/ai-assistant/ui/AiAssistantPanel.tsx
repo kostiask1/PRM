@@ -439,6 +439,7 @@ export default function AiAssistantPanel({
 		buildRetryPlan,
 		contextConfig,
 		currentLanguage,
+		createAiResponse: api.createAiResponse,
 		deleteAiResponse: api.deleteAiResponse,
 		generateAi: api.generateAi,
 		generateCharacters,
@@ -597,11 +598,32 @@ export default function AiAssistantPanel({
 			setIsImagePromptPickerOpen(false);
 			setError("");
 			try {
-				const result = await aiApi.generateImage({ campaign: assetCampaignSlug || "general", historyCampaign: aiHistoryCampaign, modelName, prompt, attachedImages });
+				const pendingEntry = await aiApi
+					.createAiResponse({
+						type: "generated-image",
+						modelName,
+						userInstructions: prompt,
+						path: { campaign: aiHistoryCampaign },
+						attachedImages,
+					})
+					.catch(() => null);
+				if (pendingEntry) upsertResponseHistoryEntry(pendingEntry);
+				const result = await aiApi.generateImage({
+					campaign: assetCampaignSlug || "general",
+					historyCampaign: aiHistoryCampaign,
+					modelName,
+					prompt,
+					attachedImages,
+					responseId: pendingEntry?.id,
+				});
 				if (!result?.aiResponse) throw new Error("Не вдалося зберегти зображення в історії ШІ.");
 				upsertResponseHistoryEntry(result.aiResponse);
 				showGeneratedPrompt(result.aiResponse);
 			} catch (failure) {
+				const failedEntry = (
+					failure as { data?: { aiResponse?: AiHistoryEntry } }
+				)?.data?.aiResponse;
+				if (failedEntry) upsertResponseHistoryEntry(failedEntry);
 				setError(failure instanceof Error ? failure.message : "Не вдалося згенерувати зображення.");
 			}
 		}}

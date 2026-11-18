@@ -1223,5 +1223,8 @@
 	"Reorder item with arrow keys": "Змінити порядок стрілками",
 	"Reorder note: {name} (arrow keys)": "Змінити порядок нотатки: {name} (клавіші зі стрілками)",
 	"Reorder scene {number} (arrow keys)": "Змінити порядок сцени {number} (клавіші зі стрілками)",
-	"Reorder item: {name} (arrow keys)": "Змінити порядок: {name} (клавіші зі стрілками)"
+	"Reorder item: {name} (arrow keys)": "Змінити порядок: {name} (клавіші зі стрілками)",
+	"AI request": "Запит до ШІ",
+	"Pending": "Очікування відповіді",
+	"Waiting for AI response...": "Очікування відповіді від ШІ..."
 }

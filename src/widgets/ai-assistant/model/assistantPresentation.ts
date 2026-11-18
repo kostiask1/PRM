@@ -20,6 +20,7 @@ export interface AssistantEntity extends Record<string, unknown> {
 
 export interface AssistantHistoryEntry extends Record<string, unknown> {
 	createdAt?: unknown;
+	status?: unknown;
 	text?: unknown;
 	userInstructions?: unknown;
 	applyState?: unknown;
@@ -331,12 +332,14 @@ export function createAiAssistantPresentation({
 		const requestText = getHistoryRequestText(entry);
 		if (requestText) return requestText;
 		if (isFailedHistoryEntry(entry)) return translate("Failed AI request");
+		if (entry.status === "pending") return translate("AI request");
 		if (hasHistoryChanges(entry)) return translate("AI changes");
 		return getResponsePreview(entry.text) || translate("AI response");
 	};
 
 	const getAiResponseStateLabel = (entry: AssistantHistoryEntry): string => {
 		if (isFailedHistoryEntry(entry)) return translate("Failed");
+		if (entry.status === "pending") return translate("Pending");
 		const labels: Record<string, string> = {
 			draft: "Draft",
 			applied: "Applied",

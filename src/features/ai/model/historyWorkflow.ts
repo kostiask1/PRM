@@ -34,6 +34,10 @@ export type AiHistoryRetryOutcome =
 export interface ExecuteAiHistoryRetryOptions {
 	plan: AiHistoryRetryPlan;
 	signal: AbortSignal;
+	createAiResponse?(
+		payload: AiGenerationPayload,
+		options: { signal: AbortSignal },
+	): Promise<AiHistoryEntry | null>;
 	deleteAiResponse(
 		campaign: string,
 		id: AiHistoryId,
@@ -42,6 +46,7 @@ export interface ExecuteAiHistoryRetryOptions {
 		payload: AiGenerationPayload,
 		options: { signal: AbortSignal },
 	): Promise<AiGenerationResult | null>;
+	onPendingHistoryEntry?(entry: AiHistoryEntry): void;
 	onFailedEntryDeleted?(responses: AiHistoryEntry[]): void;
 	onSucceeded?(data: AiGenerationResult | null): void;
 	onCancelled?(): void;
@@ -180,6 +185,10 @@ export function isFailedHistoryEntry(entry: AiHistoryEntry | null | undefined) {
 	return entry?.status === "failed";
 }
 
+export function isPendingHistoryEntry(entry: AiHistoryEntry | null | undefined) {
+	return entry?.status === "pending";
+}
+
 export function isNonParsedHistoryEntry(entry: AiHistoryEntry | null | undefined) {
 	return entry?.request?.options?.responseParsing === false;
 }
@@ -232,7 +241,9 @@ export function createAiHistoryWorkflow(
 	const buildRetryPayload = (entry: AiHistoryEntry) =>
 		buildRetryPayloadFromHistoryEntry(entry, getRequestText);
 	const canRetryHistoryEntry = (entry: AiHistoryEntry) => {
-		if (isFailedHistoryEntry(entry)) return Boolean(entry.retryPayload);
+		if (isFailedHistoryEntry(entry) || isPendingHistoryEntry(entry)) {
+			return Boolean(entry.retryPayload);
+		}
 		if (isNonParsedHistoryEntry(entry)) return Boolean(buildRetryPayload(entry));
 		return false;
 	};
@@ -290,12 +301,13 @@ export function buildAiHistoryRetryPlan(
 		requestType: getRetryRequestType(payloadType, isBestiary),
 		shouldParseResponse:
 			payloadType === "image" ? false : Boolean(retryPayload.parseAIResponse),
-		deleteFailedEntry: isFailedHistoryEntry(entry)
-			? {
-					campaign: entry.path?.campaign || historyCampaign,
-					id: entry.id,
-				}
-			: null,
+		deleteFailedEntry:
+			isFailedHistoryEntry(entry) || isPendingHistoryEntry(entry)
+				? {
+						campaign: entry.path?.campaign || historyCampaign,
+						id: entry.id,
+					}
+				: null,
 	};
 }
 
@@ -320,12 +332,35 @@ async function deleteFailedRetryEntry(
 	onFailedEntryDeleted?.(Array.isArray(responses) ? responses : []);
 }
 
+async function createPendingRetryEntry(
+	payload: AiGenerationPayload,
+	signal: AbortSignal,
+	createAiResponse: ExecuteAiHistoryRetryOptions["createAiResponse"],
+	onPendingHistoryEntry: ExecuteAiHistoryRetryOptions["onPendingHistoryEntry"],
+): Promise<AiGenerationPayload> {
+	if (!createAiResponse) return payload;
+	const pendingEntry = await createAiResponse(payload, { signal });
+	if (
+		pendingEntry &&
+		typeof pendingEntry === "object" &&
+		!Array.isArray(pendingEntry) &&
+		pendingEntry.id !== undefined
+	) {
+		onPendingHistoryEntry?.(pendingEntry);
+		return {
+			...payload,
+			responseId: pendingEntry.id,
+		};
+	}
+	return payload;
+}
+
 function generateRetryData(
-	plan: AiHistoryRetryPlan,
+	payload: AiGenerationPayload,
 	signal: AbortSignal,
 	generateAi: ExecuteAiHistoryRetryOptions["generateAi"],
 ): Promise<AiGenerationResult | null> {
-	return generateAi(plan.retryPayload, { signal });
+	return generateAi(payload, { signal });
 }
 
 function getSuccessfulRetryOutcome(
@@ -352,8 +387,10 @@ function getFailedRetryOutcome(
 export async function executeAiHistoryRetry({
 	plan,
 	signal,
+	createAiResponse,
 	deleteAiResponse,
 	generateAi,
+	onPendingHistoryEntry,
 	onFailedEntryDeleted,
 	onSucceeded,
 	onCancelled,
@@ -365,7 +402,13 @@ export async function executeAiHistoryRetry({
 			deleteAiResponse,
 			onFailedEntryDeleted,
 		);
-		const data = await generateRetryData(plan, signal, generateAi);
+		const requestPayload = await createPendingRetryEntry(
+			plan.retryPayload,
+			signal,
+			createAiResponse,
+			onPendingHistoryEntry,
+		);
+		const data = await generateRetryData(requestPayload, signal, generateAi);
 		return getSuccessfulRetryOutcome(data, onSucceeded);
 	} catch (error) {
 		return getFailedRetryOutcome(error, onCancelled, onFailed);

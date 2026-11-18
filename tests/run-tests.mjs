@@ -582,6 +582,7 @@ import {
 	hasGeneratedCampaignChanges,
 	initialAiGenerationLifecycle,
 	isAiGenerationPending,
+	isPendingHistoryEntry,
 	mergeLoadedAiSessionData,
 	normalizeCustomMonsterCollection,
 	resolveAiGenerationRequestPolicy,
@@ -72757,6 +72758,260 @@ await run("entity transfers preserve identity and compensate failed source write
 	await assert.rejects(() => transfer({ campaignSlug: "one", type: "npc", source: { scope: "session", fileName: "a.json", entityId: 0 }, target: { campaignSlug: "two", scope: "session", fileName: "b.json" } }), /already contains/);
 	assert.equal(sessions.get("one:a.json").data.npcs[0].firstName, "Міра");
 	await assert.rejects(() => transfer({ ...input, source: { scope: "campaign", entitySlug: "../mira" } }), /invalid/i);
+});
+
+await run("storage saves pending AI requests immediately and supplements them in place when completed or failed", async () => {
+	await withTestSlug("ai-pending-history", async (slug) => {
+		const pending = await storage.addAiResponse({
+			text: "",
+			status: "pending",
+			path: { campaign: slug, session: null, encounter: null },
+			type: "campaign",
+			modelName: "gemini-test",
+			language: "uk",
+			userInstructions: "Створи таверну",
+			retryPayload: {
+				userInstructions: "Створи таверну",
+				path: { campaign: slug },
+			},
+		});
+		assert.ok(pending.id);
+		assert.ok(pending.createdAt);
+		assert.equal(pending.status, "pending");
+		assert.equal(pending.text, "");
+		assert.equal((await storage.readAiResponses(slug)).length, 1);
+
+		const completed = await storage.addAiResponse({
+			text: "Готова відповідь",
+			path: { campaign: slug, session: null, encounter: null },
+			type: "campaign",
+			modelName: "gemini-test",
+			language: "uk",
+			userInstructions: "Створи таверну",
+			retryPayload: {
+				responseId: pending.id,
+				userInstructions: "Створи таверну",
+				path: { campaign: slug },
+			},
+		});
+		assert.equal(completed.id, pending.id);
+		assert.equal(completed.createdAt, pending.createdAt);
+		assert.equal(completed.status, "completed");
+		assert.equal(completed.text, "Готова відповідь");
+		assert.equal("responseId" in completed.retryPayload, false);
+		const storedAfterComplete = await storage.readAiResponses(slug);
+		assert.equal(storedAfterComplete.length, 1);
+		assert.equal(storedAfterComplete[0].id, pending.id);
+		assert.equal(storedAfterComplete[0].status, "completed");
+
+		const secondPending = await storage.addAiResponse({
+			text: "",
+			status: "pending",
+			path: { campaign: slug },
+			userInstructions: "Другий запит",
+			retryPayload: { userInstructions: "Другий запит", path: { campaign: slug } },
+		});
+		const failedUpdate = await storage.addAiResponse({
+			responseId: secondPending.id,
+			text: "AI request failed\nStatus: 503\nUnavailable",
+			status: "failed",
+			error: { message: "Unavailable", status: 503 },
+			path: { campaign: slug },
+			userInstructions: "Другий запит",
+		});
+		assert.equal(failedUpdate.id, secondPending.id);
+		assert.equal(failedUpdate.createdAt, secondPending.createdAt);
+		assert.equal(failedUpdate.status, "failed");
+		assert.equal(failedUpdate.error.status, 503);
+		assert.equal((await storage.readAiResponses(slug)).length, 2);
+
+		await withTestSlug("ai-pending-cross-scope", async (targetSlug) => {
+			const crossPending = await storage.addAiResponse({
+				text: "",
+				status: "pending",
+				path: { campaign: slug },
+				userInstructions: "Перенести запис",
+			});
+			const moved = await storage.addAiResponse({
+				text: "Перенесена відповідь",
+				path: { campaign: targetSlug },
+				retryPayload: {
+					responseId: crossPending.id,
+					path: { campaign: slug },
+				},
+			});
+			assert.equal(moved.id, crossPending.id);
+			assert.equal(moved.createdAt, crossPending.createdAt);
+			assert.equal(moved.status, "completed");
+			assert.equal(
+				(await storage.readAiResponses(slug)).some((entry) => entry.id === crossPending.id),
+				false,
+			);
+			assert.equal((await storage.readAiResponses(targetSlug)).length, 1);
+			assert.equal((await storage.readAiResponses(targetSlug))[0].id, crossPending.id);
+		});
+	});
+});
+
+await run("AiHistoryWriter.savePending records pending request metadata and supplements same record on failure", async () => {
+	await withTestSlug("ai-writer-pending", async (slug) => {
+		const writer = new AiHistoryWriter();
+		const pending = await writer.savePending({
+			path: { campaign: slug },
+			type: "campaign",
+			modelName: "gemini-test",
+			language: "uk",
+			userInstructions: "Створи сюжет",
+			attachedImages: [{ name: "map.png", data: "secret-data" }],
+		});
+		assert.equal(pending.status, "pending");
+		assert.equal(pending.text, "");
+		assert.equal(pending.userInstructions, "Створи сюжет");
+		assert.equal(pending.retryPayload.attachedImages[0].omittedData, true);
+		assert.equal("data" in pending.retryPayload.attachedImages[0], false);
+		assert.equal(
+			await writer.savePending({ saveToHistory: false, path: { campaign: slug } }),
+			null,
+		);
+
+		const originalAddAiResponse = storage.addAiResponse;
+		try {
+			let capturedCustomPayload = null;
+			storage.addAiResponse = async (entry) => {
+				capturedCustomPayload = entry;
+				return { id: "bestiary-pending", ...entry };
+			};
+			await writer.savePending({
+				type: "custom-monster",
+				userInstructions: "Створи лісовика",
+			});
+			assert.deepEqual(capturedCustomPayload.path, { campaign: "bestiary" });
+			assert.equal(capturedCustomPayload.status, "pending");
+		} finally {
+			storage.addAiResponse = originalAddAiResponse;
+		}
+
+		const failed = await writer.saveFailed(
+			{
+				responseId: pending.id,
+				path: { campaign: slug },
+				userInstructions: "Створи сюжет",
+			},
+			{ message: "Overloaded" },
+			503,
+		);
+		assert.equal(failed.id, pending.id);
+		assert.equal(failed.createdAt, pending.createdAt);
+		assert.equal(failed.status, "failed");
+		assert.equal(failed.error.status, 503);
+		assert.equal((await storage.readAiResponses(slug)).length, 1);
+	});
+});
+
+await run("executeAiGeneration and executeAiHistoryRetry create pending history entries before generation", async () => {
+	const signal = new AbortController().signal;
+	const events = [];
+	const originalPayload = {
+		type: "campaign",
+		path: { campaign: "demo" },
+		userInstructions: "Напиши сцену",
+	};
+	const generationOutcome = await executeAiGeneration({
+		payload: originalPayload,
+		signal,
+		createAiResponse: async (payload, options) => {
+			events.push(["create", payload.userInstructions, options.signal === signal]);
+			return { id: "pending-1", status: "pending", text: "" };
+		},
+		generateAi: async (payload, options) => {
+			events.push(["generate", payload.responseId, options.signal === signal]);
+			return {
+				prompt: "Готова сцена",
+				aiResponse: { id: payload.responseId, status: "completed", text: "Готова сцена" },
+			};
+		},
+		onPendingHistoryEntry: (entry) => events.push(["pending", entry.id, entry.status]),
+		onSucceeded: (data) => events.push(["succeeded", data.aiResponse.id, data.aiResponse.status]),
+		onCancelled: () => {},
+		onFailedHistoryEntry: () => {},
+		onApiKeyMissing: () => {},
+		onFailed: () => {},
+	});
+	assert.equal(generationOutcome.status, "succeeded");
+	assert.equal("responseId" in originalPayload, false);
+	assert.deepEqual(events, [
+		["create", "Напиши сцену", true],
+		["pending", "pending-1", "pending"],
+		["generate", "pending-1", true],
+		["succeeded", "pending-1", "completed"],
+	]);
+
+	const workflow = createAiHistoryWorkflow(() => "Повтори");
+	const interruptedPending = {
+		id: "interrupted-pending",
+		status: "pending",
+		path: { campaign: "demo" },
+		retryPayload: {
+			userInstructions: "Повтори",
+			path: { campaign: "demo" },
+		},
+	};
+	assert.equal(isPendingHistoryEntry(interruptedPending), true);
+	assert.equal(workflow.canRetryHistoryEntry(interruptedPending), true);
+	const retryPlan = workflow.buildRetryPlan(interruptedPending, {
+		historyCampaign: "demo",
+	});
+	assert.deepEqual(retryPlan.deleteFailedEntry, {
+		campaign: "demo",
+		id: "interrupted-pending",
+	});
+
+	const retryEvents = [];
+	const retryOutcome = await executeAiHistoryRetry({
+		plan: retryPlan,
+		signal,
+		deleteAiResponse: async (campaign, id) => {
+			retryEvents.push(["delete", campaign, id]);
+			return [];
+		},
+		createAiResponse: async (payload) => {
+			retryEvents.push(["create", payload.userInstructions]);
+			return { id: "retry-pending", status: "pending", text: "" };
+		},
+		generateAi: async (payload) => {
+			retryEvents.push(["generate", payload.responseId]);
+			return { prompt: "Повторно згенеровано" };
+		},
+		onFailedEntryDeleted: () => retryEvents.push(["deleted"]),
+		onPendingHistoryEntry: (entry) => retryEvents.push(["pending", entry.id]),
+		onSucceeded: (data) => retryEvents.push(["succeeded", data.prompt]),
+	});
+	assert.equal(retryOutcome.status, "succeeded");
+	assert.deepEqual(retryEvents, [
+		["delete", "demo", "interrupted-pending"],
+		["deleted"],
+		["create", "Повтори"],
+		["pending", "retry-pending"],
+		["generate", "retry-pending"],
+		["succeeded", "Повторно згенеровано"],
+	]);
+});
+
+await run("AI assistant presentation labels and titles handle pending history entries", () => {
+	const presentation = createAiAssistantPresentation({
+		translate: (phrase) => `uk:${phrase}`,
+		isFailedHistoryEntry: (entry) => entry.status === "failed",
+		hasHistoryChanges: () => false,
+	});
+	assert.equal(presentation.getHistoryTitle({ status: "pending" }), "uk:AI request");
+	assert.equal(
+		presentation.getHistoryTitle({ status: "pending", userInstructions: "Питання" }),
+		"Питання",
+	);
+	assert.equal(
+		presentation.getAiResponseStateLabel({ status: "pending" }),
+		"uk:Pending",
+	);
 });
 
 const failed = results.filter((r) => !r.ok);

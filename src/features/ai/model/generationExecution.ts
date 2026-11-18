@@ -19,10 +19,15 @@ export type AiGenerationExecutionOutcome =
 export interface ExecuteAiGenerationOptions {
 	payload: AiGenerationPayload;
 	signal: AbortSignal;
+	createAiResponse?(
+		payload: AiGenerationPayload,
+		options: { signal: AbortSignal },
+	): Promise<AiHistoryEntry | null>;
 	generateAi(
 		payload: AiGenerationPayload,
 		options: { signal: AbortSignal },
 	): Promise<AiGenerationResult | null>;
+	onPendingHistoryEntry?(entry: AiHistoryEntry): void;
 	onSucceeded(data: AiGenerationResult | null): void;
 	onCancelled(): void;
 	onFailedHistoryEntry(entry: AiHistoryEntry): void;
@@ -102,7 +107,9 @@ function handleAiGenerationFailure(
 export async function executeAiGeneration({
 	payload,
 	signal,
+	createAiResponse,
 	generateAi,
+	onPendingHistoryEntry,
 	onSucceeded,
 	onCancelled,
 	onFailedHistoryEntry,
@@ -110,7 +117,18 @@ export async function executeAiGeneration({
 	onFailed,
 }: ExecuteAiGenerationOptions): Promise<AiGenerationExecutionOutcome> {
 	try {
-		const data = await generateAi(payload, { signal });
+		let requestPayload = payload;
+		if (createAiResponse) {
+			const pendingEntry = await createAiResponse(payload, { signal });
+			if (isRecord(pendingEntry) && pendingEntry.id !== undefined) {
+				onPendingHistoryEntry?.(pendingEntry as AiHistoryEntry);
+				requestPayload = {
+					...payload,
+					responseId: pendingEntry.id,
+				};
+			}
+		}
+		const data = await generateAi(requestPayload, { signal });
 		onSucceeded(data);
 		return { status: "succeeded", data };
 	} catch (error) {

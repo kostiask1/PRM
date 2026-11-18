@@ -34,6 +34,7 @@ export {
 	hasHistoryChanges,
 	isFailedHistoryEntry,
 	isNonParsedHistoryEntry,
+	isPendingHistoryEntry,
 	type AiHistoryRetryOutcome,
 	type AiHistoryRetryFailure,
 	type AiHistoryRetryPlan,

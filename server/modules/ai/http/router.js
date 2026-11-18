@@ -176,18 +176,73 @@ router.get("/models", async (_req, res, next) => {
 });
 
 router.post("/generate-image", async (req, res, next) => {
+	const sendImageFailure = async (status, errorOrMessage) => {
+		const message =
+			typeof errorOrMessage === "string"
+				? errorOrMessage
+				: errorOrMessage?.message || "Image generation failed.";
+		if (req.body?.responseId) {
+			const historySlug = path.basename(
+				String(req.body?.historyCampaign || req.body?.campaign || "").trim(),
+			);
+			const aiResponse = await aiHistoryWriter
+				.saveFailed(
+					{
+						responseId: req.body.responseId,
+						type: "generated-image",
+						modelName: req.body?.modelName,
+						userInstructions: String(req.body?.prompt || "").trim(),
+						path: historySlug ? { campaign: historySlug } : {},
+						attachedImages: req.body?.attachedImages,
+					},
+					typeof errorOrMessage === "string"
+						? { message: errorOrMessage }
+						: errorOrMessage,
+					status,
+				)
+				.catch(() => null);
+			if (aiResponse) {
+				return res.status(status).json({ error: message, aiResponse });
+			}
+		}
+		if (typeof errorOrMessage === "string") {
+			return res.status(status).json({ error: message });
+		}
+		return null;
+	};
+
 	try {
-		const { campaign, historyCampaign, modelName, prompt, attachedImages } = req.body || {};
+		const {
+			campaign,
+			historyCampaign,
+			modelName,
+			prompt,
+			attachedImages,
+			responseId,
+		} = req.body || {};
 		const text = String(prompt || "").trim();
-		if (!text || text.length > 10000) return res.status(400).json({ error: "Image prompt must contain 1–10000 characters." });
-		if (!process.env.GEMINI_API_KEY) return res.status(400).json({ error: "Gemini API key is required." });
+		if (!text || text.length > 10000) {
+			return sendImageFailure(
+				400,
+				"Image prompt must contain 1–10000 characters.",
+			);
+		}
+		if (!process.env.GEMINI_API_KEY) {
+			return sendImageFailure(400, "Gemini API key is required.");
+		}
 		const available = await aiService.listAvailableModels();
 		const model = available.imageModels?.find((item) => item.name === modelName);
-		if (!model) return res.status(400).json({ error: "Select an available image model." });
+		if (!model) {
+			return sendImageFailure(400, "Select an available image model.");
+		}
 		const slug = path.basename(String(campaign || "").trim());
-		if (!slug || slug === ".") return res.status(400).json({ error: "Campaign is required." });
+		if (!slug || slug === ".") {
+			return sendImageFailure(400, "Campaign is required.");
+		}
 		const historySlug = path.basename(String(historyCampaign || slug).trim());
-		if (!historySlug || historySlug === "." || historySlug === "..") return res.status(400).json({ error: "Invalid AI history scope." });
+		if (!historySlug || historySlug === "." || historySlug === "..") {
+			return sendImageFailure(400, "Invalid AI history scope.");
+		}
 		const attachmentParts = await buildImageParts(Array.isArray(attachedImages) ? attachedImages : []);
 		const result = await geminiGateway.generateImage({ modelName: model.name, prompt: text, attachmentParts });
 		const imageBuffer = Buffer.from(result.data, "base64");
@@ -199,9 +254,40 @@ router.post("/generate-image", async (req, res, next) => {
 		await storage.ensureDir(directory);
 		await fs.writeFile(path.join(directory, fileName), imageBuffer, { flag: "wx" });
 		const imageUrl = `/api/images/${encodeURIComponent(slug)}/${category}/${encodeURIComponent(fileName)}`;
-		const aiResponse = await aiHistoryRepository.add({ text: result.text || text, imageUrl, path: { campaign: historySlug }, type: "generated-image", modelName: model.name, userInstructions: text });
+		const aiResponse = await aiHistoryRepository.add({ responseId, text: result.text || text, imageUrl, path: { campaign: historySlug }, type: "generated-image", modelName: model.name, userInstructions: text });
 		res.json({ aiResponse, imageUrl });
 	} catch (error) {
+		const handled = await sendImageFailure(error?.status || 500, error);
+		if (handled) return handled;
+		next(error);
+	}
+});
+
+router.post("/responses", async (req, res, next) => {
+	try {
+		const payload = req.body && typeof req.body === "object" ? req.body : {};
+		const campaignSlug =
+			getAiHistoryCampaignSlug(req) || asText(payload.path?.campaign);
+		const nextPayload = campaignSlug
+			? {
+					...payload,
+					path: {
+						...(payload.path && typeof payload.path === "object"
+							? payload.path
+							: {}),
+						campaign: campaignSlug,
+					},
+				}
+			: payload;
+		const aiResponse = await aiHistoryWriter.savePending(nextPayload);
+		if (!aiResponse) {
+			return res.status(400).json({ error: "campaign is required." });
+		}
+		return res.status(201).json(aiResponse);
+	} catch (error) {
+		if (error.status) {
+			return res.status(error.status).json({ error: error.message });
+		}
 		next(error);
 	}
 });
@@ -270,10 +356,54 @@ router.post("/api-key", async (req, res, next) => {
 });
 
 router.post("/generate", async (req, res, next) => {
+	let requestBody = req.body;
 	try {
-		const result = await generateAiRequest(req.body);
+		if (
+			requestBody &&
+			typeof requestBody === "object" &&
+			!Array.isArray(requestBody) &&
+			!requestBody.responseId
+		) {
+			const pendingEntry = await aiHistoryWriter
+				.savePending(requestBody)
+				.catch(() => null);
+			if (pendingEntry?.id) {
+				requestBody = { ...requestBody, responseId: pendingEntry.id };
+			}
+		}
+		const result = await generateAiRequest(requestBody);
+		if (
+			result.status >= 400 &&
+			requestBody?.responseId &&
+			!result.body?.aiResponse
+		) {
+			const aiResponse = await aiHistoryWriter
+				.saveFailed(
+					requestBody,
+					{ message: result.body?.error },
+					result.status,
+				)
+				.catch(() => null);
+			if (aiResponse) {
+				return res
+					.status(result.status)
+					.json({ ...result.body, aiResponse });
+			}
+		}
 		return res.status(result.status).json(result.body);
 	} catch (error) {
+		if (requestBody?.responseId) {
+			const status = error?.status || 500;
+			const aiResponse = await aiHistoryWriter
+				.saveFailed(requestBody, error, status)
+				.catch(() => null);
+			if (aiResponse) {
+				return res.status(status).json({
+					error: error?.message || "AI request failed.",
+					aiResponse,
+				});
+			}
+		}
 		next(error);
 	}
 });

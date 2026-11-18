@@ -38,6 +38,7 @@ interface UseAiAssistantGenerationOptions {
 		},
 	): AiHistoryRetryPlan | null;
 	contextConfig: AiGenerationRequestInput["contextConfig"];
+	createAiResponse?: ExecuteAiGenerationOptions["createAiResponse"];
 	currentLanguage: string;
 	deleteAiResponse: ExecuteAiHistoryRetryOptions["deleteAiResponse"];
 	generateAi: ExecuteAiGenerationOptions["generateAi"];
@@ -73,6 +74,7 @@ export function useAiAssistantGeneration({
 	attachedImages,
 	buildRetryPlan,
 	contextConfig,
+	createAiResponse,
 	currentLanguage,
 	deleteAiResponse,
 	generateAi,
@@ -167,7 +169,9 @@ export function useAiAssistantGeneration({
 			await executeAiGeneration({
 				payload,
 				signal: controller.signal,
+				createAiResponse,
 				generateAi,
+				onPendingHistoryEntry: upsertResponseHistoryEntry,
 				onSucceeded: (data) => {
 					handleGeneratedAiData({
 						data,
@@ -227,8 +231,10 @@ export function useAiAssistantGeneration({
 			await executeAiHistoryRetry({
 				plan,
 				signal: controller.signal,
+				createAiResponse,
 				deleteAiResponse,
 				generateAi,
+				onPendingHistoryEntry: upsertResponseHistoryEntry,
 				onFailedEntryDeleted: (responses) => {
 					setResponseHistory(responses);
 					refreshResponseHistoryStats();

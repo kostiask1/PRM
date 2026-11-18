@@ -55,6 +55,7 @@ export {
 	hasHistoryChanges,
 	isFailedHistoryEntry,
 	isNonParsedHistoryEntry,
+	isPendingHistoryEntry,
 } from "./model/historyWorkflow.ts";
 export {
 	buildAiGenerationRequestAttachments,

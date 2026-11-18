@@ -103,7 +103,30 @@ function cloneRetryPayload(payload) {
 }
 
 function getFailedHistoryPath(payload) {
-	return payload?.path && typeof payload.path === "object" ? payload.path : {};
+	if (payload?.path && typeof payload.path === "object") return payload.path;
+	if (payload?.responseId && payload?.type === "custom-monster") {
+		return { campaign: "bestiary" };
+	}
+	return {};
+}
+
+function getPendingHistoryPath(payload) {
+	if (
+		payload?.path &&
+		typeof payload.path === "object" &&
+		asText(payload.path.campaign)
+	) {
+		return payload.path;
+	}
+	if (payload?.type === "custom-monster") {
+		return {
+			...(payload?.path && typeof payload.path === "object"
+				? payload.path
+				: {}),
+			campaign: "bestiary",
+		};
+	}
+	return getFailedHistoryPath(payload);
 }
 
 function shouldParseFailedResponse(payload, path) {
@@ -177,6 +200,26 @@ function createFailedResponsePayload({
 	};
 }
 
+function createPendingResponsePayload({
+	payload,
+	path,
+	historyUserInstructions,
+	requestSnapshot,
+	clonePayload,
+}) {
+	return {
+		text: "",
+		path,
+		type: payload.type || null,
+		modelName: payload.modelName || null,
+		language: payload.language || null,
+		userInstructions: historyUserInstructions,
+		request: requestSnapshot,
+		status: "pending",
+		retryPayload: clonePayload(payload),
+	};
+}
+
 class AiHistoryWriter {
 	cloneRetryPayload(payload = {}) {
 		return cloneRetryPayload(payload);
@@ -221,6 +264,30 @@ class AiHistoryWriter {
 		return this.shouldSave(requestPayload)
 			? storage.addAiResponse(responsePayload)
 			: this.createEphemeral(responsePayload);
+	}
+
+	async savePending(payload = {}) {
+		if (!this.shouldSave(payload)) return null;
+		const path = getPendingHistoryPath(payload);
+		const campaignSlug = asText(path.campaign);
+		if (!campaignSlug) return null;
+		const historyUserInstructions = this.getUserInstructions(payload);
+		const requestSnapshot = this.buildRequestSnapshot(
+			createFailedRequestSnapshotInput({
+				payload,
+				path,
+				historyUserInstructions,
+			}),
+		);
+		return storage.addAiResponse(
+			createPendingResponsePayload({
+				payload,
+				path,
+				historyUserInstructions,
+				requestSnapshot,
+				clonePayload: (value) => this.cloneRetryPayload(value),
+			}),
+		);
 	}
 
 	async saveFailed(payload = {}, error, status = null) {

@@ -697,12 +697,17 @@ function normalizeAiRequest(rawRequest, userInstructions) {
 	};
 }
 
+function isPendingAiResponse(raw, text) {
+	return raw.status === "pending" && !text.trim();
+}
+
 function normalizeAiResponseApplyState(value) {
 	return AI_RESPONSE_APPLY_STATES.has(value) ? value : null;
 }
 
-function normalizeAiResponseStatus(value) {
-	return value === "failed" ? "failed" : "completed";
+function normalizeAiResponseStatus(value, text = "") {
+	if (value === "failed") return "failed";
+	return isPendingAiResponse({ status: value }, text) ? "pending" : "completed";
 }
 
 function normalizeAiResponsePath(value) {
@@ -739,7 +744,7 @@ function createNormalizedAiResponse(raw, text, rawRequest, userInstructions) {
 		id: normalizeGeneratedId(raw.id),
 		text,
 		...(typeof raw.imageUrl === "string" && raw.imageUrl.startsWith("/api/images/") ? { imageUrl: raw.imageUrl } : {}),
-		status: normalizeAiResponseStatus(raw.status),
+		status: normalizeAiResponseStatus(raw.status, text),
 		path: normalizeAiResponsePath(raw.path),
 		type: normalizeNullableAiMetadata(raw.type),
 		modelName: normalizeNullableAiMetadata(raw.modelName),
@@ -758,7 +763,7 @@ function createNormalizedAiResponse(raw, text, rawRequest, userInstructions) {
 function normalizeAiResponse(raw = {}) {
 	if (!isObjectLike(raw)) return null;
 	const text = normalizeAiResponseText(raw);
-	if (!text.trim()) return null;
+	if (!text.trim() && !isPendingAiResponse(raw, text)) return null;
 	const rawRequest = normalizeAiRequestSource(raw);
 	const userInstructions = normalizeAiUserInstructions(rawRequest, raw);
 	return createNormalizedAiResponse(raw, text, rawRequest, userInstructions);
@@ -876,18 +881,74 @@ async function writeAiResponses(campaignSlugValue, responses) {
 	return normalized;
 }
 
+function getRequestedAiResponseId(payload) {
+	const candidate =
+		payload?.responseId ??
+		payload?.id ??
+		(isObjectLike(payload?.retryPayload)
+			? payload.retryPayload.responseId
+			: null);
+	return typeof candidate === "string" || typeof candidate === "number"
+		? String(candidate).trim()
+		: "";
+}
+
+function stripInternalRetryResponseId(payload) {
+	if (!payload || typeof payload !== "object") return payload;
+	const hasResponseId = hasOwn(payload, "responseId");
+	const retryPayload = payload.retryPayload;
+	const hasRetryResponseId =
+		isObjectLike(retryPayload) &&
+		!Array.isArray(retryPayload) &&
+		hasOwn(retryPayload, "responseId");
+	if (!hasResponseId && !hasRetryResponseId) return payload;
+	const next = { ...payload };
+	if (hasResponseId) delete next.responseId;
+	if (hasRetryResponseId) {
+		const nextRetryPayload = { ...retryPayload };
+		delete nextRetryPayload.responseId;
+		next.retryPayload = nextRetryPayload;
+	}
+	return next;
+}
+
 async function addAiResponse(payload) {
 	const campaignSlugValue = payload?.path?.campaign;
+	const requestedId = getRequestedAiResponseId(payload);
+	const sanitizedPayload = stripInternalRetryResponseId(payload);
 	const responses = await readAiResponses(campaignSlugValue);
+	const existingEntry = requestedId
+		? responses.find((item) => item.id === requestedId)
+		: null;
+	let sourceEntry = null;
+	if (!existingEntry && requestedId) {
+		const sourceCampaign = normalizeCampaignSlug(
+			payload?.retryPayload?.path?.campaign,
+		);
+		if (
+			sourceCampaign &&
+			sourceCampaign !== normalizeCampaignSlug(campaignSlugValue)
+		) {
+			sourceEntry = await getAiResponse(sourceCampaign, requestedId);
+			if (sourceEntry) {
+				await deleteAiResponse(sourceCampaign, requestedId);
+			}
+		}
+	}
+	const baseEntry = existingEntry || sourceEntry;
 	const entry = normalizeAiResponse({
-		...payload,
-		id: createId(),
-		createdAt: new Date().toISOString(),
+		...(baseEntry || {}),
+		...sanitizedPayload,
+		id: baseEntry?.id || requestedId || createId(),
+		createdAt: baseEntry?.createdAt || new Date().toISOString(),
 	});
 	if (!entry) {
 		throw new Error("AI response text is required.");
 	}
-	await writeAiResponses(campaignSlugValue, [entry, ...responses]);
+	const remaining = existingEntry
+		? responses.filter((item) => item.id !== entry.id)
+		: responses;
+	await writeAiResponses(campaignSlugValue, [entry, ...remaining]);
 	return entry;
 }
 

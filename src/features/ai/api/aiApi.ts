@@ -43,7 +43,7 @@ export interface AiHistoryEntry extends Record<string, unknown> {
 	campaign?: string;
 	createdAt?: string;
 	applyState?: "draft" | "applied" | "undone" | string;
-	status?: string;
+	status?: "pending" | "completed" | "failed" | string;
 	type?: string;
 	modelName?: string;
 	language?: string;
@@ -96,7 +96,7 @@ const historyPath = (campaign: string, id?: AiHistoryId) =>
 
 export const aiApi = {
 	listAiModels: () => request<AiModelListResult>("/ai/models"),
-	generateImage: (payload: { campaign: string; historyCampaign?: string; modelName: string; prompt: string; attachedImages?: Record<string, unknown>[] }) =>
+	generateImage: (payload: { campaign: string; historyCampaign?: string; modelName: string; prompt: string; attachedImages?: Record<string, unknown>[]; responseId?: AiHistoryId }) =>
 		request<{ aiResponse: AiHistoryEntry; imageUrl: string }>("/ai/generate-image", { method: "POST", body: JSON.stringify(payload) }),
 	saveGeminiApiKey: (apiKey: string) =>
 		request<{ ok: true }>("/ai/api-key", {
@@ -105,6 +105,15 @@ export const aiApi = {
 		}),
 	listAiResponses: (campaign: string) =>
 		request<AiHistoryEntry[]>(historyPath(campaign)),
+	createAiResponse: (
+		payload: AiGenerationPayload,
+		options: Omit<RequestInit, "method" | "body"> = {},
+	) =>
+		request<AiHistoryEntry>("/ai/responses", {
+			method: "POST",
+			body: JSON.stringify(payload),
+			...options,
+		}),
 	getAiResponsesStats: (campaign: string) =>
 		request<AiHistoryStats>(
 			`/ai/responses/stats?campaign=${encodeURIComponent(campaign)}`,

@@ -50,8 +50,18 @@ interface UseAiAssistantHistoryControllerOptions {
 	labels: AiAssistantHistoryLabels;
 }
 
-const getEntryText = (entry: AiHistoryEntry | null): string | null =>
-	typeof entry?.text === "string" ? entry.text : null;
+const getEntryText = (
+	entry: AiHistoryEntry | null,
+	translate: (phrase: string) => string,
+): string | null => {
+	if (typeof entry?.text === "string" && entry.text.trim()) {
+		return entry.text;
+	}
+	if (entry?.status === "pending") {
+		return translate("Waiting for AI response...");
+	}
+	return typeof entry?.text === "string" ? entry.text : null;
+};
 
 export function useAiAssistantHistoryController({
 	historyCampaign,
@@ -100,16 +110,19 @@ export function useAiAssistantHistoryController({
 		setIsGeneratedPromptCopied(false);
 	}, []);
 
-	const showPrompt = useCallback((response: unknown) => {
-		const entry: AiHistoryEntry =
-			response && typeof response === "object"
-				? (response as AiHistoryEntry)
-				: { id: "", text: response };
-		setGeneratedPrompt(getEntryText(entry));
-		setSelectedResponseId(entry.id || null);
-		setSelectedResponseEntry(entry);
-		setIsGeneratedPromptCopied(false);
-	}, []);
+	const showPrompt = useCallback(
+		(response: unknown) => {
+			const entry: AiHistoryEntry =
+				response && typeof response === "object"
+					? (response as AiHistoryEntry)
+					: { id: "", text: response };
+			setGeneratedPrompt(getEntryText(entry, translate));
+			setSelectedResponseId(entry.id || null);
+			setSelectedResponseEntry(entry);
+			setIsGeneratedPromptCopied(false);
+		},
+		[translate],
+	);
 
 	const copyPrompt = useCallback(async () => {
 		if (!generatedPromptRef.current || !generatedPrompt) return;
@@ -161,10 +174,10 @@ export function useAiAssistantHistoryController({
 			void refreshStats();
 			if (selectedResponseId === entry.id) {
 				setSelectedResponseEntry(entry);
-				setGeneratedPrompt(getEntryText(entry));
+				setGeneratedPrompt(getEntryText(entry, translate));
 			}
 		},
-		[refreshStats, selectedResponseId],
+		[refreshStats, selectedResponseId, translate],
 	);
 
 	const refreshAfterRestore = useCallback(
@@ -186,7 +199,7 @@ export function useAiAssistantHistoryController({
 				onHistoryChanged: () => void refreshStats(),
 				onSelectionUpdate: (restoredEntry) => {
 					setSelectedResponseEntry(restoredEntry);
-					setGeneratedPrompt(getEntryText(restoredEntry));
+					setGeneratedPrompt(getEntryText(restoredEntry, translate));
 				},
 				onApplyUpdatedData: applyUpdatedData,
 				onRequestReload: requestReload,
@@ -200,6 +213,7 @@ export function useAiAssistantHistoryController({
 			requestReload,
 			route,
 			selectedResponseId,
+			translate,
 		],
 	);
 
@@ -218,7 +232,7 @@ export function useAiAssistantHistoryController({
 		onEntryUpserted: upsertEntry,
 		onDraftSaved: (entry) => {
 			setSelectedResponseEntry(entry);
-			setGeneratedPrompt(getEntryText(entry));
+			setGeneratedPrompt(getEntryText(entry, translate));
 		},
 		onRestored: (result, entry, { isUndo }) => {
 			refreshAfterRestore(result, entry);
