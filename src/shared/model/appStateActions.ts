@@ -28,6 +28,7 @@ export interface UiSettingsInput extends Record<string, unknown> {
 	ignoreSourcesList?: unknown;
 	autoApplyAiChanges?: unknown;
 	useSearchDebounce?: unknown;
+	animationMode?: unknown;
 }
 
 export interface NormalizedUiSettingsPatch {
@@ -43,6 +44,7 @@ export interface NormalizedUiSettingsPatch {
 	ignoreSourcesList?: string[];
 	autoApplyAiChanges?: boolean;
 	useSearchDebounce?: boolean;
+	animationMode?: "auto" | "enabled" | "disabled";
 }
 
 type UiSettingsField = keyof NormalizedUiSettingsPatch;
@@ -130,6 +132,10 @@ function normalizeEnabledByDefault(value: unknown): boolean {
 	return value !== false;
 }
 
+function normalizeAnimationMode(value: unknown): "auto" | "enabled" | "disabled" {
+	return value === "enabled" || value === "disabled" ? value : "auto";
+}
+
 const UI_SETTINGS_FIELD_POLICIES: UiSettingsFieldPolicies = {
 	theme: (value) => (value === "dark" ? "dark" : "light"),
 	encounterViewMode: (value) => (value === "grid" ? "grid" : "single"),
@@ -143,6 +149,7 @@ const UI_SETTINGS_FIELD_POLICIES: UiSettingsFieldPolicies = {
 	ignoreSourcesList: normalizeIgnoreSourcesList,
 	autoApplyAiChanges: normalizeEnabledByDefault,
 	useSearchDebounce: normalizeEnabledByDefault,
+	animationMode: normalizeAnimationMode,
 };
 
 function hasOwnUiSetting(

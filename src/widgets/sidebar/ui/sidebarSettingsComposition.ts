@@ -30,6 +30,7 @@ function useSidebarSettingsModalRuntime(): SettingsModalRuntime {
 		storedIgnoreSourcesList,
 		storedImagePromptBasePrompt,
 		useSearchDebounce,
+		animationMode,
 	} = useSidebarRuntime();
 
 	return useMemo<SettingsModalRuntime>(
@@ -49,6 +50,7 @@ function useSidebarSettingsModalRuntime(): SettingsModalRuntime {
 			storedIgnoreSourcesList,
 			autoApplyAiChanges,
 			useSearchDebounce,
+			animationMode,
 			setLanguage,
 			patchUiSettings,
 			setCampaigns,
@@ -69,6 +71,7 @@ function useSidebarSettingsModalRuntime(): SettingsModalRuntime {
 			storedIgnoreSourcesList,
 			autoApplyAiChanges,
 			useSearchDebounce,
+			animationMode,
 			setLanguage,
 			patchUiSettings,
 			setCampaigns,

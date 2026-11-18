@@ -39,3 +39,8 @@ export {
 	sanitizeNotesForSave,
 	upsertNoteById,
 } from "./noteUtils.js";
+export {
+	getMotionPreferences,
+	initMotionSystem,
+	setMotionAnimationMode,
+} from "./motion.ts";

@@ -49,7 +49,11 @@ import {
 	SpellsBrowser,
 	SpellsBrowserRuntimeProvider,
 } from "./widgets/spells-browser/index.js";
-import { lang } from "./shared/lib/index.js";
+import {
+	initMotionSystem,
+	lang,
+	setMotionAnimationMode,
+} from "./shared/lib/index.js";
 import {
 	alert,
 	requestCampaignsReloadAction,
@@ -91,6 +95,7 @@ export default function App() {
 		activeCampaignSlug,
 		currentLanguage,
 		currentTheme,
+		animationMode,
 		simplifiedNotesEnabled,
 		showAllCardNotes,
 		syncEvent,
@@ -109,6 +114,15 @@ export default function App() {
 	useEffect(() => {
 		initRealtimeSync();
 	}, []);
+
+	useEffect(() => {
+		const cleanup = initMotionSystem(animationMode);
+		return cleanup;
+	}, []);
+
+	useEffect(() => {
+		setMotionAnimationMode(animationMode);
+	}, [animationMode]);
 
 	useEffect(() => {
 		setRouterNavigate(routerNavigate);

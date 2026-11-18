@@ -90,6 +90,14 @@
     font-size: 13px;
     font-weight: 600;
     text-decoration: none;
+    transition:
+        background var(--anim-duration-fast) var(--anim-ease-standard),
+        color var(--anim-duration-fast) var(--anim-ease-standard),
+        transform var(--anim-duration-fast) var(--anim-ease-spring);
+}
+
+.Sidebar__link:hover {
+    transform: translateX(3px);
 }
 
 .Sidebar__link:hover,

@@ -8,6 +8,7 @@
 	justify-content: center;
 	z-index: 1300;
 	padding: var(--space-4);
+	animation: ModalOverlayFadeIn var(--anim-duration-normal) var(--anim-ease-standard);
 }
 
 .Modal__overlay .Panel__body {
@@ -25,6 +26,30 @@
 	display: flex;
 	flex-direction: column;
 	max-height: 96vh;
+	animation: ModalCardPopIn var(--anim-duration-slow) var(--anim-ease-spring);
+	will-change: transform, opacity;
+}
+
+@keyframes ModalOverlayFadeIn {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes ModalCardPopIn {
+	from {
+		opacity: 0;
+		transform: translateY(var(--anim-modal-enter-y)) scale(var(--anim-modal-enter-scale));
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
 }
 
 .Modal__card__error {

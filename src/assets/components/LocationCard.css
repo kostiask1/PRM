@@ -5,8 +5,21 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     overflow: hidden;
-    transition: all 0.2s ease;
+    transition:
+        border-color var(--anim-duration-normal) var(--anim-ease-standard),
+        box-shadow var(--anim-duration-normal) var(--anim-ease-standard),
+        transform var(--anim-duration-normal) var(--anim-ease-spring);
     height: 100%;
+    will-change: transform, box-shadow;
+}
+
+.LocationCard:hover {
+    border-color: color-mix(in srgb, var(--accent), transparent 60%);
+    box-shadow: var(--shadow-sm);
+}
+
+.LocationCard.is_collapsed:hover {
+    transform: var(--anim-hover-lift);
 }
 
 .LocationCard.is_collapsed {

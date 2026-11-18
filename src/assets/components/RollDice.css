@@ -5,4 +5,16 @@
 	font-weight: 500;
 	white-space: nowrap;
 	user-select: none;
+	display: inline-block;
+	transition:
+		transform var(--anim-duration-fast) var(--anim-ease-spring),
+		color var(--anim-duration-fast) var(--anim-ease-standard);
+}
+
+.RollDice:hover {
+	color: color-mix(in srgb, var(--accent), var(--text-bright) 20%);
+}
+
+.RollDice:active {
+	transform: scale(0.92);
 }

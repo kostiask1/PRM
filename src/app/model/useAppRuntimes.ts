@@ -61,6 +61,7 @@ export function useAppRuntimes() {
 		(store) => store.localization.language,
 	);
 	const currentTheme = useAppSelector((store) => store.ui.theme);
+	const animationMode = useAppSelector((store) => store.ui.animationMode);
 	const simplifiedNotesEnabled = useAppSelector(
 		(store) => store.ui.simplifiedNotes,
 	);
@@ -257,6 +258,7 @@ export function useAppRuntimes() {
 		activeCampaignSlug,
 		currentLanguage,
 		currentTheme,
+		animationMode,
 		simplifiedNotesEnabled: effectiveSimplifiedNotesEnabled,
 		showAllCardNotes,
 		syncEvent,

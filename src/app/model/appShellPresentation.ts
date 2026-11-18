@@ -44,6 +44,7 @@ const UI_SETTING_KEYS = [
 	"ignoreSourcesList",
 	"autoApplyAiChanges",
 	"useSearchDebounce",
+	"animationMode",
 ] as const;
 
 export function isEditableAppTarget(target: EventTarget | null): boolean {

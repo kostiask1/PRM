@@ -6,10 +6,10 @@
 	border-radius: var(--radius-sm);
 	background: var(--panel);
 	transition:
-		border-color 0.2s ease,
-		background 0.2s ease,
-		box-shadow 0.2s ease,
-		transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1);
+		border-color var(--anim-duration-normal) var(--anim-ease-standard),
+		background var(--anim-duration-normal) var(--anim-ease-standard),
+		box-shadow var(--anim-duration-normal) var(--anim-ease-standard),
+		transform var(--anim-duration-normal) var(--anim-ease-bounce);
 	position: relative;
 	z-index: 1;
 	will-change: transform, opacity;
@@ -18,6 +18,8 @@
 .ListCard:hover {
 	border-color: color-mix(in srgb, var(--accent), transparent 65%);
 	background: color-mix(in srgb, var(--bg), transparent 30%);
+	transform: var(--anim-hover-lift);
+	box-shadow: var(--shadow-sm);
 }
 
 .ListCard__active {

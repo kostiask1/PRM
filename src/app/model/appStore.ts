@@ -60,6 +60,7 @@ function getInitialUiSettings(): UiSettingsState {
 		ignoreSourcesList: [],
 		autoApplyAiChanges: false,
 		useSearchDebounce: true,
+		animationMode: "auto",
 	};
 }
 

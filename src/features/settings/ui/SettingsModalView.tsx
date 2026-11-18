@@ -26,6 +26,8 @@ export interface SettingsGeneralViewProps {
 	autoApplyAiChanges: boolean;
 	useSearchDebounce: boolean;
 	showAllCardNotes: boolean;
+	animationMode: "auto" | "enabled" | "disabled";
+	onAnimationModeChange: (mode: "auto" | "enabled" | "disabled") => void;
 	onCardNotesChange: (enabled: boolean) => void;
 	onThemeToggle: () => void;
 	onLanguageChange: (language: string) => void;
@@ -86,6 +88,8 @@ function SettingsGeneralGroup({
 	autoApplyAiChanges,
 	useSearchDebounce,
 	showAllCardNotes,
+	animationMode,
+	onAnimationModeChange,
 	onCardNotesChange,
 	onThemeToggle,
 	onLanguageChange,
@@ -125,6 +129,27 @@ function SettingsGeneralGroup({
 									: languageCode.toUpperCase()}
 						</option>
 					))}
+				</Select>
+			</div>
+
+			<div className="SettingsModal__lang">
+				<label className="SettingsModal__label">{lang.t("Interface animations")}</label>
+				<Select
+					aria-label={lang.t("Interface animations")}
+					value={animationMode}
+					onChange={(event) =>
+						onAnimationModeChange(
+							event.target.value as "auto" | "enabled" | "disabled",
+						)
+					}
+				>
+					<option value="auto">
+						{lang.t("Automatic (adapts to power saving and OS)")}
+					</option>
+					<option value="enabled">{lang.t("Always enabled")}</option>
+					<option value="disabled">
+						{lang.t("Disabled (power saving)")}
+					</option>
 				</Select>
 			</div>
 

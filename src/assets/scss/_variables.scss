@@ -76,6 +76,19 @@
 	--rules-sense: #3e6221;
 	--rules-creature: #944328;
 	--content-padding: 24px;
+	--anim-duration-fast: 150ms;
+	--anim-duration-normal: 240ms;
+	--anim-duration-slow: 350ms;
+	--anim-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+	--anim-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+	--anim-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--anim-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+	--anim-scale-click: scale(0.97);
+	--anim-scale-pop: scale(1.05);
+	--anim-hover-lift: translateY(-2px);
+	--anim-modal-enter-scale: 0.96;
+	--anim-modal-enter-y: 8px;
+	--anim-dice-tumble-scale: 1.15;
 }
 
 :root[data-theme="light"] {

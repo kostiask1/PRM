@@ -12,6 +12,7 @@ export interface SettingsModalUiPatch extends Record<string, unknown> {
 	ignoreSourcesList?: string[];
 	autoApplyAiChanges?: boolean;
 	useSearchDebounce?: boolean;
+	animationMode?: "auto" | "enabled" | "disabled";
 }
 
 export interface SettingsModalRuntime {
@@ -30,6 +31,7 @@ export interface SettingsModalRuntime {
 	storedIgnoreSourcesList: string[] | undefined;
 	autoApplyAiChanges: boolean | undefined;
 	useSearchDebounce: boolean | undefined;
+	animationMode?: "auto" | "enabled" | "disabled";
 	setLanguage(language: string): void;
 	patchUiSettings(patch: SettingsModalUiPatch): void;
 	setCampaigns(campaigns: unknown[]): void;

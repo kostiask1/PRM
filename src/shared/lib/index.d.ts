@@ -151,3 +151,10 @@ export {
 export function makeDomId(...parts: unknown[]): string;
 export function scrollToHashTarget(hash?: string): boolean;
 export { useUrlSection } from "./useUrlSection.ts";
+export {
+	getMotionPreferences,
+	initMotionSystem,
+	setMotionAnimationMode,
+	type AnimationMode,
+	type MotionPreferences,
+} from "./motion.ts";

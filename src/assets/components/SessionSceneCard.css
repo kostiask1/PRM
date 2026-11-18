@@ -6,6 +6,14 @@
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
 	overflow: hidden;
+	transition:
+		border-color var(--anim-duration-normal) var(--anim-ease-standard),
+		box-shadow var(--anim-duration-normal) var(--anim-ease-standard);
+}
+
+.SessionSceneCard:hover {
+	border-color: color-mix(in srgb, var(--accent), transparent 65%);
+	box-shadow: var(--shadow-sm);
 }
 
 .SessionSceneCard__header {

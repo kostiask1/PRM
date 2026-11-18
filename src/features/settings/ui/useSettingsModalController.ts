@@ -279,6 +279,10 @@ export function useSettingsModalController(
 		runtime.patchUiSettings({ useSearchDebounce: enabled });
 		patchSettings({ useSearchDebounce: enabled });
 	};
+	const handleAnimationModeChange = (mode: "auto" | "enabled" | "disabled") => {
+		runtime.patchUiSettings({ animationMode: mode });
+		patchSettings({ animationMode: mode });
+	};
 	const schedulePromptSave = useQueuedAutosave({
 		onSave: async (payload: ReturnType<typeof buildPromptSettingsPayload>, isLatest) => {
 			if (isLatest() && isMountedRef.current) setPromptStatus("saving");
@@ -521,6 +525,8 @@ export function useSettingsModalController(
 			availableLanguages,
 			autoApplyAiChanges,
 			useSearchDebounce,
+			animationMode: runtime.animationMode || "auto",
+			onAnimationModeChange: handleAnimationModeChange,
 			showAllCardNotes: runtime.showAllCardNotes,
 			onCardNotesChange: runtime.setCardNotesViewMode,
 			onThemeToggle: handleThemeToggle,

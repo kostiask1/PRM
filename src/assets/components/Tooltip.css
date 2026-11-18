@@ -15,6 +15,20 @@
 	color: var(--text);
 	font-size: 0.9rem;
 	line-height: 1.4;
+	animation: TooltipPopIn var(--anim-duration-fast) var(--anim-ease-spring);
+	will-change: transform, opacity;
+}
+
+@keyframes TooltipPopIn {
+	from {
+		opacity: 0;
+		transform: translateY(-4px) scale(0.97);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
 }
 
 .Tooltip__title {

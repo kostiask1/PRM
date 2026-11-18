@@ -47,6 +47,7 @@ export default function SidebarRuntimeHost({
 		showAllCardNotes,
 		theme: currentTheme,
 		useSearchDebounce,
+		animationMode,
 	} = useAppSelector((state) => state.ui);
 	const rolledResult = useAppSelector((state) => state.dice.rolledResult);
 	const syncEvent = useAppSelector(
@@ -124,6 +125,7 @@ export default function SidebarRuntimeHost({
 			storedImagePromptBasePrompt,
 			syncEvent,
 			useSearchDebounce,
+			animationMode,
 			closeModal,
 			openModal,
 			reportError,
@@ -158,6 +160,7 @@ export default function SidebarRuntimeHost({
 			storedImagePromptBasePrompt,
 			syncEvent,
 			useSearchDebounce,
+			animationMode,
 		],
 	);
 

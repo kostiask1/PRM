@@ -4,12 +4,21 @@
     background: color-mix(in srgb, var(--text-bright), transparent 97%);
     border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
     border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
+    transition:
+        border-color var(--anim-duration-normal) var(--anim-ease-standard),
+        box-shadow var(--anim-duration-normal) var(--anim-ease-standard),
+        transform var(--anim-duration-normal) var(--anim-ease-spring);
     cursor: grab;
+    will-change: transform, box-shadow;
 }
 
 .NoteCard:hover {
     border-color: color-mix(in srgb, var(--text-bright), transparent 80%);
+    box-shadow: var(--shadow-sm);
+}
+
+.NoteCard.is_collapsed:hover {
+    transform: var(--anim-hover-lift);
 }
 
 .NoteCard__header {

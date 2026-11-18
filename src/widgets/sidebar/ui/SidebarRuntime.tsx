@@ -40,6 +40,7 @@ export interface SidebarRuntime extends Pick<
 		| "storedIgnoreSourcesList"
 		| "storedImagePromptBasePrompt"
 		| "useSearchDebounce"
+		| "animationMode"
 	> {
 	activeEncounterId: string | number | null;
 	activeSessionFileName: string | null;
