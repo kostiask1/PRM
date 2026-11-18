@@ -1,4 +1,4 @@
-import React, { type DragEvent, type ReactNode } from "react";
+import React, { useRef, useState, type DragEvent, type ReactNode } from "react";
 import type {
 	BestiaryMonster,
 	MonsterEntry,
@@ -108,21 +108,40 @@ function MonsterTokenImage({
 	TokenSectionProps,
 	"monster" | "sources" | "dragPayload" | "onReplace" | "onImageError"
 > & { presentation: MonsterTokenSectionPresentation }) {
+	const [hasError, setHasError] = useState(false);
+	const prevSrcRef = useRef(sources.localSrc);
+	if (prevSrcRef.current !== sources.localSrc) {
+		prevSrcRef.current = sources.localSrc;
+		setHasError(false);
+	}
+	const hasValidSrc = Boolean(sources.localSrc) && !hasError;
+
 	return (
 		<>
-		<div
-			className="MonsterStatBlock__tokenDragProxy"
-			draggable
-			onDragStart={(event) => applyTokenDragPayload(event, dragPayload)}
-		>
-			<img
-				src={sources.localSrc}
-				alt={String(monster.name ?? "")}
-				className="MonsterStatBlock__token"
-				draggable={false}
-				onError={onImageError}
-			/>
-		</div>
+			<div
+				className="MonsterStatBlock__tokenDragProxy"
+				draggable
+				onDragStart={(event) => applyTokenDragPayload(event, dragPayload)}
+			>
+				{sources.localSrc && (
+					<img
+						src={sources.localSrc}
+						alt={String(monster.name ?? "")}
+						className="MonsterStatBlock__token"
+						draggable={false}
+						onError={() => {
+							setHasError(true);
+							onImageError();
+						}}
+						hidden={!hasValidSrc}
+					/>
+				)}
+				{!hasValidSrc && (
+					<span className="MonsterStatBlock__tokenFallback" aria-hidden="true">
+						<Icon name="dice" size={48} />
+					</span>
+				)}
+			</div>
 			{presentation.showReplaceAction && (
 				<Button
 					variant="ghost"

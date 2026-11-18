@@ -227,7 +227,7 @@ export default function MonsterStatBlock({
 	};
 
 	const tokenSources = getMonsterTokenSources(monster, customTokenUrl, tokenImageOverrideUrl, model.localTokenSrc, model.externalTokenSrc);
-	const showTokenDropzone = shouldShowMonsterTokenDropzone({
+	const showTokenDropzone = isReplacingToken && shouldShowMonsterTokenDropzone({
 		allowTokenUpload,
 		hasImageError,
 		isReplacingToken,
@@ -263,7 +263,7 @@ export default function MonsterStatBlock({
 					sources={tokenSources}
 					showDropzone={showTokenDropzone}
 					isReplacingToken={isReplacingToken}
-					hasImageError={hasImageError}
+					hasImageError={isReplacingToken ? hasImageError : false}
 					allowTokenUpload={allowTokenUpload}
 					tokenUploadCampaignSlug={tokenUploadCampaignSlug}
 					hasTokenImageChange={Boolean(onTokenImageChange)}
