@@ -81,11 +81,26 @@ export function formatComparisonFieldValue(field: string | undefined, value: unk
 	return formatFieldValue(value);
 }
 
-const PREVIEW_IGNORED_KEYS = new Set(["id", "slug", "source", "createdAt"]);
-const CARD_IGNORED_KEYS = new Set([
-	...PREVIEW_IGNORED_KEYS,
+export function isFieldEmpty(value: unknown): boolean {
+	if (value === null || value === undefined || value === "") return true;
+	if (Array.isArray(value) && value.length === 0) return true;
+	return false;
+}
+
+export const PREVIEW_IGNORED_KEYS = new Set([
+	"id",
+	"slug",
+	"source",
+	"createdAt",
 	"collapsed",
 	"isNotesCollapsed",
+	"isDescriptionCollapsed",
+	"isCharactersCollapsed",
+	"isNpcsCollapsed",
+	"isLocationsCollapsed",
+]);
+export const CARD_IGNORED_KEYS = new Set([
+	...PREVIEW_IGNORED_KEYS,
 ]);
 
 function getChangedKeys(
@@ -95,7 +110,13 @@ function getChangedKeys(
 ): string[] {
 	if (!isObjectSnapshot(before) || !isObjectSnapshot(after)) return [];
 	return [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
-		(key) => !ignoredKeys.has(key) && !snapshotsEqual(before[key], after[key]),
+		(key) => {
+			if (ignoredKeys.has(key)) return false;
+			const bVal = before[key];
+			const aVal = after[key];
+			if (isFieldEmpty(bVal) && isFieldEmpty(aVal)) return false;
+			return !snapshotsEqual(bVal, aVal);
+		},
 	);
 }
 
@@ -106,7 +127,7 @@ export function getPreviewFieldKeys(
 ): string[] {
 	if (!isObjectSnapshot(before) || !isObjectSnapshot(after)) return ["value"];
 	const keys = getChangedKeys(before, after, PREVIEW_IGNORED_KEYS);
-	return keys.length > 0 ? keys : summary;
+	return keys.length > 0 ? keys : summary.filter((key) => !PREVIEW_IGNORED_KEYS.has(key));
 }
 
 export function getFieldValue(snapshot: unknown, key: string, wholeSnapshot = false): unknown {

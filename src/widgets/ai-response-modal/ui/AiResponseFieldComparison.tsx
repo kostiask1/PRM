@@ -1,7 +1,14 @@
 import type { ReactNode } from "react";
 
 import { lang } from "../../../shared/lib/index.js";
-import { formatComparisonFieldValue, getFieldValue, getPreviewFieldKeys, isObjectSnapshot } from "../model/aiResponseModal.ts";
+import {
+	formatComparisonFieldValue,
+	getFieldValue,
+	getPreviewFieldKeys,
+	isFieldEmpty,
+	isObjectSnapshot,
+	PREVIEW_IGNORED_KEYS,
+} from "../model/aiResponseModal.ts";
 import { compareText, type ComparedTextPart } from "../model/compareText.ts";
 import { getAiResponseFieldLabel } from "./aiResponseFieldLabel.ts";
 
@@ -69,7 +76,12 @@ export function AiResponseSingleSnapshotComparison({ before, after, renderNotes,
 	const snapshot = before === null ? after : before;
 	const wholeSnapshot = !isObjectSnapshot(snapshot);
 	const fields = isObjectSnapshot(snapshot)
-		? Object.keys(snapshot).filter((key) => !["id", "slug", "source", "createdAt", ...ignoredFields].includes(key))
+		? Object.keys(snapshot).filter(
+				(key) =>
+					!PREVIEW_IGNORED_KEYS.has(key) &&
+					!ignoredFields.includes(key) &&
+					!isFieldEmpty(snapshot[key]),
+		  )
 		: ["value"];
 	return (
 		<div className="AiAssistantPanel__field_comparisons">
