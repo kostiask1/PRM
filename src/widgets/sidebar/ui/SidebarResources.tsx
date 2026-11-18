@@ -33,7 +33,7 @@ const EXTERNAL_RESOURCES: Array<{
 		label: "Szepeku maps",
 	},
 	{
-		href: "https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect",
+		href: "https://chatgpt.com/plugins/plugin_4771db7bd38c819198b3a5f0bc06ff63",
 		icon: "wand",
 		label: "Map Architect (AI)",
 	},
