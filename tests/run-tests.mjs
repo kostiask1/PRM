@@ -29860,7 +29860,10 @@ await run("rules link previews preserve creature and reference metadata", async 
 			ac: [{ ac: 12 }],
 			hp: { special: "variable" },
 		}),
-		getCondition: async () => ({ name: "Blinded", entries: ["Cannot see"] }),
+		getCondition: async (name) =>
+			String(name).includes("PHB")
+				? { name: "Blinded", source: "PHB", entries: ["2014 rules"] }
+				: { name: "Blinded", source: "XPHB", entries: ["2024 rules"] },
 		getDisease: async () => ({ name: "Sight Rot", type: "Disease" }),
 		getVariantRule: async () => ({ name: "Flanking" }),
 		getSkill: async () => ({ name: "Arcana", ability: "int", entries: [] }),
@@ -29889,6 +29892,24 @@ await run("rules link previews preserve creature and reference metadata", async 
 			title: "Arcana",
 			meta: "INT",
 			entries: [],
+		},
+	);
+	assert.deepEqual(
+		await loadRulesLinkPreview("condition", "Blinded|PHB", loaders, formatters),
+		{
+			kind: "reference",
+			title: "Blinded",
+			meta: "PHB",
+			entries: ["2014 rules"],
+		},
+	);
+	assert.deepEqual(
+		await loadRulesLinkPreview("condition", "Blinded", loaders, formatters),
+		{
+			kind: "reference",
+			title: "Blinded",
+			meta: "XPHB",
+			entries: ["2024 rules"],
 		},
 	);
 });
@@ -51776,6 +51797,33 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 	assert.equal(
 		createReferenceSelection("bestiary", { name: "Дракон", source: "MM" }).tag,
 		"{@creature Дракон|MM}",
+	);
+	assert.deepEqual(
+		createReferenceSelection("conditions", { name: "Blinded", source: "PHB" }),
+		{
+			tabId: "conditions",
+			item: { name: "Blinded", source: "PHB" },
+			name: "Blinded|PHB",
+			tag: "{@condition Blinded|PHB}",
+		},
+	);
+	assert.deepEqual(
+		createReferenceSelection("conditions", { name: "Blinded", source: "XPHB" }),
+		{
+			tabId: "conditions",
+			item: { name: "Blinded", source: "XPHB" },
+			name: "Blinded|XPHB",
+			tag: "{@condition Blinded|XPHB}",
+		},
+	);
+	assert.deepEqual(
+		createReferenceSelection("conditions", { name: "Отруєний" }),
+		{
+			tabId: "conditions",
+			item: { name: "Отруєний" },
+			name: "Отруєний",
+			tag: "{@condition Отруєний}",
+		},
 	);
 	const creatures = [
 		{ name: "Дракон", source: "XMM" },

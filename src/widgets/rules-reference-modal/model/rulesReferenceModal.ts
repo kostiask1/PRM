@@ -205,7 +205,7 @@ interface ReferenceInlineTagPolicy {
 const INLINE_TAG_POLICIES: Record<ReferenceTabId, ReferenceInlineTagPolicy> = {
 	conditions: {
 		tag: (item) => item.kind === "status" ? "status" : "condition",
-		identity: (_item, name) => name,
+		identity: (item) => getConditionReferenceName(item),
 	},
 	diseases: { tag: () => "disease", identity: (_item, name) => name },
 	senses: { tag: () => "sense", identity: (_item, name) => name },
@@ -521,6 +521,13 @@ export function getCreatureReferenceMatchRank(item: ReferenceItem, selectedName:
 	return 1 + Number(candidate.source === selected.source) * 2;
 }
 
+export function getConditionReferenceName(item: ReferenceItem = {}): string {
+	const name = String(item.name || "").trim();
+	if (!name) return "";
+	const source = String(item.source || "").trim().toUpperCase();
+	return source ? `${name}|${source}` : name;
+}
+
 export function getReferenceSelectionName(tabId: ReferenceTabId, item: ReferenceItem = {}): string {
 	if (tabId === "spells") return getSpellReferenceName(item);
 	if (tabId === "bestiary") return getCreatureReferenceName(item);
@@ -624,7 +631,10 @@ export function createReferenceSelection<TItem extends ReferenceItem>(
 	tabId: ReferenceTabId,
 	item: TItem,
 ): ReferenceSelection<TItem> | null {
-	const name = String(item.name || "");
+	const name =
+		tabId === "conditions"
+			? getConditionReferenceName(item)
+			: getReferenceSelectionName(tabId, item);
 	if (!name) return null;
 	return { tabId, item, name, tag: getReferenceInlineTag(tabId, item) };
 }

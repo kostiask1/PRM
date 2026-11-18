@@ -161,9 +161,11 @@ export default function EncounterPageContent({ controller }: Props) {
 								const conditions = Array.isArray(participant.encounterConditions)
 									? participant.encounterConditions.filter((condition): condition is string => typeof condition === "string" && Boolean(condition.trim()))
 									: [];
-								if (!conditions.some((condition) => condition.trim().toLocaleLowerCase() === name.toLocaleLowerCase())) {
-									view.updateMonsterConditions(conditionTarget, [...conditions, name]);
-								}
+								const baseName = name.split("|")[0].trim().toLocaleLowerCase();
+								const withoutSameCondition = conditions.filter(
+									(condition) => condition.split("|")[0].trim().toLocaleLowerCase() !== baseName,
+								);
+								view.updateMonsterConditions(conditionTarget, [...withoutSameCondition, name]);
 							}
 							setConditionTarget(null);
 					}}

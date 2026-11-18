@@ -456,7 +456,13 @@ export async function resolveRulesLinkNavigation(
 	if (!config) return null;
 	const reference = await resolvers[config.resolver](referenceName);
 	return reference?.name
-		? { tab: config.tab, name: reference.name }
+		? {
+				tab: config.tab,
+				name:
+					config.tab === "conditions" && reference.source
+						? `${reference.name}|${reference.source}`
+						: reference.name,
+			}
 		: null;
 }
 
@@ -527,18 +533,23 @@ async function loadGenericReferencePreview(
 	type: RulesReferenceType,
 	referenceName: string,
 	loaders: RulesReferencePreviewLoaders,
+	formatters: RulesReferencePreviewFormatters,
 ): Promise<RulesReferencePreview | null> {
 	const config = REFERENCE_TYPE_CONFIG[type];
 	if (!config) return null;
 	const reference = await loaders[config.loader](referenceName);
-	return reference?.name
-		? {
-				kind: "reference",
-				title: reference.name,
-				meta: getReferenceMeta(reference, config.metaField),
-				entries: reference.entries,
-			}
-		: null;
+	if (!reference?.name) return null;
+	const meta = config.metaField
+		? getReferenceMeta(reference, config.metaField)
+		: reference.source && formatters?.formatSource
+			? formatters.formatSource(reference.source)
+			: "";
+	return {
+		kind: "reference",
+		title: reference.name,
+		meta,
+		entries: reference.entries,
+	};
 }
 
 export async function loadRulesLinkPreview(
@@ -550,5 +561,5 @@ export async function loadRulesLinkPreview(
 	const specialLoader = SPECIAL_PREVIEW_LOADERS[type];
 	return specialLoader
 		? specialLoader(referenceName, loaders, formatters)
-		: loadGenericReferencePreview(type, referenceName, loaders);
+		: loadGenericReferencePreview(type, referenceName, loaders, formatters);
 }
