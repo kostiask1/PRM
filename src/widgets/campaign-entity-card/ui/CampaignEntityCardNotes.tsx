@@ -92,7 +92,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 					}
 					onDrop={onReorderDrop}
 					{...getAiIgnoredNoteListProps((noteId, ignored) => updateNotes(setCampaignNoteAiIgnored(model.notes, noteId, ignored)))}
-					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); const changed = Boolean(getCampaignNoteHighlightFields(highlightFields, note)?.length); return <EntityLinkedListItem text={preview.text || label} label={changed ? `${label} — ${lang.t("Changed")}` : label} maxLength={preview.maxLength} selected={note === selected} changed={changed} onSelect={() => { setSelectedKey(String(note.id)); if (stream) detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-note-index]")[notesForRender.indexOf(note)]?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }} />; }}
+					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); const changed = Boolean(getCampaignNoteHighlightFields(highlightFields, note)?.length); return <EntityLinkedListItem text={preview.text || label} label={changed ? `${label} — ${lang.t("Changed")}` : label} maxLength={preview.maxLength} selected={note === selected} changed={changed} onSelect={() => { setSelectedKey(String(note.id)); if (stream) detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-note-index]")[notesForRender.indexOf(note)]?.scrollIntoView({ block: "start", behavior: "smooth" }); }} />; }}
 				/>
 				<div ref={detailRef} className={`CampaignEntitySection__detail${stream ? " CampaignEntitySection__detail_stream" : ""}`} onScroll={(event) => {
 					if (!stream) return;

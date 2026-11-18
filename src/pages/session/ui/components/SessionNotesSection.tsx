@@ -52,14 +52,9 @@ export default function SessionNotesSection({
 					{...getAiIgnoredNoteListProps(onToggleAiIgnored, {
 						isolateDragEvents: false,
 					})}
-					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); return <EntityLinkedListItem text={preview.text || label} label={label} maxLength={preview.maxLength} selected={note === selected} onSelect={() => { setSelectedKey(String(note.id)); detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-note-index]")[renderableNotes.indexOf(note)]?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }} />; }}
+					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); return <EntityLinkedListItem text={preview.text || label} label={label} maxLength={preview.maxLength} selected={note === selected} onSelect={() => { setSelectedKey(String(note.id)); detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-note-index]")[renderableNotes.indexOf(note)]?.scrollIntoView({ block: "start", behavior: "smooth" }); }} />; }}
 				/>
-				<div ref={detailRef} className="CampaignEntitySection__detail CampaignEntitySection__detail_stream" onScroll={(event) => {
-					const top = event.currentTarget.getBoundingClientRect().top;
-					const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(":scope > [data-note-index]"));
-					const active = cards.reduce<HTMLElement | null>((current, card) => card.getBoundingClientRect().top <= top + 24 ? card : current, cards[0] || null);
-					if (active) setSelectedKey(String(renderableNotes[Number(active.dataset.noteIndex)]?.id));
-				}}>{renderableNotes.map((note, index) => <div key={String(note.id)} data-note-index={index}>{renderItem(note, false, index)}</div>)}</div>
+				<div ref={detailRef} className="CampaignEntitySection__detail CampaignEntitySection__detail_stream">{renderableNotes.map((note, index) => <div key={String(note.id)} data-note-index={index}>{renderItem(note, false, index)}</div>)}</div>
 			</div>
 		</TodoSection>
 	);

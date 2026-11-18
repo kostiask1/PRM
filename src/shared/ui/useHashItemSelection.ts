@@ -85,7 +85,7 @@ export function useHashItemSelection<T>(
 	itemsRef.current = items;
 	getKeyRef.current = getKey;
 	const selectKey = useCallback((key: string | null) => {
-		manualSelectUntilRef.current = Date.now() + 600;
+		manualSelectUntilRef.current = Date.now() + 1000;
 		setSelectedKey(key);
 	}, []);
 	useEffect(() => { if (selectionRequest) setSelectedKey(String(selectionRequest.id)); }, [selectionRequest]);
@@ -130,16 +130,21 @@ export function useHashItemSelection<T>(
 				".CampaignEntitySection__list, .CampaignNotesSection__list",
 			);
 			const scrollParent = container.closest<HTMLElement>(".Panel__body");
+			const isBottom = scrollParent
+				? scrollParent.scrollTop + scrollParent.clientHeight >= scrollParent.scrollHeight - 24
+				: typeof window !== "undefined" && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 24;
 			const thresholdTop = Math.max(
 				container.getBoundingClientRect().top,
 				listSibling ? listSibling.getBoundingClientRect().top : -Infinity,
 				scrollParent ? scrollParent.getBoundingClientRect().top + 48 : -Infinity,
 			);
-			const activeIndex = getActiveScrollItemIndex(
-				cards.map((card) => card.getBoundingClientRect().top),
-				thresholdTop,
-				24,
-			);
+			const activeIndex = isBottom
+				? cards.length - 1
+				: getActiveScrollItemIndex(
+					cards.map((card) => card.getBoundingClientRect().top),
+					thresholdTop,
+					24,
+				);
 			if (activeIndex >= 0 && activeIndex < currentItems.length) {
 				const nextKey = getKeyRef.current(currentItems[activeIndex], activeIndex);
 				setSelectedKey((prev) => (prev === nextKey ? prev : nextKey));

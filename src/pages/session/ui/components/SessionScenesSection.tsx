@@ -22,7 +22,7 @@ export default function SessionScenesSection({ scenes, selectedScene, onAddScene
    <aside className="SessionWorkspace__outline" aria-label={lang.t("Scenes")}>
     <header><h3>{lang.t("Session plan")}</h3><Button className="SessionWorkspace__compactAdd" variant="ghost" size="sm" icon="plus" aria-label={lang.t("Add scene")} title={lang.t("Add scene")} onClick={onAddScene} /></header>
     <DraggableList items={scenes} onReorder={onReorder} keyExtractor={(scene) => scene.id} keyboardReorder getKeyboardReorderLabel={(_scene, index) => lang.t("Reorder scene {number} (arrow keys)", { number: index + 1 })} renderItem={(scene, _dragging, index) => (
-     <button className="SessionWorkspace__scene" type="button" aria-pressed={selectedScene?.id === scene.id} onClick={() => { onOpenScene(scene); editorRef.current?.querySelectorAll<HTMLElement>(":scope > [data-scene-index]")[index]?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }}>
+     <button className="SessionWorkspace__scene" type="button" aria-pressed={selectedScene?.id === scene.id} onClick={() => { onOpenScene(scene); editorRef.current?.querySelectorAll<HTMLElement>(":scope > [data-scene-index]")[index]?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>
       <span className="WorkspaceEyebrow">{lang.t("Scene {number}", { number: String(index + 1).padStart(2, "0") })}</span>
       <strong>{String(scene.name || scene.title || scene.texts?.summary || lang.t("Untitled")).split("\n")[0]}</strong>
       <small>{lang.t(scene.encounterId !== null && scene.encounterId !== undefined ? "Combat encounter" : "Preparation")}</small>

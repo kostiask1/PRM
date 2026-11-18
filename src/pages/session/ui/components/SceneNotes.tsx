@@ -52,7 +52,7 @@ export default function SceneNotes({
 					getKeyboardReorderLabel={(note) => lang.t("Reorder note: {name} (arrow keys)", { name: getNoteListLabel(note) || lang.t("New note") })}
 					onReorder={onSceneNotesReorder}
 					{...getAiIgnoredNoteListProps(onSceneNoteAiIgnoredChange)}
-					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); return <EntityLinkedListItem text={preview.text || label} label={label} maxLength={preview.maxLength} selected={note === selected} onSelect={() => { setSelectedKey(String(note.id)); if (showAll) detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-note-index]")[notes.indexOf(note)]?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }} />; }}
+					renderItem={(note) => { const preview = getNoteListPreview(note); const label = getNoteListLabel(note) || lang.t("New note"); return <EntityLinkedListItem text={preview.text || label} label={label} maxLength={preview.maxLength} selected={note === selected} onSelect={() => { setSelectedKey(String(note.id)); if (showAll) detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-note-index]")[notes.indexOf(note)]?.scrollIntoView({ block: "start", behavior: "smooth" }); }} />; }}
 				/>
 				<div ref={detailRef} className={`CampaignEntitySection__detail${showAll ? " CampaignEntitySection__detail_stream" : ""}`} onScroll={(event) => {
 					if (!showAll) return;

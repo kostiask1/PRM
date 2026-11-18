@@ -80,15 +80,10 @@ export default function SessionEntitySection<Item extends SessionEntityListItem>
 					)}
 					renderItem={(item) => {
 						const name = listVariant === "location" ? item.name || item.title : [item.firstName, item.lastName].filter(Boolean).join(" ") || item.name;
-						return <button type="button" className="CampaignEntitySection__item" aria-pressed={item === selected} onClick={() => { setSelectedKey(String(item.id)); detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-entity-index]")[items.indexOf(item)]?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }}>{typeof item.imageUrl === "string" && item.imageUrl && <img src={item.imageUrl} alt="" />}<span>{String(name || lang.t("Untitled"))}</span></button>;
+						return <button type="button" className="CampaignEntitySection__item" aria-pressed={item === selected} onClick={() => { setSelectedKey(String(item.id)); detailRef.current?.querySelectorAll<HTMLElement>(":scope > [data-entity-index]")[items.indexOf(item)]?.scrollIntoView({ block: "start", behavior: "smooth" }); }}>{typeof item.imageUrl === "string" && item.imageUrl && <img src={item.imageUrl} alt="" />}<span>{String(name || lang.t("Untitled"))}</span></button>;
 					}}
 				/>
-				<div ref={detailRef} className="CampaignEntitySection__detail CampaignEntitySection__detail_stream" onScroll={(event) => {
-					const top = event.currentTarget.getBoundingClientRect().top;
-					const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(":scope > [data-entity-index]"));
-					const active = cards.reduce<HTMLElement | null>((current, card) => card.getBoundingClientRect().top <= top + 24 ? card : current, cards[0] || null);
-					if (active) setSelectedKey(String(items[Number(active.dataset.entityIndex)]?.id));
-				}}>{items.map((item, index) => <div key={String(item.id)} data-entity-index={index}>{renderItem(item)}</div>)}</div></div>
+				<div ref={detailRef} className="CampaignEntitySection__detail CampaignEntitySection__detail_stream">{items.map((item, index) => <div key={String(item.id)} data-entity-index={index}>{renderItem(item)}</div>)}</div></div>
 			) : (
 				<div className="muted SessionEntitySection__empty">{emptyText}</div>
 			)}
