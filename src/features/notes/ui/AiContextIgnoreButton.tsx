@@ -1,5 +1,5 @@
+import { classNames, lang } from "../../../shared/lib/index.js";
 import { Button } from "../../../shared/ui/index.js";
-import { lang } from "../../../shared/lib/index.js";
 
 export interface AiContextIgnoreButtonProps {
 	ignored: boolean;
@@ -12,6 +12,7 @@ export default function AiContextIgnoreButton({
 }: AiContextIgnoreButtonProps) {
 	return (
 		<Button
+			className={classNames("AiContextIgnoreButton", ignored && "is_ignored")}
 			variant={ignored ? "primary" : "ghost"}
 			size={Button.SIZES.SMALL}
 			icon={ignored ? "x" : "database"}
