@@ -1,5 +1,6 @@
 import {
 	useCallback,
+	useEffect,
 	useId,
 	useMemo,
 	useRef,
@@ -7,6 +8,7 @@ import {
 } from "react";
 import {
 	Button,
+	NoteViewMode,
 	Panel,
 	SectionTabs,
 } from "../../../shared/ui/index.js";
@@ -56,6 +58,8 @@ import {
 	getCampaignEntityAiIgnoredUpdate,
 	getCampaignPageCampaign,
 	getCampaignSectionState,
+	getNextCampaignSectionFromArrowKey,
+	isCampaignEditableTarget,
 	type CampaignSessionItem,
 } from "../model/campaignPagePresentation.ts";
 
@@ -284,6 +288,32 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	);
 	const onCloseGlobalSearch = () => setIsGlobalSearchOpen(false);
 
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			const target = event.target instanceof HTMLElement ? event.target : null;
+			const isInteractiveOrEditable =
+				isCampaignEditableTarget(target) ||
+				target?.tagName === "SELECT" ||
+				Boolean(target?.closest("[contenteditable='true'], [role='tablist']"));
+			const nextSection = getNextCampaignSectionFromArrowKey({
+				key: event.key,
+				ctrlKey: event.ctrlKey,
+				metaKey: event.metaKey,
+				altKey: event.altKey,
+				shiftKey: event.shiftKey,
+				defaultPrevented: event.defaultPrevented,
+				isEditableTarget: isInteractiveOrEditable,
+				hasOpenModal: Boolean(document.querySelector(".Modal__overlay")),
+				activeSection,
+			});
+			if (!nextSection) return;
+			event.preventDefault();
+			setActiveSection(nextSection);
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [activeSection, setActiveSection]);
+
 	return (
 		<Panel
 			className="CampaignView"
@@ -308,9 +338,59 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 					{ id: "story", label: lang.t("Campaign story") },
 					{ id: "gallery", label: lang.t("Gallery") },
 				]} />
-				<Button size={Button.SIZES.SMALL} icon="notes-graph" onClick={() => { handleNotesViewModeChange("graph"); setActiveSection("notes"); }}>
-					{lang.t("Notes graph")}
-				</Button>
+				<div className="CampaignView__navigationActions">
+					{activeSection === "overview" && (
+						<Button size={Button.SIZES.SMALL} icon="notes-graph" onClick={() => { handleNotesViewModeChange("graph"); setActiveSection("notes"); }}>
+							{lang.t("Notes graph")}
+						</Button>
+					)}
+					{activeSection === "sessions" && (
+						<Button variant="create" size={Button.SIZES.SMALL} icon="plus" onClick={view.handleCreateSession}>
+							{lang.t("New session")}
+						</Button>
+					)}
+					{activeSection === "characters" && (
+						<CreateCharacterButton
+							onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "characters", id: entity.id }); }}
+							campaignSlug={campaign.slug}
+							entityType="characters"
+						/>
+					)}
+					{activeSection === "npc" && (
+						<CreateCharacterButton
+							onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "npc", id: entity.id }); }}
+							campaignSlug={campaign.slug}
+							entityType="npc"
+						/>
+					)}
+					{activeSection === "locations" && (
+						<CreateLocationButton
+							campaignSlug={campaign.slug}
+							onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "locations", id: entity.id }); }}
+						/>
+					)}
+					{activeSection === "notes" && (
+						<NoteViewMode
+							className="CampaignNotesSection__viewToggle"
+							value={notesViewMode}
+							onChange={handleNotesViewModeChange}
+							options={[
+								{
+									value: "list",
+									label: lang.t("List"),
+									title: lang.t("List view"),
+									icon: "list",
+								},
+								{
+									value: "graph",
+									label: lang.t("Graph"),
+									title: lang.t("Graph view"),
+									icon: "notes-graph",
+								},
+							]}
+						/>
+					)}
+				</div>
 				</div>
 				<div role="tabpanel" id={`${tabsId}-panel-overview`} aria-labelledby={`${tabsId}-tab-overview`} hidden={activeSection !== "overview"}>
 					<CampaignOverview sessions={allSessions} characters={view.characters} notes={view.notes}
@@ -364,13 +444,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							selectionRequest={requestedEntity?.type === "characters" ? requestedEntity : null}
 							listVariant="person"
 							dropType="characters"
-							actions={
-								<CreateCharacterButton
-									onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "characters", id: entity.id }); }}
-									campaignSlug={campaign.slug}
-									entityType="characters"
-								/>
-							}
 							onReorder={view.handleCharactersReorder}
 							onReorderDrop={characterSectionControls.onReorderDrop}
 							dragData={(character) => ({
@@ -423,13 +496,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							selectionRequest={requestedEntity?.type === "npc" ? requestedEntity : null}
 							listVariant="person"
 							dropType="npc"
-							actions={
-								<CreateCharacterButton
-									onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "npc", id: entity.id }); }}
-									campaignSlug={campaign.slug}
-									entityType="npc"
-								/>
-							}
 							onReorder={view.handleNpcsReorder}
 							onReorderDrop={npcSectionControls.onReorderDrop}
 							dragData={(npc) => ({
@@ -491,7 +557,6 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							items={view.locations}
 							selectionRequest={requestedEntity?.type === "locations" ? requestedEntity : null}
 							listVariant="location"
-							actions={<CreateLocationButton campaignSlug={campaign.slug} onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "locations", id: entity.id }); }} />}
 							onReorder={view.handleLocationsReorder}
 							onReorderDrop={locationSectionControls.onReorderDrop}
 							isItemControlActive={(location) =>

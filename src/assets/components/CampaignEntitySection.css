@@ -52,7 +52,7 @@
 	gap: var(--space-1);
 	min-width: 0;
 	position: sticky;
-	top: var(--space-7);
+	top: 0;
 }
 
 :is(.CampaignEntitySection__list, .NoteSelectionList) {
@@ -253,38 +253,4 @@
 
 :is(.CharacterCard__notes, .LocationCard__notes, .SessionSceneCard__notes) .CampaignEntitySection__detail_stream {
 	max-height: 400px;
-}
-
-.NoteViewMode {
-	display: inline-flex;
-	gap: var(--space-0-5);
-	padding: var(--space-0-5);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-md);
-	background: var(--accent-soft);
-	margin-left: auto;
-}
-
-.NoteViewMode button {
-	border: 0;
-	border-radius: var(--radius-xs);
-	padding: var(--space-1) var(--space-2);
-	background: transparent;
-	color: var(--muted);
-	font: inherit;
-	font-size: 0.75rem;
-	cursor: pointer;
-	white-space: nowrap;
-}
-
-.NoteViewMode button[aria-pressed="true"] {
-	color: var(--accent);
-	background: var(--panel);
-	box-shadow: 0 1px 3px color-mix(in srgb, var(--text), transparent 85%);
-	font-weight: 700;
-}
-
-.NoteViewMode button:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 1px;
 }

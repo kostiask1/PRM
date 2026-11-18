@@ -37,7 +37,7 @@ export default function SessionNotesSection({
 	renderItem,
 }: SessionNotesSectionProps) {
 	const detailRef = useRef<HTMLDivElement>(null);
-	const { selected, setSelectedKey } = useHashItemSelection(renderableNotes, (note) => String(note.id), (note, hash) => matchesHistoryTargetId(hash, "session", "note", note.id) || hash === `#${makeDomId("session", "note", note.id)}`, (note, key) => note._renderKey != null && String(note._renderKey) === key);
+	const { selected, setSelectedKey } = useHashItemSelection(renderableNotes, (note) => String(note.id), (note, hash) => matchesHistoryTargetId(hash, "session", "note", note.id) || hash === `#${makeDomId("session", "note", note.id)}`, (note, key) => note._renderKey != null && String(note._renderKey) === key, undefined, detailRef);
 	return (
 		<TodoSection
 			title={lang.t("Notes")}

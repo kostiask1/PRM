@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Button, DraggableList, useHashItemSelection } from "../../../../shared/ui/index.js";
+import { DraggableList, useHashItemSelection } from "../../../../shared/ui/index.js";
 import "../../../../assets/components/CampaignNotesSection.css";
 import "../../../../assets/components/CampaignEntitySection.css";
 import {
@@ -50,7 +50,7 @@ function CampaignNotesList({
 	onToggleIgnored,
 }: CampaignNotesListProps) {
 	const detailRef = useRef<HTMLDivElement>(null);
-	const { selected, setSelectedKey } = useHashItemSelection(notes, (note) => String(note.id), (note, hash) => matchesHistoryTargetId(hash, "campaign", "note", note.id) || hash === `#${makeDomId("campaign", "note", note.id)}`, (note, key) => note._renderKey != null && String(note._renderKey) === key);
+	const { selected, setSelectedKey } = useHashItemSelection(notes, (note) => String(note.id), (note, hash) => matchesHistoryTargetId(hash, "campaign", "note", note.id) || hash === `#${makeDomId("campaign", "note", note.id)}`, (note, key) => note._renderKey != null && String(note._renderKey) === key, undefined, detailRef);
 	return (
 		<div className="CampaignEntitySection__workspace">
 		<DraggableList
@@ -94,41 +94,6 @@ function CampaignNotesList({
 				</div>
 			))}
 		</div>
-		</div>
-	);
-}
-
-interface CampaignNotesViewToggleProps {
-	presentation: CampaignNotesSectionPresentation;
-	onViewModeChange: (mode: CampaignNotesViewMode) => void;
-}
-
-function CampaignNotesViewToggle({
-	presentation,
-	onViewModeChange,
-}: CampaignNotesViewToggleProps) {
-	return (
-		<div className="CampaignNotesSection__viewToggle">
-			<Button
-				variant={presentation.listButtonVariant}
-				size={Button.SIZES.SMALL}
-				icon="list"
-				iconSize={16}
-				onClick={() => onViewModeChange("list")}
-				title={lang.t("List view")}
-			>
-				{lang.t("List")}
-			</Button>
-			<Button
-				variant={presentation.graphButtonVariant}
-				size={Button.SIZES.SMALL}
-				icon="notes-graph"
-				iconSize={16}
-				onClick={() => onViewModeChange("graph")}
-				title={lang.t("Graph view")}
-			>
-				{lang.t("Graph")}
-			</Button>
 		</div>
 	);
 }
@@ -187,7 +152,7 @@ interface CampaignNotesSectionProps {
 	view: CampaignViewController;
 	notes: CampaignRenderableNote[];
 	viewMode: CampaignNotesViewMode;
-	onViewModeChange: (mode: CampaignNotesViewMode) => void;
+	onViewModeChange?: (mode: CampaignNotesViewMode) => void;
 	onToggleIgnored: (noteId: DomainId, ignored: boolean) => void;
 }
 
@@ -196,7 +161,6 @@ export default function CampaignNotesSection({
 	view,
 	notes,
 	viewMode,
-	onViewModeChange,
 	onToggleIgnored,
 }: CampaignNotesSectionProps) {
 	const presentation = getCampaignNotesSectionPresentation({
@@ -210,15 +174,6 @@ export default function CampaignNotesSection({
 			className="CampaignNotesSection"
 			data-history-focus-id={makeHistoryTargetId("campaign", "notes")}
 		>
-			<div className="CampaignNotesSection__row">
-				<div className="CampaignNotesSection__titleGroup">
-					<h3>{lang.t("Notes")}</h3>
-				</div>
-				<CampaignNotesViewToggle
-					presentation={presentation}
-					onViewModeChange={onViewModeChange}
-				/>
-			</div>
 			<CampaignNotesContent
 				campaign={campaign}
 				view={view}

@@ -10,13 +10,13 @@ import type { CampaignPageEntity } from "../../model/contracts.ts";
 import { getCampaignEntityRenderKey } from "../../model/campaignPagePresentation.ts";
 
 interface CampaignEntitySectionProps {
-	title: string;
+	title?: string;
 	items: CampaignPageEntity[];
 	selectionRequest?: { id: string | number } | null;
 	listVariant: "person" | "location";
 	historyFocusId: string;
 	dropType?: "characters" | "npc";
-	actions: ReactNode;
+	actions?: ReactNode;
 	dragData?: (entity: CampaignPageEntity) => unknown;
 	renderItemControl?: (entity: CampaignPageEntity) => ReactNode;
 	isItemControlActive?: (entity: CampaignPageEntity) => boolean;
@@ -26,13 +26,11 @@ interface CampaignEntitySectionProps {
 }
 
 export default function CampaignEntitySection({
-	title,
 	items,
 	selectionRequest,
 	listVariant,
 	historyFocusId,
 	dropType,
-	actions,
 	dragData,
 	renderItemControl,
 	isItemControlActive,
@@ -42,21 +40,13 @@ export default function CampaignEntitySection({
 }: CampaignEntitySectionProps) {
 	const detailRef = useRef<HTMLDivElement>(null);
 	const kind = dropType === "characters" ? "character" : dropType === "npc" ? "npc" : "location";
-	const { selected, setSelectedKey } = useHashItemSelection(items, (entity, index) => String(getCampaignEntityRenderKey(entity, index)), (entity, hash) => matchesHistoryTargetId(hash, "campaign", kind, entity.id) || matchesHistoryTargetId(hash, "campaign", `${kind}-note`, entity.id) || hash === `#${makeDomId("campaign", kind, entity.id)}`, undefined, selectionRequest);
+	const { selected, setSelectedKey } = useHashItemSelection(items, (entity, index) => String(getCampaignEntityRenderKey(entity, index)), (entity, hash) => matchesHistoryTargetId(hash, "campaign", kind, entity.id) || matchesHistoryTargetId(hash, "campaign", `${kind}-note`, entity.id) || hash === `#${makeDomId("campaign", kind, entity.id)}`, undefined, selectionRequest, detailRef);
 	return (
 		<div
 			className="CampaignEntitySection"
 			data-character-drop-type={dropType}
 			data-history-focus-id={historyFocusId}
 		>
-			<div className="CampaignEntitySection__row">
-				<div className="CampaignEntitySection__titleGroup">
-					<h3>{title}</h3>
-				</div>
-					<div className="CampaignEntitySection__actions">
-						{actions}
-					</div>
-			</div>
 			<div className="CampaignEntitySection__workspace">
 				<DraggableList
 					items={items}

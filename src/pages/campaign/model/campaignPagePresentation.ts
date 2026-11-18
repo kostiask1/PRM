@@ -17,6 +17,31 @@ export type CampaignCharacterType = "characters" | "npc";
 export type CampaignHashTarget = "notes" | "characters" | "npc" | "locations";
 export type CampaignKeyboardAction = "undo" | "redo" | "none";
 
+export const CAMPAIGN_SECTIONS = [
+	"overview",
+	"sessions",
+	"characters",
+	"npc",
+	"locations",
+	"notes",
+	"story",
+	"gallery",
+] as const;
+
+export type CampaignSectionId = (typeof CAMPAIGN_SECTIONS)[number];
+
+export interface CampaignSectionArrowNavigationInput {
+	key?: string;
+	ctrlKey?: boolean;
+	metaKey?: boolean;
+	altKey?: boolean;
+	shiftKey?: boolean;
+	defaultPrevented?: boolean;
+	isEditableTarget?: boolean;
+	hasOpenModal?: boolean;
+	activeSection: CampaignSectionId;
+}
+
 export interface CampaignKeyboardTarget {
 	tagName?: unknown;
 	isContentEditable?: unknown;
@@ -160,6 +185,31 @@ export function getCampaignKeyboardAction({
 		isEditableTarget,
 	});
 	return canRoute ? getCampaignHistoryKeyAction(code, shiftKey) : "none";
+}
+
+export function getNextCampaignSectionFromArrowKey(
+	input: CampaignSectionArrowNavigationInput,
+): CampaignSectionId | null {
+	if (
+		input.defaultPrevented ||
+		input.isEditableTarget ||
+		input.hasOpenModal ||
+		input.ctrlKey ||
+		input.metaKey ||
+		input.altKey ||
+		input.shiftKey
+	) {
+		return null;
+	}
+	const direction =
+		input.key === "ArrowRight" ? 1 : input.key === "ArrowLeft" ? -1 : 0;
+	if (direction === 0) return null;
+	const currentIndex = CAMPAIGN_SECTIONS.indexOf(input.activeSection);
+	const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+	const nextIndex =
+		(safeIndex + direction + CAMPAIGN_SECTIONS.length) %
+		CAMPAIGN_SECTIONS.length;
+	return CAMPAIGN_SECTIONS[nextIndex];
 }
 
 export function getCampaignPageCampaign(

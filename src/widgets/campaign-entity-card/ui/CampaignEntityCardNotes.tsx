@@ -13,7 +13,7 @@ import {
 } from "../../../features/notes/ui/index.js";
 import { EntityLinkedListItem, renderMentionText } from "../../../features/entity-link/index.js";
 import { getNoteListLabel, getNoteListPreview, lang, makeDomId, sanitizeNotesForSave } from "../../../shared/lib/index.js";
-import { DraggableList, useHashItemSelection } from "../../../shared/ui/index.js";
+import { DraggableList, NoteViewMode, useHashItemSelection } from "../../../shared/ui/index.js";
 import "../../../assets/components/CampaignEntitySection.css";
 import {
 	getCampaignNoteHighlightFields,
@@ -74,10 +74,9 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 		<div className={`${classPrefix}__notes`}>
 			<div className={`${classPrefix}__notesHeader`}>
 				<label>{label}</label>
-				{historyKind !== "character" && <div className="NoteViewMode" role="group" aria-label={lang.t("Notes display mode")}>
-					<button type="button" aria-pressed={showAll} onClick={() => setShowAll(true)}>{lang.t("All notes")}</button>
-					<button type="button" aria-pressed={!showAll} onClick={() => setShowAll(false)}>{lang.t("One note")}</button>
-				</div>}
+				{historyKind !== "character" && (
+					<NoteViewMode value={showAll} onChange={setShowAll} />
+				)}
 			</div>
 			<div className="CampaignEntitySection__workspace">
 				<DraggableList<CardNote>

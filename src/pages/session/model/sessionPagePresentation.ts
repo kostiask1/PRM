@@ -17,6 +17,27 @@ import {
 export type SessionKeyboardAction = "back" | "undo" | "redo" | "none";
 export type SessionSyncAction = "ignore" | "reload" | "discard-and-reload";
 
+export const SESSION_SECTIONS = [
+	"scenes",
+	"notes",
+	"entities",
+	"result",
+] as const;
+
+export type SessionSectionId = (typeof SESSION_SECTIONS)[number];
+
+export interface SessionSectionArrowNavigationInput {
+	key?: string;
+	ctrlKey?: boolean;
+	metaKey?: boolean;
+	altKey?: boolean;
+	shiftKey?: boolean;
+	defaultPrevented?: boolean;
+	isEditableTarget?: boolean;
+	hasOpenModal?: boolean;
+	activeSection: SessionSectionId;
+}
+
 export interface SessionKeyboardInput {
 	key: string;
 	code: string;
@@ -94,6 +115,31 @@ export function isSessionEditableTarget(
 ): boolean {
 	return ["INPUT", "TEXTAREA"].includes(String(target?.tagName || "")) ||
 		Boolean(target?.isContentEditable);
+}
+
+export function getNextSessionSectionFromArrowKey(
+	input: SessionSectionArrowNavigationInput,
+): SessionSectionId | null {
+	if (
+		input.defaultPrevented ||
+		input.isEditableTarget ||
+		input.hasOpenModal ||
+		input.ctrlKey ||
+		input.metaKey ||
+		input.altKey ||
+		input.shiftKey
+	) {
+		return null;
+	}
+	const direction =
+		input.key === "ArrowRight" ? 1 : input.key === "ArrowLeft" ? -1 : 0;
+	if (direction === 0) return null;
+	const currentIndex = SESSION_SECTIONS.indexOf(input.activeSection);
+	const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+	const nextIndex =
+		(safeIndex + direction + SESSION_SECTIONS.length) %
+		SESSION_SECTIONS.length;
+	return SESSION_SECTIONS[nextIndex];
 }
 
 type SessionSyncResourcePolicy = "ignore" | "reload" | "discard-and-reload";

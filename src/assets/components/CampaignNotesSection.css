@@ -28,16 +28,9 @@
 	user-select: none;
 }
 
-.CampaignNotesSection__viewToggle {
-	display: flex;
-	align-items: center;
-	gap: var(--space-1);
-	flex-wrap: wrap;
-}
-
 .CampaignNotesSection__list {
 	position: sticky;
-	top: var(--space-7);
+	top: 0;
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-1);
@@ -47,11 +40,6 @@
 @media (max-width: 1024px) {
 	.CampaignNotesSection__viewToggle {
 		max-width: 100%;
-	}
-
-	.CampaignNotesSection__viewToggle .Button {
-		flex: 0 0 auto;
-		min-height: var(--control-h-sm);
 	}
 }
 
@@ -67,11 +55,8 @@
 	}
 
 	.CampaignNotesSection__viewToggle {
-		width: 100%;
-		flex-wrap: nowrap;
+		max-width: 100%;
 		overflow-x: auto;
-		justify-content: flex-end;
-		padding-bottom: var(--space-1);
 		scrollbar-width: thin;
 	}
 

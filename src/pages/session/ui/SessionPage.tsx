@@ -1,6 +1,7 @@
 import {
 	useCallback,
 	useContext,
+	useEffect,
 	useId,
 	useMemo,
 	useRef,
@@ -66,11 +67,13 @@ import {
 	matchesHistoryTargetId,
 } from "../../../entities/history/index.js";
 import {
+	getNextSessionSectionFromArrowKey,
 	getSessionEncounterLinks,
 	getSessionPageData,
 	getSessionScopeImportPresentation,
 	getSessionSectionCollapsed,
 	hasSessionNoteContent,
+	isSessionEditableTarget,
 } from "../model/sessionPagePresentation.ts";
 import type { SessionEntityType, SessionPageEntity } from "../model/sessionEntityModel.ts";
 import { useSessionPageRuntime } from "../model/SessionPageRuntime.tsx";
@@ -379,6 +382,32 @@ function SessionView() {
 		isOpen: isHeaderActionsOpen,
 		setIsOpen: setIsHeaderActionsOpen,
 	});
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			const target = event.target instanceof HTMLElement ? event.target : null;
+			const isInteractiveOrEditable =
+				isSessionEditableTarget(target) ||
+				target?.tagName === "SELECT" ||
+				Boolean(target?.closest("[contenteditable='true'], [role='tablist']"));
+			const nextSection = getNextSessionSectionFromArrowKey({
+				key: event.key,
+				ctrlKey: event.ctrlKey,
+				metaKey: event.metaKey,
+				altKey: event.altKey,
+				shiftKey: event.shiftKey,
+				defaultPrevented: event.defaultPrevented,
+				isEditableTarget: isInteractiveOrEditable,
+				hasOpenModal: Boolean(document.querySelector(".Modal__overlay")),
+				activeSection,
+			});
+			if (!nextSection) return;
+			event.preventDefault();
+			setActiveSection(nextSection);
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [activeSection, setActiveSection]);
 
 	if (!session) return null;
 

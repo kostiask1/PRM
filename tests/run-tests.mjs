@@ -31,6 +31,10 @@ import {
 	UNORDERED_LIST,
 } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
+import {
+	getActiveScrollItemIndex,
+	getScrollTopForVisibleListItem,
+} from "../src/shared/ui/useHashItemSelection.ts";
 import { getTopModal } from "../src/shared/ui/useModalController.ts";
 import {
 	$isMentionNode,
@@ -86,6 +90,7 @@ import {
 	getMonsterTypeString,
 } from "../src/entities/bestiary/index.js";
 import {
+	CAMPAIGN_SECTIONS,
 	executeCampaignHashNavigationPlan,
 	filterCampaignSessions,
 	getCampaignCharacterDropRequest,
@@ -99,6 +104,7 @@ import {
 	getCampaignNotesViewModePlan,
 	getCampaignPageCampaign,
 	getCampaignSectionState,
+	getNextCampaignSectionFromArrowKey,
 	hasCampaignNoteContent,
 	isCampaignEditableTarget,
 	normalizeCampaignCardNotes,
@@ -500,6 +506,7 @@ import {
 } from "../src/pages/session/model/sessionEntityModel.ts";
 import {
 	executeSessionRenamePlan,
+	getNextSessionSectionFromArrowKey,
 	getSessionEncounterLinks,
 	getSessionKeyboardAction,
 	getSessionPageData,
@@ -510,6 +517,7 @@ import {
 	hasSessionNoteContent,
 	isSessionEditableTarget,
 	normalizeSessionPageSession,
+	SESSION_SECTIONS,
 } from "../src/pages/session/model/sessionPagePresentation.ts";
 import {
 	addSourceMonsterImageToDraft,
@@ -5582,6 +5590,89 @@ await run(
 		assert.doesNotMatch(
 			sectionSource,
 			/useState|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useCampaignView|useCampaignPageRuntime|CampaignViewController|\bview\b|triggerSave|persistEntitiesReorder|setIs(?:Characters|Npcs|Locations)Collapsed|campaignApi|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
+		);
+	},
+);
+
+await run(
+	"useHashItemSelection active scroll index resolves against sticky threshold",
+	() => {
+		assert.equal(getActiveScrollItemIndex([], 150), -1);
+		assert.equal(getActiveScrollItemIndex([200, 500, 800], 150), 0);
+		assert.equal(getActiveScrollItemIndex([-120, 165, 500], 150), 1);
+		assert.equal(getActiveScrollItemIndex([-400, -100, 174, 480], 150), 2);
+		assert.equal(getActiveScrollItemIndex([-400, -100, 175, 480], 150), 1);
+		assert.equal(
+			getScrollTopForVisibleListItem({
+				listTop: 100,
+				listBottom: 400,
+				listScrollTop: 0,
+				listScrollHeight: 280,
+				listClientHeight: 300,
+				itemTop: 420,
+				itemBottom: 460,
+			}),
+			null,
+		);
+		assert.equal(
+			getScrollTopForVisibleListItem({
+				listTop: 100,
+				listBottom: 400,
+				listScrollTop: 50,
+				listScrollHeight: 700,
+				listClientHeight: 300,
+				itemTop: 150,
+				itemBottom: 190,
+			}),
+			null,
+		);
+		assert.equal(
+			getScrollTopForVisibleListItem({
+				listTop: 100,
+				listBottom: 400,
+				listScrollTop: 120,
+				listScrollHeight: 700,
+				listClientHeight: 300,
+				itemTop: 65,
+				itemBottom: 105,
+			}),
+			85,
+		);
+		assert.equal(
+			getScrollTopForVisibleListItem({
+				listTop: 100,
+				listBottom: 400,
+				listScrollTop: 10,
+				listScrollHeight: 700,
+				listClientHeight: 300,
+				itemTop: 50,
+				itemBottom: 90,
+			}),
+			0,
+		);
+		assert.equal(
+			getScrollTopForVisibleListItem({
+				listTop: 100,
+				listBottom: 400,
+				listScrollTop: 120,
+				listScrollHeight: 700,
+				listClientHeight: 300,
+				itemTop: 390,
+				itemBottom: 430,
+			}),
+			150,
+		);
+		assert.equal(
+			getScrollTopForVisibleListItem({
+				listTop: 100,
+				listBottom: 400,
+				listScrollTop: 380,
+				listScrollHeight: 700,
+				listClientHeight: 300,
+				itemTop: 410,
+				itemBottom: 450,
+			}),
+			400,
 		);
 	},
 );
@@ -27484,6 +27575,56 @@ await run("campaign page presentation narrows routes, sessions, and card notes",
 	for (const { input, action } of keyboardCases) {
 		assert.equal(getCampaignKeyboardAction(input), action);
 	}
+	assert.deepEqual(CAMPAIGN_SECTIONS, [
+		"overview",
+		"sessions",
+		"characters",
+		"npc",
+		"locations",
+		"notes",
+		"story",
+		"gallery",
+	]);
+	assert.equal(
+		getNextCampaignSectionFromArrowKey({
+			key: "ArrowRight",
+			activeSection: "overview",
+		}),
+		"sessions",
+	);
+	assert.equal(
+		getNextCampaignSectionFromArrowKey({
+			key: "ArrowRight",
+			activeSection: "gallery",
+		}),
+		"overview",
+	);
+	assert.equal(
+		getNextCampaignSectionFromArrowKey({
+			key: "ArrowLeft",
+			activeSection: "overview",
+		}),
+		"gallery",
+	);
+	assert.equal(
+		getNextCampaignSectionFromArrowKey({
+			key: "ArrowLeft",
+			activeSection: "characters",
+		}),
+		"sessions",
+	);
+	for (const blockedInput of [
+		{ key: "Enter", activeSection: "overview" },
+		{ key: "ArrowRight", activeSection: "overview", isEditableTarget: true },
+		{ key: "ArrowRight", activeSection: "overview", hasOpenModal: true },
+		{ key: "ArrowRight", activeSection: "overview", defaultPrevented: true },
+		{ key: "ArrowRight", activeSection: "overview", ctrlKey: true },
+		{ key: "ArrowRight", activeSection: "overview", metaKey: true },
+		{ key: "ArrowRight", activeSection: "overview", altKey: true },
+		{ key: "ArrowRight", activeSection: "overview", shiftKey: true },
+	]) {
+		assert.equal(getNextCampaignSectionFromArrowKey(blockedInput), null);
+	}
 });
 
 await run("partial campaign archive selection is typed, immutable, and ordered", () => {
@@ -46230,6 +46371,47 @@ await run("session page policies preserve keyboard, sync, and presentation behav
 		}),
 		"redo",
 	);
+	assert.deepEqual(SESSION_SECTIONS, ["scenes", "notes", "entities", "result"]);
+	assert.equal(
+		getNextSessionSectionFromArrowKey({
+			key: "ArrowRight",
+			activeSection: "scenes",
+		}),
+		"notes",
+	);
+	assert.equal(
+		getNextSessionSectionFromArrowKey({
+			key: "ArrowRight",
+			activeSection: "result",
+		}),
+		"scenes",
+	);
+	assert.equal(
+		getNextSessionSectionFromArrowKey({
+			key: "ArrowLeft",
+			activeSection: "scenes",
+		}),
+		"result",
+	);
+	assert.equal(
+		getNextSessionSectionFromArrowKey({
+			key: "ArrowLeft",
+			activeSection: "entities",
+		}),
+		"notes",
+	);
+	for (const blockedInput of [
+		{ key: "Enter", activeSection: "scenes" },
+		{ key: "ArrowRight", activeSection: "scenes", isEditableTarget: true },
+		{ key: "ArrowRight", activeSection: "scenes", hasOpenModal: true },
+		{ key: "ArrowRight", activeSection: "scenes", defaultPrevented: true },
+		{ key: "ArrowRight", activeSection: "scenes", ctrlKey: true },
+		{ key: "ArrowRight", activeSection: "scenes", metaKey: true },
+		{ key: "ArrowRight", activeSection: "scenes", altKey: true },
+		{ key: "ArrowRight", activeSection: "scenes", shiftKey: true },
+	]) {
+		assert.equal(getNextSessionSectionFromArrowKey(blockedInput), null);
+	}
 	assert.equal(
 		getSessionSyncAction(
 			{

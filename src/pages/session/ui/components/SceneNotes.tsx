@@ -5,7 +5,7 @@ import { getAiIgnoredNoteListProps, useCardNotesViewMode, useRestoreNoteStreamPo
 import type { SessionResourceId } from "../../../../features/session-editor/index.js";
 import { getNoteListLabel, getNoteListPreview, getNotesForRender, lang, makeDomId, type SharedNote } from "../../../../shared/lib/index.js";
 import { EntityLinkedListItem } from "../../../../features/entity-link/index.js";
-import { DraggableList, useHashItemSelection } from "../../../../shared/ui/index.js";
+import { DraggableList, NoteViewMode, useHashItemSelection } from "../../../../shared/ui/index.js";
 import { matchesHistoryTargetId } from "../../../../entities/history/index.js";
 import "../../../../assets/components/CampaignEntitySection.css";
 
@@ -38,12 +38,12 @@ export default function SceneNotes({
 	const { detailRef, restoringRef } = useRestoreNoteStreamPosition(showAll, notes.indexOf(selected));
 	return (
 		<div className="SessionSceneCard__notes">
-			<div className="SessionSceneCard__notesHeaderRow"><div className="SessionSceneCard__notesHeader"><label>{lang.t("Scene notes")}</label>
-				<div className="NoteViewMode" role="group" aria-label={lang.t("Notes display mode")}>
-					<button type="button" aria-pressed={showAll} onClick={() => setShowAll(true)}>{lang.t("All notes")}</button>
-					<button type="button" aria-pressed={!showAll} onClick={() => setShowAll(false)}>{lang.t("One note")}</button>
+			<div className="SessionSceneCard__notesHeaderRow">
+				<div className="SessionSceneCard__notesHeader">
+					<label>{lang.t("Scene notes")}</label>
+					<NoteViewMode value={showAll} onChange={setShowAll} />
 				</div>
-			</div></div>
+			</div>
 			<div className="CampaignEntitySection__workspace">
 				<DraggableList
 					items={notes}

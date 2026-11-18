@@ -18,11 +18,16 @@ export {
 export { default as Icon, type IconName, type IconProps } from "./Icon.tsx";
 export { default as ListCard, type ListCardProps } from "./ListCard.tsx";
 export { default as Modal, type ModalProps } from "./Modal.tsx";
-export { useHashItemSelection } from "./useHashItemSelection.ts";
+export { getActiveScrollItemIndex, getScrollTopForVisibleListItem, useHashItemSelection, type ListScrollVisibilityInput } from "./useHashItemSelection.ts";
 export {
 	default as MultiSelect,
 	type MultiSelectProps,
 } from "./MultiSelect.tsx";
+export {
+	default as NoteViewMode,
+	type NoteViewModeOption,
+	type NoteViewModeProps,
+} from "./NoteViewMode.tsx";
 export {
 	default as Notification,
 	type NotificationProps,
