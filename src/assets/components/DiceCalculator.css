@@ -2,16 +2,12 @@
 	position: fixed;
 	bottom: var(--space-4);
 	right: var(--space-4);
-	z-index: 3000;
+	z-index: 9999;
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
 	gap: var(--space-3);
 	transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-body:has(.Modal__overlay) .DiceCalculator:not(.is_open) {
-	visibility: hidden;
 }
 
 .DiceCalculator__toggle {

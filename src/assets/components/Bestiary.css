@@ -5,6 +5,10 @@
 	gap: var(--space-3);
 }
 
+.Bestiary .AiAssistantPanel__toggle {
+	bottom: var(--space-5);
+}
+
 .Bestiary__header_actions {
 	display: flex;
 	align-items: center;
