@@ -300,6 +300,40 @@
 	height: var(--size-3);
 }
 
+.Bestiary__item_more_btn.is_active {
+	background: color-mix(in srgb, var(--accent), transparent 80%);
+	color: var(--accent);
+}
+
+.Bestiary__item_more_menu {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	padding: var(--space-1);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--panel);
+	box-shadow: var(--shadow-md);
+	z-index: 10000;
+	min-width: 250px;
+}
+
+.Bestiary__item_more_menu .Button {
+	justify-content: flex-start;
+	width: 100%;
+	padding: var(--space-1-5) var(--space-2-5);
+	font-size: 0.85rem;
+	white-space: nowrap;
+	min-height: var(--size-8);
+	gap: var(--space-2);
+}
+
+.Bestiary__item_more_menu .Button .Icon {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+}
+
 .Bestiary__ai_edit_modal {
 	width: min(720px, calc(100vw - 32px));
 }
@@ -400,14 +434,13 @@
 	display: flex;
 }
 
-.Bestiary__list .ListCard__actions:has(> span:only-child) {
-	display: flex;
-}
-
 .Bestiary__list .ListCard__actions {
 	display: grid;
-	grid-template-columns: repeat(3, var(--size-8));
+	grid-auto-flow: column;
+	grid-auto-columns: var(--size-8);
 	gap: var(--space-1);
+	align-items: center;
+	justify-content: end;
 }
 
 .Bestiary__list .ListCard__actions .Button {

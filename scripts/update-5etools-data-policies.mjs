@@ -428,7 +428,7 @@ export function normalizeSkillsData(data) {
 
 export function normalizeSensesData(data) {
 	return {
-		sense: dedupeConditionsByName(data.sense || []).map(pruneSenseMeta),
+		sense: groupConditionsByName(data.sense || []),
 	};
 }
 

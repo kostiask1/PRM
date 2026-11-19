@@ -69,6 +69,7 @@ type UiReferenceItem = ReferenceItem &
 interface ReferenceTab extends ReferenceTabPolicy {
 	load: (options?: RequestInit) => Promise<unknown>;
 	meta?: (item: UiReferenceItem) => string;
+	listMeta?: (item: UiReferenceItem) => string;
 }
 
 const VARIANT_RULE_TYPE_LABELS = {
@@ -139,10 +140,21 @@ const META: Partial<Record<ReferenceTabId, (item: UiReferenceItem) => string>> =
 	bestiary: getMonsterMeta,
 };
 
+const LIST_META: Partial<Record<ReferenceTabId, (item: UiReferenceItem) => string>> = {
+	conditions: (item) => String(item.source || "").trim(),
+	diseases: (item) =>
+		[String(item.type || "").trim(), String(item.source || "").trim()]
+			.filter(Boolean)
+			.join(" · "),
+	senses: (item) => String(item.source || "").trim(),
+	skills: (item) => String(item.ability || "").toUpperCase(),
+};
+
 const REFERENCE_TABS: ReferenceTab[] = REFERENCE_TAB_POLICIES.map((policy) => ({
 	...policy,
 	load: LOADERS[policy.id],
 	meta: META[policy.id],
+	listMeta: LIST_META[policy.id],
 }));
 
 const TAB_BY_ID = new Map(REFERENCE_TABS.map((tab) => [tab.id, tab]));
@@ -153,6 +165,13 @@ function isEditableTarget(target: EventTarget | null) {
 	return Boolean(
 		target.closest("input, textarea, select, [contenteditable='true']"),
 	);
+}
+
+function getReferenceListMeta(tab: ReferenceTab, item: UiReferenceItem | null): string {
+	if (!item) return "";
+	if (tab.listMeta) return tab.listMeta(item);
+	if (tab.meta) return tab.meta(item);
+	return "";
 }
 
 function getReferenceMeta(tab: ReferenceTab, item: UiReferenceItem | null): string {
@@ -502,7 +521,7 @@ export default function RulesReferenceModalContent({
 				tabId={activeTab.id}
 				item={item}
 				query={query}
-				meta={getReferenceMeta(activeTab, item)}
+				meta={getReferenceListMeta(activeTab, item)}
 				active={selectedItem === item}
 				onSelect={() => selectItem(selectionName)}
 				onInsert={selectableTab ? undefined : () => insertReference(activeTab.id, item)}

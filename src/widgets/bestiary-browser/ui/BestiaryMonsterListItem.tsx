@@ -1,4 +1,11 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
+import {
+	useCallback,
+	useRef,
+	useState,
+	type CSSProperties,
+} from "react";
+import { createPortal } from "react-dom";
 import type {
 	BestiaryFavorite,
 	BestiaryMonster,
@@ -7,15 +14,15 @@ import {
 	getMonsterTypeString,
 	MonsterStatBlockModel,
 } from "../../../entities/bestiary/index.js";
-import { lang } from "../../../shared/lib/index.js";
+import { classNames, lang } from "../../../shared/lib/index.js";
 import {
 	Button,
 	highlightText,
 	Icon,
 	ListCard,
 	Tooltip,
+	useDropdownPortalLifecycle,
 } from "../../../shared/ui/index.js";
-import { classNames } from "../../../shared/lib/index.js";
 import { getSourceFullName } from "../../../entities/reference/index.js";
 import {
 	getBestiaryMonsterRowPresentation,
@@ -55,6 +62,120 @@ interface MonsterListItemActionsProps {
 	onSelectMonster: MonsterListItemProps["onSelectMonster"];
 	onToggleFavorite: MonsterListItemProps["onToggleFavorite"];
 	presentation: BestiaryMonsterRowPresentation;
+}
+
+interface CustomMonsterMoreMenuProps {
+	monster: BestiaryMonster;
+	onAiEdit: MonsterListItemProps["onAiEdit"];
+	onDelete: MonsterListItemProps["onDelete"];
+}
+
+function CustomMonsterMoreMenu({
+	monster,
+	onAiEdit,
+	onDelete,
+}: CustomMonsterMoreMenuProps) {
+	const [isOpen, setIsOpen] = useState(false);
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	const dropdownRef = useRef<HTMLDivElement>(null);
+	const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+
+	const updatePosition = useCallback(() => {
+		if (!triggerRef.current) return;
+		const rect = triggerRef.current.getBoundingClientRect();
+		const width = 300;
+		const offset = 4;
+		const spaceBelow = window.innerHeight - rect.bottom;
+		const openUp = spaceBelow < 100 && rect.top > spaceBelow;
+		const left = Math.min(
+			Math.max(8, rect.right - width),
+			window.innerWidth - width - 8,
+		);
+
+		setDropdownStyle({
+			position: "fixed",
+			left,
+			...(openUp
+				? { bottom: window.innerHeight - rect.top + offset }
+				: { top: rect.bottom + offset }),
+			width,
+			zIndex: 10000,
+		});
+	}, []);
+
+	useDropdownPortalLifecycle({
+		isOpen,
+		triggerRef,
+		dropdownRef,
+		setIsOpen,
+		updatePosition,
+	});
+
+	const toggleOpen = (event: ReactMouseEvent<HTMLElement>) => {
+		event.stopPropagation();
+		if (!isOpen) updatePosition();
+		setIsOpen((prev) => !prev);
+	};
+
+	const handleAiEdit = (event: ReactMouseEvent<HTMLElement>) => {
+		event.stopPropagation();
+		setIsOpen(false);
+		onAiEdit(monster);
+	};
+
+	const handleDelete = (event: ReactMouseEvent<HTMLElement>) => {
+		event.stopPropagation();
+		setIsOpen(false);
+		onDelete(monster);
+	};
+
+	return (
+		<>
+			<Button
+				ref={triggerRef}
+				variant="ghost"
+				size={Button.SIZES.SMALL}
+				icon="dots-vertical"
+				className={classNames("Bestiary__item_more_btn", {
+					is_active: isOpen,
+				})}
+				aria-label={`${lang.t("More actions")}: ${monster.name}`}
+				aria-expanded={isOpen}
+				onClick={toggleOpen}
+				title={isOpen ? undefined : lang.t("More actions")}
+			/>
+			{isOpen &&
+				typeof document !== "undefined" &&
+				createPortal(
+					<div
+						ref={dropdownRef}
+						className="Bestiary__item_more_menu"
+						style={dropdownStyle}
+						onClick={(event) => event.stopPropagation()}
+					>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="wand"
+							className="Bestiary__item_ai_edit_btn"
+							onClick={handleAiEdit}
+						>
+							{lang.t("AI edit custom creature")}
+						</Button>
+						<Button
+							variant="danger"
+							size={Button.SIZES.SMALL}
+							icon="trash"
+							className="Bestiary__item_delete_btn"
+							onClick={handleDelete}
+						>
+							{lang.t("Delete custom creature")}
+						</Button>
+					</div>,
+					document.body,
+				)}
+		</>
+	);
 }
 
 function MonsterListItemActions({
@@ -115,30 +236,11 @@ function MonsterListItemActions({
 				title={lang.t("Edit creature")}
 			/>
 			{presentation.isCustom && (
-				<>
-					<Button
-						variant="ghost"
-						className="Bestiary__item_ai_edit_btn"
-						size={Button.SIZES.SMALL}
-						icon="wand"
-						aria-label={`${lang.t("AI edit custom creature")}: ${monster.name}`}
-						onClick={(event) =>
-							executeStoppedMonsterRowAction(event, () => onAiEdit(monster))
-						}
-						title={lang.t("AI edit custom creature")}
-					/>
-					<Button
-						variant="danger"
-						className="Bestiary__item_delete_btn"
-						size={Button.SIZES.SMALL}
-						icon="trash"
-						aria-label={`${lang.t("Delete custom creature")}: ${monster.name}`}
-						onClick={(event) =>
-							executeStoppedMonsterRowAction(event, () => onDelete(monster))
-						}
-						title={lang.t("Delete custom creature")}
-					/>
-				</>
+				<CustomMonsterMoreMenu
+					monster={monster}
+					onAiEdit={onAiEdit}
+					onDelete={onDelete}
+				/>
 			)}
 		</>
 	);

@@ -137,7 +137,7 @@ export interface ReferenceModalHostPlan {
 export const REFERENCE_TAB_POLICIES: ReferenceTabPolicy[] = [
 	{ id: "conditions", label: "Conditions", emptyLabel: "No conditions or statuses found.", searchFields: ["name", "source", "sources"] },
 	{ id: "diseases", label: "Diseases", emptyLabel: "No diseases found.", searchFields: ["name", "type", "source", "sources"] },
-	{ id: "senses", label: "Senses", emptyLabel: "No senses found.", searchFields: ["name", "source"] },
+	{ id: "senses", label: "Senses", emptyLabel: "No senses found.", searchFields: ["name", "source", "sources"] },
 	{ id: "skills", label: "Skills", emptyLabel: "No skills found.", searchFields: ["name", "ability", "source", "sources"] },
 	{ id: "variantrules", label: "Variant Rules", emptyLabel: "No variant rules found.", searchFields: ["name", "ruleType"] },
 	{ id: "spells", label: "Spells", emptyLabel: "No spells found.", searchFields: ["name", "school", "source", "level", "level_int"] },

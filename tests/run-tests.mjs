@@ -52004,7 +52004,8 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 	);
 	assert.equal(getSenseMeta({}), "");
 	assert.equal(itemMatchesQuery(skillPolicy, { name: "Acrobatics", ability: "dex", source: "XPHB" }, "xphb", false), true);
-	assert.equal(itemMatchesQuery(sensePolicy, { name: "Blindsight", source: "XPHB" }, "xphb", false), true);
+	assert.equal(itemMatchesQuery(sensePolicy, { name: "Blindsight", source: "XPHB", sources: ["XPHB", "PHB"] }, "xphb", false), true);
+	assert.equal(itemMatchesQuery(sensePolicy, { name: "Blindsight", source: "XPHB", sources: ["XPHB", "PHB"] }, "phb", false), true);
 	assert.equal(
 		getDiseaseMeta({ name: "Cackle Fever", type: "Magical Contagion", source: "XDMG" }),
 		"Magical Contagion · Dungeon Master's Guide (2024) (XDMG)",
@@ -58349,6 +58350,23 @@ await run(
 			versions: [
 				{ name: "Cackle Fever", source: "XDMG", type: "Magical Contagion", entries: ["2024"] },
 				{ name: "Cackle Fever", source: "DMG", entries: ["2014"] },
+			],
+		});
+		const normalizedSenses = updaterPolicies.normalizeSensesData({
+			sense: [
+				{ name: "Blindsight", source: "PHB", entries: ["2014"] },
+				{ name: "Blindsight", source: "XPHB", entries: ["2024"] },
+			],
+		});
+		assert.equal(normalizedSenses.sense.length, 1);
+		assert.deepEqual(normalizedSenses.sense[0], {
+			name: "Blindsight",
+			source: "XPHB",
+			sources: ["XPHB", "PHB"],
+			entries: ["2024"],
+			versions: [
+				{ name: "Blindsight", source: "XPHB", entries: ["2024"] },
+				{ name: "Blindsight", source: "PHB", entries: ["2014"] },
 			],
 		});
 		const inlineRule = {
