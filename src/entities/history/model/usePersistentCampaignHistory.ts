@@ -82,7 +82,15 @@ export function usePersistentCampaignHistory({
 			const path = String(
 				(event as CustomEvent<{ path?: unknown }>).detail?.path || "",
 			);
-			if (!path.startsWith(campaignPrefix) && !path.startsWith("/ai/")) return;
+			if (
+				!path.startsWith(campaignPrefix) &&
+				!path.startsWith("/ai/") &&
+				path !== "/history" &&
+				!path.startsWith("/history?") &&
+				!path.startsWith("/history/")
+			) {
+				return;
+			}
 			void refreshHistory().catch(onError);
 		};
 		window.addEventListener(API_MUTATION_EVENT, handleMutation);

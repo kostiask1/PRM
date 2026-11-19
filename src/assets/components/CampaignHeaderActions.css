@@ -36,6 +36,7 @@
 
 .CampaignHeaderActions__menu .Button {
     justify-content: flex-start;
+    border: unset;
 }
 
 .CampaignHeaderActions .Button>span {

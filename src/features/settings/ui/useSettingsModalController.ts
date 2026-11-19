@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import { bestiaryApi } from "../../../entities/bestiary/index.js";
+import { historyApi } from "../../../entities/history/index.js";
 import { spellApi } from "../../../entities/spell/index.js";
 import {
 	getIgnoreSourcesListFromSelectedSources,
@@ -8,7 +9,10 @@ import {
 	normalizeIgnoreSourcesList,
 } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { settingsApi } from "../api/settingsApi.ts";
+import {
+	settingsApi,
+	type SettingsStorageOverview,
+} from "../api/settingsApi.ts";
 import {
 	DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 	GLOBAL_SETTINGS_SCOPE,
@@ -18,6 +22,8 @@ import {
 	normalizeSavedIgnoreSources,
 	normalizeSavedPromptSettings,
 	normalizeSettingsCampaigns,
+	normalizeSettingsStorageOverview,
+	resolveScopedStorageSummary,
 	resolveSelectedPromptSettings,
 	resolveSelectedSimplifiedNotesSettings,
 	resolveSelectedSourceSettings,
@@ -28,6 +34,7 @@ import {
 	type CampaignIgnoreSourcesMap,
 	type SettingsPromptMap,
 	type SettingsSaveStatus,
+	type SettingsStorageAction,
 } from "../model/settingsModal.ts";
 import { getNextTheme } from "../model/theme.ts";
 import type { SettingsModalViewProps } from "./SettingsModalView.tsx";
@@ -159,6 +166,14 @@ export function useSettingsModalController(
 		useState<SettingsSaveStatus>("idle");
 	const [sourceStatus, setSourceStatus] =
 		useState<SettingsSaveStatus>("idle");
+	const [storageOverview, setStorageOverview] =
+		useState<SettingsStorageOverview | null>(null);
+	const [isStorageLoading, setIsStorageLoading] = useState(false);
+	const [storageError, setStorageError] = useState<string | null>(null);
+	const [clearingAction, setClearingAction] =
+		useState<SettingsStorageAction | null>(null);
+	const [pendingConfirmAction, setPendingConfirmAction] =
+		useState<SettingsStorageAction | null>(null);
 	const [notification, setNotification] = useState<string | null>(null);
 	const isMountedRef = useRef(true);
 
@@ -216,6 +231,41 @@ export function useSettingsModalController(
 		activeCampaignSlug,
 		campaigns,
 	});
+
+	const loadStorageOverview = useCallback(async () => {
+		if (isMountedRef.current) {
+			setIsStorageLoading(true);
+			setStorageError(null);
+		}
+		try {
+			const overview = normalizeSettingsStorageOverview(
+				await settingsApi.getStorageOverview(),
+			);
+			if (!overview) {
+				throw new Error("Storage overview response is empty");
+			}
+			if (isMountedRef.current) {
+				setStorageOverview(overview);
+			}
+		} catch (error) {
+			console.error("Failed to load storage overview", error);
+			if (isMountedRef.current) {
+				setStorageError(lang.t("Failed to load storage overview."));
+			}
+		} finally {
+			if (isMountedRef.current) {
+				setIsStorageLoading(false);
+			}
+		}
+	}, []);
+
+	useEffect(() => {
+		void loadStorageOverview();
+	}, [loadStorageOverview]);
+
+	useEffect(() => {
+		setPendingConfirmAction(null);
+	}, [selectedScope]);
 
 	const promptSelection = resolveSelectedPromptSettings({
 		scope: selectedScope,
@@ -515,6 +565,105 @@ export function useSettingsModalController(
 		);
 	};
 
+	const scopedStorageSummary = useMemo(
+		() =>
+			resolveScopedStorageSummary(
+				storageOverview,
+				selectedScope,
+				campaigns,
+			),
+		[storageOverview, selectedScope, campaigns],
+	);
+
+	const handleConfirmStorageAction = async (action: SettingsStorageAction) => {
+		if (clearingAction) return;
+		const isCampaignAction =
+			action === "ai-campaign" || action === "undo-campaign";
+		if (
+			isCampaignAction &&
+			(!selectedScope || selectedScope === GLOBAL_SETTINGS_SCOPE)
+		) {
+			return;
+		}
+
+		setClearingAction(action);
+		try {
+			if (action === "ai-all") {
+				const result = await settingsApi.clearAiHistory({ scope: "all" });
+				const nextOverview = normalizeSettingsStorageOverview(
+					result?.storage,
+				);
+				if (nextOverview && isMountedRef.current) {
+					setStorageOverview(nextOverview);
+				} else {
+					await loadStorageOverview();
+				}
+				if (isMountedRef.current) {
+					setNotification(lang.t("AI history cleared."));
+				}
+			} else if (action === "ai-bestiary") {
+				const result = await settingsApi.clearAiHistory({
+					scope: "bestiary",
+				});
+				const nextOverview = normalizeSettingsStorageOverview(
+					result?.storage,
+				);
+				if (nextOverview && isMountedRef.current) {
+					setStorageOverview(nextOverview);
+				} else {
+					await loadStorageOverview();
+				}
+				if (isMountedRef.current) {
+					setNotification(lang.t("AI history cleared."));
+				}
+			} else if (action === "ai-campaign") {
+				const result = await settingsApi.clearAiHistory({
+					scope: "campaign",
+					campaignSlug: selectedScope,
+				});
+				const nextOverview = normalizeSettingsStorageOverview(
+					result?.storage,
+				);
+				if (nextOverview && isMountedRef.current) {
+					setStorageOverview(nextOverview);
+				} else {
+					await loadStorageOverview();
+				}
+				if (isMountedRef.current) {
+					setNotification(lang.t("AI history cleared."));
+				}
+			} else if (action === "undo-all") {
+				await historyApi.clearApplication("all");
+				await loadStorageOverview();
+				if (isMountedRef.current) {
+					setNotification(lang.t("Undo/Redo history cleared."));
+				}
+			} else if (action === "undo-application") {
+				await historyApi.clearApplication("application");
+				await loadStorageOverview();
+				if (isMountedRef.current) {
+					setNotification(lang.t("Undo/Redo history cleared."));
+				}
+			} else if (action === "undo-campaign") {
+				await historyApi.clearCampaign(selectedScope);
+				await loadStorageOverview();
+				if (isMountedRef.current) {
+					setNotification(lang.t("Undo/Redo history cleared."));
+				}
+			}
+		} catch (error) {
+			console.error("Failed to clear history", error);
+			if (isMountedRef.current) {
+				setNotification(lang.t("Failed to clear history."));
+			}
+		} finally {
+			if (isMountedRef.current) {
+				setClearingAction(null);
+				setPendingConfirmAction(null);
+			}
+		}
+	};
+
 	return {
 		notification,
 		onNotificationClose: () => setNotification(null),
@@ -561,6 +710,21 @@ export function useSettingsModalController(
 			imagePrompt: promptSelection.imagePrompt,
 			onBasePromptChange: handleSelectedBasePromptChange,
 			onImagePromptChange: handleSelectedImagePromptChange,
+		},
+		storage: {
+			isLoading: isStorageLoading,
+			error: storageError,
+			summary: scopedStorageSummary,
+			clearingAction,
+			pendingConfirmAction,
+			onRefresh: () => {
+				void loadStorageOverview();
+			},
+			onRequestConfirm: setPendingConfirmAction,
+			onCancelConfirm: () => setPendingConfirmAction(null),
+			onConfirmAction: (action) => {
+				void handleConfirmStorageAction(action);
+			},
 		},
 	};
 }

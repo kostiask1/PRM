@@ -2,6 +2,8 @@ export {
 	historyApi,
 	isHistoryConflict,
 	type HistoryAffectedResources,
+	type HistoryClearResult,
+	type HistoryClearScope,
 	type HistoryConflict,
 	type HistoryFocusResource,
 	type HistoryFocusTarget,

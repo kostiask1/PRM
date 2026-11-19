@@ -1032,6 +1032,8 @@ function createFileHistoryRepository(storage) {
 				force: true,
 			});
 		},
+		removeAllPending: () =>
+			fs.rm(pendingRoot(), { recursive: true, force: true }),
 		writeTombstone: (transactionId, key, value) =>
 			writeCompressed(tombstonePath(transactionId, key), value),
 		readTombstone: (transactionId, key, fingerprint) =>

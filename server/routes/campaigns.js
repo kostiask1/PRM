@@ -102,6 +102,19 @@ router.post("/:slug/history/redo", validateBody(validateHistoryRestoreRequest), 
 	}
 });
 
+router.delete("/:slug/history", async (req, res, next) => {
+	try {
+		await historyService.clearCampaignHistory(req.params.slug);
+		res.json({
+			cleared: true,
+			campaignSlug: req.params.slug,
+			history: await historyService.getCampaignStatus(req.params.slug),
+		});
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.post(
 	"/",
 	validateBody(validateCampaignCreate),

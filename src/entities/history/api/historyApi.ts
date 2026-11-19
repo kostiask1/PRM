@@ -83,6 +83,15 @@ export interface HistoryConflict {
 	error: string;
 }
 
+export type HistoryClearScope = "application" | "all";
+
+export interface HistoryClearResult {
+	cleared: boolean;
+	scope?: HistoryClearScope;
+	campaignSlug?: string;
+	history: HistoryStatus;
+}
+
 export function isHistoryConflict(error: unknown): boolean {
 	return Boolean(
 		error &&
@@ -107,6 +116,10 @@ export const historyApi = {
 			method: "POST",
 			body: JSON.stringify({ expectedRevision }),
 		}),
+	clearCampaign: (slug: string) =>
+		request<HistoryClearResult>(campaignHistoryPath(slug), {
+			method: "DELETE",
+		}),
 	getApplication: () => request<HistoryStatus>("/history"),
 	undoApplication: (expectedRevision: number) =>
 		request<HistoryMutationResult>("/history/undo", {
@@ -118,4 +131,9 @@ export const historyApi = {
 			method: "POST",
 			body: JSON.stringify({ expectedRevision }),
 		}),
+	clearApplication: (scope: HistoryClearScope = "application") =>
+		request<HistoryClearResult>(
+			`/history?scope=${encodeURIComponent(scope)}`,
+			{ method: "DELETE" },
+		),
 };

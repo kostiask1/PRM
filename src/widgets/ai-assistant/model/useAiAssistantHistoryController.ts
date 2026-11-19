@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { API_MUTATION_EVENT } from "../../../shared/api/index.ts";
 import {
 	buildAiHistoryRestorePlan,
 	upsertAiHistoryEntry,
@@ -166,6 +167,40 @@ export function useAiAssistantHistoryController({
 			cancelled = true;
 		};
 	}, [getResponseStats, historyCampaign, isOpen, listResponses]);
+
+	useEffect(() => {
+		if (!isOpen || !historyCampaign) return;
+		let cancelled = false;
+		const handleMutation = (event: Event) => {
+			const path = String(
+				(event as CustomEvent<{ path?: unknown }>).detail?.path || "",
+			);
+			if (!path.startsWith("/settings/storage/ai-history")) return;
+			Promise.all([
+				listResponses(historyCampaign),
+				getResponseStats(historyCampaign).catch(() => null),
+			])
+				.then(([responses, stats]) => {
+					if (cancelled) return;
+					const nextResponses = Array.isArray(responses) ? responses : [];
+					setResponseHistory(nextResponses);
+					setResponseHistorySizeBytes(Number(stats?.bytes) || 0);
+					if (nextResponses.length === 0) {
+						closePrompt();
+					}
+				})
+				.catch((error) => {
+					if (!cancelled) {
+						console.error("Failed to refresh AI response history", error);
+					}
+				});
+		};
+		window.addEventListener(API_MUTATION_EVENT, handleMutation);
+		return () => {
+			cancelled = true;
+			window.removeEventListener(API_MUTATION_EVENT, handleMutation);
+		};
+	}, [closePrompt, getResponseStats, historyCampaign, isOpen, listResponses]);
 
 	const upsertEntry = useCallback(
 		(entry: AiHistoryEntry) => {

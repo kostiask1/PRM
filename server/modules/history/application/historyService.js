@@ -1630,6 +1630,22 @@ function createHistoryService(storage) {
 		}
 	}
 
+	async function clearAllHistory() {
+		const release = await acquire();
+		try {
+			await repository.removeApplication();
+			const slugs = (await storage.listExportableCampaignSlugs()).filter(
+				(slug) => !isLifecycleRestoreArtifactSlug(slug),
+			);
+			for (const slug of slugs) {
+				await repository.removeCampaign(slug);
+			}
+			await repository.removeAllPending();
+		} finally {
+			release();
+		}
+	}
+
 	return Object.freeze({
 		applyApplicationHistory,
 		applyCampaignHistory,
@@ -1637,6 +1653,7 @@ function createHistoryService(storage) {
 		beginCampaign,
 		finishApplication,
 		finishCampaign,
+		clearAllHistory,
 		clearApplicationHistory,
 		clearCampaignHistory,
 		getApplicationStatus,

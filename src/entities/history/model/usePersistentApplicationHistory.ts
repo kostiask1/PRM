@@ -54,8 +54,13 @@ export function usePersistentApplicationHistory({
 				path === "/campaigns/reorder" ||
 				/^\/campaigns\/[^/]+$/.test(path) ||
 				/^\/campaigns\/[^/]+\/entities\/[^/]+\/transfer$/.test(path);
+			const isHistoryReset =
+				path === "/history" ||
+				path.startsWith("/history?") ||
+				path.startsWith("/history/");
 			if (
 				!isCampaignLifecycle &&
+				!isHistoryReset &&
 				!path.startsWith("/import-all") &&
 				!path.startsWith("/import-archive")
 			) return;

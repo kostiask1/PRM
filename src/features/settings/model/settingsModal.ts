@@ -1,5 +1,10 @@
 import type { CampaignRecord } from "../../../entities/campaign/index.js";
 import { normalizeIgnoreSourcesList } from "../../../entities/reference/model.js";
+import type {
+	CampaignStorageBreakdown,
+	SettingsStorageOverview,
+	StorageHistoryMetric,
+} from "../api/settingsApi.ts";
 
 export const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
 	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
@@ -244,4 +249,250 @@ export function normalizeSavedPromptSettings(
 export function normalizeSavedIgnoreSources(value: unknown): string[] {
 	if (!isRecord(value)) return [];
 	return normalizeIgnoreSourcesList(value.ignoreSourcesList);
+}
+
+export type SettingsStorageAction =
+	| "ai-all"
+	| "ai-bestiary"
+	| "ai-campaign"
+	| "undo-all"
+	| "undo-application"
+	| "undo-campaign";
+
+export type SettingsStorageSegmentId =
+	| "images"
+	| "content"
+	| "ai"
+	| "undoRedo"
+	| "appData";
+
+export interface SettingsStorageSegment {
+	id: SettingsStorageSegmentId;
+	bytes: number;
+	percent: number;
+}
+
+export interface ScopedSettingsStorageSummary {
+	isGlobalScope: boolean;
+	campaignSlug: string | null;
+	campaignName: string | null;
+	totalBytes: number;
+	contentBytes: number;
+	imagesBytes: number;
+	generalImagesBytes: number;
+	appDataBytes: number;
+	aiHistory: {
+		bytes: number;
+		entryCount: number;
+		campaignsBytes: number;
+		campaignsEntryCount: number;
+		bestiaryBytes: number;
+		bestiaryEntryCount: number;
+	};
+	undoRedo: {
+		bytes: number;
+		entryCount: number;
+		applicationBytes: number;
+		applicationEntryCount: number;
+		tombstonesBytes: number;
+		campaignsBytes: number;
+		campaignsEntryCount: number;
+	};
+	segments: SettingsStorageSegment[];
+}
+
+function toNonNegativeNumber(value: unknown): number {
+	const numeric = Number(value);
+	return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+}
+
+function normalizeHistoryMetric(value: unknown): StorageHistoryMetric {
+	const record = isRecord(value) ? value : {};
+	return {
+		bytes: toNonNegativeNumber(record.bytes),
+		entryCount: Math.trunc(toNonNegativeNumber(record.entryCount)),
+	};
+}
+
+function normalizeCampaignStorageBreakdown(
+	value: unknown,
+): CampaignStorageBreakdown | null {
+	if (!isRecord(value) || typeof value.slug !== "string" || !value.slug) {
+		return null;
+	}
+	const contentBytes = toNonNegativeNumber(value.contentBytes);
+	const imagesBytes = toNonNegativeNumber(value.imagesBytes);
+	const aiHistory = normalizeHistoryMetric(value.aiHistory);
+	const undoRedo = normalizeHistoryMetric(value.undoRedo);
+	const rawTotal = toNonNegativeNumber(value.totalBytes);
+	const computedTotal =
+		contentBytes + imagesBytes + aiHistory.bytes + undoRedo.bytes;
+	return {
+		slug: value.slug,
+		name: typeof value.name === "string" && value.name ? value.name : value.slug,
+		contentBytes,
+		imagesBytes,
+		aiHistory,
+		undoRedo,
+		totalBytes: rawTotal || computedTotal,
+	};
+}
+
+export function normalizeSettingsStorageOverview(
+	value: unknown,
+): SettingsStorageOverview | null {
+	if (!isRecord(value) || !isRecord(value.project)) return null;
+	const project = value.project;
+	const aiRecord = isRecord(project.aiHistory) ? project.aiHistory : {};
+	const undoRecord = isRecord(project.undoRedo) ? project.undoRedo : {};
+	const contentBytes = toNonNegativeNumber(project.contentBytes);
+	const imagesBytes = toNonNegativeNumber(project.imagesBytes);
+	const generalImagesBytes = toNonNegativeNumber(project.generalImagesBytes);
+	const appDataBytes = toNonNegativeNumber(project.appDataBytes);
+	const aiMetric = normalizeHistoryMetric(aiRecord);
+	const undoMetric = normalizeHistoryMetric(undoRecord);
+	const rawTotal = toNonNegativeNumber(project.totalBytes);
+	const computedTotal =
+		contentBytes +
+		imagesBytes +
+		appDataBytes +
+		aiMetric.bytes +
+		undoMetric.bytes;
+	const campaigns = Array.isArray(value.campaigns)
+		? value.campaigns
+				.map(normalizeCampaignStorageBreakdown)
+				.filter((item): item is CampaignStorageBreakdown => Boolean(item))
+		: [];
+
+	return {
+		project: {
+			contentBytes,
+			imagesBytes,
+			generalImagesBytes,
+			appDataBytes,
+			aiHistory: {
+				...aiMetric,
+				campaignsBytes: toNonNegativeNumber(aiRecord.campaignsBytes),
+				campaignsEntryCount: Math.trunc(
+					toNonNegativeNumber(aiRecord.campaignsEntryCount),
+				),
+				bestiaryBytes: toNonNegativeNumber(aiRecord.bestiaryBytes),
+				bestiaryEntryCount: Math.trunc(
+					toNonNegativeNumber(aiRecord.bestiaryEntryCount),
+				),
+			},
+			undoRedo: {
+				...undoMetric,
+				applicationBytes: toNonNegativeNumber(undoRecord.applicationBytes),
+				applicationEntryCount: Math.trunc(
+					toNonNegativeNumber(undoRecord.applicationEntryCount),
+				),
+				tombstonesBytes: toNonNegativeNumber(undoRecord.tombstonesBytes),
+				campaignsBytes: toNonNegativeNumber(undoRecord.campaignsBytes),
+				campaignsEntryCount: Math.trunc(
+					toNonNegativeNumber(undoRecord.campaignsEntryCount),
+				),
+			},
+			totalBytes: rawTotal || computedTotal,
+		},
+		campaigns,
+	};
+}
+
+function buildStorageSegments(
+	entries: Array<{ id: SettingsStorageSegmentId; bytes: number }>,
+): SettingsStorageSegment[] {
+	const nonZero = entries.filter((entry) => entry.bytes > 0);
+	const sum = nonZero.reduce((acc, entry) => acc + entry.bytes, 0);
+	if (sum <= 0) return [];
+	let remaining = 100;
+	return nonZero.map((entry, index) => {
+		const rawPercent =
+			index === nonZero.length - 1
+				? remaining
+				: Math.round(((entry.bytes / sum) * 100) * 10) / 10;
+		const percent = Math.min(remaining, Math.max(0, rawPercent));
+		remaining = Math.max(0, Math.round((remaining - percent) * 10) / 10);
+		return {
+			id: entry.id,
+			bytes: entry.bytes,
+			percent,
+		};
+	});
+}
+
+export function resolveScopedStorageSummary(
+	overview: SettingsStorageOverview | null,
+	scope: string,
+	campaigns: SettingsCampaign[],
+): ScopedSettingsStorageSummary | null {
+	if (!overview) return null;
+	if (scope === GLOBAL_SETTINGS_SCOPE) {
+		const { project } = overview;
+		return {
+			isGlobalScope: true,
+			campaignSlug: null,
+			campaignName: null,
+			totalBytes: project.totalBytes,
+			contentBytes: project.contentBytes,
+			imagesBytes: project.imagesBytes,
+			generalImagesBytes: project.generalImagesBytes,
+			appDataBytes: project.appDataBytes,
+			aiHistory: { ...project.aiHistory },
+			undoRedo: { ...project.undoRedo },
+			segments: buildStorageSegments([
+				{ id: "images", bytes: project.imagesBytes },
+				{ id: "content", bytes: project.contentBytes },
+				{ id: "ai", bytes: project.aiHistory.bytes },
+				{ id: "undoRedo", bytes: project.undoRedo.bytes },
+				{ id: "appData", bytes: project.appDataBytes },
+			]),
+		};
+	}
+
+	if (!scope) return null;
+	const breakdown = overview.campaigns.find((item) => item.slug === scope);
+	const knownCampaign = campaigns.find((item) => item.slug === scope);
+	const contentBytes = breakdown?.contentBytes ?? 0;
+	const imagesBytes = breakdown?.imagesBytes ?? 0;
+	const aiBytes = breakdown?.aiHistory.bytes ?? 0;
+	const aiCount = breakdown?.aiHistory.entryCount ?? 0;
+	const undoBytes = breakdown?.undoRedo.bytes ?? 0;
+	const undoCount = breakdown?.undoRedo.entryCount ?? 0;
+	const totalBytes =
+		breakdown?.totalBytes ?? contentBytes + imagesBytes + aiBytes + undoBytes;
+
+	return {
+		isGlobalScope: false,
+		campaignSlug: scope,
+		campaignName: breakdown?.name || knownCampaign?.name || scope,
+		totalBytes,
+		contentBytes,
+		imagesBytes,
+		generalImagesBytes: 0,
+		appDataBytes: 0,
+		aiHistory: {
+			bytes: aiBytes,
+			entryCount: aiCount,
+			campaignsBytes: aiBytes,
+			campaignsEntryCount: aiCount,
+			bestiaryBytes: 0,
+			bestiaryEntryCount: 0,
+		},
+		undoRedo: {
+			bytes: undoBytes,
+			entryCount: undoCount,
+			applicationBytes: 0,
+			applicationEntryCount: 0,
+			tombstonesBytes: 0,
+			campaignsBytes: undoBytes,
+			campaignsEntryCount: undoCount,
+		},
+		segments: buildStorageSegments([
+			{ id: "images", bytes: imagesBytes },
+			{ id: "content", bytes: contentBytes },
+			{ id: "ai", bytes: aiBytes },
+			{ id: "undoRedo", bytes: undoBytes },
+		]),
+	};
 }

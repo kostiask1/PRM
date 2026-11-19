@@ -183,6 +183,8 @@ import {
 	normalizeSavedIgnoreSources,
 	normalizeSavedPromptSettings,
 	normalizeSettingsCampaigns,
+	normalizeSettingsStorageOverview,
+	resolveScopedStorageSummary,
 	resolveSelectedPromptSettings,
 	resolveSelectedSimplifiedNotesSettings,
 	resolveSelectedSourceSettings,
@@ -1129,6 +1131,12 @@ const {
 const {
 	createSettingsCommands,
 } = require("../server/modules/settings/application/settingsCommands.js");
+const {
+	createStorageOverviewCommands,
+} = require("../server/modules/settings/application/storageOverviewCommands.js");
+const {
+	createFileStorageOverviewRepository,
+} = require("../server/modules/settings/infrastructure/fileStorageOverviewRepository.js");
 const {
 	createImageCommands,
 	parseGalleryQuery,
@@ -73638,6 +73646,338 @@ await run("AI assistant presentation labels and titles handle pending history en
 		"uk:Pending",
 	);
 });
+
+await run(
+	"Settings storage overview and history cleanup report exact sizes and clear scoped AI and Undo/Redo data",
+	async () => {
+		const os = await import("node:os");
+		const tracking = require("../server/modules/history/http/historyTrackingMiddleware.js").__test;
+		const realtime = require("../server/realtime.js").__test;
+		assert.equal(
+			tracking.getTrackingTarget({
+				method: "DELETE",
+				path: "/api/settings/storage/ai-history",
+			}),
+			null,
+		);
+		assert.equal(
+			tracking.getTrackingTarget({
+				method: "DELETE",
+				path: "/api/history",
+			}),
+			null,
+		);
+		assert.equal(
+			tracking.getTrackingTarget({
+				method: "DELETE",
+				path: "/api/campaigns/demo/history",
+			}),
+			null,
+		);
+		const aiChangeEvent = realtime.describeChange({
+			method: "DELETE",
+			originalUrl: "/api/settings/storage/ai-history?scope=campaign&campaign=demo",
+		});
+		assert.equal(aiChangeEvent.resource, "ai");
+		assert.equal(aiChangeEvent.campaignSlug, "demo");
+		const historyChangeEvent = realtime.describeChange({
+			method: "DELETE",
+			originalUrl: "/api/history?scope=all",
+		});
+		assert.equal(historyChangeEvent.resource, "history");
+
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "prm-settings-storage-"));
+		try {
+			const baseStorage = createIsolatedHistoryStorage(root);
+			const bestiaryAiFile = path.join(root, "_aiResponses-bestiary.json");
+			const aiFileFor = (slug) =>
+				slug === "bestiary"
+					? bestiaryAiFile
+					: baseStorage.campaignAiResponsesPath(slug);
+			const isolated = {
+				...baseStorage,
+				readAiResponses: async (slug) => {
+					const file = aiFileFor(slug);
+					if (!(await baseStorage.exists(file))) return [];
+					const parsed = await baseStorage.readJson(file);
+					return Array.isArray(parsed) ? parsed : [];
+				},
+				getAiResponsesStorageStats: async (slug) => {
+					const file = aiFileFor(slug);
+					try {
+						const stat = await fs.stat(file);
+						return { bytes: stat.isFile() ? stat.size : 0 };
+					} catch {
+						return { bytes: 0 };
+					}
+				},
+				clearAiResponses: async (slug) => {
+					const file = aiFileFor(slug);
+					await fs.mkdir(path.dirname(file), { recursive: true });
+					await fs.writeFile(file, "[]", "utf8");
+					return [];
+				},
+			};
+
+			await isolated.writeJson(isolated.campaignMetaPath("alpha"), {
+				id: "c1",
+				slug: "alpha",
+				name: "Альфа",
+				order: 1,
+			});
+			await isolated.writeJson(isolated.sessionPath("alpha", "s1.json"), {
+				id: "s1",
+				name: "Сесія 1",
+				data: { notes: [{ id: "n1", title: "Нотатка", text: "Текст" }] },
+			});
+			await isolated.writeJson(isolated.campaignMetaPath("beta"), {
+				id: "c2",
+				slug: "beta",
+				name: "Бета",
+				order: 2,
+			});
+
+			await fs.mkdir(path.join(root, "images", "alpha"), { recursive: true });
+			await fs.writeFile(
+				path.join(root, "images", "alpha", "map.png"),
+				Buffer.alloc(120, 1),
+			);
+			await fs.mkdir(path.join(root, "images", "general"), { recursive: true });
+			await fs.writeFile(
+				path.join(root, "images", "general", "token.png"),
+				Buffer.alloc(80, 2),
+			);
+
+			await isolated.writeAiResponses("alpha", [
+				{ id: "ai-a1", text: "Відповідь для Альфи" },
+			]);
+			await isolated.writeAiResponses("beta", [
+				{ id: "ai-b1", text: "Відповідь для Бети" },
+			]);
+			await isolated.writeJson(bestiaryAiFile, [
+				{ id: "ai-best-1", text: "Монстр для бестіарію" },
+			]);
+
+			const alphaHistoryPath = path.join(
+				isolated.campaignDir("alpha"),
+				"_changeHistory.json",
+			);
+			await isolated.writeJson(alphaHistoryPath, {
+				version: 1,
+				revision: 2,
+				limit: 100,
+				past: [{ id: "t1" }, { id: "t2" }],
+				future: [{ id: "t3" }],
+			});
+			const betaHistoryPath = path.join(
+				isolated.campaignDir("beta"),
+				"_changeHistory.json",
+			);
+			await isolated.writeJson(betaHistoryPath, {
+				version: 1,
+				revision: 1,
+				limit: 100,
+				past: [{ id: "t4" }],
+				future: [],
+			});
+			const appHistoryPath = path.join(root, "_applicationChangeHistory.json");
+			await isolated.writeJson(appHistoryPath, {
+				version: 1,
+				revision: 1,
+				limit: 100,
+				past: [{ id: "app1" }],
+				future: [],
+			});
+			await fs.mkdir(path.join(root, "_history-tombstones", "app1"), {
+				recursive: true,
+			});
+			await fs.writeFile(
+				path.join(root, "_history-tombstones", "app1", "snap.json.gz"),
+				Buffer.alloc(64, 3),
+			);
+			await isolated.writeJson(path.join(root, "settings.json"), {
+				language: "uk",
+				theme: "dark",
+			});
+			await isolated.writeJson(path.join(root, "favorites.json"), [
+				{ name: "Goblin", source: "MM" },
+			]);
+
+			const repo = createFileStorageOverviewRepository(isolated);
+			const commands = createStorageOverviewCommands(repo);
+			const historySvc = createHistoryService(isolated);
+
+			const initial = await commands.getOverview();
+			assert.equal(initial.campaigns.length, 2);
+			assert.equal(initial.campaigns[0].slug, "alpha");
+			assert.equal(initial.campaigns[1].slug, "beta");
+			assert.equal(initial.campaigns[0].imagesBytes, 120);
+			assert.equal(initial.campaigns[0].aiHistory.entryCount, 1);
+			assert.ok(initial.campaigns[0].aiHistory.bytes > 0);
+			assert.equal(initial.campaigns[0].undoRedo.entryCount, 3);
+			assert.ok(initial.campaigns[0].undoRedo.bytes > 0);
+			assert.equal(initial.project.imagesBytes, 200);
+			assert.equal(initial.project.generalImagesBytes, 80);
+			assert.equal(initial.project.aiHistory.entryCount, 3);
+			assert.equal(initial.project.aiHistory.campaignsEntryCount, 2);
+			assert.equal(initial.project.aiHistory.bestiaryEntryCount, 1);
+			assert.equal(initial.project.undoRedo.entryCount, 5);
+			assert.equal(initial.project.undoRedo.applicationEntryCount, 1);
+			assert.equal(initial.project.undoRedo.tombstonesBytes, 64);
+			assert.equal(initial.project.undoRedo.campaignsEntryCount, 4);
+			assert.equal(
+				initial.project.totalBytes,
+				initial.project.contentBytes +
+					initial.project.imagesBytes +
+					initial.project.appDataBytes +
+					initial.project.aiHistory.bytes +
+					initial.project.undoRedo.bytes,
+			);
+
+			await assert.rejects(
+				() => commands.clearAiHistory({ scope: "unknown" }),
+				(err) => err.status === 400,
+			);
+			await assert.rejects(
+				() => commands.clearAiHistory({ scope: "campaign", campaignSlug: "missing" }),
+				(err) => err.status === 404,
+			);
+
+			const afterAlphaAiClear = await commands.clearAiHistory({
+				scope: "campaign",
+				campaignSlug: "alpha",
+			});
+			assert.equal(afterAlphaAiClear.cleared, true);
+			assert.equal(afterAlphaAiClear.storage.campaigns[0].aiHistory.bytes, 0);
+			assert.equal(afterAlphaAiClear.storage.campaigns[0].aiHistory.entryCount, 0);
+			assert.equal(afterAlphaAiClear.storage.campaigns[0].imagesBytes, 120);
+			assert.ok(afterAlphaAiClear.storage.campaigns[0].contentBytes > 0);
+			assert.equal(afterAlphaAiClear.storage.campaigns[1].aiHistory.entryCount, 1);
+			assert.equal(afterAlphaAiClear.storage.project.aiHistory.bestiaryEntryCount, 1);
+
+			const afterBestiaryAiClear = await commands.clearAiHistory({
+				scope: "bestiary",
+			});
+			assert.equal(afterBestiaryAiClear.storage.project.aiHistory.bestiaryBytes, 0);
+			assert.equal(
+				afterBestiaryAiClear.storage.project.aiHistory.bestiaryEntryCount,
+				0,
+			);
+			assert.equal(afterBestiaryAiClear.storage.campaigns[1].aiHistory.entryCount, 1);
+
+			const afterAllAiClear = await commands.clearAiHistory({ scope: "all" });
+			assert.equal(afterAllAiClear.storage.project.aiHistory.bytes, 0);
+			assert.equal(afterAllAiClear.storage.project.aiHistory.entryCount, 0);
+			assert.equal(afterAllAiClear.storage.campaigns[1].aiHistory.entryCount, 0);
+
+			await historySvc.clearCampaignHistory("alpha");
+			const afterAlphaUndoClear = await commands.getOverview();
+			assert.equal(afterAlphaUndoClear.campaigns[0].undoRedo.bytes, 0);
+			assert.equal(afterAlphaUndoClear.campaigns[0].undoRedo.entryCount, 0);
+			assert.equal(afterAlphaUndoClear.campaigns[1].undoRedo.entryCount, 1);
+			assert.equal(afterAlphaUndoClear.project.undoRedo.applicationEntryCount, 1);
+
+			await historySvc.clearApplicationHistory();
+			const afterAppUndoClear = await commands.getOverview();
+			assert.equal(afterAppUndoClear.project.undoRedo.applicationBytes, 0);
+			assert.equal(afterAppUndoClear.project.undoRedo.applicationEntryCount, 0);
+			assert.equal(afterAppUndoClear.project.undoRedo.tombstonesBytes, 0);
+			assert.equal(afterAppUndoClear.campaigns[1].undoRedo.entryCount, 1);
+
+			await historySvc.clearAllHistory();
+			const afterAllUndoClear = await commands.getOverview();
+			assert.equal(afterAllUndoClear.project.undoRedo.bytes, 0);
+			assert.equal(afterAllUndoClear.project.undoRedo.entryCount, 0);
+			assert.equal(afterAllUndoClear.campaigns[1].undoRedo.bytes, 0);
+			assert.equal(afterAllUndoClear.campaigns[1].undoRedo.entryCount, 0);
+			assert.equal(afterAllUndoClear.project.imagesBytes, 200);
+			assert.ok(afterAllUndoClear.project.contentBytes > 0);
+		} finally {
+			assert.equal(path.dirname(path.resolve(root)), path.resolve(os.tmpdir()));
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	},
+);
+
+await run(
+	"Settings storage model normalizes overview payloads and computes scoped breakdown segments",
+	() => {
+		assert.equal(normalizeSettingsStorageOverview(null), null);
+		const normalized = normalizeSettingsStorageOverview({
+			project: {
+				contentBytes: 100,
+				imagesBytes: 600,
+				generalImagesBytes: 100,
+				appDataBytes: 50,
+				aiHistory: {
+					bytes: 200,
+					entryCount: 4,
+					campaignsBytes: 150,
+					campaignsEntryCount: 3,
+					bestiaryBytes: 50,
+					bestiaryEntryCount: 1,
+				},
+				undoRedo: {
+					bytes: 50,
+					entryCount: 2,
+					applicationBytes: 20,
+					applicationEntryCount: 1,
+					tombstonesBytes: 10,
+					campaignsBytes: 30,
+					campaignsEntryCount: 1,
+				},
+				totalBytes: 1000,
+			},
+			campaigns: [
+				{
+					slug: "dogma",
+					name: "Догма",
+					contentBytes: 80,
+					imagesBytes: 500,
+					aiHistory: { bytes: 150, entryCount: 3 },
+					undoRedo: { bytes: 30, entryCount: 1 },
+					totalBytes: 760,
+				},
+			],
+		});
+		assert.ok(normalized);
+
+		const globalSummary = resolveScopedStorageSummary(
+			normalized,
+			GLOBAL_SETTINGS_SCOPE,
+			[],
+		);
+		assert.ok(globalSummary);
+		assert.equal(globalSummary.isGlobalScope, true);
+		assert.equal(globalSummary.totalBytes, 1000);
+		assert.equal(
+			globalSummary.segments.reduce((acc, s) => acc + s.percent, 0),
+			100,
+		);
+		assert.deepEqual(
+			globalSummary.segments.map((s) => s.id),
+			["images", "content", "ai", "undoRedo", "appData"],
+		);
+
+		const campaignSummary = resolveScopedStorageSummary(normalized, "dogma", [
+			{ slug: "dogma", name: "Догма" },
+		]);
+		assert.ok(campaignSummary);
+		assert.equal(campaignSummary.isGlobalScope, false);
+		assert.equal(campaignSummary.campaignName, "Догма");
+		assert.equal(campaignSummary.totalBytes, 760);
+		assert.equal(campaignSummary.aiHistory.bytes, 150);
+		assert.equal(campaignSummary.undoRedo.entryCount, 1);
+
+		const fallbackSummary = resolveScopedStorageSummary(normalized, "new-one", [
+			{ slug: "new-one", name: "Нова" },
+		]);
+		assert.ok(fallbackSummary);
+		assert.equal(fallbackSummary.campaignName, "Нова");
+		assert.equal(fallbackSummary.totalBytes, 0);
+		assert.deepEqual(fallbackSummary.segments, []);
+	},
+);
 
 const failed = results.filter((r) => !r.ok);
 console.log(

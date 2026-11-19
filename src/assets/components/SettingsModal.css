@@ -149,9 +149,176 @@
 	flex: 0 0 auto;
 }
 
+.SettingsModal__storageHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	flex-wrap: wrap;
+}
+
+.SettingsModal__storageHeaderRight {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.SettingsModal__storageTotal {
+	font-family: var(--font-mono);
+	font-size: 0.9rem;
+	font-weight: 700;
+	color: var(--text-bright);
+}
+
+.SettingsModal__storageBar {
+	display: flex;
+	width: 100%;
+	height: 10px;
+	border-radius: var(--radius-pill);
+	background: var(--panel-soft);
+	overflow: hidden;
+	gap: 2px;
+}
+
+.SettingsModal__storageSegment {
+	height: 100%;
+	min-width: 4px;
+	transition: width var(--anim-duration-normal) var(--anim-ease-standard);
+}
+
+.SettingsModal__storageSegment--images {
+	background: var(--accent);
+}
+
+.SettingsModal__storageSegment--content {
+	background: var(--rules-spell);
+}
+
+.SettingsModal__storageSegment--ai {
+	background: var(--rules-status);
+}
+
+.SettingsModal__storageSegment--undoRedo {
+	background: var(--warning);
+}
+
+.SettingsModal__storageSegment--appData {
+	background: var(--muted);
+}
+
+.SettingsModal__storageBreakdown {
+	display: grid;
+	gap: var(--space-1-5);
+	padding: var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--panel-soft);
+}
+
+.SettingsModal__storageRow {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+
+.SettingsModal__storageRowMain {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-2);
+	min-width: 0;
+}
+
+.SettingsModal__storageDot {
+	width: 10px;
+	height: 10px;
+	margin-top: 5px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.SettingsModal__storageLabel {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.SettingsModal__storageSize {
+	font-family: var(--font-mono);
+	font-size: 0.82rem;
+	font-weight: 600;
+	color: var(--text-bright);
+	white-space: nowrap;
+}
+
+.SettingsModal__cleanupGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: var(--space-3);
+}
+
+.SettingsModal__cleanupCard {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--panel);
+}
+
+.SettingsModal__cleanupHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+}
+
+.SettingsModal__cleanupHeader .SettingsModal__label {
+	font-weight: 700;
+	color: var(--text-bright);
+}
+
+.SettingsModal__cleanupBadge {
+	font-family: var(--font-mono);
+	font-size: 0.76rem;
+	color: var(--muted);
+}
+
+.SettingsModal__cleanupActions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	margin-top: auto;
+	padding-top: var(--space-1);
+}
+
+.SettingsModal__cleanupConfirm {
+	display: grid;
+	gap: var(--space-2);
+	margin-top: auto;
+	padding: var(--space-2);
+	border: 1px solid color-mix(in srgb, var(--danger), transparent 65%);
+	border-radius: var(--radius-xs);
+	background: color-mix(in srgb, var(--danger), transparent 94%);
+}
+
+.SettingsModal__cleanupConfirmText {
+	font-size: 0.8rem;
+	line-height: 1.4;
+	color: var(--text);
+}
+
+.SettingsModal__cleanupConfirmButtons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
 @media (max-width: 767px) {
 	.SettingsModal__layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
-	.SettingsModal__navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.SettingsModal__navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.SettingsModal__navigation .Button { width: 100%; min-width: 0; white-space: normal; }
 	.SettingsModal__modal {
 		width: 100%;

@@ -1,5 +1,10 @@
 import { useState } from "react";
-import type { SettingsCampaign } from "../model/settingsModal.ts";
+import type {
+	ScopedSettingsStorageSummary,
+	SettingsCampaign,
+	SettingsStorageAction,
+	SettingsStorageSegmentId,
+} from "../model/settingsModal.ts";
 import type { Theme } from "../model/theme.ts";
 import {
 	DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
@@ -7,7 +12,7 @@ import {
 	type SettingsSaveStatus,
 } from "../model/settingsModal.ts";
 import { THEMES } from "../model/theme.ts";
-import { lang } from "../../../shared/lib/index.js";
+import { formatBytes, lang } from "../../../shared/lib/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
 import {
 	Button,
@@ -67,6 +72,18 @@ export interface SettingsAiViewProps {
 	onImagePromptChange: (value: string) => void;
 }
 
+export interface SettingsStorageViewProps {
+	isLoading: boolean;
+	error: string | null;
+	summary: ScopedSettingsStorageSummary | null;
+	clearingAction: SettingsStorageAction | null;
+	pendingConfirmAction: SettingsStorageAction | null;
+	onRefresh: () => void;
+	onRequestConfirm: (action: SettingsStorageAction) => void;
+	onCancelConfirm: () => void;
+	onConfirmAction: (action: SettingsStorageAction) => void;
+}
+
 export interface SettingsModalViewProps {
 	notification: string | null;
 	general: SettingsGeneralViewProps;
@@ -74,12 +91,13 @@ export interface SettingsModalViewProps {
 	notes: SettingsNotesViewProps;
 	sources: SettingsSourcesViewProps;
 	ai: SettingsAiViewProps;
+	storage: SettingsStorageViewProps;
 	onNotificationClose: () => void;
 	onCancel: () => void;
 }
 
 type SettingsAiGroupProps = SettingsAiViewProps & SettingsModalCompositionSlots;
-type SettingsSection = "general" | "campaign" | "ai";
+type SettingsSection = "general" | "campaign" | "ai" | "storage";
 
 function SettingsGeneralGroup({
 	currentTheme,
@@ -330,12 +348,450 @@ function SettingsAiGroup({
 	);
 }
 
+function getSegmentLabel(
+	segmentId: SettingsStorageSegmentId,
+	isGlobalScope: boolean,
+): string {
+	switch (segmentId) {
+		case "images":
+			return lang.t(isGlobalScope ? "Images" : "Campaign images");
+		case "content":
+			return lang.t(
+				isGlobalScope ? "Campaign content" : "Selected campaign content",
+			);
+		case "ai":
+			return lang.t("AI history");
+		case "undoRedo":
+			return lang.t("Undo/Redo history");
+		case "appData":
+			return lang.t("Bestiary, favorites & settings");
+	}
+}
+
+function getStorageConfirmMessage(
+	action: SettingsStorageAction,
+	summary: ScopedSettingsStorageSummary,
+): string {
+	switch (action) {
+		case "ai-all":
+			return lang.t(
+				"Clear AI history across all campaigns and the Bestiary ({size})? This cannot be undone.",
+				{ size: formatBytes(summary.aiHistory.bytes) },
+			);
+		case "ai-bestiary":
+			return lang.t(
+				"Clear Bestiary AI history ({size})? This cannot be undone.",
+				{ size: formatBytes(summary.aiHistory.bestiaryBytes) },
+			);
+		case "ai-campaign":
+			return lang.t(
+				'Clear AI history for "{name}" ({size})? This cannot be undone.',
+				{
+					name: summary.campaignName || summary.campaignSlug || "",
+					size: formatBytes(summary.aiHistory.bytes),
+				},
+			);
+		case "undo-all":
+			return lang.t(
+				"Clear all Undo/Redo history and recovery snapshots across the project ({size})? This cannot be undone.",
+				{ size: formatBytes(summary.undoRedo.bytes) },
+			);
+		case "undo-application":
+			return lang.t(
+				"Clear application-level Undo/Redo history and lifecycle recovery snapshots ({size})? Campaign edit histories will stay intact.",
+				{ size: formatBytes(summary.undoRedo.applicationBytes) },
+			);
+		case "undo-campaign":
+			return lang.t(
+				'Clear Undo/Redo history for "{name}" ({size})? This cannot be undone.',
+				{
+					name: summary.campaignName || summary.campaignSlug || "",
+					size: formatBytes(summary.undoRedo.bytes),
+				},
+			);
+	}
+}
+
+function SettingsStorageGroup({
+	isLoading,
+	error,
+	summary,
+	clearingAction,
+	pendingConfirmAction,
+	onRefresh,
+	onRequestConfirm,
+	onCancelConfirm,
+	onConfirmAction,
+}: SettingsStorageViewProps) {
+	const isBusy = Boolean(clearingAction);
+	const isAiConfirmOpen =
+		pendingConfirmAction === "ai-all" ||
+		pendingConfirmAction === "ai-bestiary" ||
+		pendingConfirmAction === "ai-campaign";
+	const isUndoConfirmOpen =
+		pendingConfirmAction === "undo-all" ||
+		pendingConfirmAction === "undo-application" ||
+		pendingConfirmAction === "undo-campaign";
+
+	if (isLoading && !summary) {
+		return (
+			<div className="SettingsModal__group SettingsModal__subsection">
+				<div className="SettingsModal__hint">{lang.t("Loading...")}</div>
+			</div>
+		);
+	}
+
+	if (!summary) {
+		return (
+			<div className="SettingsModal__group SettingsModal__subsection">
+				<div className="SettingsModal__sectionHeader">
+					<span className="SettingsModal__hint">
+						{error || lang.t("No campaigns")}
+					</span>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						onClick={onRefresh}
+						disabled={isLoading || isBusy}
+					>
+						{lang.t("Refresh")}
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
+	const breakdownRows: Array<{
+		id: SettingsStorageSegmentId;
+		label: string;
+		bytes: number;
+		detail?: string;
+	}> = summary.isGlobalScope
+		? [
+				{
+					id: "content",
+					label: lang.t("Campaign content"),
+					bytes: summary.contentBytes,
+				},
+				{
+					id: "images",
+					label: lang.t("Images"),
+					bytes: summary.imagesBytes,
+					detail:
+						summary.generalImagesBytes > 0
+							? lang.t("Shared gallery: {size}", {
+									size: formatBytes(summary.generalImagesBytes),
+								})
+							: undefined,
+				},
+				{
+					id: "ai",
+					label: lang.t("AI history"),
+					bytes: summary.aiHistory.bytes,
+					detail: `${lang.t("{count} entries", {
+						count: summary.aiHistory.entryCount,
+					})} · ${lang.t(
+						"Campaigns: {campaignsSize} · Bestiary: {bestiarySize}",
+						{
+							campaignsSize: formatBytes(summary.aiHistory.campaignsBytes),
+							bestiarySize: formatBytes(summary.aiHistory.bestiaryBytes),
+						},
+					)}`,
+				},
+				{
+					id: "undoRedo",
+					label: lang.t("Undo/Redo history"),
+					bytes: summary.undoRedo.bytes,
+					detail: `${lang.t("{count} actions", {
+						count: summary.undoRedo.entryCount,
+					})} · ${lang.t(
+						"Application: {appSize} · Campaigns: {campaignsSize}",
+						{
+							appSize: formatBytes(summary.undoRedo.applicationBytes),
+							campaignsSize: formatBytes(summary.undoRedo.campaignsBytes),
+						},
+					)}`,
+				},
+				{
+					id: "appData",
+					label: lang.t("Bestiary, favorites & settings"),
+					bytes: summary.appDataBytes,
+				},
+			]
+		: [
+				{
+					id: "content",
+					label: lang.t("Selected campaign content"),
+					bytes: summary.contentBytes,
+				},
+				{
+					id: "images",
+					label: lang.t("Campaign images"),
+					bytes: summary.imagesBytes,
+				},
+				{
+					id: "ai",
+					label: lang.t("AI history"),
+					bytes: summary.aiHistory.bytes,
+					detail: lang.t("{count} entries", {
+						count: summary.aiHistory.entryCount,
+					}),
+				},
+				{
+					id: "undoRedo",
+					label: lang.t("Undo/Redo history"),
+					bytes: summary.undoRedo.bytes,
+					detail: lang.t("{count} actions", {
+						count: summary.undoRedo.entryCount,
+					}),
+				},
+			];
+
+	const isAiEmpty =
+		summary.aiHistory.bytes === 0 && summary.aiHistory.entryCount === 0;
+	const isBestiaryAiEmpty =
+		summary.aiHistory.bestiaryBytes === 0 &&
+		summary.aiHistory.bestiaryEntryCount === 0;
+	const isUndoEmpty =
+		summary.undoRedo.bytes === 0 && summary.undoRedo.entryCount === 0;
+	const isAppUndoEmpty =
+		summary.undoRedo.applicationBytes === 0 &&
+		summary.undoRedo.applicationEntryCount === 0;
+
+	return (
+		<div className="SettingsModal__group SettingsModal__subsection">
+			<div className="SettingsModal__storageHeader">
+				<div className="SettingsModal__label">
+					{lang.t(
+						summary.isGlobalScope
+							? "Project storage usage"
+							: "Campaign storage usage",
+					)}
+				</div>
+				<div className="SettingsModal__storageHeaderRight">
+					<span className="SettingsModal__storageTotal">
+						{formatBytes(summary.totalBytes)}
+					</span>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						onClick={onRefresh}
+						disabled={isLoading || isBusy}
+					>
+						{lang.t("Refresh")}
+					</Button>
+				</div>
+			</div>
+
+			{error && <div className="SettingsModal__hint">{error}</div>}
+
+			{summary.segments.length > 0 && (
+				<div className="SettingsModal__storageBar" aria-hidden="true">
+					{summary.segments.map((segment) => (
+						<div
+							key={segment.id}
+							className={`SettingsModal__storageSegment SettingsModal__storageSegment--${segment.id}`}
+							style={{ width: `${segment.percent}%` }}
+							title={`${getSegmentLabel(segment.id, summary.isGlobalScope)}: ${formatBytes(segment.bytes)} (${segment.percent}%)`}
+						/>
+					))}
+				</div>
+			)}
+
+			<div className="SettingsModal__storageBreakdown">
+				{breakdownRows.map((row) => (
+					<div key={row.id} className="SettingsModal__storageRow">
+						<div className="SettingsModal__storageRowMain">
+							<span
+								className={`SettingsModal__storageDot SettingsModal__storageSegment--${row.id}`}
+								aria-hidden="true"
+							/>
+							<div>
+								<div className="SettingsModal__storageLabel">{row.label}</div>
+								{row.detail && (
+									<div className="SettingsModal__hint">{row.detail}</div>
+								)}
+							</div>
+						</div>
+						<span className="SettingsModal__storageSize">
+							{formatBytes(row.bytes)}
+						</span>
+					</div>
+				))}
+			</div>
+
+			<div className="SettingsModal__cleanupGrid">
+				<div className="SettingsModal__cleanupCard">
+					<div className="SettingsModal__cleanupHeader">
+						<span className="SettingsModal__label">
+							{lang.t("AI history")}
+						</span>
+						<span className="SettingsModal__cleanupBadge">
+							{formatBytes(summary.aiHistory.bytes)} ·{" "}
+							{lang.t("{count} entries", {
+								count: summary.aiHistory.entryCount,
+							})}
+						</span>
+					</div>
+					<div className="SettingsModal__hint">
+						{lang.t(
+							"Saved AI responses and draft changes will be removed. Applied campaign and bestiary data stay unchanged.",
+						)}
+					</div>
+					{isAiConfirmOpen && pendingConfirmAction ? (
+						<div className="SettingsModal__cleanupConfirm">
+							<div className="SettingsModal__cleanupConfirmText">
+								{getStorageConfirmMessage(pendingConfirmAction, summary)}
+							</div>
+							<div className="SettingsModal__cleanupConfirmButtons">
+								<Button
+									variant="danger"
+									size={Button.SIZES.SMALL}
+									disabled={isBusy}
+									onClick={() => onConfirmAction(pendingConfirmAction)}
+								>
+									{clearingAction === pendingConfirmAction
+										? lang.t("Clearing...")
+										: lang.t("Confirm")}
+								</Button>
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									disabled={isBusy}
+									onClick={onCancelConfirm}
+								>
+									{lang.t("Cancel")}
+								</Button>
+							</div>
+						</div>
+					) : (
+						<div className="SettingsModal__cleanupActions">
+							{summary.isGlobalScope ? (
+								<>
+									<Button
+										variant="danger"
+										size={Button.SIZES.SMALL}
+										disabled={isAiEmpty || isBusy}
+										onClick={() => onRequestConfirm("ai-all")}
+									>
+										{lang.t("Clear all AI history")}
+									</Button>
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										disabled={isBestiaryAiEmpty || isBusy}
+										onClick={() => onRequestConfirm("ai-bestiary")}
+									>
+										{lang.t("Bestiary only ({size})", {
+											size: formatBytes(summary.aiHistory.bestiaryBytes),
+										})}
+									</Button>
+								</>
+							) : (
+								<Button
+									variant="danger"
+									size={Button.SIZES.SMALL}
+									disabled={isAiEmpty || isBusy}
+									onClick={() => onRequestConfirm("ai-campaign")}
+								>
+									{lang.t("Clear AI history")}
+								</Button>
+							)}
+						</div>
+					)}
+				</div>
+
+				<div className="SettingsModal__cleanupCard">
+					<div className="SettingsModal__cleanupHeader">
+						<span className="SettingsModal__label">
+							{lang.t("Undo/Redo history")}
+						</span>
+						<span className="SettingsModal__cleanupBadge">
+							{formatBytes(summary.undoRedo.bytes)} ·{" "}
+							{lang.t("{count} actions", {
+								count: summary.undoRedo.entryCount,
+							})}
+						</span>
+					</div>
+					<div className="SettingsModal__hint">
+						{lang.t(
+							"Saved undo/redo steps and deletion recovery snapshots will be removed. Current data stay unchanged.",
+						)}
+					</div>
+					{isUndoConfirmOpen && pendingConfirmAction ? (
+						<div className="SettingsModal__cleanupConfirm">
+							<div className="SettingsModal__cleanupConfirmText">
+								{getStorageConfirmMessage(pendingConfirmAction, summary)}
+							</div>
+							<div className="SettingsModal__cleanupConfirmButtons">
+								<Button
+									variant="danger"
+									size={Button.SIZES.SMALL}
+									disabled={isBusy}
+									onClick={() => onConfirmAction(pendingConfirmAction)}
+								>
+									{clearingAction === pendingConfirmAction
+										? lang.t("Clearing...")
+										: lang.t("Confirm")}
+								</Button>
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									disabled={isBusy}
+									onClick={onCancelConfirm}
+								>
+									{lang.t("Cancel")}
+								</Button>
+							</div>
+						</div>
+					) : (
+						<div className="SettingsModal__cleanupActions">
+							{summary.isGlobalScope ? (
+								<>
+									<Button
+										variant="danger"
+										size={Button.SIZES.SMALL}
+										disabled={isUndoEmpty || isBusy}
+										onClick={() => onRequestConfirm("undo-all")}
+									>
+										{lang.t("Clear all Undo/Redo")}
+									</Button>
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										disabled={isAppUndoEmpty || isBusy}
+										onClick={() => onRequestConfirm("undo-application")}
+									>
+										{lang.t("Application only ({size})", {
+											size: formatBytes(summary.undoRedo.applicationBytes),
+										})}
+									</Button>
+								</>
+							) : (
+								<Button
+									variant="danger"
+									size={Button.SIZES.SMALL}
+									disabled={isUndoEmpty || isBusy}
+									onClick={() => onRequestConfirm("undo-campaign")}
+								>
+									{lang.t("Clear Undo/Redo")}
+								</Button>
+							)}
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function SettingsScopedGroup({
 	activeSection,
 	scope,
 	notes,
 	sources,
 	ai,
+	storage,
 	EditableField,
 }: {
 	activeSection: SettingsSection;
@@ -343,11 +799,20 @@ function SettingsScopedGroup({
 	notes: SettingsNotesViewProps;
 	sources: SettingsSourcesViewProps;
 	ai: SettingsAiViewProps;
+	storage: SettingsStorageViewProps;
 } & SettingsModalCompositionSlots) {
 	return (
 		<div className="SettingsModal__group SettingsModal__section">
 			<div className="SettingsModal__sectionHeader">
-				<h3>{lang.t(activeSection === "ai" ? "AI settings" : "Campaign settings")}</h3>
+				<h3>
+					{lang.t(
+						activeSection === "ai"
+							? "AI settings"
+							: activeSection === "storage"
+								? "Data & history"
+								: "Campaign settings",
+					)}
+				</h3>
 			</div>
 			<label className="SettingsModal__field SettingsModal__scope">
 				<span className="SettingsModal__label">{lang.t("Apply to")}</span>
@@ -391,6 +856,9 @@ function SettingsScopedGroup({
 			<div hidden={activeSection !== "ai"}>
 			<SettingsAiGroup {...ai} EditableField={EditableField} />
 			</div>
+			<div hidden={activeSection !== "storage"}>
+			<SettingsStorageGroup {...storage} />
+			</div>
 		</div>
 	);
 }
@@ -402,6 +870,7 @@ export default function SettingsModalView({
 	notes,
 	sources,
 	ai,
+	storage,
 	onNotificationClose,
 	onCancel,
 	EditableField,
@@ -411,6 +880,7 @@ export default function SettingsModalView({
 		{ id: "general", label: "General" },
 		{ id: "campaign", label: "Campaign" },
 		{ id: "ai", label: "AI assistant" },
+		{ id: "storage", label: "Data & history" },
 	];
 	return (
 		<div className="SettingsModal">
@@ -434,6 +904,7 @@ export default function SettingsModalView({
 				notes={notes}
 				sources={sources}
 				ai={ai}
+				storage={storage}
 				EditableField={EditableField}
 			/>
 			</div>

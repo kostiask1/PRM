@@ -114,7 +114,13 @@ function createChangeEvent(req, requestUrl) {
 	};
 }
 
-function describeSettingsChange(event) {
+function describeSettingsChange(event, segments = [], requestUrl = "") {
+	if (segments[2] === "storage" && segments[3] === "ai-history") {
+		event.resource = "ai";
+		const parsedUrl = new URL(requestUrl, "http://localhost");
+		event.campaignSlug = parsedUrl.searchParams.get("campaign");
+		return;
+	}
 	event.resource = "settings";
 }
 
