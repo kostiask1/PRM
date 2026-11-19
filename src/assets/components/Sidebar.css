@@ -359,6 +359,7 @@
 .Sidebar .DraggableList__handle {
     right: 0;
     left: auto;
+    transform: unset;
 }
 
 @keyframes SidebarBackupLoaderSpin {
