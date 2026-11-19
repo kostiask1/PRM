@@ -24,8 +24,10 @@ export function useBestiaryMobileSelection({
 	setSelectedMonster,
 }: UseBestiaryMobileSelectionOptions) {
 	const detailRef = useRef<HTMLDivElement>(null);
+	const isClickSelectionRef = useRef(false);
 
 	const handleSelectMonster = (monster: BestiaryMonster | null) => {
+		isClickSelectionRef.current = true;
 		setSelectedMonster(monster);
 		if (!monster?.name || !isMobileViewport()) return;
 
@@ -38,6 +40,10 @@ export function useBestiaryMobileSelection({
 	};
 
 	useEffect(() => {
+		if (isClickSelectionRef.current) {
+			isClickSelectionRef.current = false;
+			return undefined;
+		}
 		if (!selectedMonster?.name || !isMobileViewport()) return undefined;
 		const selectedIndex = displayedMonsters.findIndex((monster) =>
 			isSameMonsterIdentity(monster, selectedMonster),

@@ -498,6 +498,7 @@ export default function RulesReferenceModalContent({
 	const recordEmbeddedReferenceSelection = useCallback(
 		(tabId: ReferenceTabId, name: string) => {
 			if (!isReferenceTabId(tabId) || !name) return;
+			shouldScrollToActiveRef.current = false;
 			pendingNavigationTabRef.current = null;
 			recordNavigation(tabId, name);
 			setSelectedByTab((current) => rememberEmbeddedReferenceSelection(current, tabId, name));

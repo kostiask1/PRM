@@ -28,6 +28,7 @@ import {
 	normalizeSpellList,
 	normalizeStringList,
 	sortSpells,
+	spellMatchesReferenceKey,
 	type SpellSortOrder,
 } from "../model/spellsBrowser.ts";
 import SpellsBrowserContent from "./SpellsBrowserContent.tsx";
@@ -85,6 +86,7 @@ export default function SpellsBrowser({
 	const detailRef = useRef<HTMLDivElement | null>(null);
 	const selectedSpellRef = useRef<SpellRecord | null>(null);
 	const embeddedScrolledSpellRef = useRef("");
+	const isClickSelectionRef = useRef(false);
 
 	const ignoreSourcesList = useMemo(() => getCampaignIgnoreSourcesList(normalizeCampaignSourceSettings(activeCampaign), normalizeStringList(globalIgnoreSourcesList)), [activeCampaign, globalIgnoreSourcesList]);
 	const selectedSources = useMemo(() => getSelectedSourcesFromIgnoreList(sources, ignoreSourcesList), [sources, ignoreSourcesList]);
@@ -105,7 +107,16 @@ export default function SpellsBrowser({
 	useEffect(() => { selectedSpellRef.current = selectedSpell; }, [selectedSpell]);
 	useEffect(() => { setSearch(initialSearch); }, [initialSearch]);
 	useEffect(() => { setIsDetailedSearch(Boolean(initialDetailedSearch)); }, [initialDetailedSearch]);
-	useEffect(() => { embeddedScrolledSpellRef.current = ""; }, [initialSelectedName]);
+	useEffect(() => {
+		if (
+			selectedSpellRef.current &&
+			initialSelectedName &&
+			spellMatchesReferenceKey(selectedSpellRef.current, initialSelectedName)
+		) {
+			return;
+		}
+		embeddedScrolledSpellRef.current = "";
+	}, [initialSelectedName]);
 	useEffect(() => { setSourceFilter((current) => getValidSourceFilter(current, selectedSources)); }, [selectedSources]);
 
 	useEffect(() => {
@@ -167,6 +178,10 @@ export default function SpellsBrowser({
 	}, [displayedSpells, initialSelectedName, scrollToInitialSelected, selectedSpell]);
 
 	useEffect(() => {
+		if (isClickSelectionRef.current) {
+			isClickSelectionRef.current = false;
+			return;
+		}
 		if (!selectedSpell || !isMobileViewport()) return;
 		const selectedIndex = getSpellListIndex(displayedSpells, selectedSpell);
 		if (selectedIndex < 0) return;
@@ -191,6 +206,10 @@ export default function SpellsBrowser({
 	};
 
 	const selectSpell = (spell: SpellRecord | null) => {
+		isClickSelectionRef.current = true;
+		if (spell) {
+			embeddedScrolledSpellRef.current = `${spell.source ?? ""}:${spell.name}`;
+		}
 		setSelectedSpell(spell);
 		if (spell) onActiveSpellChange?.(spell);
 		if (!spell || !isMobileViewport()) return;

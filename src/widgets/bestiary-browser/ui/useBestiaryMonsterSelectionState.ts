@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
+import { monsterMatchesReference, parseMonsterReference } from "../model.js";
 
 export interface UseBestiaryMonsterSelectionStateOptions {
 	initialSelectedName: string;
@@ -23,12 +24,25 @@ export function useBestiaryMonsterSelectionState({
 	}, [selectedMonster]);
 
 	useEffect(() => {
+		if (
+			selectedMonsterRef.current?.name &&
+			initialSelectedName &&
+			monsterMatchesReference(
+				selectedMonsterRef.current,
+				parseMonsterReference(initialSelectedName, initialSelectedSource),
+			)
+		) {
+			return;
+		}
 		embeddedScrolledMonsterRef.current = "";
 	}, [initialSelectedName, initialSelectedSource]);
 
 	const selectMonster = useCallback(
 		(monster: BestiaryMonster | null) => {
 			shouldAutoSelectMonsterRef.current = false;
+			if (monster?.name) {
+				embeddedScrolledMonsterRef.current = `${monster.source || ""}:${monster.name}`;
+			}
 			setSelectedMonster(monster);
 			if (monster?.name) {
 				onActiveMonsterChange?.(monster);
