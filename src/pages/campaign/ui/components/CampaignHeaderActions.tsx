@@ -79,7 +79,6 @@ export default function CampaignHeaderActions({
 				undoTitle={undoTitle}
 			/>
 			</div>
-			<Button className="CampaignHeaderActions__archive" variant="ghost" size={Button.SIZES.SMALL} icon="database" onClick={onOpenPartialArchive}>{lang.t("Import/export parts")}</Button>
 			<Button
 				variant="ghost"
 				size={Button.SIZES.SMALL}

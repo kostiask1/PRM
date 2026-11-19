@@ -1,13 +1,77 @@
-.CampaignHeaderActions { display: flex; position: relative; align-items: center; justify-content: flex-end; gap: var(--space-2); }
-.CampaignHeaderActions .Button { white-space: nowrap; }
-.CampaignHeaderActions__toggle { display: inline-flex; }
-.CampaignHeaderActions__menu { position: absolute; top: calc(100% + var(--space-1)); right: 0; z-index: 30; display: none; flex-direction: column; align-items: stretch; min-width: 240px; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); box-shadow: var(--shadow); }
-.CampaignHeaderActions.is_open .CampaignHeaderActions__menu { display: flex; }
-.CampaignHeaderActions__menu .Button { justify-content: flex-start; }
-.CampaignHeaderActions .Button > span { display: none; }
-.CampaignHeaderActions__menu .Button > span { display: flex; }
-.CampaignHeaderActions__history { display: flex; align-items: center; gap: var(--space-1); }
-.CampaignHeaderActions__historyScope { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
-.CampaignHeaderActions .CampaignHeaderActions__history .Button > span, .CampaignHeaderActions .CampaignHeaderActions__archive > span { display: inline; }
-@media (max-width: 1024px) { .CampaignHeaderActions__historyScope, .CampaignHeaderActions .CampaignHeaderActions__history .Button > span, .CampaignHeaderActions__archive { display: none !important; } }
-@media (max-width: 767px) { .CampaignHeaderActions .Button { min-height: 44px; } }
+.CampaignHeaderActions {
+    display: flex;
+    position: relative;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+
+.CampaignHeaderActions .Button {
+    white-space: nowrap;
+}
+
+.CampaignHeaderActions__toggle {
+    display: inline-flex;
+}
+
+.CampaignHeaderActions__menu {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    right: 0;
+    z-index: 30;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 240px;
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+}
+
+.CampaignHeaderActions.is_open .CampaignHeaderActions__menu {
+    display: flex;
+}
+
+.CampaignHeaderActions__menu .Button {
+    justify-content: flex-start;
+}
+
+.CampaignHeaderActions .Button>span {
+    display: none;
+}
+
+.CampaignHeaderActions__menu .Button>span {
+    display: flex;
+}
+
+.CampaignHeaderActions__history {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.CampaignHeaderActions__historyScope {
+    color: var(--muted);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.CampaignHeaderActions .CampaignHeaderActions__history .Button>span {
+    display: inline;
+}
+
+@media (max-width: 1024px) {
+
+    .CampaignHeaderActions__historyScope,
+    .CampaignHeaderActions .CampaignHeaderActions__history .Button>span {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .CampaignHeaderActions .Button {
+        min-height: 44px;
+    }
+}

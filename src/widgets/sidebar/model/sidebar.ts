@@ -73,6 +73,18 @@ export function getSidebarClassName(
 	return `Sidebar App__sidebar${isExpanded ? " Sidebar__hovered" : ""}${isMobileOpen ? " Sidebar__mobile_open" : ""}`;
 }
 
+export function getSidebarCampaignMonogram(name?: string | null): string {
+	const words = String(name || "")
+		.trim()
+		.split(/\s+/)
+		.filter(Boolean);
+	if (words.length === 0) return "?";
+	if (words.length >= 2) {
+		return `${Array.from(words[0])[0] || ""}${Array.from(words[1])[0] || ""}`.toLocaleUpperCase();
+	}
+	return Array.from(words[0]).slice(0, 2).join("").toLocaleUpperCase();
+}
+
 export function isSidebarToggleKey(key: string): boolean {
 	return key === "Enter" || key === " ";
 }

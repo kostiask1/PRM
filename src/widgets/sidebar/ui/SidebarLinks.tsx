@@ -52,7 +52,9 @@ export default function SidebarLinks({
 }: SidebarLinksProps) {
 	return (
 		<div className="Sidebar__links">
-			<h2 className="Sidebar__sectionTitle">{lang.t("Library")}</h2>
+			<h2 className="Sidebar__sectionTitle">
+				<span>{lang.t("Library")}</span>
+			</h2>
 			<SidebarLink
 				icon="skull"
 				label={lang.t("Bestiary")}

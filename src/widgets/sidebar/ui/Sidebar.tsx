@@ -5,6 +5,8 @@ import {
 	useRef,
 	useState,
 	type ChangeEvent,
+	type FocusEvent,
+	type PointerEvent,
 } from "react";
 
 import { campaignApi } from "../../../entities/campaign/index.js";
@@ -86,12 +88,17 @@ export default function Sidebar({
 		setCampaigns,
 		syncEvent,
 	} = useSidebarRuntime();
+	const asideRef = useRef<HTMLElement>(null);
+	const lastInputWasKeyboardRef = useRef(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [dbImportStrategy, setDbImportStrategy] =
 		useState<BackupImportStrategy | null>(null);
 	const [localCampaigns, setLocalCampaigns] =
 		useState<SidebarCampaign[]>(campaigns);
 	const [isExportingBackup, setIsExportingBackup] = useState(false);
+	const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+	const [isSidebarPinnedOpen, setIsSidebarPinnedOpen] = useState(false);
+	const [isSidebarFocusExpanded, setIsSidebarFocusExpanded] = useState(false);
 	const [isCompletedCampaignsCollapsed, setIsCompletedCampaignsCollapsed] =
 		useState(true);
 	const effectiveActiveSlug = activeCampaignId || activeNavigationSlug;
@@ -183,6 +190,7 @@ export default function Sidebar({
 
 	const handleOpenImportDb = () => {
 		onClose?.();
+		setIsSidebarPinnedOpen(false);
 		void openModal({
 			title: lang.t("Import data"),
 			type: "confirm",
@@ -219,11 +227,13 @@ export default function Sidebar({
 		options: SidebarRulesReferenceNavigationOptions = {},
 	) => {
 		onClose?.();
+		setIsSidebarPinnedOpen(false);
 		requestRulesReferenceNavigation(initialTab, "", options);
 	};
 
 	const handleOpenPlayerQuestions = () => {
 		onClose?.();
+		setIsSidebarPinnedOpen(false);
 		void openModal({
 			title: lang.t("Player questions"),
 			type: "confirm",
@@ -235,6 +245,7 @@ export default function Sidebar({
 
 	const handleOpenSettings = () => {
 		onClose?.();
+		setIsSidebarPinnedOpen(false);
 		void openModal({
 			title: lang.t("Settings"),
 			type: "confirm",
@@ -249,6 +260,7 @@ export default function Sidebar({
 	};
 
 	const handleCampaignClick = (campaignSlug: string) => {
+		setIsSidebarPinnedOpen(false);
 		onSelectCampaign(
 			getSidebarCampaignSelection({
 				campaignSlug,
@@ -261,7 +273,27 @@ export default function Sidebar({
 
 	const handleOpenGallery = () => {
 		onClose?.();
+		setIsSidebarPinnedOpen(false);
 		onOpenGallery();
+	};
+
+	const canUseHoverSidebar = () =>
+		typeof window !== "undefined" &&
+		Boolean(
+			window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches,
+		);
+
+	const handleSidebarPointerEnter = (event: PointerEvent<HTMLElement>) => {
+		if (event.pointerType !== "mouse" || !canUseHoverSidebar()) return;
+		setIsSidebarHovered(true);
+	};
+
+	const handleSidebarPointerLeave = (event: PointerEvent<HTMLElement>) => {
+		if (event.pointerType !== "mouse") return;
+		if (document.body.classList.contains("prm_draggable_list_dragging")) {
+			return;
+		}
+		setIsSidebarHovered(false);
 	};
 
 	const handleExport = async () => {
@@ -293,6 +325,7 @@ export default function Sidebar({
 		settings: handleOpenSettings,
 		newCampaign: () => {
 			onClose?.();
+			setIsSidebarPinnedOpen(false);
 			onCreateCampaign();
 		},
 		exportData: () => {
@@ -310,6 +343,7 @@ export default function Sidebar({
 		settings: handleOpenSettings,
 		newCampaign: () => {
 			onClose?.();
+			setIsSidebarPinnedOpen(false);
 			onCreateCampaign();
 		},
 		exportData: () => {
@@ -317,6 +351,28 @@ export default function Sidebar({
 		},
 		importData: handleOpenImportDb,
 	};
+
+	useEffect(() => {
+		const handleDragModeChange = (event: Event) => {
+			const dragEvent = event as CustomEvent<{ enabled?: boolean }>;
+			if (
+				dragEvent.detail?.enabled === false &&
+				!asideRef.current?.matches(":hover")
+			) {
+				setIsSidebarHovered(false);
+			}
+		};
+
+		window.addEventListener(
+			"prm-draggable-list-drag-mode",
+			handleDragModeChange,
+		);
+		return () =>
+			window.removeEventListener(
+				"prm-draggable-list-drag-mode",
+				handleDragModeChange,
+			);
+	}, []);
 
 	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
@@ -362,11 +418,85 @@ export default function Sidebar({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, []);
 
+	useEffect(() => {
+		const navigationKeys = new Set([
+			"Tab",
+			"ArrowUp",
+			"ArrowDown",
+			"ArrowLeft",
+			"ArrowRight",
+			"Home",
+			"End",
+		]);
+		const handleModalityKeyDown = (event: KeyboardEvent) => {
+			if (navigationKeys.has(event.key)) {
+				lastInputWasKeyboardRef.current = true;
+			}
+		};
+		const handleModalityPointerDown = () => {
+			lastInputWasKeyboardRef.current = false;
+			setIsSidebarFocusExpanded(false);
+		};
+
+		window.addEventListener("keydown", handleModalityKeyDown, {
+			capture: true,
+		});
+		window.addEventListener("pointerdown", handleModalityPointerDown, {
+			capture: true,
+		});
+		return () => {
+			window.removeEventListener("keydown", handleModalityKeyDown, {
+				capture: true,
+			});
+			window.removeEventListener(
+				"pointerdown",
+				handleModalityPointerDown,
+				{ capture: true },
+			);
+		};
+	}, []);
+
+	const handleSidebarFocus = () => {
+		if (lastInputWasKeyboardRef.current) {
+			setIsSidebarFocusExpanded(true);
+		}
+	};
+
+	const handleSidebarBlur = (event: FocusEvent<HTMLElement>) => {
+		if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+			setIsSidebarFocusExpanded(false);
+		}
+	};
+
+	const isSidebarExpanded =
+		isSidebarHovered ||
+		isSidebarPinnedOpen ||
+		isSidebarFocusExpanded ||
+		isMobileOpen;
+
 	return (
 		<>
 			<aside
-				className={getSidebarClassName(true, isMobileOpen)}
+				ref={asideRef}
+				className={getSidebarClassName(isSidebarExpanded, isMobileOpen)}
+				onPointerEnter={handleSidebarPointerEnter}
+				onPointerLeave={handleSidebarPointerLeave}
+				onFocus={handleSidebarFocus}
+				onBlur={handleSidebarBlur}
 			>
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon={isSidebarPinnedOpen ? "back" : "menu"}
+					className="Sidebar__touchToggle"
+					aria-label={
+						isSidebarPinnedOpen
+							? lang.t("Close navigation")
+							: lang.t("Open navigation")
+					}
+					aria-expanded={isSidebarPinnedOpen}
+					onClick={() => setIsSidebarPinnedOpen((value) => !value)}
+				/>
 				<div className="Sidebar__header">
 					<h1 className="Sidebar__title">
 						<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.diceCalculator}>
@@ -374,10 +504,15 @@ export default function Sidebar({
 								type="button"
 								className="Sidebar__brandIcon"
 								aria-label={lang.t("Dice calculator")}
-								onClick={onOpenDiceCalculator}
+								onClick={() => {
+									setIsSidebarPinnedOpen(false);
+									onOpenDiceCalculator();
+								}}
 							><Icon name="dice" size={20} /></button>
 						</Tooltip>
-						{lang.t("Session notebook")}
+						<span className="Sidebar__titleText">
+							{lang.t("Session notebook")}
+						</span>
 					</h1>
 					<div className="Sidebar__historyActions" role="group" aria-label={lang.t("Application history")}>
 						<span className="Sidebar__historyScope">{lang.t("Application history")}</span>
@@ -411,7 +546,10 @@ export default function Sidebar({
 					onToggleCompleted={() =>
 						setIsCompletedCampaignsCollapsed((value) => !value)
 					}
-					onCreateCampaign={onCreateCampaign}
+					onCreateCampaign={() => {
+						setIsSidebarPinnedOpen(false);
+						onCreateCampaign();
+					}}
 					onSelectCampaign={handleCampaignClick}
 					onToggleCampaignStatus={onToggleCampaignStatus}
 					onReorder={handleCampaignGroupReorder}

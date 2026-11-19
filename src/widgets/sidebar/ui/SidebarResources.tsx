@@ -46,7 +46,9 @@ export default function SidebarResources({
 }) {
 	return (
 		<div className="Sidebar__section Sidebar__section__resources">
-			<h2 className="Sidebar__sectionTitle">{lang.t("Useful resources")}</h2>
+			<h2 className="Sidebar__sectionTitle">
+				<span>{lang.t("Useful resources")}</span>
+			</h2>
 			<div className="Sidebar__resource_list">
 				{EXTERNAL_RESOURCES.map((resource) => (
 					<a

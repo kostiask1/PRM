@@ -197,6 +197,12 @@
 	--text-bright: #ffffff;
 }
 
+@media (min-width: 767.02px) and (max-width: 1399.98px) {
+	:root {
+		--sidebar-collapsed: 72px;
+	}
+}
+
 @media (max-width: 767px) {
 	:root { --content-padding: 20px; }
 }

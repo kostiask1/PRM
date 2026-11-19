@@ -17,12 +17,27 @@
     padding: var(--space-4) var(--space-3);
     background: var(--sidebar-bg);
     color: var(--sidebar-text);
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
 }
 
+.Sidebar > * {
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.Sidebar .Icon {
+    flex-shrink: 0;
+}
+
+.Sidebar__touchToggle {
+    display: none !important;
+}
+
 .Sidebar__header {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2);
     padding-bottom: var(--space-3);
 }
@@ -31,9 +46,19 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
+    height: 48px;
     min-height: 48px;
     font: 600 20px/28px var(--font-heading);
     color: var(--sidebar-title);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.Sidebar__titleText {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .Sidebar__brandIcon {
@@ -55,9 +80,14 @@
 }
 
 .Sidebar__historyActions {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-1);
+    height: var(--control-h-sm);
+    min-height: var(--control-h-sm);
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .Sidebar__historyScope {
@@ -66,9 +96,14 @@
     color: var(--sidebar-text);
     font-size: 0.68rem;
     line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .Sidebar__historyActions .Button {
+    height: var(--control-h-sm);
+    min-height: var(--control-h-sm);
     background: transparent;
     color: var(--sidebar-text);
 }
@@ -76,6 +111,7 @@
 .Sidebar__links,
 .Sidebar__workspaceLinks {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2);
 }
 
@@ -84,16 +120,26 @@
     align-items: center;
     gap: var(--space-3);
     width: 100%;
+    height: var(--size-8);
     padding: var(--space-1) var(--space-1);
     border-radius: var(--radius-sm);
     color: var(--sidebar-text);
     font-size: 13px;
     font-weight: 600;
     text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
     transition:
         background var(--anim-duration-fast) var(--anim-ease-standard),
         color var(--anim-duration-fast) var(--anim-ease-standard),
         transform var(--anim-duration-fast) var(--anim-ease-spring);
+}
+
+.Sidebar__link > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .Sidebar__link:hover {
@@ -109,16 +155,30 @@
 
 .Sidebar__section {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2);
     min-width: 0;
 }
 
 .Sidebar__sectionTitle,
 .Sidebar__workspaceLabel {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 24px;
     padding: var(--space-1) 0;
     color: var(--sidebar-text);
     font: 700 10px/16px var(--font-body);
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.Sidebar__sectionTitle > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .Sidebar__workspaceLinks {
@@ -127,13 +187,17 @@
 
 .Sidebar__list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
+    min-width: 0;
 }
 
 .Sidebar .ListCard {
+    height: 66px;
     background: transparent;
     border-color: transparent;
     border-radius: var(--radius-sm);
+    overflow: hidden;
 }
 
 .Sidebar .ListCard:hover,
@@ -144,23 +208,30 @@
 
 .Sidebar .ListCard__main {
     min-width: 0;
+    height: 100%;
     padding: var(--space-2);
 }
 
 .ListCard__sidebar_content {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-3);
     min-width: 0;
     width: 100%;
+    height: 48px;
+    overflow: hidden;
 }
 
 .ListCard__sidebar_info {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: var(--space-1);
     min-width: 0;
     width: 100%;
+    height: 48px;
+    transition: opacity var(--anim-duration-fast) var(--anim-ease-standard);
 }
 
 .Sidebar__campaignTitle {
@@ -170,22 +241,36 @@
 }
 
 .Sidebar .ListCard__title {
+    height: 20px;
+    margin-bottom: 0;
     font-size: 13px;
     line-height: 20px;
     color: var(--sidebar-title);
 }
 
 .Sidebar .ListCard__meta {
+    height: 24px;
     font-size: 12px;
-    line-height: 19px;
+    line-height: 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-1);
     width: 100%;
+    white-space: nowrap;
+}
+
+.Sidebar__campaignSessions {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .Sidebar .StatusBadge {
     font-size: 10px;
+    line-height: 16px;
+    flex-shrink: 0;
     padding: var(--space-0-5) var(--space-1-5);
 }
 
@@ -200,15 +285,68 @@
     background: var(--sidebar-hover);
 }
 
+.Sidebar__campaignCompact {
+    display: none;
+}
+
+.Sidebar__campaignMonogram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    max-width: 100%;
+    height: 22px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-xs);
+    background: color-mix(in srgb, var(--sidebar-hover), var(--sidebar-title) 8%);
+    color: var(--sidebar-title);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.03em;
+}
+
+.Sidebar .ListCard__active .Sidebar__campaignMonogram {
+    background: var(--sidebar-brand-bg);
+    color: var(--sidebar-utility-text);
+}
+
+.Sidebar__campaignCompactMeta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    height: 18px;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--sidebar-text);
+}
+
+.Sidebar__campaignStatusDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--sidebar-utility-bg);
+}
+
+.Sidebar__campaignStatusDot__done {
+    background: color-mix(in srgb, var(--sidebar-text), transparent 45%);
+}
+
 .Sidebar .ListCard__actions {
     padding-right: var(--space-1);
 }
 
 .Sidebar .Button__create {
+    height: var(--size-9);
+    min-height: var(--size-9);
     font-size: 12px;
     background: transparent;
     color: var(--sidebar-text);
     border-color: var(--sidebar-hover);
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .Sidebar .Button__create:hover {
@@ -218,19 +356,34 @@
 
 .Sidebar__completedCampaigns {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
+    min-width: 0;
 }
 
 .Sidebar__completedHeader {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-1);
+    height: var(--size-6);
+    min-height: var(--size-6);
     cursor: pointer;
     font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.Sidebar__completedLabel {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .Sidebar__completedCount {
     margin-left: auto;
+    flex-shrink: 0;
 }
 
 .Sidebar__campaignCompleted {
@@ -239,17 +392,29 @@
 
 .Sidebar__resource_list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
+    min-width: 0;
 }
 
 .Sidebar__resource_item {
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    height: var(--space-6);
     min-height: var(--space-6);
     color: var(--sidebar-text);
     text-decoration: none;
     font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.Sidebar__resource_item > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .Sidebar button.Sidebar__resource_item {
@@ -274,28 +439,43 @@
 
 .Sidebar__footer {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
     padding-top: var(--space-1);
     margin-top: auto;
     border-top: 1px solid var(--sidebar-hover);
+    min-width: 0;
 }
 
 .Sidebar__footerGrid {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
+    min-width: 0;
 }
 
 .Sidebar .Button__footer {
+    height: var(--control-h-sm);
     min-height: var(--control-h-sm);
     font-size: 12px;
     background: var(--sidebar-utility-bg);
     color: var(--sidebar-utility-text);
     border-color: var(--sidebar-utility-bg);
     padding-inline: var(--space-3);
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .Sidebar .Button__footer:hover {
     background: color-mix(in srgb, var(--sidebar-utility-bg), var(--sidebar-utility-text) 10%);
+}
+
+.Sidebar .Button .Sidebar__buttonLabel {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .Sidebar__settings {
@@ -313,7 +493,9 @@
 .Sidebar__resource_list > .Tooltip__trigger,
 .Sidebar__footerGrid > .Tooltip__trigger {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
+    min-width: 0;
 }
 
 .Sidebar__title > .Tooltip__trigger,
@@ -325,6 +507,7 @@
 .Sidebar__backupLoader {
     width: var(--size-4);
     height: var(--size-4);
+    flex-shrink: 0;
     border: 2px solid currentColor;
     border-top-color: transparent;
     border-radius: 50%;
@@ -374,6 +557,209 @@
     }
 }
 
+@media (min-width: 767.02px) and (max-width: 1399.98px) {
+    .Sidebar {
+        width: var(--sidebar-collapsed);
+        padding: var(--space-4) var(--space-2);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+        transition:
+            width var(--anim-duration-normal) var(--anim-ease-standard),
+            padding-inline var(--anim-duration-normal) var(--anim-ease-standard),
+            box-shadow var(--anim-duration-normal) var(--anim-ease-standard);
+    }
+
+    .Sidebar.Sidebar__hovered {
+        width: var(--sidebar-expanded);
+        padding: var(--space-4) var(--space-3);
+        box-shadow: 10px 0 30px color-mix(in srgb, var(--shadow-ink), transparent 65%);
+    }
+
+    .Sidebar__campaignCompact {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-1);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--anim-duration-fast) var(--anim-ease-standard);
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__title {
+        justify-content: center;
+        gap: 0;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__titleText {
+        width: 0;
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__historyActions {
+        justify-content: center;
+        gap: var(--space-1);
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__historyScope {
+        position: absolute;
+        width: 0;
+        height: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__historyActions .Button {
+        width: 22px;
+        min-width: 22px;
+        padding: 0;
+        border-color: transparent;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__historyActions .Button .Icon {
+        width: 15px;
+        height: 15px;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__sectionTitle {
+        justify-content: center;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__sectionTitle > span {
+        position: absolute;
+        width: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__sectionTitle::after {
+        content: "";
+        display: block;
+        width: 24px;
+        height: 2px;
+        border-radius: var(--radius-pill);
+        background: color-mix(in srgb, var(--sidebar-text), transparent 72%);
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Button__create {
+        padding-inline: 0;
+        gap: 0;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Button__create > span {
+        width: 0;
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        gap: 0;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .ListCard__main {
+        padding-inline: var(--space-0-5);
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .ListCard__sidebar_info {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__campaignCompact {
+        opacity: 1;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .DraggableList__handle {
+        display: none;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__completedHeader {
+        justify-content: center;
+        gap: var(--space-0-5);
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__completedLabel {
+        position: absolute;
+        width: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__completedCount {
+        margin-left: 0;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__link {
+        justify-content: center;
+        gap: 0;
+        padding-inline: 0;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__link:hover {
+        transform: none;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__link > span {
+        width: 0;
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__resource_item {
+        justify-content: center;
+        gap: 0;
+        padding-inline: 0;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__resource_item > span {
+        width: 0;
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Button__footer {
+        padding-inline: 0;
+        gap: 0;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Button__footer > span {
+        gap: 0;
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Button__footer .Sidebar__buttonLabel {
+        width: 0;
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+    }
+}
+
+@media (min-width: 767.02px) and (max-width: 1399.98px) and (hover: none),
+       (min-width: 767.02px) and (max-width: 1399.98px) and (pointer: coarse) {
+    .Sidebar__touchToggle {
+        display: inline-flex !important;
+        width: var(--size-8);
+        min-width: var(--size-8);
+        height: var(--size-8);
+        min-height: var(--size-8);
+        padding: 0;
+        align-self: flex-start;
+        color: var(--sidebar-text);
+        border-color: var(--sidebar-hover);
+    }
+
+    .Sidebar:not(.Sidebar__hovered) .Sidebar__touchToggle {
+        align-self: center;
+    }
+}
+
 @media (max-width: 767px) {
     .Sidebar {
         width: min(86vw, 320px);
@@ -388,6 +774,7 @@
     }
 
     .Sidebar__link {
+        height: auto;
         min-height: 44px;
     }
 }

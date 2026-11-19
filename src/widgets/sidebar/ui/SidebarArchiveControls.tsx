@@ -41,7 +41,9 @@ export default function SidebarArchiveControls({
 						{isExporting && (
 							<span className="Sidebar__backupLoader" aria-hidden="true" />
 						)}
-						{isExporting ? lang.t("Loading...") : lang.t("Export data")}
+						<span className="Sidebar__buttonLabel">
+							{isExporting ? lang.t("Loading...") : lang.t("Export data")}
+						</span>
 					</Button>
 				</Tooltip>
 				<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.importData}>
@@ -51,7 +53,9 @@ export default function SidebarArchiveControls({
 						iconSize={16}
 						onClick={onImport}
 					>
-						{lang.t("Import data")}
+						<span className="Sidebar__buttonLabel">
+							{lang.t("Import data")}
+						</span>
 					</Button>
 				</Tooltip>
 			</div>

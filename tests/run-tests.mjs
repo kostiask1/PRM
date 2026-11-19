@@ -320,6 +320,7 @@ import {
 } from "../src/widgets/rules-reference-modal/model.js";
 import {
 	buildSidebarCampaignOrder,
+	getSidebarCampaignMonogram,
 	getSidebarCampaignSelection,
 	getSidebarClassName,
 	getSidebarErrorMessage,
@@ -54088,6 +54089,13 @@ await run("sidebar keeps campaign navigation and ordering policies stable", () =
 		getSidebarClassName(false, true),
 		"Sidebar App__sidebar Sidebar__mobile_open",
 	);
+	assert.equal(getSidebarCampaignMonogram("Оборона Грейфорда"), "ОГ");
+	assert.equal(getSidebarCampaignMonogram("Тестова Кампанія QA"), "ТК");
+	assert.equal(getSidebarCampaignMonogram("Догма"), "ДО");
+	assert.equal(getSidebarCampaignMonogram("Example"), "EX");
+	assert.equal(getSidebarCampaignMonogram(""), "?");
+	assert.equal(getSidebarCampaignMonogram("   "), "?");
+	assert.equal(getSidebarCampaignMonogram("A"), "A");
 	assert.equal(isSidebarToggleKey("Enter"), true);
 	assert.equal(isSidebarToggleKey(" "), true);
 	assert.equal(isSidebarToggleKey("Escape"), false);

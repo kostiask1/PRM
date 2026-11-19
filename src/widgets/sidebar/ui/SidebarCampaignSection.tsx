@@ -5,13 +5,13 @@ import {
 	Button,
 	CollapseToggleButton,
 	DraggableList,
-	Icon,
 	ListCard,
 	Tooltip,
 } from "../../../shared/ui/index.js";
 import { StatusBadge } from "../../../features/status-badge/index.js";
 import { makeHistoryTargetId } from "../../../entities/history/index.js";
 import {
+	getSidebarCampaignMonogram,
 	isSidebarToggleKey,
 	SIDEBAR_SHORTCUT_LABELS,
 	type SidebarCampaign,
@@ -65,7 +65,9 @@ function CompletedCampaignsHeader({
 				collapsed={collapsed}
 				onClick={onToggle}
 			/>
-			<span>{lang.t("Completed campaigns")}</span>
+			<span className="Sidebar__completedLabel">
+				{lang.t("Completed campaigns")}
+			</span>
 			<span className="Sidebar__completedCount">{count}</span>
 		</div>
 	);
@@ -97,6 +99,19 @@ export default function SidebarCampaignSection({
 
 		>
 			<div className="ListCard__sidebar_content">
+				<div className="Sidebar__campaignCompact" aria-hidden="true">
+					<span className="Sidebar__campaignMonogram">
+						{getSidebarCampaignMonogram(campaign.name)}
+					</span>
+					<span className="Sidebar__campaignCompactMeta">
+						<span
+							className={`Sidebar__campaignStatusDot${campaign.completed ? " Sidebar__campaignStatusDot__done" : ""}`}
+						/>
+						<span className="Sidebar__campaignCompactCount">
+							{campaign.sessionCount || 0}
+						</span>
+					</span>
+				</div>
 				<div className="ListCard__sidebar_info">
 					<div
 						className="ListCard__title Sidebar__campaignTitle"
@@ -105,11 +120,13 @@ export default function SidebarCampaignSection({
 						{campaign.name}
 					</div>
 					<div className="ListCard__meta">
-						{(campaign.sessionCount || 0) === 1
-							? lang.t("1 session")
-							: lang.t("{count} sessions", {
-									count: campaign.sessionCount || 0,
-								})}
+						<span className="Sidebar__campaignSessions">
+							{(campaign.sessionCount || 0) === 1
+								? lang.t("1 session")
+								: lang.t("{count} sessions", {
+										count: campaign.sessionCount || 0,
+									})}
+						</span>
 						<StatusBadge
 							completed={Boolean(campaign.completed)}
 							onClick={(event: MouseEvent<HTMLSpanElement>) => {
@@ -136,7 +153,9 @@ export default function SidebarCampaignSection({
 			</div>
 			<Tooltip delay={1200} content={SIDEBAR_SHORTCUT_LABELS.newCampaign}>
 				<Button variant="create" onClick={onCreateCampaign} icon="plus">
-					<span>{lang.t("New campaign")}</span>
+					<span className="Sidebar__buttonLabel">
+						{lang.t("New campaign")}
+					</span>
 				</Button>
 			</Tooltip>
 
