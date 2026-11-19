@@ -1,4 +1,4 @@
-import type { SpellRecord } from "../../../entities/spell/index.js";
+import type { SpellData, SpellRecord } from "../../../entities/spell/index.js";
 import { normalizeSourceCode } from "../../../entities/reference/model.js";
 import type { CampaignSourceSettings } from "../../../entities/reference/model.js";
 import { rankSearchResultsByName } from "../../../shared/lib/index.js";
@@ -125,42 +125,92 @@ export function getPreferredSpellVersion(versions: readonly SpellRecord[]): Spel
 	return preferred;
 }
 
+function stripSpellGroupingFields(spell: SpellRecord): SpellRecord {
+	const copy: SpellRecord = { ...spell };
+	delete copy.versions;
+	delete copy.sources;
+	return copy;
+}
+
+function getAllSpellVersions(spell: SpellRecord): SpellRecord[] {
+	const primary = stripSpellGroupingFields(spell);
+	if (!Array.isArray(spell.versions) || spell.versions.length === 0) {
+		return [primary];
+	}
+	const seen = new Set<string>();
+	const primarySource = normalizeSourceCode(primary.source);
+	if (primarySource) seen.add(primarySource);
+	const all: SpellRecord[] = [primary];
+	for (const rawVersion of spell.versions) {
+		if (!rawVersion || typeof rawVersion !== "object") continue;
+		const cleanVersion: SpellRecord = {
+			...rawVersion,
+			name: rawVersion.name || primary.name,
+		};
+		delete cleanVersion.versions;
+		delete cleanVersion.sources;
+		const verSource = normalizeSourceCode(cleanVersion.source);
+		if (verSource && seen.has(verSource)) continue;
+		if (verSource) seen.add(verSource);
+		all.push(cleanVersion);
+	}
+	return all;
+}
+
+function buildGroupedSpell(primary: SpellRecord, allVersions: readonly SpellRecord[]): SpellRecord {
+	const primaryClean = stripSpellGroupingFields(primary);
+	const primarySource = normalizeSourceCode(primaryClean.source);
+	const otherVersions: SpellData[] = allVersions
+		.filter((ver) => normalizeSourceCode(ver.source) !== primarySource)
+		.map((ver) => {
+			const clean: SpellData = { ...ver };
+			delete clean.versions;
+			delete clean.sources;
+			if (primaryClean.name && clean.name === primaryClean.name) {
+				delete clean.name;
+			}
+			return clean;
+		});
+	if (otherVersions.length === 0) {
+		return primaryClean;
+	}
+	return {
+		...primaryClean,
+		versions: otherVersions,
+	};
+}
+
 export function groupSpellsByName(spells: readonly SpellRecord[]): SpellRecord[] {
 	const byName = new Map<string, SpellRecord[]>();
+	let needsGrouping = false;
 	for (const spell of spells) {
 		const key = String(spell.name || "").trim().toLowerCase();
 		let group = byName.get(key);
-		if (!group) {
+		if (group) {
+			needsGrouping = true;
+		} else {
 			group = [];
 			byName.set(key, group);
 		}
-		if (Array.isArray(spell.versions) && spell.versions.length > 0) {
-			for (const v of spell.versions) {
-				group.push(v as SpellRecord);
-			}
-		} else {
-			group.push(spell);
+		if (Array.isArray(spell.sources)) {
+			needsGrouping = true;
 		}
+		const primarySource = normalizeSourceCode(spell.source);
+		if (
+			Array.isArray(spell.versions) &&
+			spell.versions.some((v) => normalizeSourceCode(v?.source) === primarySource)
+		) {
+			needsGrouping = true;
+		}
+		group.push(...getAllSpellVersions(spell));
 	}
 
-	let hasDuplicates = false;
-	for (const group of byName.values()) {
-		if (group.length > 1) {
-			hasDuplicates = true;
-			break;
-		}
-	}
-	if (!hasDuplicates) {
+	if (!needsGrouping) {
 		return [...spells];
 	}
 
 	const grouped: SpellRecord[] = [];
 	for (const group of byName.values()) {
-		if (group.length === 1) {
-			grouped.push(group[0]);
-			continue;
-		}
-
 		const bySource = new Map<string, SpellRecord>();
 		for (const item of group) {
 			const s = normalizeSourceCode(item.source);
@@ -174,14 +224,11 @@ export function groupSpellsByName(spells: readonly SpellRecord[]): SpellRecord[]
 			return String(a.source || "").localeCompare(String(b.source || ""));
 		});
 
-		const primary = uniqueVersions[0]!;
-		const sources = uniqueVersions.map((v) => v.source).filter((s): s is string => Boolean(s));
-		grouped.push({
-			...primary,
-			name: primary.name,
-			sources,
-			versions: uniqueVersions,
-		});
+		grouped.push(
+			uniqueVersions.length === 1
+				? uniqueVersions[0]!
+				: buildGroupedSpell(uniqueVersions[0]!, uniqueVersions),
+		);
 	}
 
 	return grouped;
@@ -222,14 +269,10 @@ export function findSpellByReference(spells: readonly SpellRecord[], value: unkn
 	const match = spells.find((spell) => spellMatchesReferenceKey(spell, value)) ?? null;
 	if (!match) return null;
 	if (reference.source && match.source !== reference.source && Array.isArray(match.versions)) {
-		const versionMatch = match.versions.find((v) => v.source === reference.source) as SpellRecord | undefined;
+		const allVersions = getAllSpellVersions(match);
+		const versionMatch = allVersions.find((v) => v.source === reference.source);
 		if (versionMatch) {
-			return {
-				...versionMatch,
-				name: versionMatch.name || match.name,
-				sources: match.sources,
-				versions: match.versions,
-			};
+			return buildGroupedSpell(versionMatch, allVersions);
 		}
 	}
 	return match;
@@ -293,9 +336,7 @@ export function filterSpells(
 
 	const filtered: SpellRecord[] = [];
 	for (const spell of grouped) {
-		const allVersions = Array.isArray(spell.versions) && spell.versions.length > 0
-			? (spell.versions as SpellRecord[])
-			: [spell];
+		const allVersions = getAllSpellVersions(spell);
 
 		const allowedVersions = allVersions.filter((v) =>
 			selectedSourceSet.has(normalizeSourceCode(v.source)),
@@ -309,11 +350,7 @@ export function filterSpells(
 			if (!matchingVersion) continue;
 
 			const candidateSpell: SpellRecord = allowedVersions.length > 1
-				? {
-					...matchingVersion,
-					sources: allowedVersions.map((v) => v.source).filter((s): s is string => Boolean(s)),
-					versions: allowedVersions,
-				}
+				? buildGroupedSpell(matchingVersion, allowedVersions)
 				: matchingVersion;
 
 			if (!matchesLevelFilter(candidateSpell, filters.selectedLevel)) continue;
@@ -334,12 +371,8 @@ export function filterSpells(
 		}
 
 		const candidateSpell: SpellRecord = allowedVersions.length > 1
-			? {
-				...effectiveVersion,
-				sources: allowedVersions.map((v) => v.source).filter((s): s is string => Boolean(s)),
-				versions: allowedVersions,
-			}
-			: (effectiveVersion === spell ? spell : { ...effectiveVersion });
+			? buildGroupedSpell(effectiveVersion, allowedVersions)
+			: effectiveVersion;
 
 		if (!matchesLevelFilter(candidateSpell, filters.selectedLevel)) continue;
 		if (!matchesClassFilter(candidateSpell, filters.selectedClass)) continue;

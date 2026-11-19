@@ -255,6 +255,23 @@ function compareNamedEntries(left, right) {
 	return String(left.name || "").localeCompare(String(right.name || ""));
 }
 
+function stripGroupingMeta(item) {
+	if (!item || typeof item !== "object") return item;
+	const copy = { ...item };
+	delete copy.versions;
+	delete copy.sources;
+	return copy;
+}
+
+function omitRedundantVersionName(version, primaryName) {
+	if (!version || typeof version !== "object") return version;
+	const copy = { ...version };
+	if (primaryName !== undefined && copy.name === primaryName) {
+		delete copy.name;
+	}
+	return copy;
+}
+
 export function groupConditionsByName(items = []) {
 	const byName = new Map();
 	for (const rawItem of items) {
@@ -266,27 +283,25 @@ export function groupConditionsByName(items = []) {
 			group = [];
 			byName.set(key, group);
 		}
+		const baseItem = stripGroupingMeta(item);
+		group.push(baseItem);
 		if (Array.isArray(item.versions) && item.versions.length > 0) {
-			for (const v of item.versions) {
-				group.push(pruneConditionMeta(v));
+			for (const rawVersion of item.versions) {
+				const ver = stripGroupingMeta(pruneConditionMeta(rawVersion));
+				if (ver && typeof ver === "object") {
+					group.push({
+						...(baseItem.name !== undefined && ver.name === undefined
+							? { name: baseItem.name }
+							: {}),
+						...ver,
+					});
+				}
 			}
-		} else {
-			group.push(item);
 		}
 	}
 
 	const grouped = [];
 	for (const group of byName.values()) {
-		if (group.length === 1) {
-			const single = group[0];
-			const sources = single.source ? [single.source] : undefined;
-			grouped.push({
-				...single,
-				...(sources ? { sources } : {}),
-			});
-			continue;
-		}
-
 		const bySource = new Map();
 		for (const ver of group) {
 			const s = normalizeConditionSource(ver);
@@ -300,20 +315,25 @@ export function groupConditionsByName(items = []) {
 			return String(a.source || "").localeCompare(String(b.source || ""));
 		});
 
+		if (uniqueVersions.length === 1) {
+			grouped.push({ ...uniqueVersions[0] });
+			continue;
+		}
+
 		const primary = uniqueVersions[0];
-		const sources = uniqueVersions.map((v) => v.source).filter(Boolean);
-		const versions = uniqueVersions.map((v) => ({ ...v }));
+		const versions = uniqueVersions
+			.slice(1)
+			.map((v) => omitRedundantVersionName(v, primary.name));
 
 		grouped.push({
 			...primary,
-			sources,
 			versions,
 		});
 	}
 
 	return grouped.sort(compareNamedEntries);
-}
-
+}
+
 export function dedupeConditionsByName(items = []) {
 	const byName = new Map();
 	for (const item of items) {

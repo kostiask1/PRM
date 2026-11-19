@@ -235,7 +235,29 @@ export default class SpellCardModel {
 	}
 
 	get versions(): SpellData[] {
-		return Array.isArray(this.spell.versions) ? (this.spell.versions as SpellData[]) : [];
+		const rawVersions = this.spell.versions;
+		if (!Array.isArray(rawVersions) || rawVersions.length === 0) return [];
+		const primary: SpellData = { ...this.spell };
+		delete primary.versions;
+		delete primary.sources;
+		const seen = new Set<string>();
+		const primarySource = String(primary.source || "").trim().toUpperCase();
+		if (primarySource) seen.add(primarySource);
+		const list: SpellData[] = [primary];
+		for (const rawVersion of rawVersions) {
+			if (!rawVersion || typeof rawVersion !== "object") continue;
+			const ver = rawVersion as SpellData;
+			const verSource = String(ver.source || "").trim().toUpperCase();
+			if (verSource && seen.has(verSource)) continue;
+			if (verSource) seen.add(verSource);
+			list.push({
+				...(primary.name !== undefined && ver.name === undefined
+					? { name: primary.name }
+					: {}),
+				...ver,
+			});
+		}
+		return list;
 	}
 
 	get sources(): string[] {

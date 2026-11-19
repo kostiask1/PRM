@@ -48428,6 +48428,25 @@ await run("SpellCardModel formats spell labels", () => {
 		permanentModel.durationLabel,
 		"Доки не розвіяно або не спрацює",
 	);
+
+	const deduplicatedMultiModel = new SpellCardModel({
+		name: "Acid Splash",
+		source: "XPHB",
+		level: 0,
+		school: "V",
+		versions: [
+			{
+				source: "PHB",
+				level: 0,
+				school: "C",
+				entries: ["You hurl a bubble of acid."],
+			},
+		],
+	});
+	assert.equal(deduplicatedMultiModel.versions.length, 2);
+	assert.equal(deduplicatedMultiModel.versions[0]?.name, "Acid Splash");
+	assert.equal(deduplicatedMultiModel.versions[1]?.name, "Acid Splash");
+	assert.deepEqual(deduplicatedMultiModel.sources, ["XPHB", "PHB"]);
 });
 
 await run("spells browser policies preserve references, filters, sorting, and selection", () => {
@@ -48650,8 +48669,14 @@ await run("spells browser policies group multi-source spells and handle source s
 	const lbGrouped = grouped.find((s) => s.name === "Lightning Bolt");
 	assert.ok(lbGrouped);
 	assert.equal(lbGrouped.source, "XPHB");
-	assert.deepEqual(lbGrouped.sources, ["XPHB", "PHB"]);
-	assert.equal(lbGrouped.versions?.length, 2);
+	assert.equal(lbGrouped.sources, undefined);
+	assert.equal(lbGrouped.versions?.length, 1);
+	assert.equal(lbGrouped.versions?.[0]?.source, "PHB");
+	assert.equal(lbGrouped.versions?.[0]?.name, undefined);
+
+	const regrouped = groupSpellsByName(grouped);
+	const lbRegrouped = regrouped.find((s) => s.name === "Lightning Bolt");
+	assert.deepEqual(lbRegrouped, lbGrouped);
 
 	// Filtering with sourceFilter = "all"
 	const filteredAll = filterSpells(multiSpells, {
@@ -48667,7 +48692,9 @@ await run("spells browser policies group multi-source spells and handle source s
 	const lbInAll = filteredAll.find((s) => s.name === "Lightning Bolt");
 	assert.ok(lbInAll);
 	assert.equal(lbInAll.source, "XPHB");
-	assert.deepEqual(lbInAll.sources, ["XPHB", "PHB"]);
+	assert.equal(lbInAll.sources, undefined);
+	assert.equal(lbInAll.versions?.length, 1);
+	assert.equal(lbInAll.versions?.[0]?.source, "PHB");
 
 	// Filtering with sourceFilter = "PHB"
 	const filteredPhb = filterSpells(multiSpells, {
@@ -48683,6 +48710,8 @@ await run("spells browser policies group multi-source spells and handle source s
 	const lbInPhb = filteredPhb.find((s) => s.name === "Lightning Bolt");
 	assert.ok(lbInPhb);
 	assert.equal(lbInPhb.source, "PHB");
+	assert.equal(lbInPhb.versions?.length, 1);
+	assert.equal(lbInPhb.versions?.[0]?.source, "XPHB");
 
 	// Filtering with sourceFilter = "TCE" (neither spell has TCE)
 	const filteredTce = filterSpells(multiSpells, {
@@ -48709,6 +48738,7 @@ await run("spells browser policies group multi-source spells and handle source s
 	const lbWithoutXphb = filteredWithoutXphb.find((s) => s.name === "Lightning Bolt");
 	assert.ok(lbWithoutXphb);
 	assert.equal(lbWithoutXphb.source, "PHB");
+	assert.equal(lbWithoutXphb.versions, undefined);
 
 	// Ignore sources: user disabled both PHB and XPHB
 	const filteredWithoutBoth = filterSpells(multiSpells, {
@@ -48757,6 +48787,8 @@ await run("spells browser policies group multi-source spells and handle source s
 	const phbRefMatch = findSpellByReference(grouped, "Lightning Bolt|PHB");
 	assert.ok(phbRefMatch);
 	assert.equal(phbRefMatch.source, "PHB");
+	assert.equal(phbRefMatch.versions?.length, 1);
+	assert.equal(phbRefMatch.versions?.[0]?.source, "XPHB");
 	const xphbRefMatch = findSpellByReference(grouped, "Lightning Bolt|XPHB");
 	assert.ok(xphbRefMatch);
 	assert.equal(xphbRefMatch.source, "XPHB");
@@ -52006,6 +52038,7 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 	assert.equal(itemMatchesQuery(skillPolicy, { name: "Acrobatics", ability: "dex", source: "XPHB" }, "xphb", false), true);
 	assert.equal(itemMatchesQuery(sensePolicy, { name: "Blindsight", source: "XPHB", sources: ["XPHB", "PHB"] }, "xphb", false), true);
 	assert.equal(itemMatchesQuery(sensePolicy, { name: "Blindsight", source: "XPHB", sources: ["XPHB", "PHB"] }, "phb", false), true);
+	assert.equal(itemMatchesQuery(sensePolicy, { name: "Tremorsense", source: "XPHB", versions: [{ source: "MM" }] }, "mm", false), true);
 	assert.equal(
 		getDiseaseMeta({ name: "Cackle Fever", type: "Magical Contagion", source: "XDMG" }),
 		"Magical Contagion · Dungeon Master's Guide (2024) (XDMG)",
@@ -52025,6 +52058,7 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 	assert.equal(getDiseaseMeta({}), "");
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Cackle Fever", source: "XDMG", sources: ["XDMG", "DMG"] }, "dmg", false), true);
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Cackle Fever", source: "XDMG", sources: ["XDMG", "DMG"] }, "xdmg", false), true);
+	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Cackle Fever", source: "XDMG", versions: [{ source: "DMG" }] }, "dmg", false), true);
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Arcane Blight", source: "IDRotF" }, "idrotf", false), true);
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка", entries: ["лихоманка"] }, "лихоманка", true), true);
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка" }, "гаряч", false), true);
@@ -58321,19 +58355,35 @@ await run(
 		assert.deepEqual(groupedConditions[0], {
 			name: "Blinded",
 			source: "XPHB",
-			sources: ["XPHB", "PHB"],
 			entries: ["2024"],
 			versions: [
-				{ name: "Blinded", source: "XPHB", entries: ["2024"] },
-				{ name: "Blinded", source: "PHB", entries: ["2014"] },
+				{ source: "PHB", entries: ["2014"] },
 			],
 		});
 		assert.deepEqual(groupedConditions[1], {
 			name: "Bloodied",
 			source: "XPHB",
-			sources: ["XPHB"],
 			entries: ["bloodied"],
 		});
+		assert.deepEqual(
+			updaterPolicies.groupConditionsByName(groupedConditions),
+			groupedConditions,
+		);
+		assert.deepEqual(
+			updaterPolicies.groupConditionsByName([
+				{
+					name: "Blinded",
+					source: "XPHB",
+					sources: ["XPHB", "PHB"],
+					entries: ["2024"],
+					versions: [
+						{ name: "Blinded", source: "XPHB", entries: ["2024"] },
+						{ name: "Blinded", source: "PHB", entries: ["2014"] },
+					],
+				},
+			]),
+			[groupedConditions[0]],
+		);
 		const normalizedDiseases = updaterPolicies.normalizeDiseasesData({
 			disease: [
 				{ name: "Cackle Fever", source: "DMG", entries: ["2014"] },
@@ -58345,11 +58395,9 @@ await run(
 			name: "Cackle Fever",
 			source: "XDMG",
 			type: "Magical Contagion",
-			sources: ["XDMG", "DMG"],
 			entries: ["2024"],
 			versions: [
-				{ name: "Cackle Fever", source: "XDMG", type: "Magical Contagion", entries: ["2024"] },
-				{ name: "Cackle Fever", source: "DMG", entries: ["2014"] },
+				{ source: "DMG", entries: ["2014"] },
 			],
 		});
 		const normalizedSenses = updaterPolicies.normalizeSensesData({
@@ -58362,11 +58410,9 @@ await run(
 		assert.deepEqual(normalizedSenses.sense[0], {
 			name: "Blindsight",
 			source: "XPHB",
-			sources: ["XPHB", "PHB"],
 			entries: ["2024"],
 			versions: [
-				{ name: "Blindsight", source: "XPHB", entries: ["2024"] },
-				{ name: "Blindsight", source: "PHB", entries: ["2014"] },
+				{ source: "PHB", entries: ["2014"] },
 			],
 		});
 		const inlineRule = {
@@ -58813,13 +58859,11 @@ await run(
 						{
 							name: "Blinded",
 							source: "XPHB",
-							sources: ["XPHB"],
 							entries: ["new"],
 						},
 						{
 							name: "Exhaustion",
 							source: "LOCAL",
-							sources: ["LOCAL"],
 							entries: ["local"],
 						},
 					],
@@ -58827,14 +58871,13 @@ await run(
 						{
 							name: "Invisible",
 							source: "PHB",
-							sources: ["PHB"],
 						},
 					],
 				},
 			);
 			assert.deepEqual(
 				JSON.parse(await fs.readFile(config.diseasesPath, "utf8")),
-				{ disease: [{ name: "Cackle Fever", source: "DMG", sources: ["DMG"] }] },
+				{ disease: [{ name: "Cackle Fever", source: "DMG" }] },
 			);
 
 			const removalDir = path.join(rootDir, "remove-json");
@@ -66926,10 +66969,8 @@ await run(
 				{
 					name: "Blinded",
 					source: "XPHB",
-					sources: ["XPHB", "PHB"],
 					versions: [
-						{ name: "Blinded", source: "XPHB", entries: ["2024 effects"] },
-						{ name: "Blinded", source: "PHB", entries: ["2014 effects"] },
+						{ source: "PHB", entries: ["2014 effects"] },
 					],
 					entries: ["2024 effects"],
 				},
@@ -66941,6 +66982,13 @@ await run(
 			return [
 				{ name: "Bluerot", entries: ["..."] },
 				{ name: "Sight Rot", entries: ["..."] },
+				{
+					name: "Cackle Fever",
+					source: "XDMG",
+					type: "Magical Contagion",
+					entries: ["2024 contagion"],
+					versions: [{ source: "DMG", entries: ["2014 disease"] }],
+				},
 			];
 		};
 
@@ -67014,6 +67062,11 @@ await run(
 			assert.equal(await resolveConditionInput({ foo: "bar" }), null);
 
 			assert.equal((await getDiseaseByName(" bluerot|GoS ")).name, "Bluerot");
+			const dmgCackleFever = await getDiseaseByName("Cackle Fever|DMG");
+			assert.equal(dmgCackleFever.name, "Cackle Fever");
+			assert.equal(dmgCackleFever.source, "DMG");
+			assert.equal(dmgCackleFever.type, undefined);
+			assert.deepEqual(dmgCackleFever.entries, ["2014 disease"]);
 			assert.equal(conditionCalls, 2);
 			assert.equal(diseaseCalls, 1);
 			assert.equal((await resolveDiseaseInput("Sight Rot")).name, "Sight Rot");
@@ -67735,6 +67788,14 @@ await run("Reference commands own spell search sources and named precedence", as
 	const aggregateSpells = [
 		{ name: "Fire Bolt", level: 0, school: "V", source: "PHB" },
 		{ name: "Fireball", level: 3, school: "V", source: "XPHB" },
+		{
+			name: "Acid Splash",
+			level: 0,
+			school: "V",
+			source: "XPHB",
+			entriesHigherLevel: [{ type: "entries", entries: ["upgrade"] }],
+			versions: [{ source: "PHB", level: 0, school: "C" }],
+		},
 	];
 	let indexReads = 0;
 	const referenceFiles = {
@@ -67803,8 +67864,18 @@ await run("Reference commands own spell search sources and named precedence", as
 		},
 	]);
 	assert.deepEqual(await commands.getSpellSource({ source: "xphb" }), [
-		{ name: "Fireball", level: 3, school: "V", source: "XPHB" },
+		aggregateSpells[1],
+		aggregateSpells[2],
 	]);
+	const phbSourceSpells = await commands.getSpellSource({ source: "phb" });
+	assert.equal(phbSourceSpells.length, 2);
+	assert.deepEqual(phbSourceSpells[0], aggregateSpells[0]);
+	assert.equal(phbSourceSpells[1].name, "Acid Splash");
+	assert.equal(phbSourceSpells[1].source, "PHB");
+	assert.equal(phbSourceSpells[1].school, "C");
+	assert.equal(phbSourceSpells[1].entriesHigherLevel, undefined);
+	assert.equal(phbSourceSpells[1].versions?.length, 1);
+	assert.equal(phbSourceSpells[1].versions?.[0]?.source, "XPHB");
 	assert.strictEqual(await commands.getSpellSource({ source: "ALL" }), aggregateSpells);
 	assert.deepEqual(await commands.getSpellSource({ source: "missing" }), []);
 	assert.equal(indexReads, 0);

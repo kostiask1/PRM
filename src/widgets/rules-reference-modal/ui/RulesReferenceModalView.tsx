@@ -212,33 +212,54 @@ function ReferenceDetails({
 	}, [selectedItem?.name, activeSelectedName]);
 
 	const versions = useMemo(() => {
-		const rawVersions = (selectedItem as Record<string, unknown> | null)?.versions;
-		if (Array.isArray(rawVersions) && rawVersions.length > 0) {
-			return rawVersions as ReferenceRecord[];
+		if (!selectedItem) return null;
+		const rawVersions = (selectedItem as Record<string, unknown>).versions;
+		if (!Array.isArray(rawVersions) || rawVersions.length === 0) return null;
+		const primary: ReferenceRecord = { ...(selectedItem as ReferenceRecord) };
+		delete primary.versions;
+		delete primary.sources;
+		const seen = new Set<string>();
+		const primarySource = String(primary.source || "").trim().toUpperCase();
+		if (primarySource) seen.add(primarySource);
+		const list: ReferenceRecord[] = [primary];
+		for (const rawVersion of rawVersions) {
+			if (!rawVersion || typeof rawVersion !== "object") continue;
+			const version = rawVersion as ReferenceRecord;
+			const verSource = String(version.source || "").trim().toUpperCase();
+			if (verSource && seen.has(verSource)) continue;
+			if (verSource) seen.add(verSource);
+			list.push({
+				...(primary.name !== undefined && version.name === undefined
+					? { name: primary.name }
+					: {}),
+				...(primary.kind !== undefined && version.kind === undefined
+					? { kind: primary.kind }
+					: {}),
+				...version,
+			});
 		}
-		return null;
+		return list.length > 1 ? list : null;
 	}, [selectedItem]);
 
 	const activeVersion = useMemo(() => {
 		if (!versions || versions.length === 0) return null;
 		if (selectedSource) {
-			const match = versions.find((v) => String(v.source || "").toUpperCase() === selectedSource);
+			const requestedSource = selectedSource.trim().toUpperCase();
+			const match = versions.find(
+				(v) => String(v.source || "").trim().toUpperCase() === requestedSource,
+			);
 			if (match) return match;
 		}
+		const primarySource = String(selectedItem?.source || "").trim().toUpperCase();
 		return (
-			versions.find((v) => String(v.source || "").toUpperCase() === String(selectedItem?.source || "").toUpperCase()) ||
+			versions.find((v) => String(v.source || "").trim().toUpperCase() === primarySource) ||
 			versions[0]
 		);
 	}, [versions, selectedSource, selectedItem?.source]);
 
 	const displayedItem = useMemo(() => {
 		if (!selectedItem) return null;
-		if (!activeVersion) return selectedItem;
-		return {
-			...selectedItem,
-			type: undefined,
-			...activeVersion,
-		};
+		return activeVersion ? (activeVersion as ReferenceItem) : selectedItem;
 	}, [selectedItem, activeVersion]);
 
 	if (!selectedItem) return <div className="RulesReferenceModalContent__content" />;

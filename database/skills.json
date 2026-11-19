@@ -7,21 +7,8 @@
       "entries": [
         "Stay on your feet in a tricky situation, or perform an acrobatic stunt."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Acrobatics",
-          "source": "XPHB",
-          "ability": "dex",
-          "entries": [
-            "Stay on your feet in a tricky situation, or perform an acrobatic stunt."
-          ]
-        },
-        {
-          "name": "Acrobatics",
           "source": "PHB",
           "ability": "dex",
           "entries": [
@@ -37,21 +24,8 @@
       "entries": [
         "Calm or train an animal, or get an animal to behave in a certain way."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Animal Handling",
-          "source": "XPHB",
-          "ability": "wis",
-          "entries": [
-            "Calm or train an animal, or get an animal to behave in a certain way."
-          ]
-        },
-        {
-          "name": "Animal Handling",
           "source": "PHB",
           "ability": "wis",
           "entries": [
@@ -67,21 +41,8 @@
       "entries": [
         "Recall lore about spells, magic items, and the planes of existence."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Arcana",
-          "source": "XPHB",
-          "ability": "int",
-          "entries": [
-            "Recall lore about spells, magic items, and the planes of existence."
-          ]
-        },
-        {
-          "name": "Arcana",
           "source": "PHB",
           "ability": "int",
           "entries": [
@@ -97,21 +58,8 @@
       "entries": [
         "Jump farther than normal, stay afloat in rough water, or break something."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Athletics",
-          "source": "XPHB",
-          "ability": "str",
-          "entries": [
-            "Jump farther than normal, stay afloat in rough water, or break something."
-          ]
-        },
-        {
-          "name": "Athletics",
           "source": "PHB",
           "ability": "str",
           "entries": [
@@ -135,21 +83,8 @@
       "entries": [
         "Tell a convincing lie, or wear a disguise convincingly."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Deception",
-          "source": "XPHB",
-          "ability": "cha",
-          "entries": [
-            "Tell a convincing lie, or wear a disguise convincingly."
-          ]
-        },
-        {
-          "name": "Deception",
           "source": "PHB",
           "ability": "cha",
           "entries": [
@@ -165,21 +100,8 @@
       "entries": [
         "Recall lore about historical events, people, nations, and cultures."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "History",
-          "source": "XPHB",
-          "ability": "int",
-          "entries": [
-            "Recall lore about historical events, people, nations, and cultures."
-          ]
-        },
-        {
-          "name": "History",
           "source": "PHB",
           "ability": "int",
           "entries": [
@@ -195,21 +117,8 @@
       "entries": [
         "Discern a person's mood and intentions."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Insight",
-          "source": "XPHB",
-          "ability": "wis",
-          "entries": [
-            "Discern a person's mood and intentions."
-          ]
-        },
-        {
-          "name": "Insight",
           "source": "PHB",
           "ability": "wis",
           "entries": [
@@ -225,21 +134,8 @@
       "entries": [
         "Awe or threaten someone into doing what you want."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Intimidation",
-          "source": "XPHB",
-          "ability": "cha",
-          "entries": [
-            "Awe or threaten someone into doing what you want."
-          ]
-        },
-        {
-          "name": "Intimidation",
           "source": "PHB",
           "ability": "cha",
           "entries": [
@@ -255,21 +151,8 @@
       "entries": [
         "Find obscure information in books, or deduce how something works."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Investigation",
-          "source": "XPHB",
-          "ability": "int",
-          "entries": [
-            "Find obscure information in books, or deduce how something works."
-          ]
-        },
-        {
-          "name": "Investigation",
           "source": "PHB",
           "ability": "int",
           "entries": [
@@ -285,21 +168,8 @@
       "entries": [
         "Diagnose an illness, or determine what killed the recently slain."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Medicine",
-          "source": "XPHB",
-          "ability": "wis",
-          "entries": [
-            "Diagnose an illness, or determine what killed the recently slain."
-          ]
-        },
-        {
-          "name": "Medicine",
           "source": "PHB",
           "ability": "wis",
           "entries": [
@@ -315,21 +185,8 @@
       "entries": [
         "Recall lore about terrain, plants, animals, and weather."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Nature",
-          "source": "XPHB",
-          "ability": "int",
-          "entries": [
-            "Recall lore about terrain, plants, animals, and weather."
-          ]
-        },
-        {
-          "name": "Nature",
           "source": "PHB",
           "ability": "int",
           "entries": [
@@ -345,21 +202,8 @@
       "entries": [
         "Using a combination of senses, notice something that's easy to miss."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Perception",
-          "source": "XPHB",
-          "ability": "wis",
-          "entries": [
-            "Using a combination of senses, notice something that's easy to miss."
-          ]
-        },
-        {
-          "name": "Perception",
           "source": "PHB",
           "ability": "wis",
           "entries": [
@@ -376,21 +220,8 @@
       "entries": [
         "Act, tell a story, perform music, or dance."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Performance",
-          "source": "XPHB",
-          "ability": "cha",
-          "entries": [
-            "Act, tell a story, perform music, or dance."
-          ]
-        },
-        {
-          "name": "Performance",
           "source": "PHB",
           "ability": "cha",
           "entries": [
@@ -406,21 +237,8 @@
       "entries": [
         "Honestly and graciously convince someone of something."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Persuasion",
-          "source": "XPHB",
-          "ability": "cha",
-          "entries": [
-            "Honestly and graciously convince someone of something."
-          ]
-        },
-        {
-          "name": "Persuasion",
           "source": "PHB",
           "ability": "cha",
           "entries": [
@@ -436,21 +254,8 @@
       "entries": [
         "Recall lore about gods, religious rituals, and holy symbols."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Religion",
-          "source": "XPHB",
-          "ability": "int",
-          "entries": [
-            "Recall lore about gods, religious rituals, and holy symbols."
-          ]
-        },
-        {
-          "name": "Religion",
           "source": "PHB",
           "ability": "int",
           "entries": [
@@ -466,21 +271,8 @@
       "entries": [
         "Pick a pocket, conceal a handheld object, or perform legerdemain."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Sleight of Hand",
-          "source": "XPHB",
-          "ability": "dex",
-          "entries": [
-            "Pick a pocket, conceal a handheld object, or perform legerdemain."
-          ]
-        },
-        {
-          "name": "Sleight of Hand",
           "source": "PHB",
           "ability": "dex",
           "entries": [
@@ -496,21 +288,8 @@
       "entries": [
         "Escape notice by moving quietly and hiding behind things."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Stealth",
-          "source": "XPHB",
-          "ability": "dex",
-          "entries": [
-            "Escape notice by moving quietly and hiding behind things."
-          ]
-        },
-        {
-          "name": "Stealth",
           "source": "PHB",
           "ability": "dex",
           "entries": [
@@ -526,21 +305,8 @@
       "entries": [
         "Follow tracks, forage, find a trail, or avoid natural hazards."
       ],
-      "sources": [
-        "XPHB",
-        "PHB"
-      ],
       "versions": [
         {
-          "name": "Survival",
-          "source": "XPHB",
-          "ability": "wis",
-          "entries": [
-            "Follow tracks, forage, find a trail, or avoid natural hazards."
-          ]
-        },
-        {
-          "name": "Survival",
           "source": "PHB",
           "ability": "wis",
           "entries": [

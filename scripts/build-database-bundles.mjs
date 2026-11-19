@@ -65,9 +65,12 @@ const SPELL_FIELDS = new Set([
 	"duration",
 	"entries",
 	"entriesHigherLevel",
-	"sources",
 	"versions",
 ]);
+
+const SPELL_VERSION_FIELDS = new Set(
+	[...SPELL_FIELDS].filter((field) => field !== "versions"),
+);
 
 const SOURCE_PRIORITIES = new Map([
 	["XPHB", 3],
@@ -80,6 +83,14 @@ function getSourcePriority(source) {
 	return SOURCE_PRIORITIES.get(normalizeSource(source)) || 1;
 }
 
+function stripSpellGroupingMeta(spell) {
+	if (!spell || typeof spell !== "object") return spell;
+	const copy = { ...spell };
+	delete copy.versions;
+	delete copy.sources;
+	return copy;
+}
+
 function groupSpellsByName(spells) {
 	const byName = new Map();
 	for (const spell of spells) {
@@ -89,31 +100,25 @@ function groupSpellsByName(spells) {
 			group = [];
 			byName.set(key, group);
 		}
+		const baseSpell = stripSpellGroupingMeta(spell);
+		group.push(baseSpell);
 		if (Array.isArray(spell.versions) && spell.versions.length > 0) {
 			for (const v of spell.versions) {
-				group.push(v);
+				const ver = stripSpellGroupingMeta(v);
+				if (ver && typeof ver === "object") {
+					group.push({
+						...(baseSpell.name !== undefined && ver.name === undefined
+							? { name: baseSpell.name }
+							: {}),
+						...ver,
+					});
+				}
 			}
-		} else {
-			group.push(spell);
 		}
 	}
 
 	const grouped = [];
 	for (const group of byName.values()) {
-		if (group.length === 1) {
-			const single = group[0];
-			grouped.push(
-				pickFields(
-					{
-						...single,
-						sources: [single.source].filter(Boolean),
-					},
-					SPELL_FIELDS,
-				),
-			);
-			continue;
-		}
-
 		const bySource = new Map();
 		for (const ver of group) {
 			const s = normalizeSource(ver.source);
@@ -127,20 +132,24 @@ function groupSpellsByName(spells) {
 			return String(a.source || "").localeCompare(String(b.source || ""));
 		});
 
-		const primary = uniqueVersions[0];
-		const sources = uniqueVersions.map((v) => v.source).filter(Boolean);
-		const versions = uniqueVersions.map((v) => pickFields(v, SPELL_FIELDS));
+		if (uniqueVersions.length === 1) {
+			grouped.push(pickFields(uniqueVersions[0], SPELL_VERSION_FIELDS));
+			continue;
+		}
 
-		grouped.push(
-			pickFields(
-				{
-					...primary,
-					sources,
-					versions,
-				},
-				SPELL_FIELDS,
-			),
-		);
+		const primary = pickFields(uniqueVersions[0], SPELL_VERSION_FIELDS);
+		const versions = uniqueVersions.slice(1).map((v) => {
+			const picked = pickFields(v, SPELL_VERSION_FIELDS);
+			if (primary.name !== undefined && picked.name === primary.name) {
+				delete picked.name;
+			}
+			return picked;
+		});
+
+		grouped.push({
+			...primary,
+			versions,
+		});
 	}
 
 	return grouped;

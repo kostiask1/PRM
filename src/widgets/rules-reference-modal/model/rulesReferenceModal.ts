@@ -599,7 +599,16 @@ export function itemMatchesQuery(
 	metaValue: unknown = "",
 ): boolean {
 	if (!normalizedQuery) return true;
-	const values = [...policy.searchFields.map((field) => item[field]), metaValue].filter(Boolean);
+	const versionSources = Array.isArray(item.versions)
+		? item.versions
+			.filter((version): version is Record<string, unknown> => Boolean(version && typeof version === "object"))
+			.map((version) => version.source)
+		: [];
+	const values = [
+		...policy.searchFields.map((field) => item[field]),
+		...versionSources,
+		metaValue,
+	].filter(Boolean);
 	return (isDetailedSearch && objectMatchesSearch(item, normalizedQuery)) ||
 		values.some((value) => String(value).toLowerCase().includes(normalizedQuery));
 }

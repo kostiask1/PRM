@@ -43,7 +43,13 @@ function uniqueSources(records) {
 	return [
 		...new Set(
 			records
-				.flatMap((record) => [record?.source, ...(record?.sources || [])])
+				.flatMap((record) => [
+					record?.source,
+					...(record?.sources || []),
+					...(Array.isArray(record?.versions)
+						? record.versions.map((version) => version?.source)
+						: []),
+				])
 				.filter(Boolean),
 		),
 	];

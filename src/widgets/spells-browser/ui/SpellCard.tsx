@@ -6,6 +6,7 @@ import { createRichContentRenderers, type RichContentRenderOptions } from "../..
 import { createRulesLinkComponent } from "../../../features/rules-reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { highlightText } from "../../../shared/ui/index.js";
+import { getSourcePriority } from "../model/spellsBrowser.ts";
 import "../../../assets/components/SpellCard.css";
 
 const SpellCardRulesLink = createRulesLinkComponent({ RollDice });
@@ -42,29 +43,59 @@ export default function SpellCard({ spell, searchHighlight = "", renderOptions =
 
 	useEffect(() => {
 		setSelectedSource(null);
-	}, [spellData.name]);
+	}, [spellData.name, spellData.source]);
 
 	const versions = useMemo(() => {
-		if (Array.isArray(spellData.versions) && spellData.versions.length > 0) {
-			return spellData.versions as SpellData[];
+		if (!Array.isArray(spellData.versions) || spellData.versions.length === 0) {
+			return null;
 		}
-		return null;
-	}, [spellData.versions]);
+		const primary: SpellData = { ...spellData };
+		delete primary.versions;
+		delete primary.sources;
+		const seen = new Set<string>();
+		const primarySource = String(primary.source || "").trim().toUpperCase();
+		if (primarySource) seen.add(primarySource);
+		const list: SpellData[] = [primary];
+		for (const rawVersion of spellData.versions) {
+			if (!rawVersion || typeof rawVersion !== "object") continue;
+			const ver = rawVersion as SpellData;
+			const verSource = String(ver.source || "").trim().toUpperCase();
+			if (verSource && seen.has(verSource)) continue;
+			if (verSource) seen.add(verSource);
+			list.push({
+				...(primary.name !== undefined && ver.name === undefined
+					? { name: primary.name }
+					: {}),
+				...ver,
+			});
+		}
+		if (list.length <= 1) return null;
+		list.sort((a, b) => {
+			const priorityDiff = getSourcePriority(b.source) - getSourcePriority(a.source);
+			if (priorityDiff !== 0) return priorityDiff;
+			return String(a.source || "").localeCompare(String(b.source || ""));
+		});
+		return list;
+	}, [spellData]);
 
 	const activeVersion = useMemo(() => {
 		if (!versions || versions.length === 0) return null;
 		if (selectedSource) {
-			const match = versions.find((v) => v.source === selectedSource);
+			const requestedSource = selectedSource.trim().toUpperCase();
+			const match = versions.find(
+				(v) => String(v.source || "").trim().toUpperCase() === requestedSource,
+			);
 			if (match) return match;
 		}
-		return versions.find((v) => v.source === spellData.source) || versions[0];
+		const defaultSource = String(spellData.source || "").trim().toUpperCase();
+		return (
+			versions.find((v) => String(v.source || "").trim().toUpperCase() === defaultSource) ||
+			versions[0]
+		);
 	}, [versions, selectedSource, spellData.source]);
 
 	if (activeVersion) {
-		spell = {
-			...spell,
-			...activeVersion,
-		};
+		spell = activeVersion;
 	}
 
 	const model = new SpellCardModel(spell, {
@@ -83,7 +114,7 @@ export default function SpellCard({ spell, searchHighlight = "", renderOptions =
 					<div className="SpellCard__source-pills">
 						{versions.map((ver) => {
 							const verSource = ver.source || "";
-							const isActive = verSource === spell.source;
+							const isActive = verSource.toUpperCase() === String(spell.source || "").toUpperCase();
 							return (
 								<button
 									key={verSource}

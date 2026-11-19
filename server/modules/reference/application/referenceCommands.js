@@ -255,16 +255,42 @@ function matchesSpellSource(spell, normalizedSource) {
 	return false;
 }
 
+function getPrimarySpellRecord(spell) {
+	const copy = { ...spell };
+	delete copy.versions;
+	delete copy.sources;
+	return copy;
+}
+
 function getAggregateSpellSource(spells, source) {
 	const sourceText = String(source);
 	if (sourceText.toLowerCase() === "all") return spells;
 	const normalizedSource = sourceText.toUpperCase();
 	const results = [];
 	for (const spell of spells) {
+		if (String(spell.source || "").toUpperCase() === normalizedSource) {
+			results.push(spell);
+			continue;
+		}
 		if (Array.isArray(spell.versions)) {
-			const version = spell.versions.find((v) => String(v?.source || "").toUpperCase() === normalizedSource);
-			if (version) {
-				results.push({ ...spell, ...version, source: version.source || spell.source });
+			const versionIndex = spell.versions.findIndex(
+				(v) => String(v?.source || "").toUpperCase() === normalizedSource,
+			);
+			if (versionIndex >= 0) {
+				const version = spell.versions[versionIndex];
+				const primary = getPrimarySpellRecord(spell);
+				const otherVersions = [
+					...(primary.source ? [primary] : []),
+					...spell.versions.filter((_, idx) => idx !== versionIndex),
+				];
+				results.push({
+					...(spell.name !== undefined && version.name === undefined
+						? { name: spell.name }
+						: {}),
+					...version,
+					source: version.source || spell.source,
+					...(otherVersions.length > 0 ? { versions: otherVersions } : {}),
+				});
 				continue;
 			}
 		}

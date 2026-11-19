@@ -88,37 +88,57 @@ export async function getCreatureByName(
 	return creature;
 }
 
+function parseReferenceLookup(name: unknown): {
+	baseName: string;
+	requestedSource: string;
+} {
+	const parts = String(name || "").split("|");
+	return {
+		baseName: parts[0]?.trim() || "",
+		requestedSource: parts[1]?.trim().toUpperCase() || "",
+	};
+}
+
+function selectReferenceVersion(
+	record: ReferenceRecord,
+	requestedSource: string,
+): ReferenceRecord {
+	if (
+		!requestedSource ||
+		String(record.source || "").toUpperCase() === requestedSource
+	) {
+		return record;
+	}
+	if (!Array.isArray(record.versions) || record.versions.length === 0) {
+		return record;
+	}
+	const match = record.versions.find(
+		(v) => String(v.source || "").toUpperCase() === requestedSource,
+	);
+	if (!match) return record;
+	return {
+		...(record.name !== undefined ? { name: record.name } : {}),
+		...(record.kind !== undefined ? { kind: record.kind } : {}),
+		...match,
+	};
+}
+
 export async function getConditionByName(
 	name: unknown,
 ): Promise<ReferenceRecord | null> {
-	const raw = String(name || "");
-	const parts = raw.split("|");
-	const baseName = parts[0]?.trim() || "";
-	const requestedSource = parts[1]?.trim().toUpperCase();
-
+	const { baseName, requestedSource } = parseReferenceLookup(name);
 	const map = await loadConditionsMap();
 	const record = map.get(normalizeConditionName(baseName)) || null;
-	if (!record) return null;
-
-	if (requestedSource && Array.isArray(record.versions) && record.versions.length > 0) {
-		const match = record.versions.find(
-			(v) => String(v.source || "").toUpperCase() === requestedSource,
-		);
-		if (match) {
-			return {
-				...record,
-				...match,
-			};
-		}
-	}
-	return record;
+	return record ? selectReferenceVersion(record, requestedSource) : null;
 }
 
 export async function getDiseaseByName(
 	name: unknown,
 ): Promise<ReferenceRecord | null> {
+	const { baseName, requestedSource } = parseReferenceLookup(name);
 	const map = await loadDiseasesMap();
-	return map.get(normalizeDiseaseName(name)) || null;
+	const record = map.get(normalizeDiseaseName(baseName)) || null;
+	return record ? selectReferenceVersion(record, requestedSource) : null;
 }
 
 export async function getVariantRuleByName(
@@ -131,32 +151,17 @@ export async function getVariantRuleByName(
 export async function getSkillByName(
 	name: unknown,
 ): Promise<ReferenceRecord | null> {
-	const raw = String(name || "");
-	const parts = raw.split("|");
-	const baseName = parts[0]?.trim() || "";
-	const requestedSource = parts[1]?.trim().toUpperCase();
-
+	const { baseName, requestedSource } = parseReferenceLookup(name);
 	const map = await loadSkillsMap();
 	const record = map.get(normalizeSkillName(baseName)) || null;
-	if (!record) return null;
-
-	if (requestedSource && Array.isArray(record.versions) && record.versions.length > 0) {
-		const match = record.versions.find(
-			(v) => String(v.source || "").toUpperCase() === requestedSource,
-		);
-		if (match) {
-			return {
-				...record,
-				...match,
-			};
-		}
-	}
-	return record;
+	return record ? selectReferenceVersion(record, requestedSource) : null;
 }
 
 export async function getSenseByName(
 	name: unknown,
 ): Promise<ReferenceRecord | null> {
+	const { baseName, requestedSource } = parseReferenceLookup(name);
 	const map = await loadSensesMap();
-	return map.get(normalizeSenseName(name)) || null;
+	const record = map.get(normalizeSenseName(baseName)) || null;
+	return record ? selectReferenceVersion(record, requestedSource) : null;
 }
