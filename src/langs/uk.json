@@ -1271,5 +1271,10 @@
 	"Clear AI history for \"{name}\" ({size})? This cannot be undone.": "Очистити історію ШІ для кампанії «{name}» ({size})? Цю дію не можна скасувати.",
 	"Clear all Undo/Redo history and recovery snapshots across the project ({size})? This cannot be undone.": "Очистити всю історію Undo/Redo та знімки відновлення в усьому проєкті ({size})? Цю дію не можна скасувати.",
 	"Clear application-level Undo/Redo history and lifecycle recovery snapshots ({size})? Campaign edit histories will stay intact.": "Очистити історію Undo/Redo рівня застосунку та знімки відновлення видалених кампаній ({size})? Історії всередині кампаній залишаться.",
-	"Clear Undo/Redo history for \"{name}\" ({size})? This cannot be undone.": "Очистити історію Undo/Redo для кампанії «{name}» ({size})? Цю дію не можна скасувати."
+	"Clear Undo/Redo history for \"{name}\" ({size})? This cannot be undone.": "Очистити історію Undo/Redo для кампанії «{name}» ({size})? Цю дію не можна скасувати.",
+	"Item size": "Розмір елементів",
+	"Grid item size": "Розмір елементів у сітці",
+	"Decrease item size": "Зменшити розмір елементів",
+	"Increase item size": "Збільшити розмір елементів",
+	"Reset item size": "Скинути розмір елементів"
 }

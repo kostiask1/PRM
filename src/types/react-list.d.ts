@@ -13,5 +13,6 @@ declare module "react-list" {
 
 	export default class ReactList extends Component<ReactListProps> {
 		scrollTo(index: number): void;
+		updateFrameAndClearCache(): void;
 	}
 }

@@ -3,6 +3,7 @@ import {
 	useId,
 	useRef,
 	useState,
+	type CSSProperties,
 	type Dispatch,
 	type DragEvent,
 	type ReactNode,
@@ -14,6 +15,10 @@ import { classNames, formatBytes, lang } from "../../../shared/lib/index.js";
 import type { ImageLocation } from "../api/imageApi.ts";
 import { imageApi as api } from "../api/imageApi.ts";
 import {
+	GALLERY_ITEM_SIZE_DEFAULT,
+	GALLERY_ITEM_SIZE_MAX,
+	GALLERY_ITEM_SIZE_MIN,
+	GALLERY_ITEM_SIZE_STEP,
 	getGalleryStatsAndActionsPresentation,
 	getGallerySearchPresentation,
 	type GalleryHistoryDirection,
@@ -552,6 +557,81 @@ export function ImageGalleryGrid({
 			)}
 			{children}
 		</div>
+	);
+}
+
+export function ImageGalleryFooter({
+	itemSize,
+	onChange,
+	onReset,
+	onStep,
+	progressPercent,
+	scalePercent,
+}: {
+	itemSize: number;
+	onChange: (size: number) => void;
+	onReset: () => void;
+	onStep: (direction: -1 | 1) => void;
+	progressPercent: number;
+	scalePercent: number;
+}) {
+	const sliderId = useId();
+	return (
+		<footer className="ImageGallery__footer">
+			<div className="ImageGallery__sizeControl">
+				<label className="ImageGallery__sizeLabel" htmlFor={sliderId}>
+					{lang.t("Item size")}
+				</label>
+				<button
+					type="button"
+					className="ImageGallery__sizeStepBtn"
+					aria-label={lang.t("Decrease item size")}
+					title={lang.t("Decrease item size")}
+					disabled={itemSize <= GALLERY_ITEM_SIZE_MIN}
+					onClick={() => onStep(-1)}
+				>
+					<Icon name="image" size={14} />
+				</button>
+				<input
+					id={sliderId}
+					type="range"
+					className="ImageGallery__sizeSlider"
+					min={GALLERY_ITEM_SIZE_MIN}
+					max={GALLERY_ITEM_SIZE_MAX}
+					step={GALLERY_ITEM_SIZE_STEP}
+					value={itemSize}
+					aria-label={lang.t("Grid item size")}
+					aria-valuetext={`${scalePercent}%`}
+					onChange={(event) => onChange(Number(event.target.value))}
+					style={
+						{
+							"--gallery-slider-progress": `${progressPercent}%`,
+						} as CSSProperties & Record<"--gallery-slider-progress", string>
+					}
+				/>
+				<button
+					type="button"
+					className="ImageGallery__sizeStepBtn"
+					aria-label={lang.t("Increase item size")}
+					title={lang.t("Increase item size")}
+					disabled={itemSize >= GALLERY_ITEM_SIZE_MAX}
+					onClick={() => onStep(1)}
+				>
+					<Icon name="image" size={18} />
+				</button>
+				<span className="ImageGallery__sizeValue">{scalePercent}%</span>
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					className="ImageGallery__sizeResetBtn"
+					disabled={itemSize === GALLERY_ITEM_SIZE_DEFAULT}
+					onClick={onReset}
+					title={lang.t("Reset item size")}
+				>
+					{lang.t("Reset")}
+				</Button>
+			</div>
+		</footer>
 	);
 }
 

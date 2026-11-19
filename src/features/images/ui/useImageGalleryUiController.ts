@@ -16,13 +16,19 @@ import {
 	buildGalleryPresentationItems,
 	deduplicateGalleryImages,
 	findPendingGalleryImage,
+	GALLERY_ITEM_SIZE_DEFAULT,
+	GALLERY_ITEM_SIZE_STORAGE_KEY,
 	getGlobalGalleryResultNavigationPlan,
 	getGalleryColumnCount,
 	getGalleryHistoryKeyboardPlan,
+	getGalleryItemScalePercent,
+	getGalleryItemSizeProgress,
 	getGalleryNavigationEntry,
 	getGalleryPathEntry,
 	getGalleryPathKey,
+	normalizeGalleryItemSize,
 	recordGalleryNavigation,
+	stepGalleryItemSize,
 	type GalleryHistoryDirection,
 	type GalleryNavigationState,
 	type GalleryPathEntry,
@@ -135,6 +141,26 @@ function resolvePendingGallerySelection({
 	setPendingSelection(null);
 }
 
+function readStoredGalleryItemSize(): number {
+	if (typeof window === "undefined") return GALLERY_ITEM_SIZE_DEFAULT;
+	try {
+		return normalizeGalleryItemSize(
+			window.localStorage.getItem(GALLERY_ITEM_SIZE_STORAGE_KEY),
+		);
+	} catch {
+		return GALLERY_ITEM_SIZE_DEFAULT;
+	}
+}
+
+function writeStoredGalleryItemSize(size: number): void {
+	if (typeof window === "undefined") return;
+	try {
+		window.localStorage.setItem(GALLERY_ITEM_SIZE_STORAGE_KEY, String(size));
+	} catch {
+		// Ignore localStorage quota or privacy-mode errors
+	}
+}
+
 export function useImageGalleryUiController({
 	initialCategory,
 	initialSource,
@@ -155,6 +181,9 @@ export function useImageGalleryUiController({
 	const [isMoveModalOpen, setIsMoveModalOpen] = React.useState(false);
 	const [previewImage, setPreviewImage] = React.useState<GalleryImage | null>(null);
 	const [galleryColumns, setGalleryColumns] = React.useState(1);
+	const [galleryItemSize, setGalleryItemSizeState] = React.useState<number>(
+		readStoredGalleryItemSize,
+	);
 	const [pendingSelection, setPendingSelection] =
 		React.useState<GalleryPendingSelection | null>(null);
 	const [highlightedImageName, setHighlightedImageName] = React.useState("");
@@ -211,6 +240,29 @@ export function useImageGalleryUiController({
 			window.removeEventListener("keydown", handleEscapeSelection, true);
 	}, [hasSelection, clearSelection, previewImage]);
 
+	const setGalleryItemSize = React.useCallback((nextSize: number) => {
+		const normalized = normalizeGalleryItemSize(nextSize);
+		setGalleryItemSizeState(normalized);
+		writeStoredGalleryItemSize(normalized);
+	}, []);
+	const stepItemSize = React.useCallback((direction: -1 | 1) => {
+		setGalleryItemSizeState((current) => {
+			const next = stepGalleryItemSize(current, direction);
+			writeStoredGalleryItemSize(next);
+			return next;
+		});
+	}, []);
+	const resetGalleryItemSize = React.useCallback(() => {
+		setGalleryItemSize(GALLERY_ITEM_SIZE_DEFAULT);
+	}, [setGalleryItemSize]);
+	const galleryItemScalePercent = getGalleryItemScalePercent(galleryItemSize);
+	const galleryItemSizeProgress = getGalleryItemSizeProgress(galleryItemSize);
+
+	React.useEffect(() => {
+		if (!isOpen) return;
+		setGalleryItemSizeState(readStoredGalleryItemSize());
+	}, [isOpen]);
+
 	React.useEffect(() => {
 		if (!isOpen) return undefined;
 		const element = galleryViewportRef.current;
@@ -220,6 +272,7 @@ export function useImageGalleryUiController({
 			const nextColumns = getGalleryColumnCount(
 				element.clientWidth,
 				styles.columnGap,
+				galleryItemSize,
 			);
 			setGalleryColumns((current) =>
 				current === nextColumns ? current : nextColumns,
@@ -229,7 +282,15 @@ export function useImageGalleryUiController({
 		const resizeObserver = new ResizeObserver(updateColumns);
 		resizeObserver.observe(element);
 		return () => resizeObserver.disconnect();
-	}, [isOpen]);
+	}, [isOpen, galleryItemSize]);
+
+	React.useEffect(() => {
+		if (!isOpen) return undefined;
+		const frame = requestAnimationFrame(() => {
+			galleryListRef.current?.updateFrameAndClearCache();
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [isOpen, galleryColumns, galleryItemSize]);
 
 	React.useEffect(() => {
 		resolvePendingGallerySelection({
@@ -445,6 +506,9 @@ export function useImageGalleryUiController({
 		displayImages,
 		galleryColumns,
 		galleryController,
+		galleryItemScalePercent,
+		galleryItemSize,
+		galleryItemSizeProgress,
 		galleryItems,
 		galleryListRef,
 		galleryRowCount,
@@ -459,10 +523,13 @@ export function useImageGalleryUiController({
 		previewImage,
 		previewNavigation,
 		resetContentScope,
+		resetGalleryItemSize,
+		setGalleryItemSize,
 		setIsMoveModalOpen,
 		setMoveTarget,
 		setPreviewImage,
 		sourceSizes,
+		stepGalleryItemSize: stepItemSize,
 	};
 }
 

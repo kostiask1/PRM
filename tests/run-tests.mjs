@@ -699,6 +699,10 @@ import {
 import {
 	buildGalleryPresentationItems,
 	deduplicateGalleryImages,
+	GALLERY_ITEM_SIZE_DEFAULT,
+	GALLERY_ITEM_SIZE_MAX,
+	GALLERY_ITEM_SIZE_MIN,
+	GALLERY_ITEM_SIZE_STEP,
 	getGalleryFolderPresentation,
 	getGalleryFolderSubcategory,
 	getGlobalGalleryResultNavigationPlan,
@@ -706,11 +710,15 @@ import {
 	getGalleryImageKey,
 	getGalleryHistoryKeyDirection,
 	getGalleryHistoryKeyboardPlan,
+	getGalleryItemScalePercent,
+	getGalleryItemSizeProgress,
 	getGalleryNavigationEntry,
 	getGalleryPathEntry,
 	getGallerySearchPresentation,
 	getGalleryStatsAndActionsPresentation,
+	normalizeGalleryItemSize,
 	recordGalleryNavigation,
+	stepGalleryItemSize,
 } from "../src/features/images/model/imageGalleryPresentation.ts";
 import {
 	buildGalleryBulkDeletePayloads,
@@ -69594,6 +69602,30 @@ await run("image gallery presentation preserves history and unique items", () =>
 	assert.equal(getGalleryColumnCount(-100, "16px"), 1);
 	assert.equal(getGalleryColumnCount(Number.POSITIVE_INFINITY, "16px"), Infinity);
 	assert.equal(Number.isNaN(getGalleryColumnCount(Number.NaN, "16px")), true);
+	assert.equal(getGalleryColumnCount(1000, "16px", 120), 7);
+	assert.equal(getGalleryColumnCount(1000, "16px", 240), 3);
+	assert.equal(getGalleryColumnCount(1000, "16px", 420), 2);
+	assert.equal(getGalleryColumnCount(500, "16px", 420), 1);
+	assert.equal(getGalleryColumnCount(1000, "16px", 50), 7);
+	assert.equal(getGalleryColumnCount(1000, "16px", Number.NaN), 7);
+	assert.equal(normalizeGalleryItemSize(undefined), GALLERY_ITEM_SIZE_DEFAULT);
+	assert.equal(normalizeGalleryItemSize(""), GALLERY_ITEM_SIZE_DEFAULT);
+	assert.equal(normalizeGalleryItemSize("   "), GALLERY_ITEM_SIZE_DEFAULT);
+	assert.equal(normalizeGalleryItemSize(Number.NaN), GALLERY_ITEM_SIZE_DEFAULT);
+	assert.equal(normalizeGalleryItemSize(Number.POSITIVE_INFINITY), GALLERY_ITEM_SIZE_DEFAULT);
+	assert.equal(normalizeGalleryItemSize(40), GALLERY_ITEM_SIZE_MIN);
+	assert.equal(normalizeGalleryItemSize(900), GALLERY_ITEM_SIZE_MAX);
+	assert.equal(normalizeGalleryItemSize("240"), 240);
+	assert.equal(normalizeGalleryItemSize(240.6), 241);
+	assert.equal(stepGalleryItemSize(GALLERY_ITEM_SIZE_MIN, 1), GALLERY_ITEM_SIZE_MIN + GALLERY_ITEM_SIZE_STEP);
+	assert.equal(stepGalleryItemSize(GALLERY_ITEM_SIZE_MIN, -1), GALLERY_ITEM_SIZE_MIN);
+	assert.equal(stepGalleryItemSize(GALLERY_ITEM_SIZE_MAX, 1), GALLERY_ITEM_SIZE_MAX);
+	assert.equal(getGalleryItemScalePercent(120), 100);
+	assert.equal(getGalleryItemScalePercent(240), 200);
+	assert.equal(getGalleryItemScalePercent(420), 350);
+	assert.equal(getGalleryItemSizeProgress(120), 0);
+	assert.equal(getGalleryItemSizeProgress(270), 50);
+	assert.equal(getGalleryItemSizeProgress(420), 100);
 	const root = getGalleryPathEntry("general", "tokens", "");
 	const nested = getGalleryPathEntry("general", "tokens", "герої");
 	let history = recordGalleryNavigation({ entries: [], index: -1 }, root);

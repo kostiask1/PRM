@@ -5,13 +5,17 @@ import { getSourceFullName } from "../../../entities/reference/index.js";
 import { classNames, formatBytes, lang } from "../../../shared/lib/index.js";
 import { Icon, Modal, type IconName } from "../../../shared/ui/index.js";
 import type { ImageAsset } from "../api/imageApi.ts";
-import type { GalleryPresentationItem } from "../model/imageGalleryPresentation.ts";
+import {
+	GALLERY_ITEM_SIZE_DEFAULT,
+	type GalleryPresentationItem,
+} from "../model/imageGalleryPresentation.ts";
 import { getGalleryImageSelectionKey } from "../model/imageGalleryInteraction.ts";
 import { useImageGalleryRuntime } from "../model/ImageGalleryRuntime.tsx";
 import { ALL_GALLERY_CATEGORY } from "../imageGalleryConfig.js";
 import ImageGalleryItem from "./ImageGalleryItem.tsx";
 import {
 	ImageGalleryDialogs,
+	ImageGalleryFooter,
 	ImageGalleryGrid,
 	ImageGalleryNavigation,
 	ImageGallerySearch,
@@ -374,12 +378,28 @@ function ImageGalleryLayout({
 	onSelect?: (image: ImageAsset | null | undefined) => void;
 }) {
 	return (
-		<div className="ImageGallery">
+		<div
+			className="ImageGallery"
+			style={
+				{
+					"--gallery-item-scale":
+						controller.galleryItemSize / GALLERY_ITEM_SIZE_DEFAULT,
+				} as React.CSSProperties & Record<"--gallery-item-scale", number>
+			}
+		>
 			<ImageGallerySidebar controller={controller} />
 			<main className="ImageGallery__main">
 				<ImageGalleryTabs controller={controller} />
 				<ImageGalleryToolbar controller={controller} onSelect={onSelect} />
 				<ImageGalleryItems controller={controller} onSelect={onSelect} />
+				<ImageGalleryFooter
+					itemSize={controller.galleryItemSize}
+					onChange={controller.setGalleryItemSize}
+					onReset={controller.resetGalleryItemSize}
+					onStep={controller.stepGalleryItemSize}
+					progressPercent={controller.galleryItemSizeProgress}
+					scalePercent={controller.galleryItemScalePercent}
+				/>
 			</main>
 		</div>
 	);

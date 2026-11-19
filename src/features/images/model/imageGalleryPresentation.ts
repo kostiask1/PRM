@@ -112,12 +112,62 @@ const GALLERY_FOLDER_ICON_NAMES = Object.freeze({
 	players: "folder-players",
 } as const);
 
+export const GALLERY_ITEM_SIZE_MIN = 120;
+export const GALLERY_ITEM_SIZE_DEFAULT = 120;
+export const GALLERY_ITEM_SIZE_MAX = 420;
+export const GALLERY_ITEM_SIZE_STEP = 12;
+export const GALLERY_ITEM_SIZE_STORAGE_KEY = "prm.imageGallery.itemSize";
+
+/** Clamp and round raw gallery item size input to a valid pixel width. */
+export function normalizeGalleryItemSize(value: unknown): number {
+	if (typeof value !== "number" && typeof value !== "string") {
+		return GALLERY_ITEM_SIZE_DEFAULT;
+	}
+	if (typeof value === "string" && !value.trim()) {
+		return GALLERY_ITEM_SIZE_DEFAULT;
+	}
+	const numeric = Number(value);
+	if (!Number.isFinite(numeric)) return GALLERY_ITEM_SIZE_DEFAULT;
+	return Math.min(
+		GALLERY_ITEM_SIZE_MAX,
+		Math.max(GALLERY_ITEM_SIZE_MIN, Math.round(numeric)),
+	);
+}
+
+/** Step gallery item size up or down by one discrete increment within bounds. */
+export function stepGalleryItemSize(
+	currentSize: number,
+	direction: -1 | 1,
+): number {
+	return normalizeGalleryItemSize(
+		normalizeGalleryItemSize(currentSize) + direction * GALLERY_ITEM_SIZE_STEP,
+	);
+}
+
+/** Convert pixel item size into a percentage relative to default size. */
+export function getGalleryItemScalePercent(itemSize: number): number {
+	return Math.round(
+		(normalizeGalleryItemSize(itemSize) / GALLERY_ITEM_SIZE_DEFAULT) * 100,
+	);
+}
+
+/** Compute slider fill percentage within the supported item size range. */
+export function getGalleryItemSizeProgress(itemSize: number): number {
+	return (
+		((normalizeGalleryItemSize(itemSize) - GALLERY_ITEM_SIZE_MIN) /
+			(GALLERY_ITEM_SIZE_MAX - GALLERY_ITEM_SIZE_MIN)) *
+		100
+	);
+}
+
 export function getGalleryColumnCount(
 	containerWidth: number,
 	columnGap: string,
+	itemMinWidth = GALLERY_ITEM_SIZE_DEFAULT,
 ): number {
 	const gap = Number.parseFloat(columnGap) || 16;
-	return Math.max(1, Math.floor((containerWidth + gap) / (120 + gap)));
+	const tileWidth = normalizeGalleryItemSize(itemMinWidth);
+	return Math.max(1, Math.floor((containerWidth + gap) / (tileWidth + gap)));
 }
 
 function getGallerySourceScopeTitleKey(
