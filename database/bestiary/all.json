@@ -1815,7 +1815,7 @@
         "conditionImmune": [
           "charmed"
         ],
-        "note": "(with Mind Blank)",
+        "note": "(with {@spell Mind Blank|XPHB})",
         "cond": true
       }
     ],
@@ -30415,7 +30415,7 @@
         "conditionImmune": [
           "charmed"
         ],
-        "note": "(with Mind Blank)",
+        "note": "(with {@spell Mind Blank|XPHB})",
         "cond": true
       }
     ],
@@ -133444,6 +133444,12 @@
         ]
       },
       {
+        "name": "Rock",
+        "entries": [
+          "{@atk rw} {@hit 11} to hit, range 60/240 ft., one target. {@h}29 ({@damage 4d10 + 7}) bludgeoning damage."
+        ]
+      },
+      {
         "name": "Hurl Fire",
         "entries": [
           "{@atk rw} {@hit 11} to hit, range 60/240 ft., one target. {@h}29 ({@damage 4d10 + 7}) fire damage."
@@ -195444,7 +195450,13 @@
       "psychic"
     ],
     "conditionImmune": [
-      "charmed"
+      {
+        "conditionImmune": [
+          "charmed"
+        ],
+        "note": "(with {@spell Mind Blank|XPHB})",
+        "cond": true
+      }
     ],
     "languages": [
       "Abyssal",
@@ -255139,7 +255151,13 @@
       "psychic"
     ],
     "conditionImmune": [
-      "charmed"
+      {
+        "conditionImmune": [
+          "charmed"
+        ],
+        "note": "(with {@spell Mind Blank|XPHB})",
+        "cond": true
+      }
     ],
     "languages": [
       "Common",
@@ -338994,9 +339012,9 @@
       "con": "+11"
     },
     "skill": {
-      "athletics": "+10",
-      "insight": "+4",
-      "intimidation": "+10"
+      "athletics": "+11",
+      "insight": "+5",
+      "intimidation": "+12"
     },
     "languages": [
       "Common (WoW)",
