@@ -2,6 +2,17 @@ import {
 	referenceApi,
 	type ReferenceRecord,
 } from "../api/referenceApi.ts";
+import { formatSourceLabel } from "./sourceNames.ts";
+
+export interface SenseMetaRecord extends Record<string, unknown> {
+	source?: unknown;
+}
+
+export function getSenseMeta(
+	sense: SenseMetaRecord = {},
+): string {
+	return sense.source ? formatSourceLabel(sense.source) : "";
+}
 
 let senseMapCache: Map<string, ReferenceRecord> | null = null;
 let sensePromise: Promise<Map<string, ReferenceRecord>> | null = null;

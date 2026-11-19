@@ -236,6 +236,7 @@ function ReferenceDetails({
 		if (!activeVersion) return selectedItem;
 		return {
 			...selectedItem,
+			type: undefined,
 			...activeVersion,
 		};
 	}, [selectedItem, activeVersion]);
@@ -250,7 +251,7 @@ function ReferenceDetails({
 				activeTab={activeTab}
 				query={query}
 				selectedItem={targetItem}
-				selectedMeta={selectedMeta}
+				selectedMeta={activeTab.meta ? activeTab.meta(targetItem) : selectedMeta}
 				canInsertReference={canInsertReference}
 				selectionActionLabel={selectionActionLabel}
 				onInsertReference={onInsertReference}

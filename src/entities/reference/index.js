@@ -1,17 +1,21 @@
 export { referenceApi } from "./api/referenceApi.ts";
 export {
+	getConditionMeta,
 	loadConditionsMap,
 	normalizeConditionName,
 } from "./model/conditions.ts";
 export {
+	getDiseaseMeta,
 	loadDiseasesMap,
 	normalizeDiseaseName,
 } from "./model/diseases.ts";
 export {
+	getSenseMeta,
 	loadSensesMap,
 	normalizeSenseName,
 } from "./model/senses.ts";
 export {
+	getSkillMeta,
 	loadSkillsMap,
 	normalizeSkillName,
 } from "./model/skills.ts";

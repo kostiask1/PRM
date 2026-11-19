@@ -2,6 +2,21 @@ import {
 	referenceApi,
 	type ReferenceRecord,
 } from "../api/referenceApi.ts";
+import { formatSourceLabel } from "./sourceNames.ts";
+
+export interface DiseaseMetaRecord extends Record<string, unknown> {
+	type?: unknown;
+	source?: unknown;
+}
+
+export function getDiseaseMeta(
+	disease: DiseaseMetaRecord = {},
+	separator = " · ",
+): string {
+	const type = String(disease.type || "").trim();
+	const source = disease.source ? formatSourceLabel(disease.source) : "";
+	return [type, source].filter(Boolean).join(separator);
+}
 
 let diseaseMapCache: Map<string, ReferenceRecord> | null = null;
 let diseasePromise: Promise<Map<string, ReferenceRecord>> | null = null;

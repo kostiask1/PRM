@@ -12,6 +12,10 @@ import "../../../assets/components/RulesReferenceModalContent.css";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	formatSourceLabel,
+	getConditionMeta,
+	getDiseaseMeta,
+	getSenseMeta,
+	getSkillMeta,
 	getSpellMeta as formatSpellMeta,
 	referenceApi,
 } from "../../../entities/reference/index.js";
@@ -126,8 +130,10 @@ const LOADERS: Record<
 };
 
 const META: Partial<Record<ReferenceTabId, (item: UiReferenceItem) => string>> = {
-	diseases: (item) => String(item.type || ""),
-	skills: (item) => String(item.ability || "").toUpperCase(),
+	conditions: getConditionMeta,
+	diseases: getDiseaseMeta,
+	senses: getSenseMeta,
+	skills: getSkillMeta,
 	variantrules: (item) => getVariantRuleTypeLabel(item.ruleType),
 	spells: getSpellMeta,
 	bestiary: getMonsterMeta,

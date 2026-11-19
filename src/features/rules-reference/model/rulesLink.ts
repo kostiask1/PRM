@@ -459,7 +459,7 @@ export async function resolveRulesLinkNavigation(
 		? {
 				tab: config.tab,
 				name:
-					config.tab === "conditions" && reference.source
+					(config.tab === "conditions" || config.tab === "skills") && reference.source
 						? `${reference.name}|${reference.source}`
 						: reference.name,
 			}
@@ -539,11 +539,14 @@ async function loadGenericReferencePreview(
 	if (!config) return null;
 	const reference = await loaders[config.loader](referenceName);
 	if (!reference?.name) return null;
-	const meta = config.metaField
+	const fieldMeta = config.metaField
 		? getReferenceMeta(reference, config.metaField)
-		: reference.source && formatters?.formatSource
+		: "";
+	const sourceMeta =
+		reference.source && formatters?.formatSource
 			? formatters.formatSource(reference.source)
 			: "";
+	const meta = [fieldMeta, sourceMeta].filter(Boolean).join(" · ");
 	return {
 		kind: "reference",
 		title: reference.name,

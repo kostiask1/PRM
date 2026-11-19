@@ -131,8 +131,27 @@ export async function getVariantRuleByName(
 export async function getSkillByName(
 	name: unknown,
 ): Promise<ReferenceRecord | null> {
+	const raw = String(name || "");
+	const parts = raw.split("|");
+	const baseName = parts[0]?.trim() || "";
+	const requestedSource = parts[1]?.trim().toUpperCase();
+
 	const map = await loadSkillsMap();
-	return map.get(normalizeSkillName(name)) || null;
+	const record = map.get(normalizeSkillName(baseName)) || null;
+	if (!record) return null;
+
+	if (requestedSource && Array.isArray(record.versions) && record.versions.length > 0) {
+		const match = record.versions.find(
+			(v) => String(v.source || "").toUpperCase() === requestedSource,
+		);
+		if (match) {
+			return {
+				...record,
+				...match,
+			};
+		}
+	}
+	return record;
 }
 
 export async function getSenseByName(

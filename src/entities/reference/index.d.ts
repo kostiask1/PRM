@@ -4,16 +4,28 @@ export {
 } from "./api/referenceApi.ts";
 export * from "./model.d.ts";
 export {
+	getConditionMeta,
+	loadConditionsMap,
+	normalizeConditionName,
+	type ConditionMetaRecord,
+} from "./model/conditions.ts";
+export {
+	getDiseaseMeta,
 	loadDiseasesMap,
 	normalizeDiseaseName,
+	type DiseaseMetaRecord,
 } from "./model/diseases.ts";
 export {
+	getSenseMeta,
 	loadSensesMap,
 	normalizeSenseName,
+	type SenseMetaRecord,
 } from "./model/senses.ts";
 export {
+	getSkillMeta,
 	loadSkillsMap,
 	normalizeSkillName,
+	type SkillMetaRecord,
 } from "./model/skills.ts";
 export {
 	loadVariantRulesMap,

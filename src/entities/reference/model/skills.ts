@@ -2,6 +2,21 @@ import {
 	referenceApi,
 	type ReferenceRecord,
 } from "../api/referenceApi.ts";
+import { formatSourceLabel } from "./sourceNames.ts";
+
+export interface SkillMetaRecord extends Record<string, unknown> {
+	ability?: unknown;
+	source?: unknown;
+}
+
+export function getSkillMeta(
+	skill: SkillMetaRecord = {},
+	separator = " · ",
+): string {
+	const ability = String(skill.ability || "").trim().toUpperCase();
+	const source = skill.source ? formatSourceLabel(skill.source) : "";
+	return [ability, source].filter(Boolean).join(separator);
+}
 
 let skillMapCache: Map<string, ReferenceRecord> | null = null;
 let skillPromise: Promise<Map<string, ReferenceRecord>> | null = null;

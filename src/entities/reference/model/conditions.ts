@@ -2,6 +2,17 @@ import {
 	referenceApi,
 	type ReferenceRecord,
 } from "../api/referenceApi.ts";
+import { formatSourceLabel } from "./sourceNames.ts";
+
+export interface ConditionMetaRecord extends Record<string, unknown> {
+	source?: unknown;
+}
+
+export function getConditionMeta(
+	condition: ConditionMetaRecord = {},
+): string {
+	return condition.source ? formatSourceLabel(condition.source) : "";
+}
 
 let conditionMapCache: Map<string, ReferenceRecord> | null = null;
 let conditionPromise: Promise<Map<string, ReferenceRecord>> | null = null;

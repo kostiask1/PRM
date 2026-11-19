@@ -8,10 +8,10 @@ const CONDITION_PRUNE_KEYS = new Set([
 	"otherSources",
 	"hasFluffImages",
 ]);
-const DISEASE_PRUNE_KEYS = new Set([...CONDITION_PRUNE_KEYS, "source"]);
+const DISEASE_PRUNE_KEYS = new Set(CONDITION_PRUNE_KEYS);
 const VARIANT_RULE_PRUNE_KEYS = new Set([...CONDITION_PRUNE_KEYS, "source"]);
-const SKILL_PRUNE_KEYS = new Set([...CONDITION_PRUNE_KEYS, "source"]);
-const SENSE_PRUNE_KEYS = new Set([...CONDITION_PRUNE_KEYS, "source"]);
+const SKILL_PRUNE_KEYS = new Set(CONDITION_PRUNE_KEYS);
+const SENSE_PRUNE_KEYS = new Set(CONDITION_PRUNE_KEYS);
 const VARIANT_RULE_NAMES_WITH_INLINE_OBJECTS_TO_REMOVE = new Set([
 	"Customizing Ability Scores",
 ]);
@@ -405,9 +405,9 @@ export function normalizeConditionsData(data) {
 
 export function normalizeDiseasesData(data) {
 	return {
-		disease: dedupeConditionsByName(data.disease || []).map(
-			pruneDiseaseMeta,
-		),
+		disease: groupConditionsByName(data.disease || []),
+
+
 	};
 }
 
@@ -416,12 +416,13 @@ export function normalizeVariantRulesData(data) {
 		variantrule: dedupeConditionsByName(data.variantrule || []).map(
 			normalizeVariantRule,
 		),
+
 	};
 }
 
 export function normalizeSkillsData(data) {
 	return {
-		skill: dedupeConditionsByName(data.skill || []).map(pruneSkillMeta),
+		skill: groupConditionsByName(data.skill || []),
 	};
 }
 

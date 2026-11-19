@@ -748,7 +748,13 @@ import {
 } from "../src/entities/campaign/index.js";
 import { campaignApi } from "../src/entities/campaign/index.js";
 import { bestiaryApi } from "../src/entities/bestiary/index.js";
-import { referenceApi } from "../src/entities/reference/index.js";
+import {
+	getConditionMeta,
+	getDiseaseMeta,
+	getSenseMeta,
+	getSkillMeta,
+	referenceApi,
+} from "../src/entities/reference/index.js";
 import { sessionApi } from "../src/entities/session/index.js";
 import { spellApi } from "../src/entities/spell/index.js";
 import {
@@ -29914,6 +29920,98 @@ await run("rules link previews preserve creature and reference metadata", async 
 			entries: ["2024 rules"],
 		},
 	);
+	assert.deepEqual(
+		await loadRulesLinkPreview("disease", "Sight Rot", loaders, formatters),
+		{
+			kind: "reference",
+			title: "Sight Rot",
+			meta: "Disease",
+			entries: undefined,
+		},
+	);
+	assert.deepEqual(
+		await loadRulesLinkPreview(
+			"disease",
+			"Cackle Fever",
+			{
+				...loaders,
+				getDisease: async () => ({
+					name: "Cackle Fever",
+					type: "Magical Contagion",
+					source: "XDMG",
+					entries: ["cackle text"],
+				}),
+			},
+			formatters,
+		),
+		{
+			kind: "reference",
+			title: "Cackle Fever",
+			meta: "Magical Contagion · XDMG",
+			entries: ["cackle text"],
+		},
+	);
+	assert.deepEqual(
+		await loadRulesLinkPreview(
+			"skill",
+			"Stealth",
+			{
+				...loaders,
+				getSkill: async (name) =>
+					String(name).includes("PHB")
+						? { name: "Stealth", ability: "dex", source: "PHB", entries: ["2014 stealth"] }
+						: { name: "Stealth", ability: "dex", source: "XPHB", entries: ["2024 stealth"] },
+			},
+			formatters,
+		),
+		{
+			kind: "reference",
+			title: "Stealth",
+			meta: "DEX · XPHB",
+			entries: ["2024 stealth"],
+		},
+	);
+	assert.deepEqual(
+		await loadRulesLinkPreview(
+			"skill",
+			"Stealth|PHB",
+			{
+				...loaders,
+				getSkill: async (name) =>
+					String(name).includes("PHB")
+						? { name: "Stealth", ability: "dex", source: "PHB", entries: ["2014 stealth"] }
+						: { name: "Stealth", ability: "dex", source: "XPHB", entries: ["2024 stealth"] },
+			},
+			formatters,
+		),
+		{
+			kind: "reference",
+			title: "Stealth",
+			meta: "DEX · PHB",
+			entries: ["2014 stealth"],
+		},
+	);
+	assert.deepEqual(
+		await loadRulesLinkPreview(
+			"sense",
+			"Darkvision",
+			{
+				...loaders,
+				getSense: async () => ({
+					name: "Darkvision",
+					source: "XPHB",
+					entries: ["darkvision text"],
+				}),
+			},
+			formatters,
+		),
+		{
+			kind: "reference",
+			title: "Darkvision",
+			meta: "XPHB",
+			entries: ["darkvision text"],
+		},
+	);
 });
 
 await run("rules tooltip text produces stable interactive roll descriptors", () => {
@@ -51872,7 +51970,61 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 		findSelectedReferenceItem("conditions", duplicateConditions, "Отруєний"),
 		duplicateConditions[0],
 	);
+	const conditionPolicy = REFERENCE_TAB_POLICIES.find((tab) => tab.id === "conditions");
+	assert.equal(
+		getConditionMeta({ name: "Blinded", source: "XPHB" }),
+		"Player's Handbook (2024) (XPHB)",
+	);
+	assert.equal(
+		getConditionMeta({ name: "Blinded", source: "PHB" }),
+		"Player's Handbook (2014) (PHB)",
+	);
+	assert.equal(getConditionMeta({}), "");
+	assert.equal(itemMatchesQuery(conditionPolicy, { name: "Blinded", source: "XPHB", sources: ["XPHB", "PHB"] }, "xphb", false), true);
+	assert.equal(itemMatchesQuery(conditionPolicy, { name: "Blinded", source: "XPHB", sources: ["XPHB", "PHB"] }, "phb", false), true);
 	const diseasePolicy = REFERENCE_TAB_POLICIES.find((tab) => tab.id === "diseases");
+	const skillPolicy = REFERENCE_TAB_POLICIES.find((tab) => tab.id === "skills");
+	const sensePolicy = REFERENCE_TAB_POLICIES.find((tab) => tab.id === "senses");
+	assert.equal(
+		getSkillMeta({ name: "Acrobatics", ability: "dex", source: "XPHB" }),
+		"DEX · Player's Handbook (2024) (XPHB)",
+	);
+	assert.equal(
+		getSkillMeta({ name: "Acrobatics", ability: "dex", source: "PHB" }),
+		"DEX · Player's Handbook (2014) (PHB)",
+	);
+	assert.equal(
+		getSkillMeta({ name: "Custom", ability: "str" }),
+		"STR",
+	);
+	assert.equal(getSkillMeta({}), "");
+	assert.equal(
+		getSenseMeta({ name: "Blindsight", source: "XPHB" }),
+		"Player's Handbook (2024) (XPHB)",
+	);
+	assert.equal(getSenseMeta({}), "");
+	assert.equal(itemMatchesQuery(skillPolicy, { name: "Acrobatics", ability: "dex", source: "XPHB" }, "xphb", false), true);
+	assert.equal(itemMatchesQuery(sensePolicy, { name: "Blindsight", source: "XPHB" }, "xphb", false), true);
+	assert.equal(
+		getDiseaseMeta({ name: "Cackle Fever", type: "Magical Contagion", source: "XDMG" }),
+		"Magical Contagion · Dungeon Master's Guide (2024) (XDMG)",
+	);
+	assert.equal(
+		getDiseaseMeta({ name: "Sight Rot", source: "XDMG" }),
+		"Dungeon Master's Guide (2024) (XDMG)",
+	);
+	assert.equal(
+		getDiseaseMeta({ name: "Custom Disease", type: "Magical Contagion" }),
+		"Magical Contagion",
+	);
+	assert.equal(
+		getDiseaseMeta({ name: "Cackle Fever", source: "DMG" }),
+		"Dungeon Master's Guide (2014) (DMG)",
+	);
+	assert.equal(getDiseaseMeta({}), "");
+	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Cackle Fever", source: "XDMG", sources: ["XDMG", "DMG"] }, "dmg", false), true);
+	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Cackle Fever", source: "XDMG", sources: ["XDMG", "DMG"] }, "xdmg", false), true);
+	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Arcane Blight", source: "IDRotF" }, "idrotf", false), true);
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка", entries: ["лихоманка"] }, "лихоманка", true), true);
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка" }, "гаряч", false), true);
 	assert.deepEqual(
@@ -58181,6 +58333,24 @@ await run(
 			sources: ["XPHB"],
 			entries: ["bloodied"],
 		});
+		const normalizedDiseases = updaterPolicies.normalizeDiseasesData({
+			disease: [
+				{ name: "Cackle Fever", source: "DMG", entries: ["2014"] },
+				{ name: "Cackle Fever", source: "XDMG", type: "Magical Contagion", entries: ["2024"] },
+			],
+		});
+		assert.equal(normalizedDiseases.disease.length, 1);
+		assert.deepEqual(normalizedDiseases.disease[0], {
+			name: "Cackle Fever",
+			source: "XDMG",
+			type: "Magical Contagion",
+			sources: ["XDMG", "DMG"],
+			entries: ["2024"],
+			versions: [
+				{ name: "Cackle Fever", source: "XDMG", type: "Magical Contagion", entries: ["2024"] },
+				{ name: "Cackle Fever", source: "DMG", entries: ["2014"] },
+			],
+		});
 		const inlineRule = {
 			name: "Customizing Ability Scores",
 			source: "XPHB",
@@ -58646,7 +58816,7 @@ await run(
 			);
 			assert.deepEqual(
 				JSON.parse(await fs.readFile(config.diseasesPath, "utf8")),
-				{ disease: [{ name: "Cackle Fever" }] },
+				{ disease: [{ name: "Cackle Fever", source: "DMG", sources: ["DMG"] }] },
 			);
 
 			const removalDir = path.join(rootDir, "remove-json");
