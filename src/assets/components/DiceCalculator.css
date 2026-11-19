@@ -171,10 +171,12 @@ body:has(.Modal__overlay) .DiceCalculator:not(.is_open) {
 	max-height: calc(100dvh - var(--size-10) - var(--space-7));
 	overflow-y: auto;
 	background: var(--panel);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-3xl);
 	padding: var(--space-4);
-	box-shadow: var(--shadow);
+	box-shadow: 0 16px 40px color-mix(in srgb, var(--shadow-ink), transparent 45%);
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-4);

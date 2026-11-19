@@ -211,11 +211,10 @@
 }
 
 .EncounterView__gridItem .MonsterStatBlock__replaceTokenButton {
-	right: 0;
-	bottom: 0;
-	width: var(--size-7);
-	height: var(--size-7);
-	min-width: var(--size-7);
+	width: auto;
+	height: auto;
+	min-width: 0;
+	white-space: nowrap;
 }
 
 @media (max-width: 1599px) {

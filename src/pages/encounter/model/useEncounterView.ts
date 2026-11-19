@@ -44,7 +44,11 @@ import type {
 	MonsterAiUpdateOptions,
 } from "./contracts.ts";
 import { useEncounterPageRuntime } from "./EncounterPageRuntime.tsx";
-import { calculateInitiativeStats } from "./encounterViewMetrics.ts";
+import {
+	calculateInitiativeStats,
+	getExpectedInitiative,
+	rollParticipantInitiative,
+} from "./encounterViewMetrics.ts";
 import {
 	executeEncounterDiceProcessing,
 	executeEncounterHistoryAction,
@@ -61,7 +65,10 @@ import {
 	getEncounterSessionEncounters,
 	getEncounterUpdatePlan,
 	advanceEncounterTurn,
+	previousEncounterTurn,
 	resetEncounterTurns,
+	autoIndexEncounterMonsters,
+	getBaseMonsterName,
 	getSelectedEncounterParticipant,
 	isEncounterEditableTarget,
 	parseEncounterImport,
@@ -395,6 +402,76 @@ export default function useEncounterView(): EncounterViewModel {
 		applyEncounterUpdate(next);
 	}, [applyEncounterUpdate]);
 
+	const previousTurn = useCallback(() => {
+		const current = encounterRef.current;
+		if (!current) return;
+		const next = previousEncounterTurn(current);
+		if (next !== current) {
+			pendingTurnRef.current = { before: current, after: next };
+			const prevTurnParticipant = next.monsters.find(
+				(item) => String(item.instanceId) === String(next.currentTurnId),
+			);
+			const shouldSelect =
+				prevTurnParticipant && !isEncounterCharacterParticipant(prevTurnParticipant);
+			applyEncounterUpdate(next, {
+				preferredId: shouldSelect ? String(prevTurnParticipant.instanceId) : undefined,
+			});
+		}
+	}, [applyEncounterUpdate]);
+
+	const updateMonsterInitiative = useCallback(
+		(instanceId: string, value: number | null) => {
+			if (!encounter) return;
+			const updatedMonsters = encounter.monsters.map((m) =>
+				m.instanceId === instanceId
+					? { ...m, initiative: value }
+					: m,
+			);
+			applyEncounterUpdate({ ...encounter, monsters: updatedMonsters });
+		},
+		[encounter, applyEncounterUpdate],
+	);
+
+	const rollMonsterInitiative = useCallback(
+		(instanceId: string) => {
+			if (!encounter) return;
+			const target = encounter.monsters.find((m) => m.instanceId === instanceId);
+			if (!target) return;
+			const roll = rollParticipantInitiative(target);
+			const updatedMonsters = encounter.monsters.map((m) =>
+				m.instanceId === instanceId ? { ...m, initiative: roll } : m,
+			);
+			applyEncounterUpdate({ ...encounter, monsters: updatedMonsters });
+		},
+		[encounter, applyEncounterUpdate],
+	);
+
+	const rollAllInitiatives = useCallback(() => {
+		if (!encounter || !encounter.monsters.length) return;
+		const updatedMonsters = encounter.monsters.map((m) => ({
+			...m,
+			initiative: rollParticipantInitiative(m),
+		}));
+		updatedMonsters.sort((a, b) => {
+			const initA = a.initiative != null ? Number(a.initiative) : getExpectedInitiative(a);
+			const initB = b.initiative != null ? Number(b.initiative) : getExpectedInitiative(b);
+			return Number(initB) - Number(initA);
+		});
+		applyEncounterUpdate({ ...encounter, monsters: updatedMonsters });
+		setNotification(lang.t("Initiative rolled for all participants."));
+	}, [encounter, applyEncounterUpdate]);
+
+	const sortByInitiative = useCallback(() => {
+		if (!encounter || !encounter.monsters.length) return;
+		const updatedMonsters = [...encounter.monsters].sort((a, b) => {
+			const initA = a.initiative != null ? Number(a.initiative) : getExpectedInitiative(a);
+			const initB = b.initiative != null ? Number(b.initiative) : getExpectedInitiative(b);
+			return Number(initB) - Number(initA);
+		});
+		applyEncounterUpdate({ ...encounter, monsters: updatedMonsters });
+		setNotification(lang.t("Participants sorted by initiative."));
+	}, [encounter, applyEncounterUpdate]);
+
 	const reportParticipantSyncError = useCallback((error: unknown, operation: string) => {
 		console.error(`Failed encounter participant operation: ${operation}`, error);
 	}, []);
@@ -445,18 +522,19 @@ export default function useEncounterView(): EncounterViewModel {
 		async (m: EncounterViewParticipant) => {
 			if (!encounter) return;
 
+			const newMonster = createEncounterMonsterInstance(m);
+			const monsters = autoIndexEncounterMonsters(encounter.monsters || [], newMonster);
+			const created = monsters[monsters.length - 1];
+
 			const updated = {
 				...encounter,
-				monsters: [
-					...(encounter.monsters || []),
-					createEncounterMonsterInstance(m),
-				],
+				monsters,
 			};
 
 			applyEncounterUpdate(updated);
 			setNotification(
 				lang.t("{name} added to encounter.", {
-					name: m.name,
+					name: created?.name || m.name,
 				}),
 			);
 		},
@@ -648,10 +726,35 @@ export default function useEncounterView(): EncounterViewModel {
 				...ensureEncounterMonsterId(m),
 				instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
 			};
-			const index = encounter.monsters.findIndex(
+			const baseName = getBaseMonsterName(m);
+			const matching = encounter.monsters.filter(
+				(item) => !isEncounterCharacterParticipant(item) && getBaseMonsterName(item).toLowerCase() === baseName.toLowerCase(),
+			);
+
+			let updatedMonsters = [...encounter.monsters];
+			if (matching.length === 1) {
+				const firstIdx = updatedMonsters.findIndex((item) => item.instanceId === matching[0].instanceId);
+				if (firstIdx >= 0 && !/#\d+$/.test(String(updatedMonsters[firstIdx].name || ""))) {
+					updatedMonsters[firstIdx] = {
+						...updatedMonsters[firstIdx],
+						name: `${baseName} #1`,
+					};
+				}
+			}
+
+			let maxNum = matching.length;
+			matching.forEach((item) => {
+				const match = String(item.name || "").match(/#(\d+)$/);
+				if (match) {
+					const num = parseInt(match[1], 10);
+					if (num > maxNum) maxNum = num;
+				}
+			});
+			newMonster.name = `${baseName} #${maxNum + 1}`;
+
+			const index = updatedMonsters.findIndex(
 				(item) => item.instanceId === m.instanceId,
 			);
-			const updatedMonsters = [...encounter.monsters];
 			updatedMonsters.splice(index + 1, 0, newMonster);
 
 			const updated = { ...encounter, monsters: updatedMonsters };
@@ -811,7 +914,12 @@ export default function useEncounterView(): EncounterViewModel {
 		averageInitiative: initiativeStats.average,
 		initiativeStats,
 		advanceTurn,
+		previousTurn,
 		resetTurns,
+		updateMonsterInitiative,
+		rollMonsterInitiative,
+		rollAllInitiatives,
+		sortByInitiative,
 		saveFailed,
 		retryEncounterSave,
 		handleFileChange,

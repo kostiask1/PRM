@@ -481,7 +481,9 @@ import {
 	executeEncounterMonsterDropPlan,
 	executeEncounterUpdatePlan,
 	advanceEncounterTurn,
+	previousEncounterTurn,
 	resetEncounterTurns,
+	autoIndexEncounterMonsters,
 	getEncounterGridMonsterKey,
 	getEncounterGridProjection,
 	getEncounterAddCharacterPlan,
@@ -53320,6 +53322,70 @@ await run("encounter turns follow participant identity and wrap rounds", () => {
 	const reset = resetEncounterTurns(second);
 	assert.equal(reset.currentTurnId, null);
 	assert.equal(reset.round, null);
+});
+
+await run("encounter turns skip creatures with 0 HP and support previous turn", () => {
+	const encounter = {
+		name: "Бій",
+		monsters: [
+			{ instanceId: "hero", currentHp: 20 },
+			{ instanceId: "dead_goblin", currentHp: 0 },
+			{ instanceId: "alive_goblin", currentHp: 7 },
+		],
+	};
+
+	// Start turns: first alive creature is hero
+	const t1 = advanceEncounterTurn(encounter);
+	assert.equal(t1.currentTurnId, "hero");
+	assert.equal(t1.round, 1);
+
+	// Next turn: dead_goblin (0 HP) is skipped, so alive_goblin gets turn
+	const t2 = advanceEncounterTurn(t1);
+	assert.equal(t2.currentTurnId, "alive_goblin");
+	assert.equal(t2.round, 1);
+
+	// Next turn wraps to round 2, hero
+	const t3 = advanceEncounterTurn(t2);
+	assert.equal(t3.currentTurnId, "hero");
+	assert.equal(t3.round, 2);
+
+	// Previous turn from t3: wraps back to round 1, alive_goblin
+	const p1 = previousEncounterTurn(t3);
+	assert.equal(p1.currentTurnId, "alive_goblin");
+	assert.equal(p1.round, 1);
+
+	// Previous turn from p1: skips dead_goblin, goes to hero, round 1
+	const p2 = previousEncounterTurn(p1);
+	assert.equal(p2.currentTurnId, "hero");
+	assert.equal(p2.round, 1);
+});
+
+await run("autoIndexEncounterMonsters numbers duplicate monsters cleanly", () => {
+	const g1 = { name: "Goblin", originalBestiaryName: "Goblin", instanceId: "1" };
+	const list1 = autoIndexEncounterMonsters([], g1);
+	assert.equal(list1.length, 1);
+	assert.equal(list1[0].name, "Goblin");
+
+	const g2 = { name: "Goblin", originalBestiaryName: "Goblin", instanceId: "2" };
+	const list2 = autoIndexEncounterMonsters(list1, g2);
+	assert.equal(list2.length, 2);
+	assert.equal(list2[0].name, "Goblin #1");
+	assert.equal(list2[1].name, "Goblin #2");
+
+	const g3 = { name: "Goblin", originalBestiaryName: "Goblin", instanceId: "3" };
+	const list3 = autoIndexEncounterMonsters(list2, g3);
+	assert.equal(list3.length, 3);
+	assert.equal(list3[2].name, "Goblin #3");
+
+	const boss = { name: "Goblin Boss", originalBestiaryName: "Goblin Boss", instanceId: "4" };
+	const list4 = autoIndexEncounterMonsters(list3, boss);
+	assert.equal(list4.length, 4);
+	assert.equal(list4[3].name, "Goblin Boss");
+
+	const hero = { name: "Aragorn", participantType: "character", instanceId: "5" };
+	const list5 = autoIndexEncounterMonsters(list4, hero);
+	assert.equal(list5.length, 5);
+	assert.equal(list5[4].name, "Aragorn");
 });
 
 await run("AI nested note edits follow identity after reordering", () => {

@@ -10,6 +10,7 @@ export interface EncounterViewParticipant extends EncounterParticipant {
 	currentHp?: unknown;
 	hit_points?: unknown;
 	encounterConditions?: string[];
+	initiative?: number | null;
 }
 
 export interface EncounterViewState extends Record<string, unknown> {
@@ -69,7 +70,12 @@ export interface EncounterViewModel {
 	averageInitiative: number | string;
 	initiativeStats: InitiativeStats;
 	advanceTurn: () => void;
+	previousTurn: () => void;
 	resetTurns: () => void;
+	updateMonsterInitiative: (instanceId: string, value: number | null) => void;
+	rollMonsterInitiative: (instanceId: string) => void;
+	rollAllInitiatives: () => void;
+	sortByInitiative: () => void;
 	saveFailed: boolean;
 	retryEncounterSave: () => void;
 	handleFileChange: (event: ChangeEvent<HTMLInputElement>) => void;

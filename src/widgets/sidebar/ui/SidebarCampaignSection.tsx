@@ -105,9 +105,11 @@ export default function SidebarCampaignSection({
 						{campaign.name}
 					</div>
 					<div className="ListCard__meta">
-						{lang.t("{count} sessions", {
-							count: campaign.sessionCount || 0,
-						})}
+						{(campaign.sessionCount || 0) === 1
+							? lang.t("1 session")
+							: lang.t("{count} sessions", {
+									count: campaign.sessionCount || 0,
+								})}
 						<StatusBadge
 							completed={Boolean(campaign.completed)}
 							onClick={(event: MouseEvent<HTMLSpanElement>) => {

@@ -102,6 +102,11 @@ export default function EncounterPageContent({ controller }: Props) {
 							{lang.t("Exit turn mode")}
 						</Button>
 					)}
+					{encounter.currentTurnId != null && (
+						<Button variant="ghost" disabled={view.isSaving} onClick={view.previousTurn}>
+							{lang.t("Previous turn")}
+						</Button>
+					)}
 					<Button variant="primary" disabled={view.isSaving || !encounter.monsters.some((item) => item.instanceId != null && String(item.instanceId) !== "")} onClick={view.advanceTurn}>{encounter.currentTurnId == null ? lang.t("Start turns") : lang.t("Next turn")}</Button>
 				</div>
 			</div>
@@ -111,6 +116,8 @@ export default function EncounterPageContent({ controller }: Props) {
 						monsters={encounter.monsters}
 						onOpenBestiary={() => view.setShowBestiary(true)}
 						onOpenCharacterPicker={() => view.setShowCharacterPicker(true)}
+						onRollAllInitiatives={view.rollAllInitiatives}
+						onSortByInitiative={view.sortByInitiative}
 						onReorder={view.handleReorderMonsters}
 						onDrop={view.handleMonstersDrop}
 						renderRow={(monster, isDragging) => (

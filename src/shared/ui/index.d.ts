@@ -51,3 +51,7 @@ export {
 export {
 	usePointerDownOutsideDismissal,
 } from "./usePointerDownOutsideDismissal.ts";
+export {
+	useDropdownPortalLifecycle,
+	type DropdownPortalLifecycleOptions,
+} from "./useDropdownPortalLifecycle.ts";

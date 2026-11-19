@@ -123,7 +123,58 @@
 .EncounterMonsterRow__stats {
 	display: flex;
 	align-items: center;
-	gap: var(--space-3);
+	gap: var(--space-2);
+}
+
+.EncounterMonsterRow__initiative {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	background: color-mix(in srgb, var(--bg), transparent 40%);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
+	border-radius: var(--radius-xxs);
+	padding: 1px 3px;
+	transition: border-color 0.2s, background 0.2s;
+}
+
+.EncounterMonsterRow__initiative:hover {
+	border-color: color-mix(in srgb, var(--accent), transparent 50%);
+	background: color-mix(in srgb, var(--bg), transparent 20%);
+}
+
+.EncounterMonsterRow__initRollBtn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	cursor: pointer;
+	border-radius: var(--radius-xxs);
+	transition: color 0.15s ease;
+}
+
+.EncounterMonsterRow__initRollBtn:hover {
+	color: var(--accent);
+}
+
+.EncounterMonsterRow__initInput {
+	width: 32px;
+	padding: 1px 2px;
+	background: transparent;
+	border: none;
+	color: var(--text-bright);
+	font-size: 0.8rem;
+	font-weight: 700;
+	text-align: center;
+	-moz-appearance: textfield;
+}
+
+.EncounterMonsterRow__initInput::-webkit-outer-spin-button,
+.EncounterMonsterRow__initInput::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
 }
 
 .EncounterMonsterRow__hp {
@@ -184,6 +235,7 @@
 	border-radius: var(--radius-sm);
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
+	white-space: nowrap;
 }
 
 .EncounterMonsterRow__playerBadge {
@@ -197,10 +249,142 @@
 	text-transform: uppercase;
 }
 
+.EncounterMonsterRow:has(details[open]) {
+	z-index: 40;
+}
+
 .EncounterMonsterRow__actions {
 	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	position: relative;
+}
+
+.EncounterMonsterRow__actions summary {
+	list-style: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	user-select: none;
+}
+
+.EncounterMonsterRow__actions summary::-webkit-details-marker {
+	display: none;
+}
+
+.EncounterMonsterRow__actions summary::marker {
+	display: none;
+}
+
+.EncounterMonsterRow__actionsToggle {
+	opacity: 0.7;
+	transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+	border: none;
+	background: transparent;
+	color: var(--muted);
+	border-radius: var(--radius-xxs);
+	width: 22px;
+	height: 22px;
+}
+
+.EncounterMonsterRow:hover .EncounterMonsterRow__actionsToggle,
+.EncounterMonsterRow.is_active .EncounterMonsterRow__actionsToggle,
+.EncounterMonsterRow__actions[open] .EncounterMonsterRow__actionsToggle,
+.EncounterMonsterRow__actionsToggle:focus-visible {
+	opacity: 1;
+}
+
+.EncounterMonsterRow__actions[open] .EncounterMonsterRow__actionsToggle,
+.EncounterMonsterRow__actionsToggle:hover {
+	color: var(--text-bright);
+	background: color-mix(in srgb, var(--accent), transparent 85%);
+}
+
+.EncounterMonsterRow__menu {
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	z-index: 50;
 	display: flex;
-	gap: var(--space-1);
+	flex-direction: column;
+	gap: 2px;
+	padding: var(--space-2);
+	background: var(--panel);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
+	border-radius: var(--radius-md);
+	box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
+	min-width: 230px;
+	width: max-content;
+	animation: EncounterMonsterRowMenuFadeIn 0.12s ease-out;
+}
+
+@keyframes EncounterMonsterRowMenuFadeIn {
+	from {
+		opacity: 0;
+		transform: scale(0.96) translateY(-4px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
+}
+
+.EncounterMonsterRow__menu .Button {
+	width: 100%;
+	justify-content: flex-start;
+	gap: var(--space-3);
+	font-size: 0.88rem;
+	font-weight: 500;
+	padding: var(--space-2) var(--space-3) !important;
+	min-height: 36px !important;
+	height: auto !important;
+	border: none !important;
+	background: transparent !important;
+	border-radius: var(--radius-sm);
+	text-align: left;
+	white-space: nowrap;
+	color: var(--text);
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.EncounterMonsterRow__menu .Button svg {
+	width: 16px;
+	height: 16px;
+	color: var(--muted);
+	flex-shrink: 0;
+	transition: color 0.15s ease;
+}
+
+.EncounterMonsterRow__menu .Button > span {
+	display: inline-block;
+	white-space: nowrap;
+}
+
+.EncounterMonsterRow__menu .Button:hover {
+	background: color-mix(in srgb, var(--accent), transparent 90%) !important;
+	color: var(--text-bright) !important;
+}
+
+.EncounterMonsterRow__menu .Button:hover svg {
+	color: var(--accent);
+}
+
+.EncounterMonsterRow__menu .EncounterMonsterRow__menuItem--danger {
+	margin-top: 4px;
+	padding-top: calc(var(--space-2) + 2px) !important;
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 50%) !important;
+	border-radius: var(--radius-sm);
+	color: var(--danger) !important;
+}
+
+.EncounterMonsterRow__menu .EncounterMonsterRow__menuItem--danger svg {
+	color: var(--danger) !important;
+}
+
+.EncounterMonsterRow__menu .EncounterMonsterRow__menuItem--danger:hover {
+	background: color-mix(in srgb, var(--danger), transparent 88%) !important;
+	color: var(--danger) !important;
 }
 
 .EncounterMonsterRow__conditions {

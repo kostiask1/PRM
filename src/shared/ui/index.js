@@ -19,4 +19,5 @@ export { default as Tooltip } from "./Tooltip.tsx";
 export { closeAllTooltips } from "./tooltipModel.ts";
 export { UndoRedoButtons } from "./UndoRedoButtons.tsx";
 export { usePointerDownOutsideDismissal } from "./usePointerDownOutsideDismissal.ts";
+export { useDropdownPortalLifecycle } from "./useDropdownPortalLifecycle.ts";
 export { useRevealSelectedTab } from "./useRevealSelectedTab.ts";

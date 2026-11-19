@@ -25,6 +25,8 @@ type EncounterMonsterRowView = Pick<
 	| "removeMonster"
 	| "getMonsterImageOverride"
 	| "updateMonsterConditions"
+	| "updateMonsterInitiative"
+	| "rollMonsterInitiative"
 >;
 
 
@@ -48,6 +50,54 @@ type EncounterMonsterCombatStatsProps = Pick<
 > & {
 	instanceId: string;
 };
+
+function EncounterInitiativeInput({
+	monster,
+	instanceId,
+	view,
+}: {
+	monster: EncounterViewParticipant;
+	instanceId: string;
+	view: Pick<EncounterViewModel, "updateMonsterInitiative" | "rollMonsterInitiative">;
+}) {
+	return (
+		<div className="EncounterMonsterRow__initiative">
+			<Tooltip content={lang.t("Roll initiative (d20 + DEX)")}>
+				<button
+					type="button"
+					className="EncounterMonsterRow__initRollBtn"
+					onClick={(event) => {
+						event.stopPropagation();
+						view.rollMonsterInitiative(instanceId);
+					}}
+					aria-label={lang.t("Roll initiative")}
+				>
+					<Icon name="dice" size={13} />
+				</button>
+			</Tooltip>
+			<input
+				type="number"
+				aria-label={lang.t("Initiative")}
+				placeholder={lang.t("Init")}
+				title={lang.t("Initiative")}
+				className="EncounterMonsterRow__initInput"
+				value={monster.initiative ?? ""}
+				onChange={(event) => {
+					const val = event.target.value.trim();
+					view.updateMonsterInitiative(instanceId, val === "" ? null : Number(val));
+				}}
+				onClick={(event) => {
+					event.stopPropagation();
+					event.currentTarget.select();
+				}}
+				onFocus={(event) => event.currentTarget.select()}
+				onKeyDown={(event) => {
+					if (event.key === "Enter") event.currentTarget.blur();
+				}}
+			/>
+		</div>
+	);
+}
 
 function EncounterMonsterCombatStats({
 	monster,
@@ -116,48 +166,76 @@ function EncounterMonsterRowActions({
 	view: EncounterMonsterRowView;
 }) {
 	return (
-		<div className="EncounterMonsterRow__actions">
-			{!isCharacter && hasMonsterHpFormula(monster) && (
+		<details
+			className="EncounterMonsterRow__actions"
+			onClick={(event) => event.stopPropagation()}
+			onBlur={(event) => {
+				const nextTarget = event.relatedTarget;
+				if (
+					nextTarget instanceof Node &&
+					event.currentTarget.contains(nextTarget)
+				) {
+					return;
+				}
+				event.currentTarget.removeAttribute("open");
+			}}
+		>
+			<summary
+				className="EncounterMonsterRow__action EncounterMonsterRow__actionsToggle"
+				aria-label={lang.t("Actions")}
+				title={lang.t("Actions")}
+			>
+				<Icon name="dots-vertical" size={14} />
+			</summary>
+			<div className="EncounterMonsterRow__menu">
+				{!isCharacter && hasMonsterHpFormula(monster) && (
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="dice"
+						iconSize={16}
+						className="EncounterMonsterRow__menuItem"
+						onClick={(event) => {
+							event.stopPropagation();
+							event.currentTarget.closest("details")?.removeAttribute("open");
+							view.rollMonsterHp(instanceId);
+						}}
+					>
+						{lang.t("Roll HP by formula")}
+					</Button>
+				)}
+				{!isCharacter && (
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="plus"
+						iconSize={16}
+						className="EncounterMonsterRow__menuItem"
+						onClick={(event) => {
+							event.stopPropagation();
+							event.currentTarget.closest("details")?.removeAttribute("open");
+							view.duplicateMonster(monster);
+						}}
+					>
+						{lang.t("Duplicate")}
+					</Button>
+				)}
 				<Button
-					variant="ghost"
+					variant="danger"
 					size={Button.SIZES.SMALL}
-					icon="dice"
-					aria-label={lang.t("Roll HP by formula")}
-					className="EncounterMonsterRow__action"
+					icon="trash"
+					iconSize={16}
+					className="EncounterMonsterRow__menuItem EncounterMonsterRow__menuItem--danger"
 					onClick={(event) => {
 						event.stopPropagation();
-						view.rollMonsterHp(instanceId);
+						event.currentTarget.closest("details")?.removeAttribute("open");
+						view.removeMonster(instanceId);
 					}}
-					title={lang.t("Roll HP by formula")}
-				/>
-			)}
-			{!isCharacter && (
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon="plus"
-					aria-label={lang.t("Duplicate")}
-					className="EncounterMonsterRow__action"
-					onClick={(event) => {
-						event.stopPropagation();
-						view.duplicateMonster(monster);
-					}}
-					title={lang.t("Duplicate")}
-				/>
-			)}
-			<Button
-				variant="danger"
-				size={Button.SIZES.SMALL}
-				icon="x"
-				aria-label={lang.t("Delete")}
-				className="EncounterMonsterRow__action"
-				onClick={(event) => {
-					event.stopPropagation();
-					view.removeMonster(instanceId);
-				}}
-				title={lang.t("Delete")}
-			/>
-		</div>
+				>
+					{lang.t("Delete")}
+				</Button>
+			</div>
+		</details>
 	);
 }
 
@@ -226,6 +304,11 @@ export default function EncounterMonsterRow({
 							onHpBlur={onHpBlur}
 						/>
 					)}
+					<EncounterInitiativeInput
+						monster={monster}
+						instanceId={instanceId}
+						view={view}
+					/>
 					<EncounterMonsterRowActions
 						monster={monster}
 						instanceId={instanceId}

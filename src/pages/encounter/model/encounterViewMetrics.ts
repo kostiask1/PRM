@@ -26,11 +26,25 @@ function parseFractionalChallengeRating(value: string): number {
 	return denominator ? numerator / denominator : 0;
 }
 
-export function getExpectedInitiative(
+export function getDexterityModifier(
 	monster: EncounterViewParticipant,
 ): number {
 	const dexterity = monster.dex ?? monster.dexterity ?? 10;
-	const modifier = Math.floor((Number(dexterity) - 10) / 2);
+	return Math.floor((Number(dexterity) - 10) / 2);
+}
+
+export function rollParticipantInitiative(
+	monster: EncounterViewParticipant,
+): number {
+	const mod = getDexterityModifier(monster);
+	const roll = Math.floor(Math.random() * 20) + 1;
+	return roll + mod;
+}
+
+export function getExpectedInitiative(
+	monster: EncounterViewParticipant,
+): number {
+	const modifier = getDexterityModifier(monster);
 	return 10.5 + modifier;
 }
 

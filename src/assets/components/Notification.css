@@ -10,6 +10,7 @@
 	z-index: 10000;
 	font-weight: 500;
 	animation: slideUp var(--anim-duration-slow) var(--anim-ease-bounce);
+	pointer-events: none;
 }
 
 @keyframes slideUp {

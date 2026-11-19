@@ -426,6 +426,20 @@ const icons = {
 			/>
 		</>
 	),
+	dots: (
+		<>
+			<circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+		</>
+	),
+	"dots-vertical": (
+		<>
+			<circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none" />
+		</>
+	),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof icons;

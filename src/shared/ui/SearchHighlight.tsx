@@ -13,11 +13,7 @@ function renderHighlightPart(
 		return <Fragment key={index}>{part.text}</Fragment>;
 	}
 
-	return (
-		<mark key={index} className="SearchHighlight">
-			{part.text}
-		</mark>
-	);
+	return <mark key={index} className="SearchHighlight">{part.text}</mark>;
 }
 
 export function highlightText(

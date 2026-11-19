@@ -1114,15 +1114,143 @@ function replaceMonsterHp(
 	);
 }
 
-/** Advance in the manually arranged participant order, preserving identity across reorders. */
+export function getBaseMonsterName(monster: { name?: unknown; originalBestiaryName?: unknown }): string {
+	const raw = String(monster.originalBestiaryName || monster.name || "").trim();
+	return raw.replace(/\s+#\d+$/, "").trim();
+}
+
+export function autoIndexEncounterMonsters(
+	existingMonsters: EncounterViewParticipant[],
+	newMonster: EncounterViewParticipant,
+): EncounterViewParticipant[] {
+	if (isEncounterCharacterParticipant(newMonster)) {
+		return [...existingMonsters, newMonster];
+	}
+
+	const baseName = getBaseMonsterName(newMonster);
+	if (!baseName) return [...existingMonsters, newMonster];
+
+	const matchingIndexes: number[] = [];
+	existingMonsters.forEach((item, index) => {
+		if (!isEncounterCharacterParticipant(item) && getBaseMonsterName(item).toLowerCase() === baseName.toLowerCase()) {
+			matchingIndexes.push(index);
+		}
+	});
+
+	if (matchingIndexes.length === 0) {
+		return [...existingMonsters, newMonster];
+	}
+
+	const updated = [...existingMonsters];
+
+	if (matchingIndexes.length === 1) {
+		const firstIndex = matchingIndexes[0];
+		const firstMonster = updated[firstIndex];
+		if (!/#\d+$/.test(String(firstMonster.name || ""))) {
+			updated[firstIndex] = {
+				...firstMonster,
+				name: `${baseName} #1`,
+			};
+		}
+	}
+
+	let maxNum = matchingIndexes.length;
+	matchingIndexes.forEach((idx) => {
+		const match = String(updated[idx].name || "").match(/#(\d+)$/);
+		if (match) {
+			const num = parseInt(match[1], 10);
+			if (num > maxNum) maxNum = num;
+		}
+	});
+
+	const indexedNewMonster = {
+		...newMonster,
+		name: `${baseName} #${maxNum + 1}`,
+	};
+
+	return [...updated, indexedNewMonster];
+}
+
+export function isParticipantAlive(participant: EncounterViewParticipant): boolean {
+	const hpRaw = participant.currentHp !== undefined ? participant.currentHp : participant.hit_points;
+	if (hpRaw === undefined || hpRaw === null || hpRaw === "") return true;
+	const num = Number(hpRaw);
+	return Number.isFinite(num) ? num > 0 : true;
+}
+
+/** Advance in the manually arranged participant order, skipping creatures with 0 HP and preserving identity. */
 export function advanceEncounterTurn(encounter: EncounterViewState): EncounterViewState {
-	const participants = encounter.monsters.filter((participant) => participant.instanceId != null && String(participant.instanceId) !== "");
+	const participants = encounter.monsters.filter((p) => p.instanceId != null && String(p.instanceId) !== "");
 	if (!participants.length) return encounter;
+
 	const currentId = encounter.currentTurnId == null ? "" : String(encounter.currentTurnId);
-	const index = participants.findIndex((participant) => String(participant.instanceId) === currentId);
+	const currentIndex = participants.findIndex((p) => String(p.instanceId) === currentId);
 	const round = typeof encounter.round === "number" && Number.isInteger(encounter.round) && encounter.round > 0 ? encounter.round : 1;
-	const nextIndex = index < 0 ? 0 : (index + 1) % participants.length;
-	return { ...encounter, currentTurnId: String(participants[nextIndex].instanceId), round: index >= 0 && nextIndex === 0 ? round + 1 : round };
+
+	const hasAlive = participants.some(isParticipantAlive);
+
+	if (currentIndex < 0) {
+		const startIndex = hasAlive ? participants.findIndex(isParticipantAlive) : 0;
+		const targetIndex = startIndex >= 0 ? startIndex : 0;
+		return {
+			...encounter,
+			currentTurnId: String(participants[targetIndex].instanceId),
+			round: 1,
+		};
+	}
+
+	let nextIndex = (currentIndex + 1) % participants.length;
+	let nextRound = nextIndex <= currentIndex ? round + 1 : round;
+
+	if (hasAlive) {
+		for (let step = 1; step <= participants.length; step++) {
+			const candidateIndex = (currentIndex + step) % participants.length;
+			if (isParticipantAlive(participants[candidateIndex])) {
+				nextIndex = candidateIndex;
+				nextRound = candidateIndex <= currentIndex ? round + 1 : round;
+				break;
+			}
+		}
+	}
+
+	return {
+		...encounter,
+		currentTurnId: String(participants[nextIndex].instanceId),
+		round: nextRound,
+	};
+}
+
+/** Move to previous participant, skipping creatures with 0 HP. */
+export function previousEncounterTurn(encounter: EncounterViewState): EncounterViewState {
+	const participants = encounter.monsters.filter((p) => p.instanceId != null && String(p.instanceId) !== "");
+	if (!participants.length || encounter.currentTurnId == null) return encounter;
+
+	const currentId = String(encounter.currentTurnId);
+	const currentIndex = participants.findIndex((p) => String(p.instanceId) === currentId);
+	if (currentIndex < 0) return encounter;
+
+	const round = typeof encounter.round === "number" && Number.isInteger(encounter.round) && encounter.round > 0 ? encounter.round : 1;
+	const hasAlive = participants.some(isParticipantAlive);
+
+	let prevIndex = (currentIndex - 1 + participants.length) % participants.length;
+	let prevRound = prevIndex >= currentIndex ? Math.max(1, round - 1) : round;
+
+	if (hasAlive) {
+		for (let step = 1; step <= participants.length; step++) {
+			const candidateIndex = (currentIndex - step + participants.length) % participants.length;
+			if (isParticipantAlive(participants[candidateIndex])) {
+				prevIndex = candidateIndex;
+				prevRound = candidateIndex >= currentIndex ? Math.max(1, round - 1) : round;
+				break;
+			}
+		}
+	}
+
+	return {
+		...encounter,
+		currentTurnId: String(participants[prevIndex].instanceId),
+		round: prevRound,
+	};
 }
 
 /** Reset turn tracking state and round counter. */

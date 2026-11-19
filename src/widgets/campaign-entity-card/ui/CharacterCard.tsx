@@ -71,7 +71,7 @@ function CharacterIdentityFields({ character, model, enableHistory, highlightFie
 	);
 }
 
-function CharacterDetails({ character, model, enableHistory, highlightFields, updateField }: CharacterSectionProps) {
+function CharacterDetails({ character, model, enableHistory, highlightFields, updateField, type }: CharacterSectionProps) {
 	const fieldClass = (field: string) => getCampaignEntityFieldClass(highlightFields, field);
 	return (
 		<>
@@ -79,7 +79,7 @@ function CharacterDetails({ character, model, enableHistory, highlightFields, up
 				<div className="CharacterCard__field"><label>{lang.t("Motivation")}</label><EditableField aria-label={lang.t("Motivation")} data-history-field="motivation" type="textarea" value={character.motivation} enableHistory={enableHistory} onChange={(event) => updateField("motivation", event.target.value)} placeholder={lang.t("What does the character want...")} className={fieldClass("motivation")} /></div>
 				<div className="CharacterCard__field"><label>{lang.t("Trait")}</label><EditableField aria-label={lang.t("Trait")} data-history-field="trait" type="textarea" value={model.trait} enableHistory={enableHistory} onChange={(event) => updateField("trait", event.target.value)} placeholder={lang.t("Distinctive trait or habit...")} className={fieldClass("trait")} /></div>
 			</div>
-			<div className="CharacterCard__field"><label>{lang.t("Description")}</label><EditableField aria-label={lang.t("Description")} data-history-field="description" type="textarea" value={model.description} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={lang.t("Character description...")} className={fieldClass("description")} /></div>
+			<div className="CharacterCard__field"><label>{lang.t("Description")}</label><EditableField aria-label={lang.t("Description")} data-history-field="description" type="textarea" value={model.description} enableHistory={enableHistory} onChange={(event) => updateField("description", event.target.value)} placeholder={type === "npc" ? lang.t("NPC description...") : lang.t("Character description...")} className={fieldClass("description")} /></div>
 		</>
 	);
 }
