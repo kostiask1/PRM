@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import React, { useMemo, type ReactElement, type ReactNode } from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
 import { Button } from "../../../../shared/ui/index.js";
 import { renderMentionText } from "../../../../features/entity-link/index.js";
 import { getNoteListPreview, lang, type SharedNote } from "../../../../shared/lib/index.js";
@@ -7,6 +8,46 @@ import { getCampaignEntityRenderKey, type CampaignSessionItem } from "../../mode
 import type { DomainId } from "../../../../entities/campaign/index.js";
 
 export type CampaignSection = "overview" | "story" | "sessions" | "characters" | "npc" | "locations" | "notes" | "gallery";
+
+const MARKDOWN_TAGS_WITH_MENTIONS = [
+	"p",
+	"strong",
+	"em",
+	"del",
+	"blockquote",
+	"li",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"td",
+	"th",
+	"a",
+	"span",
+];
+
+function renderMentionChildren(children: ReactNode): ReactNode {
+	return React.Children.map(children, renderMentionChild);
+}
+
+function renderMentionChild(child: ReactNode): ReactNode {
+	if (typeof child === "string") return renderMentionText(child);
+	const element = getRecursiveMentionElement(child);
+	return element
+		? React.cloneElement(element, { children: renderMentionChildren(element.props.children) })
+		: child;
+}
+
+function getRecursiveMentionElement(
+	child: ReactNode,
+): ReactElement<{ children?: ReactNode }> | null {
+	if (!React.isValidElement<{ children?: ReactNode }>(child)) return null;
+	if (!child.props.children) return null;
+	if (["code", "pre"].includes(String(child.type))) return null;
+	return child;
+}
 
 interface CampaignOverviewProps {
 	sessions: CampaignSessionItem[];
@@ -24,13 +65,28 @@ export default function CampaignOverview({ sessions, characters, notes, descript
 	onSelectSection, onOpenCharacter, onOpenSession, onCreateSession, renderSessionCard }: CampaignOverviewProps) {
 	const latest = sessions[sessions.length - 1];
 	const previewNotes = notes.filter((note) => note.title?.trim() || note.text?.trim()).slice(0, 2);
+	const components = useMemo<Components>(
+		() =>
+			Object.fromEntries(
+				MARKDOWN_TAGS_WITH_MENTIONS.map((tag) => [
+					tag,
+					({ children, ...tagProps }: { children?: ReactNode }) =>
+						React.createElement(tag, tagProps, renderMentionChildren(children)),
+				]),
+			) as Components,
+		[],
+	);
+	const content = description || lang.t("Gather your heroes and write the next chapter.");
+
 	return (
 		<div className="CampaignOverview">
 			<section className="CampaignOverview__hero">
 				<div className="CampaignOverview__heroContent">
 					<p className="WorkspaceEyebrow">{lang.t("Your story continues")}</p>
 					<h3>{latest?.name || lang.t("Your next adventure starts here")}</h3>
-					<p className="CampaignOverview__description">{renderMentionText(description || lang.t("Gather your heroes and write the next chapter."))}</p>
+					<div className="CampaignOverview__description">
+						<ReactMarkdown components={components}>{content}</ReactMarkdown>
+					</div>
 					<div className="CampaignOverview__heroActions">
 						<Button variant="primary" onClick={() => latest ? onOpenSession(latest) : onCreateSession()}>
 							{lang.t(latest ? "Open latest session" : "New session")}

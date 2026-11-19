@@ -168,6 +168,14 @@
     scrollbar-width: thin;
 }
 
+.CampaignOverview__description p {
+    margin: 0;
+}
+
+.CampaignOverview__description p:not(:last-child) {
+    margin-bottom: var(--space-2);
+}
+
 .CampaignOverview__heroActions {
     display: flex;
     align-items: center;
