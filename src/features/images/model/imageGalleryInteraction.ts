@@ -858,3 +858,72 @@ export function getGalleryPreviewKeyboardPlan({
 		stopPropagation: false,
 	};
 }
+
+export const GALLERY_DRAG_SCROLL_EDGE_MAX_PX = 96;
+export const GALLERY_DRAG_SCROLL_EDGE_RATIO = 0.18;
+export const GALLERY_DRAG_SCROLL_MIN_SPEED_PX_PER_SEC = 220;
+export const GALLERY_DRAG_SCROLL_MAX_SPEED_PX_PER_SEC = 1100;
+export const GALLERY_DRAG_SCROLL_STALE_MS = 650;
+
+export interface GalleryGridDragAutoScrollInput {
+	clientHeight: number;
+	pointerY: number;
+	scrollHeight: number;
+	scrollTop: number;
+	viewportBottom: number;
+	viewportTop: number;
+}
+
+/** Compute signed vertical auto-scroll velocity (px/s) near top or bottom grid edges. */
+export function getGalleryGridDragAutoScrollVelocity({
+	clientHeight,
+	pointerY,
+	scrollHeight,
+	scrollTop,
+	viewportBottom,
+	viewportTop,
+}: GalleryGridDragAutoScrollInput): number {
+	if (
+		!Number.isFinite(clientHeight) ||
+		!Number.isFinite(pointerY) ||
+		!Number.isFinite(scrollHeight) ||
+		!Number.isFinite(scrollTop) ||
+		!Number.isFinite(viewportBottom) ||
+		!Number.isFinite(viewportTop)
+	) {
+		return 0;
+	}
+	const viewportHeight = viewportBottom - viewportTop;
+	const maxScrollTop = scrollHeight - clientHeight;
+	if (
+		viewportHeight <= 0 ||
+		maxScrollTop <= 0 ||
+		pointerY < viewportTop ||
+		pointerY > viewportBottom
+	) {
+		return 0;
+	}
+	const edgeSize = Math.min(
+		GALLERY_DRAG_SCROLL_EDGE_MAX_PX,
+		viewportHeight * GALLERY_DRAG_SCROLL_EDGE_RATIO,
+	);
+	if (edgeSize <= 0) return 0;
+
+	const speedSpan =
+		GALLERY_DRAG_SCROLL_MAX_SPEED_PX_PER_SEC -
+		GALLERY_DRAG_SCROLL_MIN_SPEED_PX_PER_SEC;
+	const distanceFromTop = pointerY - viewportTop;
+	if (distanceFromTop <= edgeSize && scrollTop > 0) {
+		const intensity = Math.min(1, Math.max(0, 1 - distanceFromTop / edgeSize));
+		return -(GALLERY_DRAG_SCROLL_MIN_SPEED_PX_PER_SEC + intensity * speedSpan);
+	}
+	const distanceFromBottom = viewportBottom - pointerY;
+	if (distanceFromBottom <= edgeSize && scrollTop < maxScrollTop) {
+		const intensity = Math.min(
+			1,
+			Math.max(0, 1 - distanceFromBottom / edgeSize),
+		);
+		return GALLERY_DRAG_SCROLL_MIN_SPEED_PX_PER_SEC + intensity * speedSpan;
+	}
+	return 0;
+}

@@ -522,6 +522,23 @@ export function useImageGalleryMutations({
 		setDragOverTarget(null);
 	}, []);
 
+	useEffect(() => {
+		if (!dragSource) return undefined;
+		const clearDragState = () => {
+			setDragSource(null);
+			setDragOverTarget(null);
+			setIsDraggingOver(false);
+		};
+		window.addEventListener("dragend", clearDragState, true);
+		window.addEventListener("pointerdown", clearDragState, true);
+		window.addEventListener("blur", clearDragState);
+		return () => {
+			window.removeEventListener("dragend", clearDragState, true);
+			window.removeEventListener("pointerdown", clearDragState, true);
+			window.removeEventListener("blur", clearDragState);
+		};
+	}, [dragSource]);
+
 	return {
 		dragOverTarget,
 		dragSource,

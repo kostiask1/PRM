@@ -725,6 +725,10 @@ import {
 	buildGalleryMovePayloads,
 	createGalleryBulkDeleteConfirmation,
 	findGalleryPreviewImageIndex,
+	GALLERY_DRAG_SCROLL_EDGE_MAX_PX,
+	GALLERY_DRAG_SCROLL_EDGE_RATIO,
+	GALLERY_DRAG_SCROLL_MAX_SPEED_PX_PER_SEC,
+	GALLERY_DRAG_SCROLL_MIN_SPEED_PX_PER_SEC,
 	getAdjacentGalleryPreviewImage,
 	getGalleryBulkDeleteConfirmationPlan,
 	getGalleryBulkDeleteSummary,
@@ -732,6 +736,7 @@ import {
 	getGalleryFolderDragOverPlan,
 	getGalleryFolderDropTarget,
 	getGalleryFolderRenameName,
+	getGalleryGridDragAutoScrollVelocity,
 	getGalleryGridDragOverPlan,
 	getGalleryGridDropPlan,
 	getGalleryGridDropTarget,
@@ -70267,6 +70272,127 @@ await run("image gallery interaction plans validate drops, moves, and selection"
 		target: readonlyGridTarget,
 	});
 	assert.equal(delegatedGridDrop.target, readonlyGridTarget);
+	const autoScrollBase = {
+		clientHeight: 600,
+		scrollHeight: 1600,
+		scrollTop: 300,
+		viewportTop: 100,
+		viewportBottom: 700,
+	};
+	const expectedEdge = Math.min(
+		GALLERY_DRAG_SCROLL_EDGE_MAX_PX,
+		600 * GALLERY_DRAG_SCROLL_EDGE_RATIO,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			scrollHeight: 600,
+			pointerY: 110,
+		}),
+		0,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			pointerY: 400,
+		}),
+		0,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			pointerY: 99,
+		}),
+		0,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			pointerY: 701,
+		}),
+		0,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			pointerY: Number.NaN,
+		}),
+		0,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			viewportBottom: 100,
+			pointerY: 100,
+		}),
+		0,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			scrollTop: 0,
+			pointerY: 100,
+		}),
+		0,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			pointerY: 100,
+		}),
+		-GALLERY_DRAG_SCROLL_MAX_SPEED_PX_PER_SEC,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			pointerY: 100 + expectedEdge,
+		}),
+		-GALLERY_DRAG_SCROLL_MIN_SPEED_PX_PER_SEC,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			scrollTop: 1000,
+			pointerY: 700,
+		}),
+		0,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			pointerY: 700,
+		}),
+		GALLERY_DRAG_SCROLL_MAX_SPEED_PX_PER_SEC,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			...autoScrollBase,
+			pointerY: 700 - expectedEdge,
+		}),
+		GALLERY_DRAG_SCROLL_MIN_SPEED_PX_PER_SEC,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			clientHeight: 200,
+			scrollHeight: 800,
+			scrollTop: 100,
+			viewportTop: 100,
+			viewportBottom: 300,
+			pointerY: 100 + 200 * GALLERY_DRAG_SCROLL_EDGE_RATIO,
+		}),
+		-GALLERY_DRAG_SCROLL_MIN_SPEED_PX_PER_SEC,
+	);
+	assert.equal(
+		getGalleryGridDragAutoScrollVelocity({
+			clientHeight: 200,
+			scrollHeight: 800,
+			scrollTop: 100,
+			viewportTop: 100,
+			viewportBottom: 300,
+			pointerY: 200,
+		}),
+		0,
+	);
 	const selection = getGallerySelectionPlan({
 		allSubs: ["official", "custom"],
 		filenames: new Set(),

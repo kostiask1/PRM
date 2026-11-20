@@ -5,8 +5,10 @@ import { lang } from "../../../shared/lib/index.js";
 import type { ImageLocation } from "../api/imageApi.ts";
 import type { GalleryImage } from "../model/contracts.ts";
 import {
+	GALLERY_DRAG_SCROLL_STALE_MS,
 	getAdjacentGalleryPreviewImage,
 	getGalleryEscapePlan,
+	getGalleryGridDragAutoScrollVelocity,
 	getGalleryPreviewKeyboardPlan,
 	getGalleryPreviewNavigationState,
 	type GalleryEscapePlan,
@@ -205,6 +207,7 @@ export function useImageGalleryUiController({
 		campaigns,
 		categories,
 		clearSelection,
+		dragSource,
 		hasSelection,
 		images,
 		selectedCat,
@@ -291,6 +294,124 @@ export function useImageGalleryUiController({
 		});
 		return () => cancelAnimationFrame(frame);
 	}, [isOpen, galleryColumns, galleryItemSize]);
+
+	React.useEffect(() => {
+		if (!isOpen || !dragSource) return undefined;
+		const element = galleryViewportRef.current;
+		if (!element) return undefined;
+
+		let frameId = 0;
+		let lastFrameTime = 0;
+		let lastDragOverTime = 0;
+		let pointerY: number | null = null;
+		let scrollCarry = 0;
+
+		const stopAutoScroll = () => {
+			if (frameId) {
+				cancelAnimationFrame(frameId);
+				frameId = 0;
+			}
+			lastFrameTime = 0;
+			lastDragOverTime = 0;
+			pointerY = null;
+			scrollCarry = 0;
+		};
+
+		const measureVelocity = (currentPointerY: number): number => {
+			const rect = element.getBoundingClientRect();
+			return getGalleryGridDragAutoScrollVelocity({
+				clientHeight: element.clientHeight,
+				pointerY: currentPointerY,
+				scrollHeight: element.scrollHeight,
+				scrollTop: element.scrollTop,
+				viewportBottom: rect.bottom,
+				viewportTop: rect.top,
+			});
+		};
+
+		const stepAutoScroll = (now: number) => {
+			frameId = 0;
+			if (
+				pointerY === null ||
+				now - lastDragOverTime > GALLERY_DRAG_SCROLL_STALE_MS
+			) {
+				stopAutoScroll();
+				return;
+			}
+			const velocity = measureVelocity(pointerY);
+			if (velocity === 0) {
+				stopAutoScroll();
+				return;
+			}
+			const dt =
+				lastFrameTime > 0 && now > lastFrameTime
+					? Math.min((now - lastFrameTime) / 1000, 0.05)
+					: 1 / 60;
+			lastFrameTime = now;
+			if (Math.sign(velocity) !== Math.sign(scrollCarry)) {
+				scrollCarry = 0;
+			}
+			const rawDelta = velocity * dt + scrollCarry;
+			const step = Math.trunc(rawDelta);
+			scrollCarry = rawDelta - step;
+			if (step !== 0) {
+				const before = element.scrollTop;
+				element.scrollTop = before + step;
+				if (Math.abs(element.scrollTop - before) < 0.01) {
+					stopAutoScroll();
+					return;
+				}
+			}
+			frameId = requestAnimationFrame(stepAutoScroll);
+		};
+
+		const handleGridDragOverCapture = (event: globalThis.DragEvent) => {
+			pointerY = event.clientY;
+			lastDragOverTime = performance.now();
+			const velocity = measureVelocity(event.clientY);
+			if (velocity === 0) {
+				stopAutoScroll();
+				return;
+			}
+			if (!frameId) {
+				lastFrameTime = performance.now();
+				frameId = requestAnimationFrame(stepAutoScroll);
+			}
+		};
+
+		const handleGridDragLeave = (event: globalThis.DragEvent) => {
+			if (
+				event.relatedTarget instanceof Node &&
+				element.contains(event.relatedTarget)
+			) {
+				return;
+			}
+			stopAutoScroll();
+		};
+
+		const handleKeyDownCapture = (event: globalThis.KeyboardEvent) => {
+			if (event.key === "Escape") stopAutoScroll();
+		};
+
+		element.addEventListener("dragover", handleGridDragOverCapture, true);
+		element.addEventListener("dragleave", handleGridDragLeave);
+		window.addEventListener("drop", stopAutoScroll, true);
+		window.addEventListener("dragend", stopAutoScroll, true);
+		window.addEventListener("pointerdown", stopAutoScroll, true);
+		window.addEventListener("keydown", handleKeyDownCapture, true);
+		window.addEventListener("blur", stopAutoScroll);
+
+		return () => {
+			stopAutoScroll();
+			element.removeEventListener("dragover", handleGridDragOverCapture, true);
+			element.removeEventListener("dragleave", handleGridDragLeave);
+			window.removeEventListener("drop", stopAutoScroll, true);
+			window.removeEventListener("dragend", stopAutoScroll, true);
+			window.removeEventListener("pointerdown", stopAutoScroll, true);
+			window.removeEventListener("keydown", handleKeyDownCapture, true);
+			window.removeEventListener("blur", stopAutoScroll);
+		};
+	}, [isOpen, dragSource]);
 
 	React.useEffect(() => {
 		resolvePendingGallerySelection({
