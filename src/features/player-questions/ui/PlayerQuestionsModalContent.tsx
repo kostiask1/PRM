@@ -1,12 +1,11 @@
 import {
 	useCallback,
 	useEffect,
-	useLayoutEffect,
 	useRef,
 	useState,
 	type ChangeEvent,
+	type MutableRefObject,
 } from "react";
-import ReactList from "react-list";
 
 import questionsCatalog from "../../../../database/questions.json";
 import "../../../assets/components/PlayerQuestionsModalContent.css";
@@ -30,13 +29,23 @@ function easeOutCubic(value: number): number {
 	return 1 - Math.pow(1 - value, 3);
 }
 
+function cancelScheduledScroll(
+	animationFrameRef: MutableRefObject<number | null>,
+): void {
+	if (animationFrameRef.current === null) return;
+	cancelAnimationFrame(animationFrameRef.current);
+	animationFrameRef.current = null;
+}
+
 function scrollToQuestion(
 	container: HTMLDivElement | null,
 	target: HTMLDivElement | undefined,
+	animationFrameRef: MutableRefObject<number | null>,
 ): void {
+	cancelScheduledScroll(animationFrameRef);
 	if (!container || !target) return;
-	const scrollContainer = container;
 
+	const scrollContainer = container;
 	const containerRect = scrollContainer.getBoundingClientRect();
 	const targetRect = target.getBoundingClientRect();
 	const startTop = scrollContainer.scrollTop;
@@ -46,18 +55,27 @@ function scrollToQuestion(
 		containerRect.top -
 		scrollContainer.clientHeight / 2 +
 		target.clientHeight / 2;
-	const maxTop = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+	const maxTop = Math.max(
+		0,
+		scrollContainer.scrollHeight - scrollContainer.clientHeight,
+	);
 	const endTop = Math.max(0, Math.min(targetTop, maxTop));
 	const distance = endTop - startTop;
+	if (Math.abs(distance) < 0.5) return;
+
 	const startedAt = performance.now();
 
 	function step(now: number): void {
 		const progress = Math.min((now - startedAt) / SCROLL_DURATION_MS, 1);
 		scrollContainer.scrollTop = startTop + distance * easeOutCubic(progress);
-		if (progress < 1) requestAnimationFrame(step);
+		if (progress < 1) {
+			animationFrameRef.current = requestAnimationFrame(step);
+			return;
+		}
+		animationFrameRef.current = null;
 	}
 
-	requestAnimationFrame(step);
+	animationFrameRef.current = requestAnimationFrame(step);
 }
 
 export default function PlayerQuestionsModalContent({
@@ -68,30 +86,31 @@ export default function PlayerQuestionsModalContent({
 	const questions = getLocalizedQuestions(questionsCatalog, currentLanguage);
 	const QUESTIONS_COUNT = questions.length;
 	const processedResultIdRef = useRef<unknown>(getDiceResultId(rolledResult));
-	const listRef = useRef<ReactList>(null);
-	const rootRef = useRef<HTMLDivElement>(null);
+	const skippedSearchScrollValueRef = useRef<string | null>(null);
+	const scrollAnimationFrameRef = useRef<number | null>(null);
+	const listContainerRef = useRef<HTMLDivElement>(null);
 	const questionRefs = useRef<Partial<Record<number, HTMLDivElement>>>({});
 	const [activeQuestionId, setActiveQuestionId] = useState<number | null>(null);
 	const [questionSearch, setQuestionSearch] = useState("");
-	const [isListReady, setIsListReady] = useState(false);
 	const debouncedQuestionSearch = useDebounce(
 		questionSearch,
 		useSearchDebounce ? SEARCH_DEBOUNCE_MS : 0,
 	);
 	const questionRollFormula = getQuestionRollFormula(QUESTIONS_COUNT);
 
-	useLayoutEffect(() => {
-		setIsListReady(Boolean(rootRef.current));
+	const cancelScrollAnimation = useCallback(() => {
+		cancelScheduledScroll(scrollAnimationFrameRef);
 	}, []);
+
+	useEffect(() => cancelScrollAnimation, [cancelScrollAnimation]);
 
 	const scrollToQuestionId = useCallback((questionId: number) => {
 		setActiveQuestionId(questionId);
-		listRef.current?.scrollTo(questionId - 1);
-		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				scrollToQuestion(rootRef.current, questionRefs.current[questionId]);
-			});
-		});
+		scrollToQuestion(
+			listContainerRef.current,
+			questionRefs.current[questionId],
+			scrollAnimationFrameRef,
+		);
 	}, []);
 
 	useEffect(() => {
@@ -100,11 +119,21 @@ export default function PlayerQuestionsModalContent({
 		processedResultIdRef.current = roll.resultId;
 		if (roll.questionId === null) return;
 
-		setQuestionSearch(String(roll.questionId));
+		const nextSearch = String(roll.questionId);
+		skippedSearchScrollValueRef.current = nextSearch;
+		setQuestionSearch(nextSearch);
 		scrollToQuestionId(roll.questionId);
 	}, [QUESTIONS_COUNT, rolledResult, scrollToQuestionId]);
 
 	useEffect(() => {
+		if (
+			skippedSearchScrollValueRef.current !== null &&
+			debouncedQuestionSearch === skippedSearchScrollValueRef.current
+		) {
+			skippedSearchScrollValueRef.current = null;
+			return;
+		}
+
 		const questionId = getQuestionSearchTarget(
 			debouncedQuestionSearch,
 			QUESTIONS_COUNT,
@@ -121,42 +150,14 @@ export default function PlayerQuestionsModalContent({
 	};
 
 	const handleQuestionSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+		skippedSearchScrollValueRef.current = null;
 		setQuestionSearch(
 			normalizeQuestionSearch(event.target.value, QUESTIONS_COUNT),
 		);
 	};
 
-	const renderQuestion = (index: number) => {
-		const questionId = index + 1;
-		const question = questions[index];
-
-		return (
-			<div
-				key={questionId}
-				ref={(node) => {
-					if (node) questionRefs.current[questionId] = node;
-					else delete questionRefs.current[questionId];
-				}}
-				className={
-					activeQuestionId === questionId
-						? "PlayerQuestionsModalContent__item PlayerQuestionsModalContent__item__active"
-						: "PlayerQuestionsModalContent__item"
-				}
-				onClick={() => setActiveQuestionId(questionId)}
-				role="listitem"
-			>
-				<span className="PlayerQuestionsModalContent__number">
-					{questionId}
-				</span>
-				<span className="PlayerQuestionsModalContent__question">
-					{question}
-				</span>
-			</div>
-		);
-	};
-
 	return (
-		<div ref={rootRef} className="PlayerQuestionsModalContent">
+		<div className="PlayerQuestionsModalContent">
 			<div className="PlayerQuestionsModalContent__toolbar">
 				<Button variant="primary" icon="dice" onClick={rollQuestion}>
 					{lang.t("Roll 1d{count}", { count: QUESTIONS_COUNT })}
@@ -177,17 +178,40 @@ export default function PlayerQuestionsModalContent({
 				</div>
 			</div>
 
-			<div className="PlayerQuestionsModalContent__list" role="list">
-				{isListReady && (
-					<ReactList
-						key={currentLanguage}
-						ref={listRef}
-						itemRenderer={renderQuestion}
-						length={QUESTIONS_COUNT}
-						scrollParentGetter={() => rootRef.current}
-						type="uniform"
-					/>
-				)}
+			<div
+				ref={listContainerRef}
+				className="PlayerQuestionsModalContent__list"
+				role="list"
+				onWheel={cancelScrollAnimation}
+				onTouchStart={cancelScrollAnimation}
+				onPointerDown={cancelScrollAnimation}
+			>
+				{questions.map((question, index) => {
+					const questionId = index + 1;
+					return (
+						<div
+							key={questionId}
+							ref={(node) => {
+								if (node) questionRefs.current[questionId] = node;
+								else delete questionRefs.current[questionId];
+							}}
+							className={
+								activeQuestionId === questionId
+									? "PlayerQuestionsModalContent__item PlayerQuestionsModalContent__item__active"
+									: "PlayerQuestionsModalContent__item"
+							}
+							onClick={() => setActiveQuestionId(questionId)}
+							role="listitem"
+						>
+							<span className="PlayerQuestionsModalContent__number">
+								{questionId}
+							</span>
+							<span className="PlayerQuestionsModalContent__question">
+								{question}
+							</span>
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);
