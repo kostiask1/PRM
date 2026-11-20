@@ -5,6 +5,7 @@ import type { ImageAsset } from "../api/imageApi.ts";
 import type { GalleryDragOverTarget, GalleryImage } from "../model/contracts.ts";
 import type { ImageGalleryRuntime } from "../model/ImageGalleryRuntime.tsx";
 import {
+	getBestiaryFolderSourceCodeBadge,
 	getGalleryFolderPresentation,
 	type GalleryFolderPresentation,
 	type GalleryPresentationItem,
@@ -188,9 +189,25 @@ function ImageGalleryFolderVisual({
 	sub: string;
 	toggleSelect: ImageGalleryController["toggleSelect"];
 }) {
+	const sourceCodeBadge = getBestiaryFolderSourceCodeBadge(
+		sub,
+		presentation.isBestiaryFolder,
+	);
 	return (
 		<div className="ImageGallery__image_wrap">
-			<Icon name={presentation.folderIcon} size={48} />
+			{sourceCodeBadge ? (
+				<span className="ImageGallery__folder_icon_wrap" aria-hidden="true">
+					<Icon name="folder" size={48} strokeWidth={1.35} />
+					<span
+						className="ImageGallery__folder_source_code"
+						data-size={sourceCodeBadge.size}
+					>
+						{sourceCodeBadge.label}
+					</span>
+				</span>
+			) : (
+				<Icon name={presentation.folderIcon} size={48} />
+			)}
 			{presentation.hasFiles && (
 				<span className="ImageGallery__folder_file_badge" aria-hidden="true">
 					<Icon name="file" size={18} />

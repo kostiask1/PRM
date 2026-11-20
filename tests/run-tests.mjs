@@ -703,6 +703,7 @@ import {
 	GALLERY_ITEM_SIZE_MAX,
 	GALLERY_ITEM_SIZE_MIN,
 	GALLERY_ITEM_SIZE_STEP,
+	getBestiaryFolderSourceCodeBadge,
 	getGalleryFolderPresentation,
 	getGalleryFolderSubcategory,
 	getGlobalGalleryResultNavigationPlan,
@@ -69901,6 +69902,34 @@ await run("image gallery presentation preserves history and unique items", () =>
 		assert.equal(presentation.subcategory, sub);
 	}
 	assert.equal(getGalleryFolderSubcategory("root/nested", "leaf"), "root/nested/leaf");
+	assert.equal(getBestiaryFolderSourceCodeBadge("PHB", false), null);
+	assert.equal(getBestiaryFolderSourceCodeBadge("npc", false), null);
+	assert.equal(getBestiaryFolderSourceCodeBadge("   ", true), null);
+	assert.equal(getBestiaryFolderSourceCodeBadge("", true), null);
+	assert.deepEqual(getBestiaryFolderSourceCodeBadge("PHB", true), {
+		label: "PHB",
+		size: "short",
+	});
+	assert.deepEqual(getBestiaryFolderSourceCodeBadge(" XPHB ", true), {
+		label: "XPHB",
+		size: "medium",
+	});
+	assert.deepEqual(getBestiaryFolderSourceCodeBadge("BGDIA", true), {
+		label: "BGDIA",
+		size: "medium",
+	});
+	assert.deepEqual(getBestiaryFolderSourceCodeBadge("IDRotF", true), {
+		label: "IDRotF",
+		size: "long",
+	});
+	assert.deepEqual(getBestiaryFolderSourceCodeBadge("DitLCoT", true), {
+		label: "DitLCoT",
+		size: "long",
+	});
+	assert.deepEqual(getBestiaryFolderSourceCodeBadge("AitFR-ISF", true), {
+		label: "AitFR-ISF",
+		size: "xlong",
+	});
 });
 
 await run("image gallery search presentation preserves scope and reset policies", () => {

@@ -63,6 +63,13 @@ export interface GalleryFolderPresentation {
 	subcategory: string;
 }
 
+export type BestiaryFolderCodeSize = "short" | "medium" | "long" | "xlong";
+
+export interface BestiaryFolderSourceCodeBadge {
+	label: string;
+	size: BestiaryFolderCodeSize;
+}
+
 type GallerySearchScope = Exclude<ImageGalleryContentScope, "local">;
 
 export interface GallerySearchScopeControl {
@@ -344,6 +351,25 @@ export function getGalleryFolderPresentation({
 		isSelected,
 		subcategory: getGalleryFolderSubcategory(selectedSub, sub),
 	};
+}
+
+/** Derive compact source code badge text and sizing bucket for Bestiary folders. */
+export function getBestiaryFolderSourceCodeBadge(
+	sub: string,
+	isBestiaryFolder: boolean,
+): BestiaryFolderSourceCodeBadge | null {
+	if (!isBestiaryFolder) return null;
+	const label = String(sub || "").trim();
+	if (!label) return null;
+	const size: BestiaryFolderCodeSize =
+		label.length <= 3
+			? "short"
+			: label.length <= 5
+				? "medium"
+				: label.length <= 7
+					? "long"
+					: "xlong";
+	return { label, size };
 }
 
 export function getGalleryPathKey(

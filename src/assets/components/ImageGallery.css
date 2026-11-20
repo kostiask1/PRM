@@ -558,6 +558,63 @@
 	height: clamp(48px, 38%, 128px);
 }
 
+.ImageGallery__folder_icon_wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: clamp(68px, 72%, 220px);
+	height: clamp(68px, 72%, 220px);
+	container-type: inline-size;
+}
+
+.ImageGallery__folder_icon_wrap > .Icon {
+	width: 100%;
+	height: 100%;
+}
+
+.ImageGallery__item__folder.is_bestiary .ImageGallery__folder_icon_wrap > .Icon path {
+	fill: color-mix(in srgb, currentColor, transparent 88%);
+}
+
+.ImageGallery__folder_source_code {
+	position: absolute;
+	top: 29%;
+	right: 12%;
+	bottom: 15%;
+	left: 12%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--font-heading);
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: 0.02em;
+	color: color-mix(in srgb, var(--warning), var(--text) 25%);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	pointer-events: none;
+	user-select: none;
+}
+
+.ImageGallery__folder_source_code[data-size="short"] {
+	font-size: 25cqi;
+}
+
+.ImageGallery__folder_source_code[data-size="medium"] {
+	font-size: 19.5cqi;
+}
+
+.ImageGallery__folder_source_code[data-size="long"] {
+	font-size: 14.5cqi;
+}
+
+.ImageGallery__folder_source_code[data-size="xlong"] {
+	font-size: 12cqi;
+	letter-spacing: -0.02em;
+}
+
 .ImageGallery__item__folder.is_selected .ImageGallery__image_wrap {
 	background: var(--accent);
 	color: var(--text-on-accent);
