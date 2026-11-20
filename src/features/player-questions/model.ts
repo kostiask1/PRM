@@ -11,8 +11,38 @@ export interface QuestionDiceRoll {
 	questionId: number | null;
 }
 
+export type LocalizedQuestionsCatalog = Record<string, readonly string[]>;
+
 function isRecord(value: unknown): value is UnknownRecord {
 	return typeof value === "object" && value !== null;
+}
+
+function getNonEmptyQuestionList(value: unknown): readonly string[] | null {
+	return Array.isArray(value) && value.length > 0 ? value : null;
+}
+
+/** Resolve the localized question list from a language-keyed catalog with fallback to English. */
+export function getLocalizedQuestions(
+	catalog: LocalizedQuestionsCatalog | readonly string[],
+	language: unknown,
+): readonly string[] {
+	if (Array.isArray(catalog)) return catalog;
+	if (!isRecord(catalog)) return [];
+
+	const normalizedLanguage = String(language || "").trim().toLowerCase();
+	const baseLanguage = normalizedLanguage.split(/[-_]/)[0];
+
+	return (
+		(normalizedLanguage &&
+			getNonEmptyQuestionList(catalog[normalizedLanguage])) ||
+		(baseLanguage && getNonEmptyQuestionList(catalog[baseLanguage])) ||
+		getNonEmptyQuestionList(catalog.en) ||
+		Object.values(catalog).find(
+			(value): value is readonly string[] =>
+				Array.isArray(value) && value.length > 0,
+		) ||
+		[]
+	);
 }
 
 export function getDiceResultId(value: unknown): unknown {

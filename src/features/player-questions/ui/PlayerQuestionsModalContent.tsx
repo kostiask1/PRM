@@ -8,13 +8,14 @@ import {
 } from "react";
 import ReactList from "react-list";
 
-import questions from "../../../../database/questions.json";
+import questionsCatalog from "../../../../database/questions.json";
 import "../../../assets/components/PlayerQuestionsModalContent.css";
 import { lang, useDebounce } from "../../../shared/lib/index.js";
 import { Button, TextInput } from "../../../shared/ui/index.js";
 import {
 	QUESTION_ROLL_CONTEXT,
 	getDiceResultId,
+	getLocalizedQuestions,
 	getQuestionDiceRoll,
 	getQuestionRollFormula,
 	getQuestionSearchTarget,
@@ -24,7 +25,6 @@ import type { PlayerQuestionsModalContentProps } from "./playerQuestionsComposit
 
 const SCROLL_DURATION_MS = 260;
 const SEARCH_DEBOUNCE_MS = 250;
-const QUESTIONS_COUNT = questions.length;
 
 function easeOutCubic(value: number): number {
 	return 1 - Math.pow(1 - value, 3);
@@ -64,6 +64,9 @@ export default function PlayerQuestionsModalContent({
 	runtime,
 }: PlayerQuestionsModalContentProps) {
 	const { rolledResult, useSearchDebounce } = runtime;
+	const currentLanguage = lang.getLanguage();
+	const questions = getLocalizedQuestions(questionsCatalog, currentLanguage);
+	const QUESTIONS_COUNT = questions.length;
 	const processedResultIdRef = useRef<unknown>(getDiceResultId(rolledResult));
 	const listRef = useRef<ReactList>(null);
 	const rootRef = useRef<HTMLDivElement>(null);
@@ -99,7 +102,7 @@ export default function PlayerQuestionsModalContent({
 
 		setQuestionSearch(String(roll.questionId));
 		scrollToQuestionId(roll.questionId);
-	}, [rolledResult, scrollToQuestionId]);
+	}, [QUESTIONS_COUNT, rolledResult, scrollToQuestionId]);
 
 	useEffect(() => {
 		const questionId = getQuestionSearchTarget(
@@ -108,7 +111,7 @@ export default function PlayerQuestionsModalContent({
 		);
 		if (questionId === null) return;
 		scrollToQuestionId(questionId);
-	}, [debouncedQuestionSearch, scrollToQuestionId]);
+	}, [QUESTIONS_COUNT, debouncedQuestionSearch, scrollToQuestionId]);
 
 	const rollQuestion = () => {
 		runtime.requestDiceRoll({
@@ -177,6 +180,7 @@ export default function PlayerQuestionsModalContent({
 			<div className="PlayerQuestionsModalContent__list" role="list">
 				{isListReady && (
 					<ReactList
+						key={currentLanguage}
 						ref={listRef}
 						itemRenderer={renderQuestion}
 						length={QUESTIONS_COUNT}

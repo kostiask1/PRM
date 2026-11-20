@@ -881,6 +881,7 @@ import {
 } from "../src/shared/ui/modalModel.ts";
 import {
 	getDiceResultId,
+	getLocalizedQuestions,
 	getQuestionDiceRoll,
 	getQuestionRollFormula,
 	getQuestionSearchTarget,
@@ -29088,6 +29089,77 @@ await run("player questions preserve dice formulas and result targeting", () => 
 		{ resultId: 7, questionId: null },
 	);
 });
+
+await run(
+	"player questions select localized lists and fall back safely",
+	async () => {
+		const sampleCatalog = {
+			uk: ["Питання 1?", "Питання 2?"],
+			en: ["Question 1?", "Question 2?"],
+		};
+
+		assert.deepEqual(
+			getLocalizedQuestions(sampleCatalog, "uk"),
+			sampleCatalog.uk,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(sampleCatalog, "UK"),
+			sampleCatalog.uk,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(sampleCatalog, "uk-UA"),
+			sampleCatalog.uk,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(sampleCatalog, "en"),
+			sampleCatalog.en,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(sampleCatalog, "en-US"),
+			sampleCatalog.en,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(sampleCatalog, "pl"),
+			sampleCatalog.en,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(sampleCatalog, null),
+			sampleCatalog.en,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(sampleCatalog, ""),
+			sampleCatalog.en,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions({ uk: ["Тільки українське?"] }, "fr"),
+			["Тільки українське?"],
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(["Legacy question?"], "uk"),
+			["Legacy question?"],
+		);
+
+		const bundledCatalog = JSON.parse(
+			await fs.readFile("database/questions.json", "utf8"),
+		);
+		assert.equal(Array.isArray(bundledCatalog.uk), true);
+		assert.equal(Array.isArray(bundledCatalog.en), true);
+		assert.equal(bundledCatalog.uk.length, 100);
+		assert.equal(bundledCatalog.en.length, 100);
+		assert.deepEqual(
+			getLocalizedQuestions(bundledCatalog, "uk"),
+			bundledCatalog.uk,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(bundledCatalog, "en"),
+			bundledCatalog.en,
+		);
+		assert.deepEqual(
+			getLocalizedQuestions(bundledCatalog, "de"),
+			bundledCatalog.en,
+		);
+	},
+);
 
 await run("dice presentation preserves roll payloads and probability labels", () => {
 	assert.equal(normalizeDiceFormula("2d6 × 3"), "2d6 * 3");
