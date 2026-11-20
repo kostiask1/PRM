@@ -635,6 +635,21 @@ export function getMonsterTokenSources(
 	};
 }
 
+export function getMonsterTokenPreviewTitle(
+	monsterName: unknown,
+	fallbackTitle: string,
+): string {
+	const name = String(monsterName ?? "").trim();
+	return name || fallbackTitle;
+}
+
+export function canPreviewMonsterToken(
+	localSrc: string,
+	hasImageError: boolean,
+): boolean {
+	return Boolean(localSrc) && !hasImageError;
+}
+
 export function shouldShowMonsterTokenDropzone(
 	input: MonsterTokenVisibilityInput,
 ): boolean {

@@ -1276,5 +1276,7 @@
 	"Grid item size": "Розмір елементів у сітці",
 	"Decrease item size": "Зменшити розмір елементів",
 	"Increase item size": "Збільшити розмір елементів",
-	"Reset item size": "Скинути розмір елементів"
+	"Reset item size": "Скинути розмір елементів",
+	"Token preview": "Перегляд токена",
+	"Open token preview: {name}": "Відкрити токен: {name}"
 }

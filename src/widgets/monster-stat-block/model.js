@@ -1,4 +1,5 @@
 export {
+	canPreviewMonsterToken,
 	executeMonsterAction,
 	executeMonsterTokenUpload,
 	getChangedFieldClass,
@@ -11,6 +12,7 @@ export {
 	getMonsterSpellcastingEntryPresentation,
 	getMonsterSpellcastingEntries,
 	getMonsterSpellSlug,
+	getMonsterTokenPreviewTitle,
 	getMonsterTokenSources,
 	getMonsterTokenSectionPresentation,
 	getSenseTextParts,

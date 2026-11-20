@@ -249,6 +249,7 @@ import {
 	sortBestiaryMonsters,
 } from "../src/widgets/bestiary-browser/model.js";
 import {
+	canPreviewMonsterToken,
 	executeMonsterAction,
 	executeMonsterTokenUpload,
 	getChangedFieldClass,
@@ -258,6 +259,7 @@ import {
 	getMonsterSpellSlug,
 	getMonsterSpellcastingEntries,
 	getMonsterSpellcastingEntryPresentation,
+	getMonsterTokenPreviewTitle,
 	getMonsterTokenSources,
 	getMonsterTokenSectionPresentation,
 	getSenseTextParts,
@@ -49521,6 +49523,27 @@ await run("monster stat block presentation policies normalize source variants", 
 			hasTokenImageChange: false,
 		}).showReplaceAction,
 		false,
+	);
+	assert.equal(
+		canPreviewMonsterToken("/api/bestiary/tokens/MM/Goblin.webp", false),
+		true,
+	);
+	assert.equal(
+		canPreviewMonsterToken("/api/bestiary/tokens/MM/Goblin.webp", true),
+		false,
+	);
+	assert.equal(canPreviewMonsterToken("", false), false);
+	assert.equal(
+		getMonsterTokenPreviewTitle("  Goblin  ", "Token preview"),
+		"Goblin",
+	);
+	assert.equal(
+		getMonsterTokenPreviewTitle("   ", "Token preview"),
+		"Token preview",
+	);
+	assert.equal(
+		getMonsterTokenPreviewTitle(null, "Token preview"),
+		"Token preview",
 	);
 
 	assert.deepEqual(

@@ -1,4 +1,11 @@
-import React, { useRef, useState, type DragEvent, type ReactNode } from "react";
+import React, {
+	useRef,
+	useState,
+	type DragEvent,
+	type KeyboardEvent,
+	type MouseEvent,
+	type ReactNode,
+} from "react";
 import type {
 	BestiaryMonster,
 	MonsterEntry,
@@ -9,7 +16,7 @@ import { ClickToCopy } from "../../../features/clipboard/index.js";
 import { RollDice } from "../../../features/dice/index.js";
 import { ImageDropzone } from "../../../features/images/index.js";
 import { classNames, lang } from "../../../shared/lib/index.js";
-import { Button, Icon, Tooltip } from "../../../shared/ui/index.js";
+import { Button, Icon, Modal, Tooltip } from "../../../shared/ui/index.js";
 import type {
 	LoadedMonsterSpell,
 	MonsterNameRowPresentation,
@@ -22,10 +29,12 @@ import type {
 	TokenDragPayload,
 } from "../model/monsterStatBlockPresentation.ts";
 import {
+	canPreviewMonsterToken,
 	executeMonsterAction,
 	getMonsterMetadataPresentation,
 	getMonsterNameRowPresentation,
 	getMonsterSpellcastingEntryPresentation,
+	getMonsterTokenPreviewTitle,
 	getMonsterTokenSectionPresentation,
 } from "../model/monsterStatBlockPresentation.ts";
 import { MonsterStatBlockRulesLink } from "./monsterStatBlockRichContent.ts";
@@ -109,19 +118,46 @@ function MonsterTokenImage({
 	"monster" | "sources" | "dragPayload" | "onReplace" | "onImageError"
 > & { presentation: MonsterTokenSectionPresentation }) {
 	const [hasError, setHasError] = useState(false);
+	const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 	const prevSrcRef = useRef(sources.localSrc);
 	if (prevSrcRef.current !== sources.localSrc) {
 		prevSrcRef.current = sources.localSrc;
 		setHasError(false);
+		setIsPreviewOpen(false);
 	}
-	const hasValidSrc = Boolean(sources.localSrc) && !hasError;
+	const hasValidSrc = canPreviewMonsterToken(sources.localSrc, hasError);
+	const previewTitle = getMonsterTokenPreviewTitle(
+		monster.name,
+		lang.t("Token preview"),
+	);
 
 	return (
 		<>
 			<div
-				className="MonsterStatBlock__tokenDragProxy"
+				className={classNames("MonsterStatBlock__tokenDragProxy", {
+					is_clickable: hasValidSrc,
+				})}
 				draggable
 				onDragStart={(event) => applyTokenDragPayload(event, dragPayload)}
+				{...(hasValidSrc
+					? {
+							role: "button" as const,
+							tabIndex: 0,
+							"aria-label": lang.t("Open token preview: {name}", {
+								name: previewTitle,
+							}),
+							onClick: (event: MouseEvent<HTMLDivElement>) => {
+								event.stopPropagation();
+								setIsPreviewOpen(true);
+							},
+							onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+								if (event.key !== "Enter" && event.key !== " ") return;
+								event.preventDefault();
+								event.stopPropagation();
+								setIsPreviewOpen(true);
+							},
+						}
+					: {})}
 			>
 				{sources.localSrc && (
 					<img
@@ -131,6 +167,7 @@ function MonsterTokenImage({
 						draggable={false}
 						onError={() => {
 							setHasError(true);
+							setIsPreviewOpen(false);
 							onImageError();
 						}}
 						hidden={!hasValidSrc}
@@ -151,6 +188,28 @@ function MonsterTokenImage({
 				>
 					{lang.t("Change token")}
 				</Button>
+			)}
+			{isPreviewOpen && hasValidSrc && (
+				<Modal
+					title={previewTitle}
+					onConfirm={() => setIsPreviewOpen(false)}
+					onCancel={() => setIsPreviewOpen(false)}
+					type="custom"
+					className="MonsterStatBlock__tokenPreviewModal"
+					showFooter={false}
+				>
+					<div
+						className="MonsterStatBlock__tokenPreviewWrap"
+						onClick={() => setIsPreviewOpen(false)}
+					>
+						<img
+							className="MonsterStatBlock__tokenPreviewImg"
+							src={sources.localSrc}
+							alt={previewTitle}
+							onClick={(event) => event.stopPropagation()}
+						/>
+					</div>
+				</Modal>
 			)}
 		</>
 	);
