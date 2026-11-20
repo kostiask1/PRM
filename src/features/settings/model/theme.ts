@@ -10,7 +10,7 @@ export function getNextTheme(theme: Theme): Theme {
 }
 
 export function getThemeToggleIcon(theme: Theme): "moon" | "sun" {
-	return theme === THEMES.LIGHT ? "moon" : "sun";
+	return theme !== THEMES.LIGHT ? "moon" : "sun";
 }
 
 function normalizeTheme(theme: unknown): Theme {
