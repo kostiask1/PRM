@@ -622,7 +622,6 @@
 	.MonsterStatBlock__action,
 	.MonsterStatBlock__lore {
 		font-size: 0.86rem;
-		line-height: 1.35;
 	}
 
 	.MonsterStatBlock__favoriteButton,
@@ -719,7 +718,6 @@
 	.MonsterStatBlock__action,
 	.MonsterStatBlock__lore {
 		font-size: 0.84rem;
-		line-height: 1.35;
 	}
 
 	.MonsterStatBlock__actionRolls {
