@@ -277,6 +277,8 @@
 .Sidebar .StatusBadge:not(.StatusBadge__done),
 .Sidebar .StatusBadge:not(.StatusBadge__done):hover {
     color: var(--sidebar-utility-text);
+    background: var(--sidebar-utility-bg);
+    border-color: var(--sidebar-utility-bg);
 }
 
 .Sidebar .StatusBadge__done,
@@ -483,8 +485,24 @@
     border-top: 1px solid var(--sidebar-hover);
     border-radius: 0;
     background: transparent;
+    color: var(--sidebar-text);
     text-align: left;
     cursor: pointer;
+}
+
+.Sidebar__settings:hover,
+.Sidebar__settings:focus-visible {
+    color: var(--sidebar-title);
+}
+
+:root[data-theme="dark"] .Sidebar .Button__footer {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-title);
+    border-color: var(--sidebar-hover);
+}
+
+:root[data-theme="dark"] .Sidebar .Button__footer:hover {
+    background: color-mix(in srgb, var(--sidebar-hover), var(--sidebar-title) 10%);
 }
 
 .Sidebar > .Tooltip__trigger,

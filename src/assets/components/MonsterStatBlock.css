@@ -269,6 +269,7 @@
 
 .MonsterStatBlock__ability_box {
 	font: inherit;
+	color: var(--text);
 	background: color-mix(in srgb, var(--bg), transparent 40%);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 50%);
 	border-radius: var(--radius-lg);
