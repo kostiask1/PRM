@@ -93,7 +93,6 @@ export interface SettingsModalViewProps {
 	ai: SettingsAiViewProps;
 	storage: SettingsStorageViewProps;
 	onNotificationClose: () => void;
-	onCancel: () => void;
 }
 
 type SettingsAiGroupProps = SettingsAiViewProps & SettingsModalCompositionSlots;
@@ -872,7 +871,6 @@ export default function SettingsModalView({
 	ai,
 	storage,
 	onNotificationClose,
-	onCancel,
 	EditableField,
 }: SettingsModalViewProps & SettingsModalCompositionSlots) {
 	const [activeSection, setActiveSection] = useState<SettingsSection>("general");
@@ -912,7 +910,6 @@ export default function SettingsModalView({
 			</div>
 			<div className="SettingsModal__footer">
 				<span>{lang.t("Changes save automatically")}</span>
-				<Button variant="primary" onClick={onCancel}>{lang.t("Done")}</Button>
 			</div>
 		</div>
 	);

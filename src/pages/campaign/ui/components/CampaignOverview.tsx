@@ -98,21 +98,21 @@ export default function CampaignOverview({ sessions, characters, notes, descript
 			</section>
 			<div className="CampaignOverview__dashboard">
 				<div className="CampaignOverview__mainColumn">
-				<section className="CampaignOverview__card">
-					<header><h3>{lang.t("Recent sessions")}</h3><button type="button" className="WorkspaceTextLink" onClick={() => onSelectSection("sessions")}>{lang.t("All sessions")} →</button></header>
-					{sessions.slice(-3).reverse().map(renderSessionCard)}
-					{sessions.length === 0 && <p className="muted">{lang.t("No sessions yet. Create your first session.")}</p>}
-				</section>
-				<section className="CampaignOverview__card CampaignOverview__notes">
-					<header><h3>{lang.t("Campaign notes")}</h3></header>
-					{previewNotes.length ? previewNotes.map((note) => (
-						<div className="CampaignOverview__note" key={note.id}>
-							{note.title?.trim() && <strong>{note.title}</strong>}
-							{note.text?.trim() && <p>{renderMentionText(getNoteListPreview({ text: note.text }).text)}</p>}
-						</div>
-					)) : <p className="muted">{lang.t("No campaign notes yet.")}</p>}
-					<Button variant="ghost" icon="edit" onClick={() => onSelectSection("notes")}>{lang.t("Edit notes")}</Button>
-				</section>
+					<section className="CampaignOverview__card">
+						<header><h3>{lang.t("Recent sessions")}</h3><button type="button" className="WorkspaceTextLink" onClick={() => onSelectSection("sessions")}>{lang.t("All sessions")} →</button></header>
+						{sessions.slice(-3).reverse().map(renderSessionCard)}
+						{sessions.length === 0 && <p className="muted">{lang.t("No sessions yet. Create your first session.")}</p>}
+					</section>
+					<section className="CampaignOverview__card CampaignOverview__notes">
+						<header><h3>{lang.t("Campaign notes")}</h3></header>
+						{previewNotes.length ? previewNotes.map((note) => (
+							<div className="CampaignOverview__note" key={note.id}>
+								{note.title?.trim() && <strong>{note.title}</strong>}
+								{note.text?.trim() && <p>{renderMentionText(getNoteListPreview({ text: note.text }).text)}</p>}
+							</div>
+						)) : <p className="muted">{lang.t("No campaign notes yet.")}</p>}
+						<Button variant="ghost" icon="edit" onClick={() => onSelectSection("notes")}>{lang.t("Edit notes")}</Button>
+					</section>
 				</div>
 				<section className="CampaignOverview__card">
 					<header><h3>{lang.t("Your party")}</h3><button type="button" className="WorkspaceTextLink" onClick={() => onSelectSection("characters")}>{lang.t("View all")} →</button></header>
@@ -120,8 +120,30 @@ export default function CampaignOverview({ sessions, characters, notes, descript
 						const name = [character.firstName, character.lastName].filter(Boolean).join(" ") || character.name || lang.t("Character");
 						const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("");
 						const details = [character.race, character.class, character.level ? `${character.level} ${lang.t("Level").toLowerCase()}` : ""].filter(Boolean).map(String).join(" · ");
+						const tokenUrl = (typeof character.imageUrl === "string" && character.imageUrl.trim()) ||
+							(typeof (character as Record<string, unknown>).tokenUrl === "string" && String((character as Record<string, unknown>).tokenUrl).trim()) ||
+							(typeof (character as Record<string, unknown>).token === "string" && String((character as Record<string, unknown>).token).trim()) ||
+							"";
 						return <button type="button" className="CampaignOverview__person" key={character.id ?? character.slug ?? index} onClick={() => onOpenCharacter(getCampaignEntityRenderKey(character, index))}>
-							<span className="CampaignOverview__avatar">{initials}</span><span><strong>{name}</strong><small>{details}</small></span>
+							<span className="CampaignOverview__avatar">
+								{tokenUrl ? (
+									<img
+										src={tokenUrl}
+										alt=""
+										loading="lazy"
+										draggable={false}
+										onError={(event) => {
+											event.currentTarget.hidden = true;
+										}}
+									/>
+								) : null}
+								{tokenUrl ? (
+									<span className="CampaignOverview__avatarFallback">{initials}</span>
+								) : (
+									initials
+								)}
+							</span>
+							<span><strong>{name}</strong><small>{details}</small></span>
 						</button>;
 					})}
 					{characters.length === 0 && <button type="button" className="WorkspaceTextLink" onClick={() => onSelectSection("characters")}>{lang.t("Add your first character")}</button>}

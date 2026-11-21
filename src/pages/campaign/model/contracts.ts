@@ -8,6 +8,9 @@ export interface CampaignPageEntity extends CampaignFeatureEntity {
 	title?: string;
 	firstName?: string;
 	lastName?: string;
+	imageUrl?: string | null;
+	tokenUrl?: string | null;
+	token?: string | null;
 	notes?: CardNote[];
 }
 
