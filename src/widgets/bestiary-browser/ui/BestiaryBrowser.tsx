@@ -5,7 +5,6 @@ import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/
 import "../../../assets/components/Bestiary.css";
 import type {
 	BestiaryAiModalsSlot,
-	BestiaryAssistantSlot,
 	BestiaryMonsterStatBlockSlot,
 } from "./bestiaryComposition.ts";
 import { useBestiaryBrowserRuntime } from "./BestiaryBrowserRuntime.tsx";
@@ -20,7 +19,6 @@ import { useBestiaryMonsterSelectionState } from "./useBestiaryMonsterSelectionS
 import { useBestiaryMonsterSelectionLifecycle } from "./useBestiaryMonsterSelectionLifecycle.ts";
 import { useBestiaryFavoriteToggle } from "./useBestiaryFavoriteToggle.ts";
 import { useBestiaryBrowserState } from "./useBestiaryBrowserState.ts";
-import { useBestiaryImagePromptBridge } from "./useBestiaryImagePromptBridge.ts";
 import {
 	bestiaryBrowserApi,
 	getDiffResourceState,
@@ -32,7 +30,6 @@ import { BestiaryBrowserContent } from "./BestiaryBrowserContent.tsx";
 
 export interface BestiaryBrowserProps {
 	BestiaryAiModals: BestiaryAiModalsSlot;
-	AiAssistantPanel: BestiaryAssistantSlot;
 	MonsterStatBlock: BestiaryMonsterStatBlockSlot;
 	ResponseModal: AiResponseModalComponent;
 	MonsterEditorModal: ComponentType<
@@ -54,7 +51,6 @@ export interface BestiaryBrowserProps {
 
 export default function BestiaryBrowser({
 	BestiaryAiModals,
-	AiAssistantPanel,
 	MonsterStatBlock,
 	ResponseModal,
 	MonsterEditorModal,
@@ -98,8 +94,6 @@ export default function BestiaryBrowser({
 		setSources,
 		sources,
 	} = useBestiaryBrowserState();
-	const { onOpenImagePrompt, onRegisterImagePromptAction } =
-		useBestiaryImagePromptBridge();
 
 	const {
 		embeddedScrolledMonsterRef,
@@ -240,7 +234,6 @@ export default function BestiaryBrowser({
 		currentLanguage,
 		customMonsters,
 		onCustomBestiaryUpdate: handleCustomBestiaryUpdate,
-		onOpenImagePrompt,
 		onPushCustomUndoSnapshot: pushCustomUndoSnapshot,
 		showMessage,
 	});
@@ -282,9 +275,7 @@ export default function BestiaryBrowser({
 	return (
 		<>
 			<BestiaryBrowserContent
-				AiAssistantPanel={AiAssistantPanel}
 				MonsterStatBlock={MonsterStatBlock}
-				ResponseModal={ResponseModal}
 				canExport={customMonsters.length > 0}
 				canRedo={redoStack.length > 0}
 				canUndo={undoStack.length > 0}
@@ -304,7 +295,6 @@ export default function BestiaryBrowser({
 				onImport={handleImportCustomMonsters}
 				onMonsterAiAction={openMonsterAiAction}
 				onRedo={handleRedo}
-				onRegisterImagePromptAction={onRegisterImagePromptAction}
 				onSelectMonster={onSelectMonster}
 				onToggleFavorite={handleToggleFavorite}
 				onUndo={handleUndo}

@@ -2071,6 +2071,32 @@ function normalizePartialArchiveSections(sections = []) {
 	return [...new Set(selected)];
 }
 
+function campaignAiChatsPath(slug) {
+	return path.join(campaignDir(slug), "_aiChats.json");
+}
+
+async function readAiChatsDoc(slug) {
+	const filePath = campaignAiChatsPath(slug);
+	if (!(await exists(filePath))) {
+		return { chats: [], legacyHistoryMigrated: false };
+	}
+	try {
+		const saved = await readJson(filePath);
+		if (Array.isArray(saved)) {
+			return { chats: saved, legacyHistoryMigrated: false };
+		}
+		if (saved && typeof saved === "object") {
+			return {
+				chats: Array.isArray(saved.chats) ? saved.chats : [],
+				legacyHistoryMigrated: Boolean(saved.legacyHistoryMigrated),
+			};
+		}
+	} catch {
+		// Fall through to empty list on corrupted/unreadable file
+	}
+	return { chats: [], legacyHistoryMigrated: false };
+}
+
 async function exportCampaignPartialArchiveBundle(slug, sections = []) {
 	const selected = normalizePartialArchiveSections(sections);
 	const meta = await readCampaign(slug);
@@ -2094,6 +2120,10 @@ async function exportCampaignPartialArchiveBundle(slug, sections = []) {
 	}
 	if (selected.includes("aiHistory")) {
 		bundle.aiResponses = await readAiResponses(slug);
+		const { chats } = await readAiChatsDoc(slug);
+		if (chats.length > 0) {
+			bundle.aiChats = chats;
+		}
 	}
 
 	return {
@@ -2234,14 +2264,57 @@ function normalizePartialImportAiResponse(context, entry) {
 	};
 }
 
+function getPartialImportAiChats(bundle) {
+	if (Array.isArray(bundle?.aiChats)) return bundle.aiChats;
+	if (bundle?.aiChats && typeof bundle.aiChats === "object" && Array.isArray(bundle.aiChats.chats)) {
+		return bundle.aiChats.chats;
+	}
+	return [];
+}
+
+function normalizePartialImportAiChat(context, chat, existingIds) {
+	if (!chat || typeof chat !== "object" || Array.isArray(chat)) return null;
+	const normalized = replaceImageSlugReferences(chat, context.sourceSlug, context.target);
+	const rawId = String(normalized.id || "").trim();
+	const id = !rawId || existingIds.has(rawId) ? `chat-${createId()}` : rawId;
+	existingIds.add(id);
+	return {
+		...normalized,
+		id,
+		campaignSlug: context.target,
+	};
+}
+
 async function restorePartialImportAiHistory(context) {
 	const existing = await readAiResponses(context.target);
 	const incoming = getPartialImportAiResponses(context.bundle).map((entry) =>
 		normalizePartialImportAiResponse(context, entry),
 	);
-	if (incoming.length === 0) return;
-	await writeAiResponses(context.target, [...existing, ...incoming]);
-	context.imported.aiHistory = incoming.length;
+	if (incoming.length > 0) {
+		await writeAiResponses(context.target, [...existing, ...incoming]);
+	}
+
+	const rawIncomingChats = getPartialImportAiChats(context.bundle);
+	let importedChatsCount = 0;
+	if (rawIncomingChats.length > 0) {
+		const existingDoc = await readAiChatsDoc(context.target);
+		const existingIds = new Set(
+			existingDoc.chats.map((c) => String(c?.id || "").trim()).filter(Boolean),
+		);
+		const normalizedIncomingChats = rawIncomingChats
+			.map((chat) => normalizePartialImportAiChat(context, chat, existingIds))
+			.filter(Boolean);
+		if (normalizedIncomingChats.length > 0) {
+			await writeJson(campaignAiChatsPath(context.target), {
+				version: 2,
+				legacyHistoryMigrated: existingDoc.legacyHistoryMigrated,
+				chats: [...existingDoc.chats, ...normalizedIncomingChats],
+			});
+			importedChatsCount = normalizedIncomingChats.length;
+		}
+	}
+
+	context.imported.aiHistory = incoming.length + importedChatsCount;
 }
 
 function getPartialImportImages(archiveBundle) {

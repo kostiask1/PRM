@@ -1,1 +1,3 @@
-export { renderMentionText as renderChatMentionText } from "../../ui/AiAssistantPanel.tsx";
+import { renderMentionText } from "../../../../features/entity-link/index.js";
+
+export const renderChatMentionText = renderMentionText;

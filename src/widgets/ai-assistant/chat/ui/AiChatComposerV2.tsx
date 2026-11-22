@@ -40,12 +40,15 @@ interface AiChatComposerV2Props {
 	onToggleModelPicker: () => void;
 	isCommandsInfoOpen: boolean;
 	onToggleCommandsInfo: () => void;
+	isImageGeneratorOpen?: boolean;
+	onToggleImageGenerator?: () => void;
 	attachments?: AiChatAttachment[];
 	onAddAttachments?: (files: FileList) => void;
 	onRemoveAttachment?: (id: string) => void;
 	disabled?: boolean;
 	commandsPopover?: ReactNode;
 	modelPopover?: ReactNode;
+	imageGeneratorPopover?: ReactNode;
 }
 
 const ZERO_WIDTH_REGEX = /[\u200B\uFEFF]/g;
@@ -231,12 +234,15 @@ export default function AiChatComposerV2({
 	onToggleModelPicker,
 	isCommandsInfoOpen,
 	onToggleCommandsInfo,
+	isImageGeneratorOpen = false,
+	onToggleImageGenerator,
 	attachments = [],
 	onAddAttachments,
 	onRemoveAttachment,
 	disabled = false,
 	commandsPopover,
 	modelPopover,
+	imageGeneratorPopover,
 }: AiChatComposerV2Props) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const inputWrapRef = useRef<HTMLDivElement>(null);
@@ -479,6 +485,7 @@ export default function AiChatComposerV2({
 			<div className="AiChatComposerV2__toolbar">
 				{commandsPopover}
 				{modelPopover}
+				{imageGeneratorPopover}
 				<div className="AiChatComposerV2__toolsLeft">
 					<button
 						type="button"
@@ -492,6 +499,24 @@ export default function AiChatComposerV2({
 							<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
 						</svg>
 					</button>
+
+					{onToggleImageGenerator && (
+						<button
+							type="button"
+							className={`AiChatComposerV2__iconBtn AiChatComposerV2__imageBtn ${isImageGeneratorOpen ? "is-active" : ""}`}
+							onClick={onToggleImageGenerator}
+							disabled={disabled || isSending}
+							title="Промпт або генерація зображення (@image)"
+							aria-label="Генерація зображення"
+							aria-expanded={isImageGeneratorOpen}
+						>
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+								<circle cx="8.5" cy="8.5" r="1.5" />
+								<polyline points="21 15 16 10 5 21" />
+							</svg>
+						</button>
+					)}
 
 					<button
 						type="button"

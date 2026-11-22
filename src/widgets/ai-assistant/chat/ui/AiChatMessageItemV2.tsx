@@ -3,21 +3,36 @@ import {
 	cloneElement,
 	createElement,
 	isValidElement,
+	useCallback,
+	useEffect,
 	useMemo,
+	useRef,
+	useState,
+	type KeyboardEvent,
 	type ReactNode,
 } from "react";
 import Markdown from "react-markdown";
+import { EditableField } from "../../../../features/editor/ui/index.js";
 import { renderChatMentionText } from "./renderChatMentionText.tsx";
 import type { AiActionCard, ChatMessage } from "../model/aiChatTypes.ts";
 import AiActionCardV2 from "./AiActionCardV2.tsx";
 
 interface AiChatMessageItemV2Props {
 	message: ChatMessage;
+	isLastUserMessage?: boolean;
+	isLastAssistantMessage?: boolean;
+	isSending?: boolean;
+	isLegacyArchive?: boolean;
+	canGenerateImages?: boolean;
+	isImagePromptReply?: boolean;
 	busyActionIds?: Set<string>;
 	onApplyActionCard: (cardId: string) => void;
 	onUndoActionCard?: (cardId: string) => void;
 	onRejectActionCard?: (cardId: string) => void;
 	onOpenDiff: (card: AiActionCard) => void;
+	onEditUserMessage?: (messageId: string, nextContent: string) => void;
+	onRegenerateAssistant?: () => void;
+	onGenerateImageFromPrompt?: (prompt: string) => void;
 }
 
 function renderMentionChildren(children: ReactNode): ReactNode {
@@ -72,13 +87,111 @@ function formatMessageTime(timestamp: number): string {
 
 export default function AiChatMessageItemV2({
 	message,
+	isLastUserMessage = false,
+	isLastAssistantMessage = false,
+	isSending = false,
+	isLegacyArchive = false,
+	canGenerateImages = false,
+	isImagePromptReply = false,
 	busyActionIds,
 	onApplyActionCard,
 	onUndoActionCard,
 	onRejectActionCard,
 	onOpenDiff,
+	onEditUserMessage,
+	onRegenerateAssistant,
+	onGenerateImageFromPrompt,
 }: AiChatMessageItemV2Props) {
 	const isUser = message.role === "user";
+	const [isEditing, setIsEditing] = useState(false);
+	const [draftText, setDraftText] = useState(message.content);
+	const [isCopied, setIsCopied] = useState(false);
+	const copyTimerRef = useRef<number | null>(null);
+	const editBoxRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		return () => {
+			if (copyTimerRef.current !== null) {
+				window.clearTimeout(copyTimerRef.current);
+			}
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!isEditing) {
+			setDraftText(message.content);
+		}
+	}, [message.content, isEditing]);
+
+	const handleCopy = useCallback(() => {
+		const text = String(message.content || "");
+		if (!text || typeof navigator === "undefined" || !navigator.clipboard?.writeText) return;
+		void navigator.clipboard
+			.writeText(text)
+			.then(() => {
+				setIsCopied(true);
+				if (copyTimerRef.current !== null) {
+					window.clearTimeout(copyTimerRef.current);
+				}
+				copyTimerRef.current = window.setTimeout(() => {
+					setIsCopied(false);
+					copyTimerRef.current = null;
+				}, 1800);
+			})
+			.catch(() => {});
+	}, [message.content]);
+
+	const startEdit = useCallback(() => {
+		setDraftText(message.content);
+		setIsEditing(true);
+		window.setTimeout(() => {
+			const editable = editBoxRef.current?.querySelector<HTMLElement>(
+				'.MarkdownView[contenteditable="true"]',
+			);
+			editable?.focus();
+		}, 30);
+	}, [message.content]);
+
+	const cancelEdit = useCallback(() => {
+		setDraftText(message.content);
+		setIsEditing(false);
+	}, [message.content]);
+
+	const submitEdit = useCallback(() => {
+		const trimmed = draftText.trim();
+		if (!trimmed || isSending) return;
+		setIsEditing(false);
+		onEditUserMessage?.(message.id, trimmed);
+	}, [draftText, isSending, message.id, onEditUserMessage]);
+
+	useEffect(() => {
+		const box = editBoxRef.current;
+		if (!isEditing || !box) return;
+		const handleCaptureEscape = (event: globalThis.KeyboardEvent) => {
+			if (event.key === "Escape") {
+				event.preventDefault();
+				event.stopPropagation();
+				cancelEdit();
+			}
+		};
+		box.addEventListener("keydown", handleCaptureEscape, true);
+		return () => {
+			box.removeEventListener("keydown", handleCaptureEscape, true);
+		};
+	}, [isEditing, cancelEdit]);
+
+	const handleEditKeyDown = useCallback(
+		(event: KeyboardEvent<HTMLElement>) => {
+			if (event.key === "Enter" && !event.shiftKey) {
+				event.preventDefault();
+				submitEdit();
+			} else if (event.key === "Escape") {
+				event.preventDefault();
+				cancelEdit();
+			}
+		},
+		[submitEdit, cancelEdit],
+	);
 
 	const renderedUserContent = useMemo(() => {
 		if (!isUser) return null;
@@ -86,9 +199,10 @@ export default function AiChatMessageItemV2({
 	}, [isUser, message.content]);
 
 	if (isUser) {
+		const canEdit = isLastUserMessage && !isSending && !isLegacyArchive && Boolean(onEditUserMessage);
 		return (
 			<div className="AiChatMessageItemV2 AiChatMessageItemV2--user">
-				<div className="AiChatMessageItemV2__bubble">
+				<div className={`AiChatMessageItemV2__bubble ${isEditing ? "is-editing" : ""}`}>
 					{message.attachments && message.attachments.length > 0 && (
 						<div className="AiChatMessageItemV2__attachments">
 							{message.attachments.map((att, idx) => (
@@ -101,14 +215,96 @@ export default function AiChatMessageItemV2({
 							))}
 						</div>
 					)}
-					{message.content ? (
-						<div className="AiChatMessageItemV2__content">{renderedUserContent}</div>
-					) : null}
-					<div className="AiChatMessageItemV2__time">{formatMessageTime(message.timestamp)}</div>
+					{isEditing ? (
+						<div className="AiChatMessageItemV2__editBox" ref={editBoxRef}>
+							<EditableField
+								type="textarea"
+								className="AiChatMessageItemV2__editEditor"
+								aria-label="Редагувати повідомлення"
+								value={draftText}
+								onChange={(event) => setDraftText(event.target.value)}
+								onKeyDown={handleEditKeyDown}
+								disabled={isSending}
+								showCopyButton={false}
+							/>
+							<div className="AiChatMessageItemV2__editActions">
+								<button
+									type="button"
+									className="AiChatMessageItemV2__editBtn AiChatMessageItemV2__editBtn--cancel"
+									onClick={cancelEdit}
+									disabled={isSending}
+								>
+									Скасувати
+								</button>
+								<button
+									type="button"
+									className="AiChatMessageItemV2__editBtn AiChatMessageItemV2__editBtn--submit"
+									onClick={submitEdit}
+									disabled={isSending || !draftText.trim()}
+								>
+									Надіслати
+								</button>
+							</div>
+						</div>
+					) : (
+						<>
+							{message.content ? (
+								<div className="AiChatMessageItemV2__content">{renderedUserContent}</div>
+							) : null}
+							<div className="AiChatMessageItemV2__userMetaRow">
+								<div className="AiChatMessageItemV2__actions AiChatMessageItemV2__actions--user">
+									{message.content && (
+										<button
+											type="button"
+											className={`AiChatMessageItemV2__actionBtn ${isCopied ? "is-copied" : ""}`}
+											onClick={handleCopy}
+											title={isCopied ? "Скопійовано" : "Копіювати запит"}
+											aria-label="Копіювати запит"
+										>
+											{isCopied ? (
+												<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+													<polyline points="20 6 9 17 4 12" />
+												</svg>
+											) : (
+												<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+													<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+													<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+												</svg>
+											)}
+										</button>
+									)}
+									{canEdit && (
+										<button
+											type="button"
+											className="AiChatMessageItemV2__actionBtn AiChatMessageItemV2__editTrigger"
+											onClick={startEdit}
+											title="Редагувати останній запит"
+											aria-label="Редагувати запит"
+										>
+											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+												<path d="M12 20h9" />
+												<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+											</svg>
+										</button>
+									)}
+								</div>
+								<div className="AiChatMessageItemV2__time">{formatMessageTime(message.timestamp)}</div>
+							</div>
+						</>
+					)}
 				</div>
 			</div>
 		);
 	}
+
+	const canRegenerate =
+		isLastAssistantMessage && !isSending && !isLegacyArchive && Boolean(onRegenerateAssistant);
+	const canGenerateFromPrompt =
+		isImagePromptReply &&
+		!message.imageUrl &&
+		canGenerateImages &&
+		!isSending &&
+		Boolean(onGenerateImageFromPrompt);
 
 	return (
 		<div className="AiChatMessageItemV2 AiChatMessageItemV2--assistant">
@@ -122,6 +318,20 @@ export default function AiChatMessageItemV2({
 					<span className="AiChatMessageItemV2__sender">Асистент</span>
 					<span className="AiChatMessageItemV2__time">{formatMessageTime(message.timestamp)}</span>
 				</div>
+
+				{message.imageUrl && (
+					<div className="AiChatMessageItemV2__generatedImage">
+						<a href={message.imageUrl} target="_blank" rel="noreferrer">
+							<img src={message.imageUrl} alt={message.content || "Згенероване зображення"} />
+						</a>
+						<div className="AiChatMessageItemV2__generatedImageFooter">
+							<span>Збережено в галереї · «Вкладення»</span>
+							<a href={message.imageUrl} download>
+								Завантажити
+							</a>
+						</div>
+					</div>
+				)}
 
 				{message.content ? (
 					<div className="AiChatMessageItemV2__markdown Prose">
@@ -157,6 +367,62 @@ export default function AiChatMessageItemV2({
 								onOpenDiff={onOpenDiff}
 							/>
 						))}
+					</div>
+				)}
+
+				{message.status !== "streaming" && (
+					<div className="AiChatMessageItemV2__actions AiChatMessageItemV2__actions--assistant">
+						{message.content && (
+							<button
+								type="button"
+								className={`AiChatMessageItemV2__actionBtn ${isCopied ? "is-copied" : ""}`}
+								onClick={handleCopy}
+								title={isCopied ? "Скопійовано" : "Копіювати відповідь"}
+								aria-label="Копіювати відповідь"
+							>
+								{isCopied ? (
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+										<polyline points="20 6 9 17 4 12" />
+									</svg>
+								) : (
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+										<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+									</svg>
+								)}
+								<span>{isCopied ? "Скопійовано" : "Копіювати"}</span>
+							</button>
+						)}
+						{canRegenerate && (
+							<button
+								type="button"
+								className="AiChatMessageItemV2__actionBtn AiChatMessageItemV2__regenerateBtn"
+								onClick={onRegenerateAssistant}
+								title="Повторити генерацію відповіді"
+								aria-label="Повторити відповідь"
+							>
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<polyline points="23 4 23 10 17 10" />
+									<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+								</svg>
+								<span>Повторити</span>
+							</button>
+						)}
+						{canGenerateFromPrompt && (
+							<button
+								type="button"
+								className="AiChatMessageItemV2__actionBtn AiChatMessageItemV2__generateImgBtn"
+								onClick={() => onGenerateImageFromPrompt?.(message.content)}
+								title="Згенерувати зображення за цим промптом"
+							>
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+									<circle cx="8.5" cy="8.5" r="1.5" />
+									<polyline points="21 15 16 10 5 21" />
+								</svg>
+								<span>Згенерувати зображення</span>
+							</button>
+						)}
 					</div>
 				)}
 			</div>

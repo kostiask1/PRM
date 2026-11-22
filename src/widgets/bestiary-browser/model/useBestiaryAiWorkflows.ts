@@ -44,7 +44,7 @@ interface Options {
 		updated: unknown,
 		options?: CustomBestiaryUpdateOptions,
 	): void;
-	onOpenImagePrompt(monster: BestiaryMonster): void;
+	onOpenImagePrompt?: (monster: BestiaryMonster) => void;
 	onPushCustomUndoSnapshot(snapshot: BestiaryMonster[]): void;
 	showMessage(message: Message): void;
 }
@@ -141,10 +141,7 @@ export function useBestiaryAiWorkflows({
 
 	const openMonsterAiAction = (monster: BestiaryMonster) => {
 		if (!monster?.name) return;
-		const hasAiChatV2 = Boolean(
-			document.querySelector(".AiAssistantSidebarV2, .AiCollapsedRailV2, .AiFloatingTriggerV2"),
-		);
-		if (hasAiChatV2) {
+		if (typeof window !== "undefined") {
 			window.dispatchEvent(
 				new CustomEvent("prm:ai-chat-prefill", {
 					detail: {
@@ -171,7 +168,21 @@ export function useBestiaryAiWorkflows({
 		const target = aiActionMonster;
 		setAiActionMonster(null);
 		if (mode === "image-prompt") {
-			onOpenImagePrompt(target);
+			if (onOpenImagePrompt) {
+				onOpenImagePrompt(target);
+			} else if (typeof window !== "undefined") {
+				window.dispatchEvent(
+					new CustomEvent("prm:ai-chat-prefill", {
+						detail: {
+							text: `@image [${target.name}] `,
+							monsterName: target.name,
+							monsterSource: target.source || "",
+							open: true,
+							focus: true,
+						},
+					}),
+				);
+			}
 			return;
 		}
 		openAiEditCustomMonster(target, mode);

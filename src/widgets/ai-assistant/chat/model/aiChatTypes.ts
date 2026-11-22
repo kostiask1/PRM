@@ -1,4 +1,11 @@
-import type { AiChatStreamPhase, AiHistoryResource } from "../../../../features/ai/index.js";
+import type {
+	AiChatContextPreview,
+	AiChatStreamPhase,
+	AiContextCatalogItem,
+	AiHistoryResource,
+} from "../../../../features/ai/index.js";
+
+export type { AiChatContextPreview, AiContextCatalogItem };
 
 export type AiMessageRole = "user" | "assistant" | "system";
 
@@ -63,17 +70,26 @@ export interface ChatMessage {
 	streamPhase?: AiChatStreamPhase;
 	actionCards?: AiActionCard[];
 	attachments?: AiChatAttachment[];
+	imageUrl?: string;
 	errorMessage?: string;
 }
 
 export interface AiContextSettings {
 	includeCurrentScene: boolean;
+	includeCampaignCharacters?: boolean;
 	includeCampaignNpc: boolean;
 	includeCampaignLocations: boolean;
 	includeRecentSessionHistory: boolean;
 	includeBestiary: boolean;
+	selectedCharacterIds?: string[] | null;
+	selectedNpcIds?: string[] | null;
+	selectedLocationIds?: string[] | null;
+	selectedSceneIds?: string[] | null;
+	selectedSessionFileNames?: string[] | null;
+	selectedBestiaryIds?: string[] | null;
 	mutationPermission: "diff_only" | "direct_mutation";
 	responseTone: "concise" | "narrative" | "rules_strict";
+	rulesEdition?: "5.5e" | "5e";
 }
 
 export interface AiChatAnchorData {
@@ -90,6 +106,7 @@ export interface AiChatSession {
 	campaignSlug?: string;
 	title: string;
 	isAutoTitled?: boolean;
+	isLegacyArchive?: boolean;
 	createdAt: number;
 	updatedAt: number;
 	model: string;
@@ -98,6 +115,7 @@ export interface AiChatSession {
 	contextSettings?: AiContextSettings;
 	anchor?: AiChatAnchorData | null;
 	summary?: string;
+	summarizedMessageCount?: number;
 	tokenEstimate?: number;
 	maxTokens?: number;
 }
@@ -107,6 +125,7 @@ export interface AiChatSessionSummary {
 	campaignSlug?: string;
 	title: string;
 	isAutoTitled?: boolean;
+	isLegacyArchive?: boolean;
 	createdAt: number;
 	updatedAt: number;
 	model: string;

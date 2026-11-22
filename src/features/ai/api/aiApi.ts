@@ -93,12 +93,69 @@ export interface AiGenerationResult extends Record<string, unknown> {
 
 export interface AiChatContextSettings {
 	includeCurrentScene: boolean;
+	includeCampaignCharacters?: boolean;
 	includeCampaignNpc: boolean;
 	includeCampaignLocations: boolean;
 	includeRecentSessionHistory: boolean;
 	includeBestiary: boolean;
+	selectedCharacterIds?: string[] | null;
+	selectedNpcIds?: string[] | null;
+	selectedLocationIds?: string[] | null;
+	selectedSceneIds?: string[] | null;
+	selectedSessionFileNames?: string[] | null;
+	selectedBestiaryIds?: string[] | null;
 	mutationPermission: "diff_only" | "direct_mutation";
 	responseTone: "concise" | "narrative" | "rules_strict";
+	rulesEdition?: "5.5e" | "5e";
+}
+
+export interface AiContextCatalogItem {
+	id: string;
+	name: string;
+	meta?: string;
+	tokenEstimate: number;
+}
+
+export interface AiChatContextPreview {
+	systemTokens: number;
+	campaignBaseTokens: number;
+	currentSessionBaseTokens: number;
+	historyTokens: number;
+	hasActiveSession: boolean;
+	activeSessionName: string;
+	defaultRecentSessionCount: number;
+	maxTokens: number;
+	catalog: {
+		characters: AiContextCatalogItem[];
+		npcs: AiContextCatalogItem[];
+		locations: AiContextCatalogItem[];
+		scenes: AiContextCatalogItem[];
+		sessions: AiContextCatalogItem[];
+		bestiary: AiContextCatalogItem[];
+	};
+	totals: {
+		systemTokens: number;
+		contextTokens: number;
+		historyTokens: number;
+		totalTokens: number;
+	};
+}
+
+export interface AiChatContextPreviewPayload {
+	chatId?: string;
+	model?: string;
+	language?: string;
+	anchor?: AiChatAnchor | null;
+	workspaceContext?: AiChatWorkspaceContext;
+	contextSettings?: Partial<AiChatContextSettings>;
+}
+
+export interface AiChatCompactResult {
+	chat: AiChatRecord;
+	compacted: boolean;
+	compactedCount: number;
+	previousHistoryTokens: number;
+	nextHistoryTokens: number;
 }
 
 export interface AiChatAnchor {
@@ -174,6 +231,7 @@ export interface AiChatMessageRecord {
 	status?: "pending" | "streaming" | "done" | "error";
 	actionCards?: AiChatActionCardRecord[];
 	attachments?: AiChatAttachmentRecord[];
+	imageUrl?: string;
 	errorMessage?: string;
 }
 
@@ -182,6 +240,7 @@ export interface AiChatSummary {
 	campaignSlug: string;
 	title: string;
 	isAutoTitled: boolean;
+	isLegacyArchive?: boolean;
 	createdAt: number;
 	updatedAt: number;
 	model: string;
@@ -199,6 +258,7 @@ export interface AiChatRecord {
 	campaignSlug: string;
 	title: string;
 	isAutoTitled: boolean;
+	isLegacyArchive?: boolean;
 	createdAt: number;
 	updatedAt: number;
 	model: string;
@@ -222,6 +282,26 @@ export interface SendAiChatMessagePayload {
 	language?: string;
 	attachedImages?: AiChatAttachmentRecord[];
 	attachedFiles?: AiChatAttachmentRecord[];
+	truncateFromMessageId?: string;
+}
+
+export interface GenerateAiChatImagePayload {
+	prompt: string;
+	displayPrompt?: string;
+	modelName?: string;
+	chatModel?: string;
+	autoApply?: boolean;
+	contextSettings?: Partial<AiChatContextSettings>;
+	anchor?: AiChatAnchor | null;
+	attachedImages?: AiChatAttachmentRecord[];
+}
+
+export interface GenerateAiChatImageResult {
+	chat: AiChatRecord;
+	userMessage: AiChatMessageRecord;
+	assistantMessage: AiChatMessageRecord;
+	imageUrl: string;
+	modelName: string;
 }
 
 export type AiChatStreamPhase = "thinking" | "streaming" | "preparing_actions";
@@ -287,6 +367,23 @@ export const aiApi = {
 		request<AiChatSummary[]>(chatPath(campaign, chatId), {
 			method: "DELETE",
 		}),
+	previewAiChatContext: (
+		campaign: string,
+		payload: AiChatContextPreviewPayload = {},
+	) =>
+		request<AiChatContextPreview>(chatPath(campaign, undefined, "/context-preview"), {
+			method: "POST",
+			body: JSON.stringify(payload),
+		}),
+	compactAiChatContext: (
+		campaign: string,
+		chatId: string,
+		payload: { model?: string; language?: string } = {},
+	) =>
+		request<AiChatCompactResult>(chatPath(campaign, chatId, "/compact"), {
+			method: "POST",
+			body: JSON.stringify(payload),
+		}),
 	sendAiChatMessage: (
 		campaign: string,
 		chatId: string,
@@ -299,6 +396,18 @@ export const aiApi = {
 				method: "POST",
 				body: JSON.stringify(payload),
 				...options,
+			},
+		),
+	generateAiChatImage: (
+		campaign: string,
+		chatId: string,
+		payload: GenerateAiChatImagePayload,
+	) =>
+		request<GenerateAiChatImageResult>(
+			chatPath(campaign, chatId, "/generate-image"),
+			{
+				method: "POST",
+				body: JSON.stringify(payload),
 			},
 		),
 	sendAiChatMessageStream: async (

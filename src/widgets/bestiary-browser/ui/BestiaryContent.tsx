@@ -17,8 +17,6 @@ import {
 	type BestiarySortOrder,
 } from "../model.js";
 import type {
-	BestiaryAssistantSlotProps,
-	BestiaryAssistantSlot,
 	BestiaryMonsterStatBlockSlot,
 } from "./bestiaryComposition.ts";
 import { BestiaryMonsterListItem } from "./BestiaryMonsterListItem.tsx";
@@ -28,9 +26,7 @@ import { BestiaryVirtualizedList } from "./BestiaryVirtualizedList.tsx";
 import { useBestiaryMobileSelection } from "./useBestiaryMobileSelection.ts";
 
 export interface BestiaryContentProps {
-	AiAssistantPanel: BestiaryAssistantSlot;
 	MonsterStatBlock: BestiaryMonsterStatBlockSlot;
-	ResponseModal: BestiaryAssistantSlotProps["ResponseModal"];
 	displayedMonsters: BestiaryMonster[];
 	favorites: BestiaryFavorite[];
 	headerActions?: ReactNode;
@@ -43,7 +39,6 @@ export interface BestiaryContentProps {
 	onEditMonster: (monster: BestiaryMonster) => void;
 	onFavoriteListChange: Dispatch<SetStateAction<BestiaryFavorite[]>>;
 	onMonsterAiAction: (monster: BestiaryMonster) => void;
-	onRegisterImagePromptAction: (handler: ((monster: BestiaryMonster) => void) | null) => void;
 	onSelectedSourcesChange: (sources: string[]) => void | Promise<void>;
 	onSourceFilterChange: (source: string) => void;
 	onAiEditCustomMonster: (monster: BestiaryMonster) => void;
@@ -67,9 +62,7 @@ export interface BestiaryContentProps {
 }
 
 export default function BestiaryContent({
-	AiAssistantPanel,
 	MonsterStatBlock,
-	ResponseModal,
 	displayedMonsters,
 	favorites,
 	headerActions = null,
@@ -82,7 +75,6 @@ export default function BestiaryContent({
 	onEditMonster,
 	onFavoriteListChange,
 	onMonsterAiAction,
-	onRegisterImagePromptAction,
 	onSelectedSourcesChange,
 	onSourceFilterChange,
 	onAiEditCustomMonster,
@@ -179,11 +171,6 @@ export default function BestiaryContent({
 					/>
 				</div>
 			</div>
-			<AiAssistantPanel
-				ResponseModal={ResponseModal}
-				isBestiary
-				onRegisterImagePromptAction={onRegisterImagePromptAction}
-			/>
 		</div>
 	);
 }

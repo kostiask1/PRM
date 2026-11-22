@@ -7,6 +7,7 @@ const SUPPORTED_CHAT_COMMANDS = Object.freeze([
 	"notes",
 	"rules",
 	"dice",
+	"image",
 ]);
 
 const COMMAND_SET = new Set(SUPPORTED_CHAT_COMMANDS);

@@ -1,21 +1,164 @@
-.SessionWorkspace { display: grid; grid-template-columns: 224px minmax(0, 1fr) 240px; gap: var(--space-4); align-items: start; min-width: 0; }
-.SessionWorkspace__outline { display: grid; gap: var(--space-3); position: sticky; top: 0; min-width: 0; }
-.SessionWorkspace__outline > header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.SessionWorkspace__outline h3 { color: var(--muted); font: 700 11px/16px var(--font-body); text-transform: uppercase; }
-.SessionWorkspace__compactAdd { display: none !important; }
-.SessionWorkspace__outline .DraggableList { display: grid; gap: var(--space-3); }
-.SessionWorkspace__outline .DraggableList__handle { top: var(--space-2); right: var(--space-2); left: auto; width: var(--size-6); height: var(--control-h-sm); transform: none; opacity: 0.75; touch-action: none; }
-.SessionWorkspace__outline .DraggableList__handle:focus-visible { opacity: 1; outline: 2px solid var(--accent); outline-offset: 1px; }
-.SessionWorkspace__scene { display: grid; gap: var(--space-2); width: 100%; min-height: 96px; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); text-align: left; background: var(--panel); color: var(--text); }
-.SessionWorkspace__scene .WorkspaceEyebrow { padding-right: var(--size-6); }
-.SessionWorkspace__scene[aria-pressed="true"], .SessionWorkspace__scene:hover { background: var(--accent-soft); }
-.SessionWorkspace__scene[aria-pressed="true"] .WorkspaceEyebrow { color: var(--accent); }
-.SessionWorkspace__scene strong { font-size: 13px; line-height: 20px; font-weight: 600; display: -webkit-box; line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-.SessionWorkspace__scene small { font-size: 12px; line-height: 19px; color: var(--muted); }
-.SessionWorkspace__editor { min-width: 0; }
-.SessionWorkspace__reference { display: grid; gap: var(--space-4); min-width: 0; }
-.SessionWorkspace__empty { display: grid; justify-items: start; gap: var(--space-4); padding: var(--space-7); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); }
-@media (max-width: 1400px) { .SessionWorkspace { grid-template-columns: 192px minmax(0, 1fr); } .SessionWorkspace__reference { grid-column: 2; } }
-@media (max-width: 767px) { .SessionWorkspace { grid-template-columns: minmax(0, 1fr); } .SessionWorkspace__outline { position: static; gap: var(--space-2); } .SessionWorkspace__compactAdd { display: inline-flex !important; } .SessionWorkspace__createButton { display: none; } .SessionWorkspace__reference { grid-column: 1; grid-template-columns: minmax(0, 1fr); } .SessionWorkspace__outline .DraggableList { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); } }
+.SessionWorkspace {
+    display: grid;
+    grid-template-columns: 224px minmax(0, 1fr) 240px;
+    gap: var(--space-4);
+    align-items: start;
+    min-width: 0;
+}
 
-.SessionWorkspace__editor_stream { display: grid; gap: var(--space-4); max-height: 70dvh; overflow-y: auto; }
+.SessionWorkspace__outline {
+    display: grid;
+    gap: var(--space-3);
+    position: sticky;
+    top: 0;
+    min-width: 0;
+}
+
+.SessionWorkspace__outline>header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.SessionWorkspace__outline h3 {
+    color: var(--muted);
+    font: 700 11px/16px var(--font-body);
+    text-transform: uppercase;
+}
+
+.SessionWorkspace__compactAdd {
+    display: none !important;
+}
+
+.SessionWorkspace__outline .DraggableList {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.SessionWorkspace__outline .DraggableList__handle {
+    top: var(--space-2);
+    right: var(--space-2);
+    left: auto;
+    width: var(--size-6);
+    height: var(--control-h-sm);
+    transform: none;
+    opacity: 0.75;
+    touch-action: none;
+}
+
+.SessionWorkspace__outline .DraggableList__handle:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.SessionWorkspace__scene {
+    display: grid;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: 96px;
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-align: left;
+    background: var(--panel);
+    color: var(--text);
+}
+
+.SessionWorkspace__scene .WorkspaceEyebrow {
+    padding-right: var(--size-6);
+}
+
+.SessionWorkspace__scene[aria-pressed="true"],
+.SessionWorkspace__scene:hover {
+    background: var(--accent-soft);
+}
+
+.SessionWorkspace__scene[aria-pressed="true"] .WorkspaceEyebrow {
+    color: var(--accent);
+}
+
+.SessionWorkspace__scene strong {
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 600;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.SessionWorkspace__scene small {
+    font-size: 12px;
+    line-height: 19px;
+    color: var(--muted);
+}
+
+.SessionWorkspace__editor {
+    min-width: 0;
+}
+
+.SessionWorkspace__reference {
+    display: grid;
+    gap: var(--space-4);
+    min-width: 0;
+}
+
+.SessionWorkspace__empty {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-4);
+    padding: var(--space-7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
+}
+
+@media (max-width: 1400px) {
+    .SessionWorkspace {
+        grid-template-columns: 192px minmax(0, 1fr);
+    }
+
+    .SessionWorkspace__reference {
+        grid-column: 2;
+    }
+}
+
+@media (max-width: 767px) {
+    .SessionWorkspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .SessionWorkspace__outline {
+        position: static;
+        gap: var(--space-2);
+    }
+
+    .SessionWorkspace__compactAdd {
+        display: inline-flex !important;
+    }
+
+    .SessionWorkspace__createButton {
+        display: none;
+    }
+
+    .SessionWorkspace__reference {
+        grid-column: 1;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .SessionWorkspace__outline .DraggableList {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-2);
+    }
+}
+
+.SessionWorkspace__editor_stream {
+    display: grid;
+    gap: var(--space-4);
+    max-height: 70dvh;
+    overflow-y: auto;
+}

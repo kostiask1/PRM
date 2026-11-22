@@ -89,6 +89,13 @@ function prepareMentionPickerModal(
 		return null;
 	}
 	if (!campaignSlug) {
+		if (
+			shouldIncludeBestiaryMentions(
+				(request as AppMentionPickerCallbacks | null)?.includeBestiary,
+			)
+		) {
+			return { campaignSlug: "", callbacks };
+		}
 		cancelMentionPicker(callbacks, dispatch);
 		return null;
 	}
@@ -260,6 +267,7 @@ async function loadMentionPickerEntities(
 	currentLanguage: string,
 	sessionFileName: string | null,
 ): Promise<AppMentionEntityOption[]> {
+	if (!campaignSlug) return [];
 	const [characters, npcs, locations] = await Promise.all([
 		campaignApi.getEntities(campaignSlug, "characters"),
 		campaignApi.getEntities(campaignSlug, "npc").catch(() => []),
@@ -289,6 +297,7 @@ function openMentionPickerModal(
 		type: "confirm",
 		className: "MentionPickerModalHost__modal",
 		showFooter: false,
+		zIndex: 1450,
 		onCancelAction: () => {
 			cancelMentionPicker(callbacks, dispatch);
 		},

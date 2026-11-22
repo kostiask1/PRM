@@ -1130,10 +1130,18 @@ const {
 	fillCurrentTargetIds,
 } = require("../server/modules/ai/application/fillCurrentTargetIds.js");
 const {
+	BESTIARY_CHATS_FILE_NAME,
+	CHATS_FILE_NAME,
 	createFileAiChatRepository,
 	MAX_STORED_CHAT_MESSAGES,
 } = require("../server/modules/ai/infrastructure/fileAiChatRepository.js");
 const {
+	LEGACY_ARCHIVE_CHAT_ID,
+	LEGACY_ARCHIVE_CHAT_TITLE,
+	createLegacyAiHistoryChatMigration,
+} = require("../server/modules/ai/infrastructure/legacyAiHistoryChatMigration.js");
+const {
+	SUPPORTED_CHAT_COMMANDS,
 	parseChatCommands,
 	extractMentionedEntityNames,
 	normalizeChatMentionsSyntax,
@@ -1142,6 +1150,7 @@ const {
 const {
 	SUMMARY_TRIGGER_UNSUMMARIZED,
 	SUMMARY_KEEP_RECENT,
+	buildChatContextPreview,
 	buildChatWorkspaceContext,
 	buildChatSystemInstruction,
 	buildChatTurnPrompt,
@@ -2958,14 +2967,6 @@ await run(
 
 		assert.match(
 			compositionSource,
-			/export interface BestiaryAssistantSlotProps\s*\{[\s\S]*?\bisBestiary: boolean;[\s\S]*?\bonRegisterImagePromptAction:/,
-		);
-		assert.match(
-			compositionSource,
-			/export type BestiaryAssistantSlot\s*=\s*ComponentType<BestiaryAssistantSlotProps>;/,
-		);
-		assert.match(
-			compositionSource,
 			/export interface BestiaryMonsterStatBlockSlotProps\s*\{[\s\S]*?\bmonster: BestiaryMonster;[\s\S]*?\bonFavoriteChange: Dispatch<SetStateAction<BestiaryFavorite\[\]>>;[\s\S]*?\bsearchHighlight: string;/,
 		);
 		assert.match(
@@ -2973,8 +2974,6 @@ await run(
 			/export type BestiaryMonsterStatBlockSlot\s*=\s*ComponentType<BestiaryMonsterStatBlockSlotProps>;/,
 		);
 		for (const publicType of [
-			"BestiaryAssistantSlot",
-			"BestiaryAssistantSlotProps",
 			"BestiaryMonsterStatBlockSlot",
 			"BestiaryMonsterStatBlockSlotProps",
 		]) {
@@ -2983,20 +2982,16 @@ await run(
 
 		assert.match(
 			bestiaryBrowserSource,
-			/export interface BestiaryBrowserProps\s*\{\s*BestiaryAiModals: BestiaryAiModalsSlot;\s*AiAssistantPanel: BestiaryAssistantSlot;\s*MonsterStatBlock: BestiaryMonsterStatBlockSlot;/,
+			/export interface BestiaryBrowserProps\s*\{\s*BestiaryAiModals: BestiaryAiModalsSlot;\s*MonsterStatBlock: BestiaryMonsterStatBlockSlot;/,
 		);
 		assert.match(
 			bestiaryBrowserSource,
-			/export default function BestiaryBrowser\(\{\s*BestiaryAiModals,\s*AiAssistantPanel,\s*MonsterStatBlock,/,
+			/export default function BestiaryBrowser\(\{\s*BestiaryAiModals,\s*MonsterStatBlock,/,
 		);
 		const bestiaryContentTag = bestiaryBrowserSource.match(
 			/<BestiaryBrowserContent(?=\s|>)[\s\S]*?\/>/,
 		)?.[0];
 		assert.ok(bestiaryContentTag);
-		assert.match(
-			bestiaryContentTag,
-			/\bAiAssistantPanel=\{AiAssistantPanel\}/,
-		);
 		assert.match(
 			bestiaryContentTag,
 			/\bMonsterStatBlock=\{MonsterStatBlock\}/,
@@ -3012,11 +3007,11 @@ await run(
 
 		assert.match(
 			bestiaryContentSource,
-			/export interface BestiaryContentProps\s*\{\s*AiAssistantPanel: BestiaryAssistantSlot;\s*MonsterStatBlock: BestiaryMonsterStatBlockSlot;/,
+			/export interface BestiaryContentProps\s*\{\s*MonsterStatBlock: BestiaryMonsterStatBlockSlot;/,
 		);
 		assert.match(
 			bestiaryContentSource,
-			/export default function BestiaryContent\(\{\s*AiAssistantPanel,\s*MonsterStatBlock,/,
+			/export default function BestiaryContent\(\{\s*MonsterStatBlock,/,
 		);
 		assert.match(
 			bestiaryContentSource,
@@ -3026,10 +3021,7 @@ await run(
 			bestiaryDetailSource,
 			/function BestiaryDetail\(\{\s*MonsterStatBlock,[\s\S]*?if \(!presentation\) return null;[\s\S]*?<MonsterStatBlock(?=\s|>)/,
 		);
-		assert.match(
-			bestiaryContentSource,
-			/<\/div>\s*<AiAssistantPanel\s+ResponseModal=\{ResponseModal\}\s+isBestiary\s+onRegisterImagePromptAction=\{onRegisterImagePromptAction\}\s*\/>/,
-		);
+		assert.doesNotMatch(bestiaryContentSource, /<AiAssistantPanel/);
 
 		const bestiaryConsumers = [];
 		for (const filePath of await collectFsdSourceFiles("src")) {
@@ -3051,10 +3043,7 @@ await run(
 			"src/pages/encounter/ui/components/MonsterAiEditModal.tsx",
 		]);
 
-		assert.match(
-			encounterSource,
-			/import \{ AiAssistantPanel \} from "\.\.\/\.\.\/\.\.\/\.\.\/widgets\/ai-assistant\/index\.js";/,
-		);
+		assert.doesNotMatch(encounterSource, /\bAiAssistantPanel\b/);
 		assert.match(
 			encounterSource,
 			/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/\.\.\/\.\.\/widgets\/monster-stat-block\/index\.js";/,
@@ -3062,10 +3051,6 @@ await run(
 		const encounterBestiaryTag = getRequiredSourceMatch(
 			encounterSource,
 			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
-		);
-		assert.match(
-			encounterBestiaryTag,
-			/\bAiAssistantPanel=\{AiAssistantPanel\}/,
 		);
 		assert.match(
 			encounterBestiaryTag,
@@ -3326,44 +3311,24 @@ await run(
 	"Phase 129 injects the AI response modal from composition roots",
 	async () => {
 		const [
-			panelSource,
-			panelDeclarationSource,
-			panelViewSource,
+			assistantV2Source,
+			assistantDeclarationSource,
+			panelV2Source,
 			mainContentSource,
-			bestiaryBrowserSource,
-			bestiaryBrowserContentSource,
-			bestiaryContentSource,
-			bestiaryCompositionSource,
 			encounterSource,
 			historyDialogSource,
 			responseModalSource,
 		] = await Promise.all([
 			fs.readFile(
-				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+				"src/widgets/ai-assistant/chat/ui/AiAssistantV2.tsx",
 				"utf8",
 			),
 			fs.readFile("src/widgets/ai-assistant/index.d.ts", "utf8"),
 			fs.readFile(
-				"src/widgets/ai-assistant/ui/AiAssistantPanelView.tsx",
+				"src/widgets/ai-assistant/chat/ui/AiAssistantPanelV2.tsx",
 				"utf8",
 			),
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
-			fs.readFile(
-				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
-				"utf8",
-			),
-			fs.readFile(
-				"src/widgets/bestiary-browser/ui/BestiaryBrowserContent.tsx",
-				"utf8",
-			),
-			fs.readFile(
-				"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
-				"utf8",
-			),
-			fs.readFile(
-				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
-				"utf8",
-			),
 			getEncounterPageCompositionSource(),
 			fs.readFile(
 				"src/features/ai/ui/AiHistoryResponseDialog.tsx",
@@ -3397,80 +3362,36 @@ await run(
 		}
 
 		assert.match(
-			panelSource,
-			/import type \{\s*AiResponseModalComponent,\s*\} from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
+			assistantV2Source,
+			/import type \{ AiResponseModalComponent \} from "\.\.\/\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
 		);
 		assert.match(
-			panelSource,
-			/export interface AiAssistantPanelProps\s*\{\s*ResponseModal: AiResponseModalComponent;/,
-		);
-		assert.doesNotMatch(panelSource, /\bResponseModal\?:/);
-		assert.match(
-			panelDeclarationSource,
-			/export \{\s*default as AiAssistantPanel,\s*type AiAssistantPanelProps,\s*\} from "\.\/ui\/AiAssistantPanel\.tsx";/,
+			assistantV2Source,
+			/interface AiAssistantV2Props\s*\{[\s\S]*?ResponseModal\?: AiResponseModalComponent;/,
 		);
 		assert.match(
-			panelSource,
-			/export default function AiAssistantPanel\(\{\s*ResponseModal,\s*isBestiary = false,/,
+			assistantDeclarationSource,
+			/export \{ default as AiAssistantV2 \} from "\.\/chat\/ui\/AiAssistantV2\.tsx";/,
+		);
+		assert.doesNotMatch(assistantDeclarationSource, /\bAiAssistantPanel\b/);
+		assert.match(
+			panelV2Source,
+			/<AiDiffPreviewModalV2[\s\S]*?ResponseModal=\{ResponseModal\}/,
 		);
 
 		assert.match(
 			mainContentSource,
-			/import \{ AiAssistantPanel \} from "\.\.\/\.\.\/widgets\/ai-assistant\/index\.js";/,
+			/import \{ AiAssistantV2 \} from "\.\.\/\.\.\/widgets\/ai-assistant\/index\.js";/,
 		);
 		assert.match(
 			mainContentSource,
 			/import \{ createAiResponseModalComponent \} from "\.\.\/\.\.\/widgets\/ai-response-modal\/index\.js";/,
 		);
-		assert.match(
-			mainContentSource,
-			/const aiAssistantRouteKey = \[\s*location\.pathname,\s*activeSessionFileName \|\| "",\s*activeEncounterId \?\? "",\s*\]\.join\(":"\);/,
+		assert.doesNotMatch(mainContentSource, /\bAiAssistantPanel\b/);
+		const mainAssistantMatches = mainContentSource.match(
+			/<AiAssistantV2[\s\S]*?ResponseModal=\{MainContentAiResponseModal\}[\s\S]*?\/>/g,
 		);
-		const mainAssistantGuard = mainContentSource.match(
-			/\{showAiAssistant && \(\s*<AiAssistantPanel(?=\s|>)[\s\S]*?\/>\s*\)\}/,
-		)?.[0];
-		assert.ok(mainAssistantGuard);
-		assert.match(mainAssistantGuard, /\bkey=\{aiAssistantRouteKey\}/);
-		assert.match(
-			mainAssistantGuard,
-			/\bResponseModal=\{MainContentAiResponseModal\}/,
-		);
-
-		assert.match(
-			bestiaryCompositionSource,
-			/import type\s*\{[^}]*\bAiResponseModalComponent\b[^}]*\}\s*from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
-		);
-		assert.match(
-			bestiaryCompositionSource,
-			/export interface BestiaryAssistantSlotProps\s*\{\s*ResponseModal: AiResponseModalComponent;\s*isBestiary: boolean;/,
-		);
-		const bestiaryContentTag = bestiaryBrowserSource.match(
-			/<BestiaryBrowserContent(?=\s|>)[\s\S]*?\/>/,
-		)?.[0];
-		assert.ok(bestiaryContentTag);
-		assert.match(bestiaryContentTag, /\bResponseModal=\{ResponseModal\}/);
-		assert.match(
-			bestiaryBrowserContentSource,
-			/<BestiaryContent[\s\S]*?\{\.\.\.contentProps\}[\s\S]*?headerActions=/,
-		);
-		assert.match(
-			bestiaryContentSource,
-			/export interface BestiaryContentProps\s*\{[\s\S]*?\bResponseModal: BestiaryAssistantSlotProps\["ResponseModal"\];/,
-		);
-		const bestiaryAssistantTag = bestiaryContentSource.match(
-			/<AiAssistantPanel(?=\s|>)[\s\S]*?\/>/,
-		)?.[0];
-		assert.ok(bestiaryAssistantTag);
-		assert.match(bestiaryAssistantTag, /\bResponseModal=\{ResponseModal\}/);
-		assert.match(bestiaryAssistantTag, /\bisBestiary\b/);
-		assert.match(
-			bestiaryAssistantTag,
-			/\bonRegisterImagePromptAction=\{onRegisterImagePromptAction\}/,
-		);
-		assert.match(
-			bestiaryContentSource,
-			/<\/div>\s*<AiAssistantPanel(?=\s|>)[\s\S]*?\/>\s*<\/div>\s*\);\s*\}/,
-		);
+		assert.equal(mainAssistantMatches?.length, 2);
 
 		const encounterBestiaryTag = getRequiredSourceMatch(
 			encounterSource,
@@ -3479,15 +3400,6 @@ await run(
 		assert.match(
 			encounterBestiaryTag,
 			/\bResponseModal=\{EncounterAiResponseModal\}/,
-		);
-
-		assert.match(
-			panelViewSource,
-			/<AiContextSettingsModal \{\.\.\.contextModal\} \/>\s*<AiHistoryResponseDialog \{\.\.\.historyDialog\} \/>\s*<AiAssistantPromptComposer \{\.\.\.promptComposer\} \/>/,
-		);
-		assert.match(
-			panelSource,
-			/historyDialog=\{\{\s*ResponseModal,\s*generatedPrompt: optional\(generatedPrompt\),[\s\S]*?generatedPromptRef,[\s\S]*?isGeneratedPromptCopied,[\s\S]*?isRestoringResponse,[\s\S]*?markdownComponents: markdownMentionComponents,[\s\S]*?onRestore:[\s\S]*?onCancel: closeGeneratedPrompt,[\s\S]*?onCopy: copyGeneratedPrompt,[\s\S]*?onSaveDraftChanges:[\s\S]*?selectedResponseDetails,[\s\S]*?selectedResponseDiffResources,[\s\S]*?selectedResponseEntry,[\s\S]*?selectedResponseHasChanges,[\s\S]*?getDiffResourceState,[\s\S]*?getHistoryChangeSummary,\s*\}\}/,
 		);
 		const responseModalTag = historyDialogSource.match(
 			/<ResponseModal(?=\s|>)[\s\S]*?\/>/,
@@ -3870,7 +3782,7 @@ await run(
 		);
 		assert.match(
 			mainContentSource,
-			/\{showAiAssistant && \(\s*<AiAssistantPanel[\s\S]*?\bkey=\{aiAssistantRouteKey\}[\s\S]*?\bResponseModal=\{MainContentAiResponseModal\}[\s\S]*?\/>\s*\)\}/,
+			/<AiAssistantV2[\s\S]*?\bResponseModal=\{MainContentAiResponseModal\}[\s\S]*?\/>/,
 		);
 		assert.equal(
 			(
@@ -7286,7 +7198,6 @@ await run(
 				"export function EncounterBestiary",
 				"<Bestiary",
 				"BestiaryAiModals={EncounterBestiaryAiModals}",
-				"AiAssistantPanel={AiAssistantPanel}",
 				"MonsterStatBlock={MonsterStatBlock}",
 				"ResponseModal={EncounterAiResponseModal}",
 				"MonsterEditorModal={EncounterMonsterEditorModal}",
@@ -10251,7 +10162,7 @@ await run(
 				"src/pages/session/ui/components/SessionNoteCard.tsx",
 				"src/pages/session/ui/components/SessionScenesSection.tsx",
 				"src/pages/session/ui/components/SessionScopeImportOverlay.tsx",
-				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+				"src/widgets/ai-assistant/chat/ui/renderChatMentionText.tsx",
 				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
 				"src/widgets/campaign-entity-card/ui/CampaignEntityCardNotes.tsx",
 				"src/widgets/campaign-entity-card/ui/CharacterCard.tsx",
@@ -10291,9 +10202,6 @@ await run(
 			attachmentSource,
 			promptCompositionSource,
 			promptSource,
-			aiOwnerSource,
-			aiPanelViewSource,
-			aiImageDetailsSource,
 			encounterAiSource,
 			settingsRuntimeEntry,
 			settingsTypeEntry,
@@ -10326,18 +10234,6 @@ await run(
 				"utf8",
 			),
 			fs.readFile("src/features/ai/ui/AiPromptComposer.tsx", "utf8"),
-			fs.readFile(
-				"src/widgets/ai-assistant/ui/aiAssistantUiComposition.ts",
-				"utf8",
-			),
-			fs.readFile(
-				"src/widgets/ai-assistant/ui/AiAssistantPanelView.tsx",
-				"utf8",
-			),
-			fs.readFile(
-				"src/widgets/ai-assistant/ui/AiImagePromptDetails.tsx",
-				"utf8",
-			),
 			fs.readFile(
 				"src/pages/encounter/ui/components/MonsterAiEditModal.tsx",
 				"utf8",
@@ -10498,24 +10394,6 @@ await run(
 					'initialSubcategory=""',
 				],
 				"AI attachment gallery behavior",
-			);
-			assertSourceTokensInOrder(
-				aiOwnerSource,
-				[
-					"createAiAttachmentControlsComponent({ ImageGallery })",
-					"createAiPromptComposerComponent({",
-					"AiAttachmentControls: AiAssistantAttachmentControls",
-					"EditableField,",
-				],
-				"AI assistant composition",
-			);
-			assert.match(
-				aiPanelViewSource,
-				/<AiAssistantPromptComposer \{\.\.\.promptComposer\} \/>/,
-			);
-			assert.match(
-				aiImageDetailsSource,
-				/<AiAssistantAttachmentControls/,
 			);
 			assertSourceTokensInOrder(
 				encounterAiSource,
@@ -11232,10 +11110,10 @@ await run(
 await run(
 	"Phase 242 isolates AI Assistant updated-data application in the private widget model",
 	async () => {
-		const [panelSource, updatedDataSource, widgetEntry, modelEntry, modelTypes] =
+		const [chatStateSource, updatedDataSource, widgetEntry, modelEntry, modelTypes] =
 			await Promise.all([
 				fs.readFile(
-					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+					"src/widgets/ai-assistant/chat/model/useAiChatState.ts",
 					"utf8",
 				),
 				fs.readFile(
@@ -11248,23 +11126,22 @@ await run(
 			]);
 
 		assert.match(
-			panelSource,
-			/import \{ useAiAssistantUpdatedData \} from "\.\.\/model\/useAiAssistantUpdatedData\.ts";/,
+			chatStateSource,
+			/import \{ useAiAssistantUpdatedData \} from "\.\.\/\.\.\/model\/useAiAssistantUpdatedData\.ts";/,
 		);
 		assert.doesNotMatch(
-			panelSource,
-			/const publishAiSyncEvent|const applyUpdatedAiData = useCallback|buildAiUpdatedDataPlan|executeAiUpdatedDataPlan/,
+			chatStateSource,
+			/const publishAiSyncEvent|buildAiUpdatedDataPlan|executeAiUpdatedDataPlan/,
 		);
 		assertSourceTokensInOrder(
-			panelSource,
+			chatStateSource,
 			[
 				"const { applyUpdatedAiData } = useAiAssistantUpdatedData({",
-				"activeCampaign,",
-				"campaignSlug: initialRoute.campaign,",
-				"encounterId: initialRoute.encounter,",
-				"fallbackSessionFileName: optional(initialRoute.session),",
-				"sessionFileName: initialRoute.session,",
-				"applyUpdatedData: applyUpdatedAiData,",
+				"activeCampaign: runtime.activeCampaign,",
+				"campaignSlug,",
+				"encounterId: activeEncounterId,",
+				"fallbackSessionFileName: activeSessionFileName || undefined,",
+				"sessionFileName: activeSessionFileName,",
 			],
 			"AI Assistant updated-data delegation",
 		);
@@ -11291,417 +11168,11 @@ await run(
 		);
 		assert.doesNotMatch(
 			updatedDataSource,
-			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
+			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model/,
 		);
 		assert.doesNotMatch(
 			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
 			/useAiAssistantUpdatedData/,
-		);
-	},
-);
-
-await run(
-	"Phase 243 isolates AI Assistant generated-result processing in the private widget model",
-	async () => {
-		const [panelSource, generatedResultSource, widgetEntry, modelEntry, modelTypes] =
-			await Promise.all([
-				fs.readFile(
-					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
-					"utf8",
-				),
-				fs.readFile(
-					"src/widgets/ai-assistant/model/useAiAssistantGeneratedResult.ts",
-					"utf8",
-				),
-				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
-			]);
-
-		assert.match(
-			panelSource,
-			/import \{ useAiAssistantGeneratedResult \} from "\.\.\/model\/useAiAssistantGeneratedResult\.ts";/,
-		);
-		assert.doesNotMatch(
-			panelSource,
-			/const handleGeneratedAiData =|buildAiGeneratedResultPlan|executeAiGeneratedResultPlan/,
-		);
-		assertSourceTokensInOrder(
-			panelSource,
-			[
-				"const { applyUpdatedAiData } = useAiAssistantUpdatedData({",
-				"const { handleGeneratedAiData } = useAiAssistantGeneratedResult({",
-				"applyUpdatedData: applyUpdatedAiData,",
-				"onClearPrompt: () => setUserInstructions(\"\"),",
-				"onCloseAssistantDialogs: () => {",
-				"onCloseAuxiliaryDialogs: () => {",
-				"onNotification: setNotification,",
-				"onRequestCampaignReload: requestCampaignReload,",
-				"onRefreshEntities: refreshEntities,",
-				"showGeneratedPrompt,",
-				"upsertResponseHistoryEntry,",
-				"const {\n\t\tcanCancelGenerate,",
-				"} = useAiAssistantGeneration({",
-			],
-			"AI Assistant generated-result delegation",
-		);
-		assertSourceTokensInOrder(
-			generatedResultSource,
-			[
-				"export function useAiAssistantGeneratedResult({",
-				"const handleGeneratedAiData = ({",
-				"const plan = buildAiGeneratedResultPlan({",
-				"executeAiGeneratedResultPlan({",
-				"onHistoryEntry: upsertResponseHistoryEntry,",
-				"onShowPrompt: showGeneratedPrompt,",
-				"onNotification: (notification) => {",
-				'notification === "draft-created"',
-				'notification === "custom-creatures-saved"',
-				"onApplyUpdated: (updatedPlan) => {",
-				"applyUpdatedData(updatedPlan.updated, {",
-				"onCampaignReload: onRequestCampaignReload,",
-				"onClearPrompt,",
-				"onRefreshEntities,",
-				"onCloseAuxiliaryDialogs,",
-				"onCloseAssistantDialogs,",
-				"return { handleGeneratedAiData };",
-			],
-			"AI Assistant private generated-result processing",
-		);
-		assert.doesNotMatch(
-			generatedResultSource,
-			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
-		);
-		assert.doesNotMatch(
-			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
-			/useAiAssistantGeneratedResult/,
-		);
-	},
-);
-
-await run(
-	"Phase 244 isolates AI Assistant generation and retry lifecycle in the private widget model",
-	async () => {
-		const [panelSource, generationSource, widgetEntry, modelEntry, modelTypes] =
-			await Promise.all([
-				fs.readFile(
-					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
-					"utf8",
-				),
-				fs.readFile(
-					"src/widgets/ai-assistant/model/useAiAssistantGeneration.ts",
-					"utf8",
-				),
-				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
-			]);
-
-		assert.match(
-			panelSource,
-			/import \{ useAiAssistantGeneration \} from "\.\.\/model\/useAiAssistantGeneration\.ts";/,
-		);
-		assert.doesNotMatch(
-			panelSource,
-			/const \[generationLifecycle|activeGenerateControllerRef|nextGenerationRequestIdRef|const generate = async|const retryResponseHistoryEntry|buildAiGenerationRequest|executeAiGeneration|executeAiHistoryRetry/,
-		);
-		assertSourceTokensInOrder(
-			panelSource,
-			[
-				"const { handleGeneratedAiData } = useAiAssistantGeneratedResult({",
-				"const {\n\t\tcanCancelGenerate,",
-				"} = useAiAssistantGeneration({",
-				"attachedFiles,",
-				"attachedImages,",
-				"buildRetryPlan,",
-				"contextConfig,",
-				"currentLanguage,",
-				"deleteAiResponse: api.deleteAiResponse,",
-				"generateAi: api.generateAi,",
-				"handleGeneratedAiData,",
-				"historyCampaign: aiHistoryCampaign,",
-				"isContextLoading,",
-				"onApiKeyMissing: () => setIsApiKeyMissing(true),",
-				"onError: setError,",
-				"showMessage,",
-				"closeGeneratedPrompt,",
-				"const loading = isContextLoading || isGenerationPending;",
-				"return () => {",
-				"cancelGenerateRequest();",
-			],
-			"AI Assistant generation-lifecycle delegation",
-		);
-		assertSourceTokensInOrder(
-			generationSource,
-			[
-				"export function useAiAssistantGeneration({",
-				"const [generationLifecycle, dispatchGenerationLifecycle] = useReducer(",
-				"const activeGenerateControllerRef = useRef<AbortController | null>(null);",
-				"const nextGenerationRequestIdRef = useRef(0);",
-				"const [canCancelGenerate, setCanCancelGenerate] = useState(false);",
-				"const loading =",
-				"const cancelGenerateRequest = () => {",
-				"activeGenerateControllerRef.current?.abort();",
-				"const generate = async (",
-				"const { requestType, shouldParseResponse, payload } =",
-				"buildAiGenerationRequest({",
-				"cancelGenerateRequest();",
-				"dispatchGenerationLifecycle({ type: \"start-generation\", requestId });",
-				"await executeAiGeneration({",
-				"onFailedHistoryEntry: upsertResponseHistoryEntry,",
-				"onApiKeyMissing: () => {",
-				"onApiKeyMissing();",
-				"onFailed: (failure) => {",
-				"formatAiGenerationFailureAlert(",
-				"const retryResponseHistoryEntry = async (",
-				"const plan = buildRetryPlan(entry, {",
-				"dispatchGenerationLifecycle({ type: \"start-retry\", requestId });",
-				"await executeAiHistoryRetry({",
-				"onFailedEntryDeleted: (responses) => {",
-				"if (selectedResponseId === entry.id) {",
-				"const failure = getAiHistoryRetryFailure(error, lang.t(\"Status\"));",
-				"return {",
-				"isGenerationPending: isAiGenerationPending(generationLifecycle),",
-			],
-			"AI Assistant private generation and retry lifecycle",
-		);
-		assert.doesNotMatch(
-			generationSource,
-			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
-		);
-		assert.doesNotMatch(
-			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
-			/useAiAssistantGeneration/,
-		);
-	},
-);
-
-await run(
-	"Phase 245 isolates AI Assistant token estimation in the private widget model",
-	async () => {
-		const [panelSource, tokenEstimateSource, widgetEntry, modelEntry, modelTypes] =
-			await Promise.all([
-				fs.readFile(
-					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
-					"utf8",
-				),
-				fs.readFile(
-					"src/widgets/ai-assistant/model/useAiAssistantTokenEstimate.ts",
-					"utf8",
-				),
-				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
-			]);
-
-		assert.match(
-			panelSource,
-			/import \{ useAiAssistantTokenEstimate \} from "\.\.\/model\/useAiAssistantTokenEstimate\.ts";/,
-		);
-		assert.doesNotMatch(
-			panelSource,
-			/tokenEstimate = useMemo|buildAiTokenEstimate|formattedTokenEstimate = new Intl\.NumberFormat/,
-		);
-		assertSourceTokensInOrder(
-			panelSource,
-			[
-				"const {\n\t\tformattedFileTokenEstimate,",
-				"} = useAiAssistantTokenEstimate({",
-				"activeCampaignBasePrompt,",
-				"attachedFiles,",
-				"attachedImages,",
-				"campaignContext: optional(campaignContext),",
-				"contextConfig,",
-				"currentLanguage,",
-				"generateCustomMonsters,",
-				"globalAiBasePrompt,",
-				"sessionData,",
-				"userInstructions,",
-				"getCharacterKey: getCharacterContextKey,",
-				"getLocationKey: getLocationContextKey,",
-				"const imagePromptController = useAiImagePromptController({",
-			],
-			"AI Assistant token-estimate delegation",
-		);
-		assertSourceTokensInOrder(
-			tokenEstimateSource,
-			[
-				'import { useMemo } from "react";',
-				"export function useAiAssistantTokenEstimate(input: AiTokenEstimateInput) {",
-				"const tokenEstimate = useMemo(() => buildAiTokenEstimate(input), [",
-				"input.activeCampaignBasePrompt,",
-				"input.attachedFiles,",
-				"input.contextConfig,",
-				"input.getCharacterKey,",
-				"input.getLocationKey,",
-				"const numberFormat = new Intl.NumberFormat(input.currentLanguage || \"en\");",
-				"formattedFileTokenEstimate: numberFormat.format(tokenEstimate.fileTokens || 0),",
-				"formattedImageTokenEstimate: numberFormat.format(tokenEstimate.imageTokens),",
-				"formattedTextTokenEstimate: numberFormat.format(tokenEstimate.textTokens),",
-				"formattedTokenEstimate: numberFormat.format(tokenEstimate.total),",
-			],
-			"AI Assistant private token-estimate projection",
-		);
-		assert.doesNotMatch(
-			tokenEstimateSource,
-			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
-		);
-		assert.doesNotMatch(
-			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
-			/useAiAssistantTokenEstimate/,
-		);
-	},
-);
-
-await run(
-	"Phase 246 isolates AI Assistant control state in the private widget model",
-	async () => {
-		const [panelSource, controlsSource, widgetEntry, modelEntry, modelTypes] =
-			await Promise.all([
-				fs.readFile(
-					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
-					"utf8",
-				),
-				fs.readFile(
-					"src/widgets/ai-assistant/model/useAiAssistantControls.ts",
-					"utf8",
-				),
-				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
-			]);
-
-		assert.match(
-			panelSource,
-			/import \{ useAiAssistantControls \} from "\.\.\/model\/useAiAssistantControls\.ts";/,
-		);
-		assert.doesNotMatch(
-			panelSource,
-			/const \[isOpen|const \[isContextModalOpen|const \[useContext|const \[attachedImages|const \[attachedFiles|const \[parseAIResponse|const \[generateCharacters|const \[generateCustomMonsters/,
-		);
-		assertSourceTokensInOrder(
-			panelSource,
-			[
-				"const {\n\t\tattachedFiles,",
-				"} = useAiAssistantControls({",
-				"generateEncountersByDefault,",
-				"isEncounter,",
-				"const imagePromptState = useAiImagePromptState();",
-				"useAiAssistantContextController({",
-				"isPanelOpen: isOpen,",
-				"isContextModalOpen,",
-				"useContext,",
-				"parseAiResponse: parseAIResponse,",
-				"generateEncounters,",
-			],
-			"AI Assistant control-state delegation",
-		);
-		assertSourceTokensInOrder(
-			controlsSource,
-			[
-				"export function useAiAssistantControls({",
-				"const [isOpen, setIsOpen] = useState(false);",
-				"const [isContextModalOpen, setIsContextModalOpen] = useState(false);",
-				"const [useContext, setUseContext] = useState(true);",
-				"const [error, setError] = useState(\"\");",
-				"const [userInstructions, setUserInstructions] = useState(\"\");",
-				"const [notification, setNotification] = useState<string | null>(null);",
-				"const [attachedImages, setAttachedImages] = useState<AiUiAttachment[]>([]);",
-				"const [attachedFiles, setAttachedFiles] = useState<AiUiAttachment[]>([]);",
-				"const [parseAIResponse, setParseAIResponse] = useState(isEncounter);",
-				"const [generateCharacters, setGenerateCharacters] = useState(false);",
-				"const [generateNpcs, setGenerateNpcs] = useState(true);",
-				"const [generateLocations, setGenerateLocations] = useState(true);",
-				"const [generateEncounters, setGenerateEncounters] = useState(",
-				"generateEncountersByDefault,",
-				"const [generateCustomMonsters, setGenerateCustomMonsters] = useState(false);",
-				"return {",
-				"setUserInstructions,",
-				"userInstructions,",
-			],
-			"AI Assistant private control state",
-		);
-		assert.doesNotMatch(
-			controlsSource,
-			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
-		);
-		assert.doesNotMatch(
-			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
-			/useAiAssistantControls/,
-		);
-	},
-);
-
-await run(
-	"Phase 247 isolates AI Assistant route projection in the private widget model",
-	async () => {
-		const [panelSource, routeStateSource, widgetEntry, modelEntry, modelTypes] =
-			await Promise.all([
-				fs.readFile(
-					"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
-					"utf8",
-				),
-				fs.readFile(
-					"src/widgets/ai-assistant/model/useAiAssistantRouteState.ts",
-					"utf8",
-				),
-				fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.js", "utf8"),
-				fs.readFile("src/widgets/ai-assistant/model.d.ts", "utf8"),
-			]);
-
-		assert.match(
-			panelSource,
-			/import \{ useAiAssistantRouteState \} from "\.\.\/model\/useAiAssistantRouteState\.ts";/,
-		);
-		assert.doesNotMatch(
-			panelSource,
-			/const routeState = useMemo|getAiAssistantRouteState\(/,
-		);
-		assertSourceTokensInOrder(
-			panelSource,
-			[
-				"const routeState = useAiAssistantRouteState({",
-				"campaignAiBasePrompts,",
-				"campaignImagePromptBasePrompts,",
-				"imagePromptBasePrompt,",
-				"isBestiary,",
-				"navigation,",
-				"route: initialRoute,",
-				"activeImagePromptBasePrompt,",
-				"activeCampaignBasePrompt,",
-				"historyCampaign: aiHistoryCampaign,",
-				"generateEncountersByDefault,",
-			],
-			"AI Assistant route-state delegation",
-		);
-		assertSourceTokensInOrder(
-			routeStateSource,
-			[
-				'import { useMemo } from "react";',
-				"export function useAiAssistantRouteState({",
-				"return useMemo(",
-				"getAiAssistantRouteState({",
-				"isBestiary,",
-				"navigation,",
-				"imagePromptBasePrompt,",
-				"campaignAiBasePrompts,",
-				"campaignImagePromptBasePrompts,",
-				"campaignAiBasePrompts,",
-				"campaignImagePromptBasePrompts,",
-				"imagePromptBasePrompt,",
-				"isBestiary,",
-				"navigation,",
-			],
-			"AI Assistant private route projection",
-		);
-		assert.doesNotMatch(
-			routeStateSource,
-			/useAiAssistantRuntime|campaignApi|sessionApi|bestiaryApi|aiApi|app\/model|shared\/model|<AiAssistantPanelView/,
-		);
-		assert.doesNotMatch(
-			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
-			/useAiAssistantRouteState/,
 		);
 	},
 );
@@ -12420,67 +11891,6 @@ await run(
 );
 
 await run(
-	"Phase 276 isolates the Bestiary image-prompt bridge in a private UI hook",
-	async () => {
-		const [browserSource, stateSource, bridgeSource, widgetEntry, modelEntry, modelTypes] =
-			await Promise.all([
-				fs.readFile(
-					"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
-					"utf8",
-				),
-				fs.readFile(
-					"src/widgets/bestiary-browser/ui/useBestiaryBrowserState.ts",
-					"utf8",
-				),
-				fs.readFile(
-					"src/widgets/bestiary-browser/ui/useBestiaryImagePromptBridge.ts",
-					"utf8",
-				),
-				fs.readFile("src/widgets/bestiary-browser/index.js", "utf8"),
-				fs.readFile("src/widgets/bestiary-browser/model.js", "utf8"),
-				fs.readFile("src/widgets/bestiary-browser/model.d.ts", "utf8"),
-			]);
-
-		assertSourceTokensInOrder(
-			browserSource,
-			[
-				'import { useBestiaryImagePromptBridge } from "./useBestiaryImagePromptBridge.ts";',
-				"} = useBestiaryBrowserState();",
-				"useBestiaryImagePromptBridge();",
-				"onOpenImagePrompt,",
-				"onRegisterImagePromptAction={onRegisterImagePromptAction}",
-			],
-			"Bestiary browser composes its private image-prompt bridge",
-		);
-		assert.doesNotMatch(
-			browserSource,
-			/openImagePromptForMonsterRef|onOpenImagePrompt: \(monster\) =>/,
-		);
-		assert.doesNotMatch(stateSource, /openImagePromptForMonsterRef/);
-		assertSourceTokensInOrder(
-			bridgeSource,
-			[
-				"export function useBestiaryImagePromptBridge()",
-				"const openImagePromptForMonsterRef = useRef<",
-				"onOpenImagePrompt: (monster: BestiaryMonster) => {",
-				"openImagePromptForMonsterRef.current?.(monster);",
-				"onRegisterImagePromptAction: (",
-				"openImagePromptForMonsterRef.current = handler;",
-			],
-			"Bestiary private image-prompt bridge registration and dispatch",
-		);
-		assert.doesNotMatch(
-			bridgeSource,
-			/useBestiaryBrowserRuntime|useBestiaryAiWorkflows|campaignApi|bestiaryApi|settingsApi|app\/model|shared\/model/,
-		);
-		assert.doesNotMatch(
-			`${widgetEntry}\n${modelEntry}\n${modelTypes}`,
-			/useBestiaryImagePromptBridge/,
-		);
-	},
-);
-
-await run(
 	"Phase 275 moves Bestiary input normalization to lifecycle owners",
 	async () => {
 		const [browserSource, dataLoadingSource, lifecycleSource, widgetEntry, modelEntry, modelTypes] =
@@ -12806,7 +12216,6 @@ await run(
 				"canRedo={redoStack.length > 0}",
 				"canUndo={undoStack.length > 0}",
 				"onImport={handleImportCustomMonsters}",
-				"onRegisterImagePromptAction={onRegisterImagePromptAction}",
 				"setSelectedMonster={selectMonster}",
 			],
 			"Bestiary browser composes its private content host",
@@ -17107,7 +16516,7 @@ await run(
 				"<CampaignSearchRuntimeHost>",
 				"<Outlet />",
 				"</CampaignSearchRuntimeHost>",
-				"{showAiAssistant && (",
+				"<AiAssistantV2",
 			],
 			"Campaign Search runtime scope",
 		);
@@ -17117,7 +16526,7 @@ await run(
 		assert.ok(campaignSearchRuntimeScope);
 		assert.doesNotMatch(
 			campaignSearchRuntimeScope,
-			/<(?:AiAssistantPanel|Sidebar|MessageBoxHost|DiceCalculatorHost|RulesReferenceModalHost)\b/,
+			/<(?:AiAssistantV2|AiAssistantPanel|Sidebar|MessageBoxHost|DiceCalculatorHost|RulesReferenceModalHost)\b/,
 		);
 		assert.match(campaignPageSource, /<GlobalSearchModal onCancel={onCloseGlobalSearch} \/>/);
 		assert.match(sessionPageSource, /<SessionFloatingActions[\s\S]*?onCloseGlobalSearch=\{\(\) => setIsGlobalSearchOpen\(false\)\}/);
@@ -18757,12 +18166,11 @@ await run(
 	async () => {
 		const [
 			runtimeSource,
-			panelSource,
+			chatStateSource,
 			widgetEntry,
 			widgetTypeEntry,
 			runtimeHostSource,
 			mainContentSource,
-			bestiaryCompositionSource,
 			eslintSource,
 		] = await Promise.all([
 			fs.readFile(
@@ -18770,17 +18178,13 @@ await run(
 				"utf8",
 			),
 			fs.readFile(
-				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+				"src/widgets/ai-assistant/chat/model/useAiChatState.ts",
 				"utf8",
 			),
 			fs.readFile("src/widgets/ai-assistant/index.js", "utf8"),
 			fs.readFile("src/widgets/ai-assistant/index.d.ts", "utf8"),
 			fs.readFile("src/app/ui/AiAssistantRuntimeHost.tsx", "utf8"),
 			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
-			fs.readFile(
-				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
-				"utf8",
-			),
 			fs.readFile("eslint.config.js", "utf8"),
 		]);
 
@@ -18841,69 +18245,29 @@ await run(
 			"AiAssistantRuntime",
 			"AiAssistantRuntimeProviderProps",
 		]);
-		for (const source of [runtimeSource, panelSource]) {
+		for (const source of [runtimeSource, chatStateSource]) {
 			assert.doesNotMatch(
 				source,
 				/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(|\balert\(|\bconfirm\(/,
 			);
 		}
-		const panelPropsSource = panelSource.match(
-			/export interface AiAssistantPanelProps \{[\s\S]*?^\}/m,
-		)?.[0];
-		assert.ok(panelPropsSource);
-		assert.doesNotMatch(panelPropsSource, /runtime/i);
-		const bestiaryAssistantSlotPropsSource = bestiaryCompositionSource.match(
-			/export interface BestiaryAssistantSlotProps \{[\s\S]*?^\}/m,
-		)?.[0];
-		assert.ok(bestiaryAssistantSlotPropsSource);
-		assert.doesNotMatch(bestiaryAssistantSlotPropsSource, /runtime/i);
 		assertSourceTokensInOrder(
-			panelSource,
+			chatStateSource,
 			[
-				"const {",
-				"activeCampaign,",
-				"activeEncounter,",
-				"activeSession,",
-				"campaignAiBasePrompts,",
-				"campaignImagePromptBasePrompts,",
-				"currentLanguage,",
-				"globalAiBasePrompt,",
-				"imagePromptBasePrompt,",
-				"navigation,",
-				"publishSyncEvent,",
-				"refreshEntities,",
-				"requestCampaignReload,",
-				"requestConfirmation,",
-				"setActiveCampaign,",
-				"setActiveEncounter,",
-				"setActiveSession,",
-				"showMessage,",
-				"} = useAiAssistantRuntime();",
+				"const runtime = useAiAssistantRuntime();",
 				"const { applyUpdatedAiData } = useAiAssistantUpdatedData({",
-				"campaignSlug: initialRoute.campaign,",
-				"encounterId: initialRoute.encounter,",
-				"fallbackSessionFileName: optional(initialRoute.session),",
-				"publishSyncEvent,",
-				"refreshEntities,",
-				"requestCampaignReload,",
-				"setActiveCampaign,",
-				"setActiveEncounter,",
-				"setActiveSession,",
-				"confirm: async (copy) => Boolean(await requestConfirmation(copy)),",
-				"alert: showMessage,",
-				"requestReload: (entityTypes) => {",
-				"requestCampaignReload();",
-				"if (entityTypes.length > 0) refreshEntities();",
-				"const { handleGeneratedAiData } = useAiAssistantGeneratedResult({",
-				"applyUpdatedData: applyUpdatedAiData,",
-				"onRequestCampaignReload: requestCampaignReload,",
-				"onRefreshEntities: refreshEntities,",
-				"} = useAiAssistantGeneration({",
-				"deleteAiResponse: api.deleteAiResponse,",
-				"generateAi: api.generateAi,",
-				"showMessage,",
+				"activeCampaign: runtime.activeCampaign,",
+				"campaignSlug,",
+				"encounterId: activeEncounterId,",
+				"fallbackSessionFileName: activeSessionFileName || undefined,",
+				"publishSyncEvent: runtime.publishSyncEvent,",
+				"refreshEntities: runtime.refreshEntities,",
+				"requestCampaignReload: runtime.requestCampaignReload,",
+				"setActiveCampaign: runtime.setActiveCampaign,",
+				"setActiveEncounter: runtime.setActiveEncounter,",
+				"setActiveSession: runtime.setActiveSession,",
 			],
-			"AI Assistant injected runtime and preserved generation/history flow",
+			"AI Assistant V2 state injects runtime instead of accessing app store",
 		);
 		assertSourceTokensInOrder(
 			runtimeHostSource,
@@ -18966,11 +18330,10 @@ await run(
 				"<Outlet />",
 				"</CampaignSearchRuntimeHost>",
 				"</BestiaryBrowserRuntimeHost>",
-				"{showAiAssistant && (",
-				"<AiAssistantPanel",
 				"</AiAssistantRuntimeHost>",
+				"<AiAssistantV2",
 			],
-			"AI Assistant runtime scope across routed panels and injected Bestiary content",
+			"AI Assistant runtime scope across routed panels and AI Chat V2",
 		);
 
 		const forbiddenAiAssistantStoreImporters = [];
@@ -19013,7 +18376,7 @@ await run(
 		]) {
 			const reports = lintFsdBoundaryRule(
 				source,
-				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+				"src/widgets/ai-assistant/ui/AiAssistantRuntime.tsx",
 				FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID,
 			);
 			assert.equal(reports.length, 1);
@@ -19021,7 +18384,7 @@ await run(
 		}
 		const mixedCaseImporterReports = lintFsdBoundaryRule(
 			'import { dataSyncReceivedAction } from "../../../shared/model/index.js";',
-			"SRC/WIDGETS/AI-ASSISTANT/ui/AiAssistantPanel.tsx",
+			"SRC/WIDGETS/AI-ASSISTANT/ui/AiAssistantRuntime.tsx",
 			FSD_AI_ASSISTANT_STORE_FACADE_RULE_ID,
 		);
 		assert.equal(mixedCaseImporterReports.length, 1);
@@ -44411,49 +43774,42 @@ await run("AI updated data plans target bestiary session campaign and reload flo
 	]);
 });
 
-await run("AI assistant delegates stable visual composition to feature UI", async () => {
-	const panelSource = await fs.readFile(
-		"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
-		"utf8",
-	);
-	const panelViewSource = await fs.readFile(
-		"src/widgets/ai-assistant/ui/AiAssistantPanelView.tsx",
-		"utf8",
-	);
-	const shellSource = await fs.readFile(
-		"src/features/ai/ui/AiAssistantShell.tsx",
-		"utf8",
-	);
-	const promptSource = await fs.readFile(
-		"src/features/ai/ui/AiPromptComposer.tsx",
-		"utf8",
-	);
-	const responseSource = await fs.readFile(
-		"src/features/ai/ui/AiHistoryResponseDialog.tsx",
-		"utf8",
-	);
-	const toolbarSource = await fs.readFile(
-		"src/features/ai/ui/AiAssistantToolbar.tsx",
-		"utf8",
-	);
-	const contextSource = await fs.readFile(
-		"src/features/ai/ui/AiContextSettingsModal.tsx",
-		"utf8",
-	);
+await run("MainContent and Bestiary mount AI Chat V2 exclusively without legacy AiAssistantPanel", async () => {
+	const [
+		mainContentSource,
+		bestiaryContentSource,
+		assistantV2Source,
+		modalV2Source,
+		shellSource,
+		promptSource,
+		responseSource,
+		toolbarSource,
+		contextSource,
+	] = await Promise.all([
+		fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+		fs.readFile("src/widgets/bestiary-browser/ui/BestiaryContent.tsx", "utf8"),
+		fs.readFile("src/widgets/ai-assistant/chat/ui/AiAssistantV2.tsx", "utf8"),
+		fs.readFile("src/widgets/ai-assistant/chat/ui/AiAssistantModalV2.tsx", "utf8"),
+		fs.readFile("src/features/ai/ui/AiAssistantShell.tsx", "utf8"),
+		fs.readFile("src/features/ai/ui/AiPromptComposer.tsx", "utf8"),
+		fs.readFile("src/features/ai/ui/AiHistoryResponseDialog.tsx", "utf8"),
+		fs.readFile("src/features/ai/ui/AiAssistantToolbar.tsx", "utf8"),
+		fs.readFile("src/features/ai/ui/AiContextSettingsModal.tsx", "utf8"),
+	]);
 
-	assert.match(panelSource, /<AiAssistantPanelView/);
-	assert.match(panelViewSource, /<AiAssistantShell/);
-	assert.match(panelViewSource, /<AiAssistantPromptComposer/);
-	assert.match(panelViewSource, /<AiHistoryResponseDialog/);
-	assert.doesNotMatch(panelSource, /className="AiAssistantPanel__prompt_area"/);
-	assert.doesNotMatch(panelSource, /<AiResponseModal/);
+	assert.doesNotMatch(mainContentSource, /\bAiAssistantPanel\b/);
+	assert.doesNotMatch(bestiaryContentSource, /\bAiAssistantPanel\b/);
+	assert.match(assistantV2Source, /<AiAssistantPanelV2/);
+	assert.match(assistantV2Source, /<AiAssistantModalV2/);
+	assert.match(modalV2Source, /<Modal/);
+	assert.match(modalV2Source, /overlayClassName="AiAssistantModalOverlayV2"/);
 	assert.match(shellSource, /className="AiAssistantPanel__toggle"/);
 	assert.match(promptSource, /className="AiAssistantPanel__token_estimate"/);
 	assert.match(responseSource, /onRestore\(entry, "apply"/);
 	assert.match(toolbarSource, /showParsedGenerationOptions/);
 	assert.match(contextSource, /CampaignEntityContext/);
 	await assert.rejects(
-		fs.access("src/components/ai/AiAssistantToolbar.jsx"),
+		fs.access("src/widgets/ai-assistant/ui/AiAssistantPanel.tsx"),
 		/ENOENT/,
 	);
 });
@@ -54377,10 +53733,6 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 			].map((file) => fs.readFile(file, "utf8")),
 		)
 	).join("\n");
-	const aiAssistantSource = await fs.readFile(
-		"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
-		"utf8",
-	);
 	const aiAssistantUpdatedDataSource = await fs.readFile(
 		"src/widgets/ai-assistant/model/useAiAssistantUpdatedData.ts",
 		"utf8",
@@ -54478,17 +53830,13 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(appActionsSource, /forceTab: Boolean\(options\.forceTab\)/);
 	assert.match(appStoreSource, /RECORD_RULES_REFERENCE_HISTORY_ENTRY/);
 	assert.match(appStoreSource, /SET_RULES_REFERENCE_HISTORY_INDEX/);
-	assert.match(aiAssistantSource, /historyCampaign: aiHistoryCampaign/);
 	assert.match(
 		aiAssistantContextSource,
 		/historyCampaign: isBestiary \? "bestiary" : route\.campaign/,
 	);
 	assert.match(aiAssistantContextSource, /getAiAssistantRouteTargets/);
-	assert.match(aiAssistantSource, /useAiAssistantRouteState/);
-	assert.match(aiAssistantSource, /useAiAssistantUpdatedData/);
 	assert.match(aiAssistantUpdatedDataSource, /buildAiUpdatedDataPlan/);
 	assert.match(aiAssistantUpdatedDataSource, /executeAiUpdatedDataPlan/);
-	assert.doesNotMatch(aiAssistantSource, /resource: "custom-bestiary"/);
 	assert.match(aiUpdatedDataWorkflowSource, /resource: "custom-bestiary"/);
 	assert.match(aiUpdatedDataWorkflowSource, /monsterName/);
 });
@@ -75022,6 +74370,864 @@ await run("AI chat @ command autocomplete detects triggers, contextual ranking, 
 		nextCaretOffset: 7,
 	});
 });
+
+await run("buildChatWorkspaceContext honors granular selected IDs and buildChatContextPreview reports non-zero empty-chat tokens", async () => {
+	const {
+		buildChatWorkspaceContext,
+		buildChatContextPreview,
+	} = require("../server/modules/ai/application/chatPromptBuilder.js");
+
+	const storageStub = {
+		readCampaign: async () => ({ name: "Кампанія", description: "Опис світу", notes: [] }),
+		listEntities: async (_slug, type) => {
+			if (type === "characters") {
+				return [{ id: "pc-1", firstName: "Арія", class: "Rogue", level: 5 }];
+			}
+			if (type === "npc") {
+				return [
+					{ id: "npc-1", firstName: "Келрін", role: "Informant" },
+					{ id: "npc-2", firstName: "Грегор", role: "Captain" },
+				];
+			}
+			if (type === "locations") {
+				return [
+					{ id: "loc-1", name: "Таверна", type: "Building" },
+					{ id: "loc-2", name: "Гільдія Тіней", type: "Hideout" },
+				];
+			}
+			return [];
+		},
+		readSession: async (_slug, fileName) => ({
+			fileName,
+			name: fileName === "s-active.json" ? "Активна сесія" : "Минула сесія",
+			data: {
+				scenes: [
+					{ id: "sc-1", name: "Вступ", notes: [{ text: "Таємні двері" }] },
+					{ id: "sc-2", name: "Площа", notes: [] },
+				],
+				notes: [{ text: "Замітка сесії" }],
+			},
+		}),
+		listSessions: async () => [
+			{ fileName: "s-prev.json", name: "Минула сесія" },
+			{ fileName: "s-active.json", name: "Активна сесія" },
+		],
+		readCustomBestiary: async () => ({
+			monster: [
+				{ id: "mon-1", name: "Крижаний Абігор", cr: "10" },
+				{ id: "mon-2", name: "Болотний Ліч", cr: "12" },
+			],
+		}),
+	};
+
+	const contextRes = await buildChatWorkspaceContext(
+		{ storage: storageStub, filterSessionDataForAiContext: (d) => d },
+		{
+			campaignSlug: "test",
+			workspaceContext: { viewType: "session", sessionFileName: "s-active.json" },
+			contextSettings: {
+				includeCurrentScene: true,
+				includeCampaignCharacters: false,
+				includeCampaignNpc: true,
+				includeCampaignLocations: true,
+				includeRecentSessionHistory: true,
+				includeBestiary: true,
+				selectedNpcIds: ["npc-2"],
+				selectedLocationIds: ["loc-2"],
+				selectedSceneIds: ["sc-1"],
+				selectedSessionFileNames: ["s-prev.json"],
+				selectedBestiaryIds: ["mon-2"],
+			},
+		},
+	);
+
+	assert.equal(contextRes.contextPayload.campaign.characters, undefined);
+	assert.deepEqual(
+		contextRes.contextPayload.campaign.npcs.map((n) => n.id),
+		["npc-2"],
+	);
+	assert.deepEqual(
+		contextRes.contextPayload.campaign.locations.map((l) => l.id),
+		["loc-2"],
+	);
+	assert.deepEqual(
+		contextRes.contextPayload.currentSession.data.scenes.map((s) => s.id),
+		["sc-1"],
+	);
+	assert.deepEqual(
+		contextRes.contextPayload.recentSessions.map((s) => s.fileName),
+		["s-prev.json"],
+	);
+	assert.deepEqual(
+		contextRes.contextPayload.customBestiary.monsterNames,
+		["Болотний Ліч"],
+	);
+
+	const preview = await buildChatContextPreview(
+		{ storage: storageStub, filterSessionDataForAiContext: (d) => d },
+		{
+			campaignSlug: "test",
+			workspaceContext: { viewType: "session", sessionFileName: "s-active.json" },
+			contextSettings: {
+				includeCurrentScene: true,
+				includeCampaignCharacters: true,
+				includeCampaignNpc: true,
+				includeCampaignLocations: true,
+				includeRecentSessionHistory: false,
+				includeBestiary: false,
+			},
+			chat: null,
+		},
+	);
+
+	assert.ok(preview.systemTokens > 0);
+	assert.ok(preview.totals.contextTokens > 0);
+	assert.equal(preview.historyTokens, 0);
+	assert.ok(preview.totals.totalTokens > preview.systemTokens);
+	assert.equal(preview.catalog.characters.length, 1);
+	assert.equal(preview.catalog.npcs.length, 2);
+	assert.equal(preview.catalog.locations.length, 2);
+	assert.equal(preview.catalog.scenes.length, 2);
+	assert.equal(preview.catalog.sessions.length, 1);
+	assert.equal(preview.catalog.bestiary.length, 2);
+	assert.ok(preview.catalog.npcs.every((item) => item.tokenEstimate > 0));
+});
+
+await run("aiContextSelection manages tri-state sections, individual toggles, and live token updates", async () => {
+	const {
+		getSectionSelectionState,
+		toggleContextSection,
+		toggleContextItem,
+		selectAllContextItems,
+		clearContextItems,
+		calculateLiveContextTokens,
+	} = await import("../src/widgets/ai-assistant/chat/model/aiContextSelection.ts");
+
+	const preview = {
+		systemTokens: 500,
+		campaignBaseTokens: 200,
+		currentSessionBaseTokens: 0,
+		historyTokens: 0,
+		hasActiveSession: false,
+		activeSessionName: "",
+		defaultRecentSessionCount: 3,
+		maxTokens: 1000000,
+		catalog: {
+			characters: [{ id: "pc-1", name: "Арія", tokenEstimate: 100 }],
+			npcs: [
+				{ id: "npc-1", name: "Келрін", tokenEstimate: 120 },
+				{ id: "npc-2", name: "Грегор", tokenEstimate: 150 },
+				{ id: "npc-3", name: "Елдерія", tokenEstimate: 180 },
+			],
+			locations: [{ id: "loc-1", name: "Таверна", tokenEstimate: 90 }],
+			scenes: [],
+			sessions: [],
+			bestiary: [],
+		},
+		totals: { systemTokens: 500, contextTokens: 840, historyTokens: 0, totalTokens: 1340 },
+	};
+
+	let settings = {
+		includeCurrentScene: true,
+		includeCampaignCharacters: true,
+		includeCampaignNpc: true,
+		includeCampaignLocations: true,
+		includeRecentSessionHistory: false,
+		includeBestiary: false,
+		selectedCharacterIds: null,
+		selectedNpcIds: null,
+		selectedLocationIds: null,
+		selectedSceneIds: null,
+		selectedSessionFileNames: null,
+		selectedBestiaryIds: null,
+		mutationPermission: "diff_only",
+		responseTone: "narrative",
+	};
+
+	const initialTokens = calculateLiveContextTokens(preview, settings);
+	assert.equal(initialTokens.totalTokens, 1340);
+	assert.equal(
+		getSectionSelectionState("npcs", settings, preview.catalog.npcs).state,
+		"all",
+	);
+
+	// Uncheck one NPC -> partial state & reduced live token total
+	settings = toggleContextItem("npcs", settings, "npc-2", ["npc-1", "npc-2", "npc-3"]);
+	assert.deepEqual(settings.selectedNpcIds, ["npc-1", "npc-3"]);
+	assert.equal(
+		getSectionSelectionState("npcs", settings, preview.catalog.npcs).state,
+		"partial",
+	);
+	const partialTokens = calculateLiveContextTokens(preview, settings);
+	assert.equal(partialTokens.sectionTokens.npcs, 300);
+	assert.equal(partialTokens.totalTokens, 1340 - 150);
+
+	// Recheck missing NPC -> collapses back to auto-all null
+	settings = toggleContextItem("npcs", settings, "npc-2", ["npc-1", "npc-2", "npc-3"]);
+	assert.equal(settings.selectedNpcIds, null);
+	assert.equal(
+		getSectionSelectionState("npcs", settings, preview.catalog.npcs).state,
+		"all",
+	);
+
+	// Clear & select all & toggle section off
+	settings = clearContextItems("npcs", settings);
+	assert.equal(settings.includeCampaignNpc, false);
+	assert.equal(
+		getSectionSelectionState("npcs", settings, preview.catalog.npcs).state,
+		"none",
+	);
+	settings = selectAllContextItems("npcs", settings, ["npc-1", "npc-2", "npc-3"]);
+	assert.equal(settings.includeCampaignNpc, true);
+	settings = toggleContextSection("npcs", settings);
+	assert.equal(settings.includeCampaignNpc, false);
+});
+
+await run("AI chat rulesEdition defaults to 5.5e and manual compactContext shrinks historyTokens while keeping UI messages", async () => {
+	const {
+		buildChatSystemInstruction,
+		buildChatTurnPrompt,
+		compactChatHistoryIfNeeded,
+		estimateChatHistoryTokens,
+	} = require("../server/modules/ai/application/chatPromptBuilder.js");
+	const { createFileAiChatRepository } = require("../server/modules/ai/infrastructure/fileAiChatRepository.js");
+	const { createAiChatCommands } = require("../server/modules/ai/application/aiChatCommands.js");
+
+	// Rules edition system instruction check
+	const instrDefault = buildChatSystemInstruction({
+		responseLanguage: "uk",
+		responseTone: "rules_strict",
+	});
+	assert.match(instrDefault, /5\.5e \(2024 Revised Rules\)/);
+
+	const instr5e = buildChatSystemInstruction({
+		responseLanguage: "uk",
+		responseTone: "rules_strict",
+		rulesEdition: "5e",
+	});
+	assert.match(instr5e, /5e \(2014 Classic Rules\)/);
+
+	// buildChatTurnPrompt excludes summarized prefix turns
+	const turnAfterCompact = buildChatTurnPrompt({
+		summary: "Стислий підсумок.",
+		summarizedMessageCount: 2,
+		recentMessages: [
+			{ role: "user", content: "Старе питання 1" },
+			{ role: "assistant", content: "Стара відповідь 1" },
+			{ role: "user", content: "Нове питання 2" },
+		],
+		contextPayload: {},
+		userMessage: "Поточний запит",
+	});
+	assert.doesNotMatch(turnAfterCompact.userPrompt, /Старе питання 1/);
+	assert.match(turnAfterCompact.userPrompt, /Нове питання 2/);
+	assert.match(turnAfterCompact.userPrompt, /Стислий підсумок\./);
+
+	// Forced manual compaction fallback & full compactContext command lifecycle
+	await withTestSlug("ai-chat-compact", async (slug) => {
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: storage.createId(),
+			slug,
+			name: "Кампанія Стиснення",
+		});
+		const repo = createFileAiChatRepository({ storage });
+		const chat = await repo.create(slug, { title: "Довгий діалог" });
+		assert.equal(chat.contextSettings.rulesEdition, "5.5e");
+
+		const longText = "Дуже детальний опис подій сесії у таверні та бою з культистами. ".repeat(12);
+		await repo.update(slug, chat.id, {
+			messages: [
+				{ id: "m1", role: "user", content: `Перший запит: ${longText}`, timestamp: 1000, status: "done" },
+				{ id: "m2", role: "assistant", content: `Перша відповідь: ${longText}`, timestamp: 1001, status: "done" },
+				{ id: "m3", role: "user", content: `Другий запит: ${longText}`, timestamp: 1002, status: "done" },
+				{ id: "m4", role: "assistant", content: `Друга відповідь: ${longText}`, timestamp: 1003, status: "done" },
+			],
+		});
+
+		const commands = createAiChatCommands({
+			storage,
+			chatRepository: repo,
+			aiService: {
+				listAvailableModels: async () => ({
+					defaultModel: "gemini-2.5-flash",
+					models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+				}),
+			},
+			geminiGateway: {
+				generateText: async () => "Короткий висновок: обговорено таверну і культистів.",
+			},
+			historyWriter: new AiHistoryWriter(),
+			applyAiOperations: async () => ({}),
+			restoreAiResponseSnapshot: async () => ({}),
+			buildCustomMonsterChangeResources: () => [],
+			filterSessionDataForAiContext: (d) => d,
+			fillCurrentTargetIds: () => {},
+			applyMentionsToGeneratedContent: (v) => v,
+			processGeneratedTextMentions: (t) => t,
+			validateAiGeneratedContent: () => {},
+			extractFirstJsonObject: (s) => s,
+			normalizeEscapedNewLines: (v) => v,
+			buildImageParts: async () => [],
+			buildFileParts: () => [],
+			isApiKeyConfigured: () => true,
+		});
+
+		const compactRes = await commands.compactContext({ campaignSlug: slug, chatId: chat.id });
+		assert.equal(compactRes.compacted, true);
+		assert.equal(compactRes.compactedCount, 4);
+		assert.ok(compactRes.nextHistoryTokens < compactRes.previousHistoryTokens);
+		assert.equal(compactRes.chat.messages.length, 4);
+		assert.equal(compactRes.chat.summarizedMessageCount, 4);
+		assert.match(compactRes.chat.summary, /Короткий висновок/);
+		assert.equal(estimateChatHistoryTokens(compactRes.chat), compactRes.nextHistoryTokens);
+
+		// Second compact with no new messages is a no-op
+		const secondRes = await commands.compactContext({ campaignSlug: slug, chatId: chat.id });
+		assert.equal(secondRes.compacted, false);
+		assert.equal(secondRes.compactedCount, 0);
+
+		// Also verify direct fallback when modelName empty in compactChatHistoryIfNeeded
+		const directFallback = await compactChatHistoryIfNeeded(
+			{ geminiGateway: null },
+			{ chat: { summary: "", summarizedMessageCount: 0, messages: [{ role: "user", content: "Привіт" }] }, modelName: "", force: true, keepRecent: 0 },
+		);
+		assert.equal(directFallback.compacted, true);
+		assert.equal(directFallback.summarizedMessageCount, 1);
+		assert.match(directFallback.summary, /DM: Привіт/);
+	});
+});
+
+await run(
+	"AI Chat V2 sendMessage supports truncateFromMessageId rollback on failure and summary invalidation",
+	async () => {
+		await withTestSlug("ai-chat-truncate", async (slug) => {
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: storage.createId(),
+				slug,
+				name: "Truncate Test",
+			});
+			const chatRepo = createFileAiChatRepository({ storage });
+			let failGemini = false;
+			let geminiReply = { reply: "Нова відповідь 1", operations: [] };
+			const commands = createAiChatCommands({
+				chatRepository: chatRepo,
+				storage,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: {
+					generateText: async () => {
+						if (failGemini) {
+							throw new Error("Simulated Gemini failure");
+						}
+						return JSON.stringify(geminiReply);
+					},
+				},
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent:
+					mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions:
+					mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => true,
+				getGeminiSettings: async () => ({
+					model: "gemini-2.5-flash",
+					responseLanguage: "uk",
+				}),
+			});
+
+			const seededChat = await chatRepo.create(slug, {
+				title: "Редагування запиту",
+				model: "gemini-2.5-flash",
+				summary: "Підсумок старого префіксу",
+				summarizedMessageCount: 2,
+				messages: [
+					{ id: "u1", role: "user", content: "Перший запит", timestamp: 1000, status: "done" },
+					{ id: "a1", role: "assistant", content: "Перша відповідь", timestamp: 1001, status: "done" },
+					{ id: "u2", role: "user", content: "Другий запит", timestamp: 2000, status: "done" },
+					{ id: "a2", role: "assistant", content: "Друга відповідь", timestamp: 2001, status: "done" },
+				],
+			});
+
+			// Failure during truncated resend must preserve original messages and summary
+			failGemini = true;
+			await assert.rejects(() =>
+				commands.sendMessage({
+					campaignSlug: slug,
+					chatId: seededChat.id,
+					payload: {
+						content: "Змінений перший запит",
+						truncateFromMessageId: "u1",
+					},
+				}),
+			);
+			const afterFailure = await chatRepo.get(slug, seededChat.id);
+			assert.equal(afterFailure.messages.length, 4);
+			assert.equal(afterFailure.messages[0].content, "Перший запит");
+			assert.equal(afterFailure.summary, "Підсумок старого префіксу");
+			assert.equal(afterFailure.summarizedMessageCount, 2);
+
+			// Truncating after summarized prefix preserves summary
+			failGemini = false;
+			geminiReply = { reply: "Перегенерована друга відповідь", operations: [] };
+			const afterTailEdit = await commands.sendMessage({
+				campaignSlug: slug,
+				chatId: seededChat.id,
+				payload: {
+					content: "Оновлений другий запит",
+					truncateFromMessageId: "u2",
+				},
+			});
+			assert.equal(afterTailEdit.chat.messages.length, 4);
+			assert.equal(afterTailEdit.chat.messages[0].id, "u1");
+			assert.equal(afterTailEdit.chat.messages[2].content, "Оновлений другий запит");
+			assert.equal(afterTailEdit.chat.messages[3].content, "Перегенерована друга відповідь");
+			assert.equal(afterTailEdit.chat.summary, "Підсумок старого префіксу");
+			assert.equal(afterTailEdit.chat.summarizedMessageCount, 2);
+
+			// Truncating inside summarized prefix clears summary and summarizedMessageCount
+			geminiReply = { reply: "Оновлена перша відповідь", operations: [] };
+			const afterHeadEdit = await commands.sendMessage({
+				campaignSlug: slug,
+				chatId: seededChat.id,
+				payload: {
+					content: "Змінений перший запит",
+					truncateFromMessageId: "u1",
+				},
+			});
+			assert.equal(afterHeadEdit.chat.messages.length, 2);
+			assert.equal(afterHeadEdit.chat.messages[0].content, "Змінений перший запит");
+			assert.equal(afterHeadEdit.chat.messages[1].content, "Оновлена перша відповідь");
+			assert.equal(afterHeadEdit.chat.summary, "");
+			assert.equal(afterHeadEdit.chat.summarizedMessageCount, 0);
+		});
+	},
+);
+
+await run(
+	"AI Chat V2 @image command, imageBasePrompt instruction, and generateImage persistence work across campaign and bestiary scopes",
+	async () => {
+		assert.ok(SUPPORTED_CHAT_COMMANDS.includes("image"));
+		const parsed = parseChatCommands("@image @bestiary [Абігор] похмурий портрет");
+		assert.deepEqual(parsed.commands, ["image", "bestiary"]);
+
+		const instruction = buildChatSystemInstruction({
+			responseLanguage: "uk",
+			responseTone: "narrative",
+			rulesEdition: "5.5e",
+			commands: ["image"],
+			imageBasePrompt: "Темне фентезі, олія на полотні",
+		});
+		assert.ok(instruction.includes("@image"));
+		assert.ok(instruction.includes("Темне фентезі, олія на полотні"));
+
+		const tinyPngBase64 =
+			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+		const os = await import("node:os");
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "prm-ai-chat-image-"));
+		try {
+			const isolatedBase = createIsolatedHistoryStorage(root);
+			const bestiaryChatsPath = path.join(root, BESTIARY_CHATS_FILE_NAME);
+			const isolated = {
+				...isolatedBase,
+				createId: storage.createId,
+				campaignImagesDir: (slug, category = "") =>
+					category
+						? path.join(root, "images", path.basename(slug), path.basename(category))
+						: path.join(root, "images", path.basename(slug)),
+				ensureCampaignStructure: async (slug, name) => {
+					await isolatedBase.writeJson(isolatedBase.campaignMetaPath(slug), {
+						id: `camp-${slug}`,
+						slug,
+						name: name || slug,
+						order: 1,
+					});
+				},
+				readCustomBestiary: async () => ({ monster: [] }),
+				writeJson: async (filePath, value) => isolatedBase.writeJson(filePath, value),
+			};
+			await isolated.ensureCampaignStructure("demo-img", "Demo Img");
+
+			const chatRepo = createFileAiChatRepository({ storage: isolated });
+			const commands = createAiChatCommands({
+				chatRepository: chatRepo,
+				storage: isolated,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						imageModels: [{ name: "gemini-2.5-flash-image" }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: {
+					generateText: async () => JSON.stringify({ reply: "ok", operations: [] }),
+					generateImage: async ({ modelName, prompt }) => ({
+						data: tinyPngBase64,
+						mimeType: "image/png",
+						text: `Згенеровано (${modelName}): ${prompt}`,
+					}),
+				},
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent:
+					mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions:
+					mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => true,
+				getGeminiSettings: async () => ({
+					model: "gemini-2.5-flash",
+					imageModel: "gemini-2.5-flash-image",
+					responseLanguage: "uk",
+				}),
+			});
+
+			const campaignChat = await chatRepo.create("demo-img", { title: "Образи" });
+			const campaignResult = await commands.generateImage({
+				campaignSlug: "demo-img",
+				chatId: campaignChat.id,
+				payload: { prompt: "Старовинна таверна", modelName: "gemini-2.5-flash-image" },
+			});
+			assert.ok(campaignResult.imageUrl.startsWith("/api/images/demo-img/attachments/"));
+			const campaignImageFile = campaignResult.imageUrl.replace(
+				"/api/images/demo-img/attachments/",
+				"",
+			);
+			assert.equal(
+				await isolatedBase.exists(
+					path.join(root, "images", "demo-img", "attachments", campaignImageFile),
+				),
+				true,
+			);
+			const updatedCampaignChat = await chatRepo.get("demo-img", campaignChat.id);
+			assert.equal(updatedCampaignChat.messages.length, 2);
+			assert.equal(updatedCampaignChat.messages[1].imageUrl, campaignResult.imageUrl);
+
+			const bestiaryChat = await chatRepo.create("bestiary", { title: "Бестіарій арт" });
+			const bestiaryResult = await commands.generateImage({
+				campaignSlug: "bestiary",
+				chatId: bestiaryChat.id,
+				payload: { prompt: "Крижаний віверн" },
+			});
+			assert.ok(bestiaryResult.imageUrl.startsWith("/api/images/general/attachments/"));
+			const bestiaryImageFile = bestiaryResult.imageUrl.replace(
+				"/api/images/general/attachments/",
+				"",
+			);
+			assert.equal(
+				await isolatedBase.exists(
+					path.join(root, "images", "general", "attachments", bestiaryImageFile),
+				),
+				true,
+			);
+			assert.equal(await isolatedBase.exists(bestiaryChatsPath), true);
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	},
+);
+
+await run(
+	"AI Chat V2 bestiary scope works without campaign in repository and prompt context builder",
+	async () => {
+		const os = await import("node:os");
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "prm-bestiary-chat-"));
+		try {
+			const isolatedBase = createIsolatedHistoryStorage(root);
+			const isolated = {
+				...isolatedBase,
+				createId: storage.createId,
+				readCustomBestiary: async () => ({
+					monster: [
+						{
+							id: "m-wolf",
+							name: "Тіньовий вовк",
+							source: "CUSTOM",
+							type: "beast",
+							cr: "2",
+							ac: 14,
+							hp: { average: 32 },
+						},
+					],
+				}),
+			};
+
+			const chatRepo = createFileAiChatRepository({ storage: isolated });
+			const created = await chatRepo.create("bestiary", {
+				title: "Бестіарій без кампанії",
+			});
+			assert.equal(
+				await isolatedBase.exists(path.join(root, BESTIARY_CHATS_FILE_NAME)),
+				true,
+			);
+			const listed = await chatRepo.list("bestiary");
+			assert.equal(listed.length, 1);
+			assert.equal(listed[0].id, created.id);
+
+			const workspaceContext = await buildChatWorkspaceContext(
+				{ storage: isolated, filterSessionDataForAiContext },
+				{
+					campaignSlug: "bestiary",
+					workspaceContext: {
+						viewType: "bestiary",
+						monsterName: "Тіньовий вовк",
+						monsterSource: "CUSTOM",
+					},
+					contextSettings: {},
+					mentionedNames: ["Тіньовий вовк"],
+					commands: ["bestiary"],
+				},
+			);
+			assert.equal(workspaceContext?.contextPayload?.workspace?.campaignSlug, "bestiary");
+			assert.equal(workspaceContext?.contextPayload?.workspace?.viewType, "bestiary");
+			assert.ok(JSON.stringify(workspaceContext).includes("Тіньовий вовк"));
+
+			const preview = await buildChatContextPreview(
+				{ storage: isolated, filterSessionDataForAiContext },
+				{
+					campaignSlug: "bestiary",
+					workspaceContext: {
+						viewType: "bestiary",
+						monsterName: "Тіньовий вовк",
+						monsterSource: "CUSTOM",
+					},
+					contextSettings: {},
+					chat: created,
+					responseLanguage: "uk",
+				},
+			);
+			assert.ok(Number.isFinite(preview?.totals?.totalTokens) && preview.totals.totalTokens > 0);
+			assert.ok(Array.isArray(preview?.catalog?.bestiary) && preview.catalog.bestiary.length > 0);
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	},
+);
+
+await run(
+	"Legacy AI history one-time migration archives user history non-destructively and never re-imports after deletion",
+	async () => {
+		const os = await import("node:os");
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "prm-legacy-ai-migration-"));
+		try {
+			const isolatedBase = createIsolatedHistoryStorage(root);
+			const isolated = {
+				...isolatedBase,
+				createId: storage.createId,
+				readAiResponses: async (slug) =>
+					(await isolatedBase.exists(isolatedBase.campaignAiResponsesPath(slug)))
+						? isolatedBase.readJson(isolatedBase.campaignAiResponsesPath(slug))
+						: [],
+			};
+			await isolated.writeJson(isolated.campaignMetaPath("legacy-demo"), {
+				id: "camp-legacy",
+				slug: "legacy-demo",
+				name: "Legacy Demo",
+				order: 1,
+			});
+			const legacyEntries = [
+				{
+					id: "r1",
+					type: "entity",
+					status: "applied",
+					userInstructions: "Створи барда Ліру",
+					text: "Ось бард Ліра",
+					modelName: "gemini-2.5-pro",
+					createdAt: "2026-01-01T10:00:00.000Z",
+				},
+				{
+					id: "r2",
+					type: "image",
+					status: "done",
+					userInstructions: "Портрет Ліри",
+					imageUrl: "/api/images/legacy-demo/attachments/lyra.png",
+					createdAt: "2026-01-01T11:00:00.000Z",
+				},
+				{
+					id: "r3",
+					type: "chat-action",
+					status: "applied",
+					text: "Internal Undo snapshot only",
+					createdAt: "2026-01-01T12:00:00.000Z",
+				},
+				{
+					id: "r4",
+					type: "notes",
+					status: "pending",
+					userInstructions: "Незавершений запит",
+					createdAt: "2026-01-01T13:00:00.000Z",
+				},
+			];
+			await isolated.writeAiResponses("legacy-demo", legacyEntries);
+
+			const chatRepo = createFileAiChatRepository({ storage: isolated });
+			const migration = createLegacyAiHistoryChatMigration({
+				storage: isolated,
+				chatRepository: chatRepo,
+			});
+
+			const [first, second] = await Promise.all([
+				migration.ensureMigrated("legacy-demo"),
+				migration.ensureMigrated("legacy-demo"),
+			]);
+			assert.equal(first.migrated, true);
+			assert.equal(first.importedCount, 2);
+			assert.equal(second.migrated, true);
+
+			const chats = await chatRepo.list("legacy-demo");
+			assert.equal(chats.length, 1);
+			assert.equal(chats[0].id, LEGACY_ARCHIVE_CHAT_ID);
+			assert.equal(chats[0].title, LEGACY_ARCHIVE_CHAT_TITLE);
+			assert.equal(chats[0].isLegacyArchive, true);
+			assert.equal(chats[0].messageCount, 4);
+
+			const archiveChat = await chatRepo.get("legacy-demo", LEGACY_ARCHIVE_CHAT_ID);
+			assert.equal(archiveChat.messages.length, 4);
+			assert.equal(archiveChat.messages[0].content, "Створи барда Ліру");
+			assert.equal(archiveChat.messages[1].content, "Ось бард Ліра");
+			assert.equal(
+				archiveChat.messages[3].imageUrl,
+				"/api/images/legacy-demo/attachments/lyra.png",
+			);
+
+			// _aiResponses.json stays untouched for Undo cards
+			const preservedResponses = await isolated.readAiResponses("legacy-demo");
+			assert.equal(preservedResponses.length, 4);
+
+			// Deleting archive chat must not cause re-import on subsequent calls
+			await chatRepo.delete("legacy-demo", LEGACY_ARCHIVE_CHAT_ID);
+			assert.deepEqual(await chatRepo.list("legacy-demo"), []);
+			const afterDelete = await migration.ensureMigrated("legacy-demo");
+			assert.equal(afterDelete.migrated, false);
+			assert.deepEqual(await chatRepo.list("legacy-demo"), []);
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	},
+);
+
+await run(
+	"Settings storage overview accounts for _aiChats files under aiHistory and clears them cleanly",
+	async () => {
+		const os = await import("node:os");
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "prm-storage-aichats-"));
+		try {
+			const baseStorage = createIsolatedHistoryStorage(root);
+			const bestiaryAiFile = path.join(root, "_aiResponses-bestiary.json");
+			const aiFileFor = (slug) =>
+				slug === "bestiary"
+					? bestiaryAiFile
+					: baseStorage.campaignAiResponsesPath(slug);
+			const isolated = {
+				...baseStorage,
+				readAiResponses: async (slug) => {
+					const file = aiFileFor(slug);
+					if (!(await baseStorage.exists(file))) return [];
+					const parsed = await baseStorage.readJson(file);
+					return Array.isArray(parsed) ? parsed : [];
+				},
+				getAiResponsesStorageStats: async (slug) => {
+					const file = aiFileFor(slug);
+					try {
+						const stat = await fs.stat(file);
+						return { bytes: stat.isFile() ? stat.size : 0 };
+					} catch {
+						return { bytes: 0 };
+					}
+				},
+				clearAiResponses: async (slug) => {
+					const file = aiFileFor(slug);
+					await fs.mkdir(path.dirname(file), { recursive: true });
+					await fs.writeFile(file, "[]", "utf8");
+					return [];
+				},
+			};
+
+			await isolated.writeJson(isolated.campaignMetaPath("alpha"), {
+				id: "c1",
+				slug: "alpha",
+				name: "Альфа",
+				order: 1,
+			});
+			await isolated.writeJson(isolated.sessionPath("alpha", "s1.json"), {
+				id: "s1",
+				name: "Сесія 1",
+				data: { notes: [{ id: "n1", title: "Нотатка", text: "Текст" }] },
+			});
+			await isolated.writeJson(aiFileFor("alpha"), []);
+			await isolated.writeJson(bestiaryAiFile, []);
+
+			const repo = createFileStorageOverviewRepository(isolated);
+			const commands = createStorageOverviewCommands(repo);
+			const beforeChats = await commands.getOverview();
+
+			const alphaChatsPath = path.join(isolated.campaignDir("alpha"), CHATS_FILE_NAME);
+			const bestiaryChatsPath = path.join(root, BESTIARY_CHATS_FILE_NAME);
+			await isolated.writeJson(alphaChatsPath, {
+				version: 2,
+				legacyHistoryMigrated: true,
+				chats: [{ id: "c1", messages: [{ id: "m1", role: "user", content: "Привіт" }] }],
+			});
+			await isolated.writeJson(bestiaryChatsPath, {
+				version: 2,
+				legacyHistoryMigrated: true,
+				chats: [
+					{
+						id: "bc1",
+						messages: [
+							{ id: "bm1", role: "user", content: "Гоблін" },
+							{ id: "bm2", role: "assistant", content: "Статистика" },
+						],
+					},
+				],
+			});
+
+			const afterChats = await commands.getOverview();
+			assert.equal(afterChats.project.contentBytes, beforeChats.project.contentBytes);
+			assert.equal(afterChats.campaigns[0].contentBytes, beforeChats.campaigns[0].contentBytes);
+			assert.ok(afterChats.campaigns[0].aiHistory.bytes > beforeChats.campaigns[0].aiHistory.bytes);
+			assert.ok(afterChats.project.aiHistory.bytes > beforeChats.project.aiHistory.bytes);
+
+			await commands.clearAiHistory({ scope: "campaign", campaignSlug: "alpha" });
+			assert.equal(await isolated.exists(alphaChatsPath), false);
+			assert.equal(await isolated.exists(bestiaryChatsPath), true);
+
+			await commands.clearAiHistory({ scope: "bestiary" });
+			assert.equal(await isolated.exists(bestiaryChatsPath), false);
+
+			await isolated.writeJson(alphaChatsPath, { version: 2, legacyHistoryMigrated: true, chats: [] });
+			await isolated.writeJson(bestiaryChatsPath, { version: 2, legacyHistoryMigrated: true, chats: [] });
+			const afterAll = await commands.clearAiHistory({ scope: "all" });
+			assert.equal(await isolated.exists(alphaChatsPath), false);
+			assert.equal(await isolated.exists(bestiaryChatsPath), false);
+			assert.ok(afterAll.storage.campaigns[0].aiHistory.bytes >= 0);
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	},
+);
 
 const failed = results.filter((r) => !r.ok);
 console.log(

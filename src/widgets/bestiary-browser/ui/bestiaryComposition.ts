@@ -24,17 +24,6 @@ import type {
 } from "../../../features/ai/ui/index.js";
 import type { MonsterAiEditMode } from "../../../features/ai-edit-monster/index.js";
 
-export interface BestiaryAssistantSlotProps {
-	ResponseModal: AiResponseModalComponent;
-	isBestiary: boolean;
-	onRegisterImagePromptAction: (
-		handler: ((monster: BestiaryMonster) => void) | null,
-	) => void;
-}
-
-export type BestiaryAssistantSlot =
-	ComponentType<BestiaryAssistantSlotProps>;
-
 export interface BestiaryMonsterStatBlockSlotProps {
 	monster: BestiaryMonster;
 	favoriteActive: boolean;

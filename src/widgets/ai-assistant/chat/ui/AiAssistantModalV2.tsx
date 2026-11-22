@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Modal } from "../../../../shared/ui/index.js";
 import type { AiResponseModalComponent } from "../../../../features/ai/ui/index.js";
 import type { useAiChatState } from "../model/useAiChatState.ts";
 import AiAssistantPanelV2 from "./AiAssistantPanelV2.tsx";
@@ -16,23 +16,19 @@ export default function AiAssistantModalV2({
 	state,
 	ResponseModal,
 }: AiAssistantModalV2Props) {
-	useEffect(() => {
-		if (!isOpen) return;
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
-		};
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, onClose]);
-
 	if (!isOpen) return null;
 
 	return (
-		<div className="AiAssistantModalOverlayV2">
-			<div className="AiAssistantModalOverlayV2__backdrop" onClick={onClose} />
-			<div className="AiAssistantModalOverlayV2__drawer">
-				<AiAssistantPanelV2 state={state} onClose={onClose} ResponseModal={ResponseModal} />
-			</div>
-		</div>
+		<Modal
+			title="AI-асистент"
+			onConfirm={() => {}}
+			onCancel={onClose}
+			showFooter={false}
+			type="custom"
+			className="AiAssistantModalV2__card"
+			overlayClassName="AiAssistantModalOverlayV2"
+		>
+			<AiAssistantPanelV2 state={state} onClose={onClose} ResponseModal={ResponseModal} />
+		</Modal>
 	);
 }

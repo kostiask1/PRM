@@ -13,8 +13,6 @@ export type {
 	BestiaryAiDraftRestore,
 	BestiaryAiModalsSlot,
 	BestiaryAiModalsSlotProps,
-	BestiaryAssistantSlot,
-	BestiaryAssistantSlotProps,
 	BestiaryMonsterStatBlockSlot,
 	BestiaryMonsterStatBlockSlotProps,
 } from "./ui/bestiaryComposition.ts";

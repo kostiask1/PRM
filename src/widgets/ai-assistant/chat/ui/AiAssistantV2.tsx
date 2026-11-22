@@ -56,7 +56,7 @@ export default function AiAssistantV2({
 	// Mobile and narrower viewports (<= 1400px)
 	return (
 		<>
-			<AiFloatingTriggerV2 onClick={openMobile} isOpen={isMobileOpen} />
+			{!isMobileOpen && <AiFloatingTriggerV2 onClick={openMobile} isOpen={false} />}
 			<AiAssistantModalV2
 				isOpen={isMobileOpen}
 				onClose={closeMobile}

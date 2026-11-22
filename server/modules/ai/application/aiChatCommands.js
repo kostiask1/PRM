@@ -1,3 +1,6 @@
+const fs = require("fs/promises");
+const path = require("path");
+const crypto = require("crypto");
 const {
 	parseChatCommands,
 	extractMentionedEntityNames,
@@ -6,7 +9,9 @@ const {
 } = require("./chatCommandParser");
 const {
 	estimateTokensFromText,
+	estimateChatHistoryTokens,
 	buildChatWorkspaceContext,
+	buildChatContextPreview,
 	buildChatSystemInstruction,
 	buildChatTurnPrompt,
 	compactChatHistoryIfNeeded,
@@ -223,6 +228,7 @@ function buildUserMessageAttachments(attachedImages, attachedFiles) {
 
 function createAiChatCommands({
 	chatRepository,
+	legacyMigration = null,
 	storage,
 	aiService,
 	geminiGateway,
@@ -242,6 +248,9 @@ function createAiChatCommands({
 	isApiKeyConfigured = () => Boolean(process.env.GEMINI_API_KEY),
 }) {
 	async function listChats({ campaignSlug }) {
+		if (legacyMigration && typeof legacyMigration.ensureMigrated === "function") {
+			await legacyMigration.ensureMigrated(campaignSlug).catch(() => {});
+		}
 		return chatRepository.list(campaignSlug);
 	}
 
@@ -270,6 +279,111 @@ function createAiChatCommands({
 
 	async function deleteChat({ campaignSlug, chatId }) {
 		return chatRepository.delete(campaignSlug, chatId);
+	}
+
+	async function previewContext({ campaignSlug, payload = {} }) {
+		const chatId = asText(payload.chatId);
+		const chat =
+			chatId && chatId !== "new"
+				? await chatRepository.get(campaignSlug, chatId).catch(() => null)
+				: null;
+		const effectiveSettings = payload.contextSettings
+			? { ...(chat?.contextSettings || {}), ...payload.contextSettings }
+			: chat?.contextSettings || {};
+		const effectiveAnchor = payload.anchor !== undefined ? payload.anchor : chat?.anchor;
+		const workspaceContext =
+			payload.workspaceContext && typeof payload.workspaceContext === "object"
+				? payload.workspaceContext
+				: {};
+		const resolvedSessionFileName =
+			asText(workspaceContext.sessionFileName) ||
+			(effectiveAnchor?.pinned ? asText(effectiveAnchor.sessionFileName) : "");
+		const resolvedEncounterId =
+			workspaceContext.encounterId ?? (effectiveAnchor?.pinned ? effectiveAnchor.encounterId : null);
+		const resolvedSceneId =
+			workspaceContext.sceneId ?? (effectiveAnchor?.pinned ? effectiveAnchor.sceneId : null);
+
+		const [settings, availableModels] = await Promise.all([
+			storage.readSettings().catch(() => ({})),
+			typeof aiService?.listAvailableModels === "function"
+				? aiService.listAvailableModels().catch(() => ({ models: [] }))
+				: Promise.resolve({ models: [] }),
+		]);
+		const responseLanguage = asText(payload.language || settings?.language || "uk");
+		const maxTokens = resolveModelMaxTokens(availableModels, asText(payload.model || chat?.model));
+
+		return buildChatContextPreview(
+			{ storage, filterSessionDataForAiContext },
+			{
+				campaignSlug,
+				workspaceContext: {
+					...workspaceContext,
+					sessionFileName: resolvedSessionFileName,
+					encounterId: resolvedEncounterId,
+					sceneId: resolvedSceneId,
+				},
+				contextSettings: effectiveSettings,
+				chat,
+				responseLanguage,
+				globalBasePrompt: asText(settings?.aiBasePrompt),
+				campaignBasePrompt: asText(settings?.campaignAiBasePrompts?.[campaignSlug]),
+				maxTokens,
+			},
+		);
+	}
+
+	async function compactContext({ campaignSlug, chatId, payload = {} }) {
+		const chat = await getChat({ campaignSlug, chatId });
+		const previousHistoryTokens = estimateChatHistoryTokens(chat);
+		const settings = await storage.readSettings().catch(() => ({}));
+		const responseLanguage = asText(payload.language || settings?.language || "uk");
+
+		let modelName = "";
+		if (isApiKeyConfigured() && typeof aiService?.listAvailableModels === "function") {
+			const availableModels = await aiService.listAvailableModels().catch(() => ({ models: [] }));
+			try {
+				modelName = resolveRequestedModelName(
+					availableModels,
+					payload.model || chat.model,
+				);
+			} catch {
+				modelName = "";
+			}
+		}
+
+		const compaction = await compactChatHistoryIfNeeded(
+			{ geminiGateway },
+			{
+				chat,
+				modelName,
+				responseLanguage,
+				force: true,
+				keepRecent: 0,
+			},
+		);
+
+		if (!compaction.compacted) {
+			return {
+				chat,
+				compacted: false,
+				compactedCount: 0,
+				previousHistoryTokens,
+				nextHistoryTokens: previousHistoryTokens,
+			};
+		}
+
+		const updatedChat = await chatRepository.update(campaignSlug, chat.id, {
+			summary: compaction.summary,
+			summarizedMessageCount: compaction.summarizedMessageCount,
+		});
+		const nextHistoryTokens = estimateChatHistoryTokens(updatedChat);
+		return {
+			chat: updatedChat,
+			compacted: true,
+			compactedCount: compaction.compactedCount,
+			previousHistoryTokens,
+			nextHistoryTokens,
+		};
 	}
 
 	async function sendMessage({
@@ -305,19 +419,39 @@ function createAiChatCommands({
 			});
 		}
 
+		let effectiveChat = chat;
+		const truncateFromMessageId = asText(payload.truncateFromMessageId);
+		if (truncateFromMessageId) {
+			const cutIndex = chat.messages.findIndex(
+				(msg) => String(msg?.id ?? "") === truncateFromMessageId,
+			);
+			if (cutIndex === -1) {
+				throw createHttpError("Message to edit or regenerate was not found.", 404);
+			}
+			const baseMessages = chat.messages.slice(0, cutIndex);
+			const prevSummarizedCount = Math.max(0, Number(chat.summarizedMessageCount) || 0);
+			const truncatedInsideSummary = cutIndex < prevSummarizedCount;
+			effectiveChat = {
+				...chat,
+				messages: baseMessages,
+				summary: truncatedInsideSummary ? "" : chat.summary,
+				summarizedMessageCount: truncatedInsideSummary ? 0 : prevSummarizedCount,
+			};
+		}
+
 		const effectiveSettings = payload.contextSettings
-			? { ...chat.contextSettings, ...payload.contextSettings }
-			: chat.contextSettings;
+			? { ...effectiveChat.contextSettings, ...payload.contextSettings }
+			: effectiveChat.contextSettings;
 		const effectiveAutoApply =
-			typeof payload.autoApply === "boolean" ? payload.autoApply : chat.autoApply;
-		const effectiveAnchor = payload.anchor !== undefined ? payload.anchor : chat.anchor;
+			typeof payload.autoApply === "boolean" ? payload.autoApply : effectiveChat.autoApply;
+		const effectiveAnchor = payload.anchor !== undefined ? payload.anchor : effectiveChat.anchor;
 
 		const settings = await storage.readSettings().catch(() => ({}));
 		const responseLanguage = asText(payload.language || settings?.language || "uk");
 		const availableModels = await aiService.listAvailableModels();
 		const selectedModel = resolveRequestedModelName(
 			availableModels,
-			payload.model || chat.model,
+			payload.model || effectiveChat.model,
 		);
 		const maxTokens = resolveModelMaxTokens(availableModels, selectedModel);
 
@@ -358,24 +492,29 @@ function createAiChatCommands({
 		);
 
 		const needsTitle =
-			!chat.isAutoTitled &&
-			chat.messages.filter((msg) => msg.role === "user").length === 0;
+			(!effectiveChat.isAutoTitled || effectiveChat.messages.length === 0) &&
+			effectiveChat.messages.filter((msg) => msg.role === "user").length === 0;
 
 		const compaction = await compactChatHistoryIfNeeded(
 			{ geminiGateway },
-			{ chat, modelName: selectedModel, responseLanguage },
+			{ chat: effectiveChat, modelName: selectedModel, responseLanguage },
 		);
 
 		const globalBasePrompt = asText(settings?.aiBasePrompt);
 		const campaignBasePrompt = asText(settings?.campaignAiBasePrompts?.[campaignSlug]);
+		const imageBasePrompt = asText(
+			settings?.campaignImagePromptBasePrompts?.[campaignSlug] || settings?.imagePromptBasePrompt,
+		);
 		const systemInstruction = buildChatSystemInstruction({
 			responseLanguage,
 			responseTone: effectiveSettings.responseTone,
+			rulesEdition: effectiveSettings.rulesEdition,
 			commands,
 			workspaceViewType: contextPayload.workspace.viewType,
 			needsTitle,
 			globalBasePrompt,
 			campaignBasePrompt,
+			imageBasePrompt,
 			simplifiedNotes,
 		});
 
@@ -383,7 +522,8 @@ function createAiChatCommands({
 		const attachmentList = buildUserMessageAttachments(attachedImages, attachedFiles);
 		const { userPrompt, tokenEstimate } = buildChatTurnPrompt({
 			summary: compaction.summary,
-			recentMessages: chat.messages,
+			summarizedMessageCount: compaction.summarizedMessageCount,
+			recentMessages: effectiveChat.messages,
 			contextPayload,
 			userMessage: rawContent,
 			diceRolls,
@@ -503,13 +643,13 @@ function createAiChatCommands({
 
 		const nextTitle = needsTitle
 			? asText(parsed.chatTitle).slice(0, 80) || deriveFallbackTitle(cleanedText || normalizedUserText)
-			: chat.title;
+			: effectiveChat.title;
 		const totalTokenEstimate =
 			tokenEstimate + estimateTokensFromText(systemInstruction) + estimateTokensFromText(processedReply);
 
 		const updatedChat = await chatRepository.update(campaignSlug, chat.id, {
 			title: nextTitle,
-			isAutoTitled: needsTitle ? true : chat.isAutoTitled,
+			isAutoTitled: needsTitle ? true : effectiveChat.isAutoTitled,
 			model: selectedModel,
 			autoApply: effectiveAutoApply,
 			contextSettings: effectiveSettings,
@@ -525,7 +665,7 @@ function createAiChatCommands({
 			summarizedMessageCount: compaction.summarizedMessageCount,
 			tokenEstimate: totalTokenEstimate,
 			maxTokens,
-			messages: [...chat.messages, userMessage, assistantMessage],
+			messages: [...effectiveChat.messages, userMessage, assistantMessage],
 		});
 
 		return {
@@ -538,6 +678,108 @@ function createAiChatCommands({
 			tokenEstimate: totalTokenEstimate,
 			maxTokens,
 			diceRolls,
+		};
+	}
+
+	async function generateImage({ campaignSlug, chatId, payload = {} }) {
+		if (!isApiKeyConfigured()) {
+			throw createHttpError("Gemini API key is required.", 400, "API_KEY_MISSING");
+		}
+
+		const promptText = asText(payload.prompt);
+		if (!promptText || promptText.length > 10000) {
+			throw createHttpError("Image prompt must contain 1–10000 characters.", 400);
+		}
+
+		const availableModels = await aiService.listAvailableModels();
+		const imageModels = Array.isArray(availableModels?.imageModels)
+			? availableModels.imageModels
+			: [];
+		const requestedImageModel = asText(payload.modelName).replace(/^models\//, "");
+		const selectedImageModel = requestedImageModel
+			? imageModels.find((m) => m.name === requestedImageModel)
+			: imageModels[0];
+		if (!selectedImageModel) {
+			throw createHttpError("Select an available image model.", 400);
+		}
+
+		let chat = chatId && chatId !== "new"
+			? await chatRepository.get(campaignSlug, chatId)
+			: null;
+		if (chatId && chatId !== "new" && !chat) {
+			throw createHttpError("AI chat not found.", 404);
+		}
+		if (!chat) {
+			chat = await chatRepository.create(campaignSlug, {
+				model: payload.chatModel || availableModels?.defaultModel || "",
+				autoApply: payload.autoApply,
+				contextSettings: payload.contextSettings,
+				anchor: payload.anchor,
+			});
+		}
+
+		const attachedImages = Array.isArray(payload.attachedImages) ? payload.attachedImages.slice(0, 4) : [];
+		const attachmentParts = attachedImages.length > 0 ? await buildImageParts(attachedImages) : [];
+		const result = await geminiGateway.generateImage({
+			modelName: selectedImageModel.name,
+			prompt: promptText,
+			attachmentParts,
+		});
+
+		const imageBuffer = Buffer.from(String(result?.data || ""), "base64");
+		if (!imageBuffer.length || imageBuffer.length > 20 * 1024 * 1024) {
+			throw createHttpError("Generated image is empty or too large.", 500);
+		}
+		const extension =
+			{ "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[result?.mimeType] ||
+			"png";
+		const saveSlug = campaignSlug === "bestiary" ? "general" : path.basename(String(campaignSlug || "general"));
+		const fileName = `ai-${Date.now()}-${crypto.randomUUID()}.${extension}`;
+		const category = "attachments";
+		const directory = storage.campaignImagesDir(saveSlug, category);
+		await storage.ensureDir(directory);
+		await fs.writeFile(path.join(directory, fileName), imageBuffer, { flag: "wx" });
+		const imageUrl = `/api/images/${encodeURIComponent(saveSlug)}/${category}/${encodeURIComponent(fileName)}`;
+
+		const attachmentList = buildUserMessageAttachments(attachedImages, []);
+		const displayPrompt = asText(payload.displayPrompt) || (promptText.startsWith("@image") ? promptText : `@image ${promptText}`);
+		const now = Date.now();
+		const userMessage = {
+			id: `user-${storage.createId()}`,
+			role: "user",
+			content: normalizeChatMentionsSyntax(displayPrompt),
+			timestamp: now,
+			status: "done",
+			...(attachmentList.length > 0 ? { attachments: attachmentList } : {}),
+		};
+		const assistantMessage = {
+			id: `assistant-${storage.createId()}`,
+			role: "assistant",
+			content: asText(result?.text) || promptText,
+			imageUrl,
+			timestamp: now + 1,
+			status: "done",
+		};
+
+		const needsTitle =
+			(!chat.isAutoTitled || chat.messages.length === 0) &&
+			chat.messages.filter((msg) => msg.role === "user").length === 0;
+		const nextTitle = needsTitle
+			? deriveFallbackTitle(promptText)
+			: chat.title;
+
+		const updatedChat = await chatRepository.update(campaignSlug, chat.id, {
+			title: nextTitle,
+			isAutoTitled: needsTitle ? true : chat.isAutoTitled,
+			messages: [...chat.messages, userMessage, assistantMessage],
+		});
+
+		return {
+			chat: updatedChat,
+			userMessage,
+			assistantMessage,
+			imageUrl,
+			modelName: selectedImageModel.name,
 		};
 	}
 
@@ -555,7 +797,7 @@ function createAiChatCommands({
 			};
 		}
 
-		const campaign = await storage.readCampaign(campaignSlug);
+		const campaign = campaignSlug === "bestiary" ? null : await storage.readCampaign(campaignSlug);
 		const settings = await storage.readSettings().catch(() => ({}));
 		const responseLanguage = asText(payload.language || settings?.language || "uk");
 		const workspaceContext = payload.workspaceContext && typeof payload.workspaceContext === "object"
@@ -660,7 +902,10 @@ function createAiChatCommands({
 		createChat,
 		updateChat,
 		deleteChat,
+		previewContext,
+		compactContext,
 		sendMessage,
+		generateImage,
 		applyAction,
 		undoAction,
 		rejectAction,

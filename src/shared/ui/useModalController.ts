@@ -158,14 +158,19 @@ function useModalKeyboard({
 			if (isInsideAiChatSidebar(event.target)) return;
 			const portal = event.target instanceof Element ? event.target.closest("[data-modal-owner]") : null;
 			if (portal?.getAttribute("data-modal-owner") === cardRef.current?.id) return;
-			executeModalKeyboardPlan(
-				getModalKeyboardPlan(event.key, event.defaultPrevented, hasChildren),
-				{
-					preventDefault: () => event.preventDefault(),
-					onClose,
-					onConfirm,
-				},
+			const plan = getModalKeyboardPlan(
+				event.key,
+				event.defaultPrevented,
+				hasChildren,
 			);
+			if (plan.action === "close") {
+				event.stopImmediatePropagation();
+			}
+			executeModalKeyboardPlan(plan, {
+				preventDefault: () => event.preventDefault(),
+				onClose,
+				onConfirm,
+			});
 		};
 
 		window.addEventListener("keydown", handleGlobalKeyDown);

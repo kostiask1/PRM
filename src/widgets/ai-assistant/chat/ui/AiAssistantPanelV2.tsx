@@ -9,6 +9,7 @@ import AiChatHistoryDropdownV2 from "./popovers/AiChatHistoryDropdownV2.tsx";
 import AiContextSettingsPopoverV2 from "./popovers/AiContextSettingsPopoverV2.tsx";
 import AiCommandsInfoTooltipV2 from "./popovers/AiCommandsInfoTooltipV2.tsx";
 import AiModelSelectorDropdownV2 from "./popovers/AiModelSelectorDropdownV2.tsx";
+import AiImageGeneratorPopoverV2 from "./popovers/AiImageGeneratorPopoverV2.tsx";
 import AiDiffPreviewModalV2 from "./AiDiffPreviewModalV2.tsx";
 
 interface AiAssistantPanelV2Props {
@@ -32,11 +33,20 @@ export default function AiAssistantPanelV2({
 		activeSession,
 		activeSessionId,
 		availableModels,
+		availableImageModels,
+		selectedImageModel,
 		inputValue,
 		selectedModel,
 		autoApply,
 		contextSettings,
 		contextAnchor,
+		contextPreview,
+		isLoadingContextPreview,
+		isCompactingContext,
+		compactContextFeedback,
+		unsummarizedMessageCount,
+		hasCompactedSummary,
+		liveTokenBreakdown,
 		attachments,
 		isSending,
 		isLoadingChats,
@@ -48,21 +58,30 @@ export default function AiAssistantPanelV2({
 		isContextSettingsOpen,
 		isCommandsInfoOpen,
 		isModelPickerOpen,
+		isImageGeneratorOpen,
+		imageGeneratorPromptDraft,
 		diffModalCard,
 		setInputValue,
 		setAutoApply,
 		setSelectedModel,
+		setSelectedImageModel,
 		setContextSettings,
 		setErrorMessage,
 		setIsHistoryOpen,
 		setIsContextSettingsOpen,
 		setIsCommandsInfoOpen,
 		setIsModelPickerOpen,
+		setIsImageGeneratorOpen,
+		setImageGeneratorPromptDraft,
 		setDiffModalCard,
 		createNewChat,
 		selectSession,
 		deleteSession,
 		sendMessage,
+		editAndResendMessage,
+		regenerateLastResponse,
+		openImageGenerator,
+		generateChatImage,
 		cancelSending,
 		applyActionCard,
 		saveCardDraftResources,
@@ -74,6 +93,7 @@ export default function AiAssistantPanelV2({
 		togglePinAnchor,
 		resyncAnchorToCurrentWorkspace,
 		insertCommand,
+		compactChatContext,
 	} = state;
 
 	const handleApiKeySubmit = async (e: FormEvent) => {
@@ -115,8 +135,22 @@ export default function AiAssistantPanelV2({
 				isOpen={isContextSettingsOpen}
 				onClose={() => setIsContextSettingsOpen(false)}
 				contextAnchor={contextAnchor}
+				contextPreview={contextPreview}
+				isLoadingPreview={isLoadingContextPreview}
+				tokenBreakdown={liveTokenBreakdown}
 				settings={contextSettings}
 				onUpdateSettings={setContextSettings}
+				onCompactContext={() => void compactChatContext()}
+				isCompacting={isCompactingContext}
+				canCompact={Boolean(
+					activeSession.id &&
+						!activeSession.id.startsWith("draft-") &&
+						unsummarizedMessageCount > 0 &&
+						!isSending,
+				)}
+				unsummarizedCount={unsummarizedMessageCount}
+				hasCompactedSummary={hasCompactedSummary}
+				compactFeedback={compactContextFeedback}
 			/>
 
 			{isApiKeyMissing && (
@@ -164,12 +198,18 @@ export default function AiAssistantPanelV2({
 			<AiChatMessagesListV2
 				messages={activeSession.messages}
 				isLoadingChats={isLoadingChats}
+				isSending={isSending}
+				isLegacyArchive={Boolean(activeSession.isLegacyArchive)}
+				canGenerateImages={availableImageModels.length > 0}
 				busyActionIds={busyActionIds}
 				onApplyActionCard={applyActionCard}
 				onUndoActionCard={undoActionCard}
 				onRejectActionCard={rejectActionCard}
 				onOpenDiff={(card) => setDiffModalCard(card)}
 				onSelectSuggestion={(text) => void sendMessage(text)}
+				onEditUserMessage={(messageId, nextText) => void editAndResendMessage(messageId, nextText)}
+				onRegenerateAssistant={() => void regenerateLastResponse()}
+				onGenerateImageFromPrompt={(prompt) => openImageGenerator(prompt)}
 			/>
 
 			<AiDiffPreviewModalV2
@@ -199,6 +239,14 @@ export default function AiAssistantPanelV2({
 					onToggleModelPicker={() => setIsModelPickerOpen((prev) => !prev)}
 					isCommandsInfoOpen={isCommandsInfoOpen}
 					onToggleCommandsInfo={() => setIsCommandsInfoOpen((prev) => !prev)}
+					isImageGeneratorOpen={isImageGeneratorOpen}
+					onToggleImageGenerator={() => {
+						if (isImageGeneratorOpen) {
+							setIsImageGeneratorOpen(false);
+						} else {
+							openImageGenerator();
+						}
+					}}
 					attachments={attachments}
 					onAddAttachments={(files) => void addAttachments(files)}
 					onRemoveAttachment={removeAttachment}
@@ -216,6 +264,30 @@ export default function AiAssistantPanelV2({
 							models={availableModels}
 							selectedModel={selectedModel}
 							onSelectModel={setSelectedModel}
+						/>
+					}
+					imageGeneratorPopover={
+						<AiImageGeneratorPopoverV2
+							isOpen={isImageGeneratorOpen}
+							prompt={imageGeneratorPromptDraft}
+							imageModels={availableImageModels}
+							selectedImageModel={selectedImageModel}
+							isSending={isSending}
+							onPromptChange={setImageGeneratorPromptDraft}
+							onSelectImageModel={setSelectedImageModel}
+							onClose={() => setIsImageGeneratorOpen(false)}
+							onComposePrompt={() => {
+								const trimmed = imageGeneratorPromptDraft.trim();
+								setIsImageGeneratorOpen(false);
+								if (trimmed) {
+									void sendMessage(`@image ${trimmed}`);
+								} else {
+									insertCommand("@image");
+								}
+							}}
+							onGenerateImage={() =>
+								void generateChatImage(imageGeneratorPromptDraft, selectedImageModel)
+							}
 						/>
 					}
 				/>

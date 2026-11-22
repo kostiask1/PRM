@@ -3,10 +3,12 @@ const path = require("path");
 const DEFAULT_CHAT_TITLE = "Новий діалог";
 const MAX_STORED_CHAT_MESSAGES = 200;
 const CHATS_FILE_NAME = "_aiChats.json";
+const BESTIARY_CHATS_FILE_NAME = "_aiChats-bestiary.json";
 const DEFAULT_MAX_TOKENS = 1000000;
 
 const VALID_MUTATION_PERMISSIONS = new Set(["diff_only", "direct_mutation"]);
 const VALID_RESPONSE_TONES = new Set(["concise", "narrative", "rules_strict"]);
+const VALID_RULES_EDITIONS = new Set(["5.5e", "5e"]);
 const VALID_ROLES = new Set(["user", "assistant", "system"]);
 const VALID_ACTION_STATUSES = new Set([
 	"pending",
@@ -17,12 +19,20 @@ const VALID_ACTION_STATUSES = new Set([
 
 const DEFAULT_CHAT_CONTEXT_SETTINGS = Object.freeze({
 	includeCurrentScene: true,
+	includeCampaignCharacters: true,
 	includeCampaignNpc: true,
 	includeCampaignLocations: true,
 	includeRecentSessionHistory: false,
 	includeBestiary: false,
+	selectedCharacterIds: null,
+	selectedNpcIds: null,
+	selectedLocationIds: null,
+	selectedSceneIds: null,
+	selectedSessionFileNames: null,
+	selectedBestiaryIds: null,
 	mutationPermission: "diff_only",
 	responseTone: "narrative",
+	rulesEdition: "5.5e",
 });
 
 function createHttpError(message, status) {
@@ -47,6 +57,11 @@ function normalizeBoolean(value, fallback) {
 	return typeof value === "boolean" ? value : fallback;
 }
 
+function normalizeOptionalIdList(raw) {
+	if (!Array.isArray(raw)) return null;
+	return Array.from(new Set(raw.map((item) => String(item ?? "").trim()).filter(Boolean)));
+}
+
 function normalizeTimestamp(value, fallback = Date.now()) {
 	const num = Number(value);
 	return Number.isFinite(num) && num > 0 ? num : fallback;
@@ -60,16 +75,29 @@ function normalizeContextSettings(raw = {}) {
 	const responseTone = VALID_RESPONSE_TONES.has(source.responseTone)
 		? source.responseTone
 		: DEFAULT_CHAT_CONTEXT_SETTINGS.responseTone;
+	const rulesEdition = VALID_RULES_EDITIONS.has(source.rulesEdition)
+		? source.rulesEdition
+		: DEFAULT_CHAT_CONTEXT_SETTINGS.rulesEdition;
+
+	const includeCampaignNpc = normalizeBoolean(
+		source.includeCampaignNpc,
+		DEFAULT_CHAT_CONTEXT_SETTINGS.includeCampaignNpc,
+	);
+	const includeCampaignCharacters =
+		source.includeCampaignCharacters === undefined
+			? includeCampaignNpc
+			: normalizeBoolean(
+					source.includeCampaignCharacters,
+					DEFAULT_CHAT_CONTEXT_SETTINGS.includeCampaignCharacters,
+				);
 
 	return {
 		includeCurrentScene: normalizeBoolean(
 			source.includeCurrentScene,
 			DEFAULT_CHAT_CONTEXT_SETTINGS.includeCurrentScene,
 		),
-		includeCampaignNpc: normalizeBoolean(
-			source.includeCampaignNpc,
-			DEFAULT_CHAT_CONTEXT_SETTINGS.includeCampaignNpc,
-		),
+		includeCampaignCharacters,
+		includeCampaignNpc,
 		includeCampaignLocations: normalizeBoolean(
 			source.includeCampaignLocations,
 			DEFAULT_CHAT_CONTEXT_SETTINGS.includeCampaignLocations,
@@ -82,8 +110,15 @@ function normalizeContextSettings(raw = {}) {
 			source.includeBestiary,
 			DEFAULT_CHAT_CONTEXT_SETTINGS.includeBestiary,
 		),
+		selectedCharacterIds: normalizeOptionalIdList(source.selectedCharacterIds),
+		selectedNpcIds: normalizeOptionalIdList(source.selectedNpcIds),
+		selectedLocationIds: normalizeOptionalIdList(source.selectedLocationIds),
+		selectedSceneIds: normalizeOptionalIdList(source.selectedSceneIds),
+		selectedSessionFileNames: normalizeOptionalIdList(source.selectedSessionFileNames),
+		selectedBestiaryIds: normalizeOptionalIdList(source.selectedBestiaryIds),
 		mutationPermission,
 		responseTone,
+		rulesEdition,
 	};
 }
 
@@ -183,6 +218,7 @@ function normalizeMessage(message, createId) {
 		status: String(message.status || "done"),
 		...(attachments.length > 0 ? { attachments } : {}),
 		...(actionCards.length > 0 ? { actionCards } : {}),
+		...(message.imageUrl ? { imageUrl: String(message.imageUrl).trim() } : {}),
 		...(message.errorMessage ? { errorMessage: String(message.errorMessage) } : {}),
 	};
 }
@@ -221,6 +257,7 @@ function normalizeChatRecord(raw, campaignSlug, createId) {
 		campaignSlug,
 		title,
 		isAutoTitled: Boolean(source.isAutoTitled),
+		...(source.isLegacyArchive ? { isLegacyArchive: true } : {}),
 		createdAt,
 		updatedAt,
 		model: String(source.model || "").trim(),
@@ -246,6 +283,7 @@ function toChatSummary(chat) {
 		campaignSlug: chat.campaignSlug,
 		title: chat.title,
 		isAutoTitled: chat.isAutoTitled,
+		...(chat.isLegacyArchive ? { isLegacyArchive: true } : {}),
 		createdAt: chat.createdAt,
 		updatedAt: chat.updatedAt,
 		model: chat.model,
@@ -271,11 +309,15 @@ function createFileAiChatRepository({ storage }) {
 		const slug = resolveCampaignSlug(campaignSlug);
 		return {
 			slug,
-			filePath: path.join(storage.campaignDir(slug), CHATS_FILE_NAME),
+			filePath:
+				slug === "bestiary"
+					? path.join(storage.DATA_DIR, BESTIARY_CHATS_FILE_NAME)
+					: path.join(storage.campaignDir(slug), CHATS_FILE_NAME),
 		};
 	}
 
 	async function assertCampaignExists(slug) {
+		if (slug === "bestiary") return;
 		const exists = await storage.exists(storage.campaignMetaPath(slug));
 		if (!exists) {
 			throw createHttpError("Campaign not found.", 404);
@@ -286,19 +328,30 @@ function createFileAiChatRepository({ storage }) {
 		const { slug, filePath } = getChatsPath(campaignSlug);
 		if (!(await storage.exists(filePath))) {
 			await assertCampaignExists(slug);
-			return { slug, filePath, chats: [] };
+			return { slug, filePath, chats: [], legacyHistoryMigrated: false };
 		}
 		const saved = await storage.readJson(filePath);
-		const list = Array.isArray(saved) ? saved : [];
+		let rawList = [];
+		let legacyHistoryMigrated = false;
+		if (Array.isArray(saved)) {
+			rawList = saved;
+		} else if (saved && typeof saved === "object") {
+			rawList = Array.isArray(saved.chats) ? saved.chats : [];
+			legacyHistoryMigrated = Boolean(saved.legacyHistoryMigrated);
+		}
 		const chats = sortChatsByUpdatedAt(
-			list.map((item) => normalizeChatRecord(item, slug, storage.createId)),
+			rawList.map((item) => normalizeChatRecord(item, slug, storage.createId)),
 		);
-		return { slug, filePath, chats };
+		return { slug, filePath, chats, legacyHistoryMigrated };
 	}
 
-	async function writeAll(filePath, chats) {
+	async function writeAll(filePath, chats, { legacyHistoryMigrated = false } = {}) {
 		await storage.ensureDir(path.dirname(filePath));
-		await storage.writeJson(filePath, sortChatsByUpdatedAt(chats));
+		await storage.writeJson(filePath, {
+			version: 2,
+			legacyHistoryMigrated: Boolean(legacyHistoryMigrated),
+			chats: sortChatsByUpdatedAt(chats),
+		});
 	}
 
 	async function list(campaignSlug) {
@@ -314,7 +367,7 @@ function createFileAiChatRepository({ storage }) {
 	}
 
 	async function create(campaignSlug, input = {}) {
-		const { slug, filePath, chats } = await readAllNormalized(campaignSlug);
+		const { slug, filePath, chats, legacyHistoryMigrated } = await readAllNormalized(campaignSlug);
 		await assertCampaignExists(slug);
 		const now = Date.now();
 		const chat = normalizeChatRecord(
@@ -331,14 +384,14 @@ function createFileAiChatRepository({ storage }) {
 			chat,
 			...chats.filter((existing) => existing.id !== chat.id),
 		]);
-		await writeAll(filePath, nextChats);
+		await writeAll(filePath, nextChats, { legacyHistoryMigrated });
 		return chat;
 	}
 
 	async function update(campaignSlug, chatId, patch = {}) {
 		const targetId = String(chatId || "").trim();
 		if (!targetId) throw createHttpError("Chat ID is required.", 400);
-		const { slug, filePath, chats } = await readAllNormalized(campaignSlug);
+		const { slug, filePath, chats, legacyHistoryMigrated } = await readAllNormalized(campaignSlug);
 		const index = chats.findIndex((chat) => chat.id === targetId);
 		if (index === -1) throw createHttpError("AI chat not found.", 404);
 		const existing = chats[index];
@@ -353,20 +406,42 @@ function createFileAiChatRepository({ storage }) {
 		const normalized = normalizeChatRecord(merged, slug, storage.createId);
 		const nextChats = [...chats];
 		nextChats[index] = normalized;
-		await writeAll(filePath, nextChats);
+		await writeAll(filePath, nextChats, { legacyHistoryMigrated });
 		return normalized;
 	}
 
 	async function remove(campaignSlug, chatId) {
 		const targetId = String(chatId || "").trim();
 		if (!targetId) throw createHttpError("Chat ID is required.", 400);
-		const { filePath, chats } = await readAllNormalized(campaignSlug);
+		const { filePath, chats, legacyHistoryMigrated } = await readAllNormalized(campaignSlug);
 		const nextChats = chats.filter((chat) => chat.id !== targetId);
 		if (nextChats.length === chats.length) {
 			throw createHttpError("AI chat not found.", 404);
 		}
-		await writeAll(filePath, nextChats);
+		await writeAll(filePath, nextChats, { legacyHistoryMigrated });
 		return sortChatsByUpdatedAt(nextChats).map(toChatSummary);
+	}
+
+	async function hasLegacyHistoryMigrated(campaignSlug) {
+		const { filePath } = getChatsPath(campaignSlug);
+		if (!(await storage.exists(filePath))) return false;
+		const { legacyHistoryMigrated } = await readAllNormalized(campaignSlug);
+		return legacyHistoryMigrated;
+	}
+
+	async function markLegacyHistoryMigrated(campaignSlug, archiveChat = null) {
+		const { slug, filePath, chats } = await readAllNormalized(campaignSlug);
+		await assertCampaignExists(slug);
+		let nextChats = chats;
+		if (archiveChat && typeof archiveChat === "object") {
+			const normalizedArchive = normalizeChatRecord(archiveChat, slug, storage.createId);
+			nextChats = [
+				normalizedArchive,
+				...chats.filter((item) => item.id !== normalizedArchive.id),
+			];
+		}
+		await writeAll(filePath, nextChats, { legacyHistoryMigrated: true });
+		return sortChatsByUpdatedAt(nextChats);
 	}
 
 	return {
@@ -375,10 +450,14 @@ function createFileAiChatRepository({ storage }) {
 		create,
 		update,
 		delete: remove,
+		hasLegacyHistoryMigrated,
+		markLegacyHistoryMigrated,
 	};
 }
 
 module.exports = {
+	CHATS_FILE_NAME,
+	BESTIARY_CHATS_FILE_NAME,
 	DEFAULT_CHAT_TITLE,
 	DEFAULT_CHAT_CONTEXT_SETTINGS,
 	DEFAULT_MAX_TOKENS,

@@ -93,7 +93,10 @@ export default function AiChatHistoryDropdownV2({
 									}}
 								>
 									<div className="AiChatHistoryDropdownV2__itemTitle" title={session.title}>
-										{session.title}
+										<span>{session.title}</span>
+										{session.isLegacyArchive && (
+											<span className="AiChatHistoryDropdownV2__archiveBadge">Архів</span>
+										)}
 									</div>
 									<div className="AiChatHistoryDropdownV2__itemMeta">
 										<span>{formatSessionDate(session.updatedAt || session.createdAt)}</span>

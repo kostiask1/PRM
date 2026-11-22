@@ -25,6 +25,7 @@ import type {
 	AiActionCard,
 	AiChatAnchorData,
 	AiChatAttachment,
+	AiChatContextPreview,
 	AiChatSession,
 	AiChatSessionSummary,
 	AiContextAnchor,
@@ -33,17 +34,61 @@ import type {
 	AiWorkspaceContext,
 	ChatMessage,
 } from "./aiChatTypes.ts";
+import { calculateLiveContextTokens } from "./aiContextSelection.ts";
 import { AI_MODELS, DEFAULT_AI_MODEL } from "./aiModels.ts";
 
 const INITIAL_CONTEXT_SETTINGS: AiContextSettings = {
 	includeCurrentScene: true,
+	includeCampaignCharacters: true,
 	includeCampaignNpc: true,
 	includeCampaignLocations: true,
 	includeRecentSessionHistory: false,
 	includeBestiary: false,
+	selectedCharacterIds: null,
+	selectedNpcIds: null,
+	selectedLocationIds: null,
+	selectedSceneIds: null,
+	selectedSessionFileNames: null,
+	selectedBestiaryIds: null,
 	mutationPermission: "diff_only",
 	responseTone: "narrative",
+	rulesEdition: "5.5e",
 };
+
+function normalizeClientContextSettings(
+	raw?: Partial<AiContextSettings> | null,
+): AiContextSettings {
+	if (!raw) return INITIAL_CONTEXT_SETTINGS;
+	const includeCampaignNpc = raw.includeCampaignNpc ?? INITIAL_CONTEXT_SETTINGS.includeCampaignNpc;
+	const includeCampaignCharacters =
+		raw.includeCampaignCharacters === undefined
+			? includeCampaignNpc
+			: raw.includeCampaignCharacters;
+	return {
+		includeCurrentScene: raw.includeCurrentScene ?? INITIAL_CONTEXT_SETTINGS.includeCurrentScene,
+		includeCampaignCharacters,
+		includeCampaignNpc,
+		includeCampaignLocations:
+			raw.includeCampaignLocations ?? INITIAL_CONTEXT_SETTINGS.includeCampaignLocations,
+		includeRecentSessionHistory:
+			raw.includeRecentSessionHistory ?? INITIAL_CONTEXT_SETTINGS.includeRecentSessionHistory,
+		includeBestiary: raw.includeBestiary ?? INITIAL_CONTEXT_SETTINGS.includeBestiary,
+		selectedCharacterIds: Array.isArray(raw.selectedCharacterIds) ? raw.selectedCharacterIds : null,
+		selectedNpcIds: Array.isArray(raw.selectedNpcIds) ? raw.selectedNpcIds : null,
+		selectedLocationIds: Array.isArray(raw.selectedLocationIds) ? raw.selectedLocationIds : null,
+		selectedSceneIds: Array.isArray(raw.selectedSceneIds) ? raw.selectedSceneIds : null,
+		selectedSessionFileNames: Array.isArray(raw.selectedSessionFileNames)
+			? raw.selectedSessionFileNames
+			: null,
+		selectedBestiaryIds: Array.isArray(raw.selectedBestiaryIds) ? raw.selectedBestiaryIds : null,
+		mutationPermission: raw.mutationPermission ?? INITIAL_CONTEXT_SETTINGS.mutationPermission,
+		responseTone: raw.responseTone ?? INITIAL_CONTEXT_SETTINGS.responseTone,
+		rulesEdition:
+			raw.rulesEdition === "5e" || raw.rulesEdition === "5.5e"
+				? raw.rulesEdition
+				: INITIAL_CONTEXT_SETTINGS.rulesEdition,
+	};
+}
 
 interface CampaignShape {
 	slug?: string;
@@ -99,20 +144,33 @@ function mapApiModelsToOptions(models: AiModelDescriptor[]): AiModelOption[] {
 	});
 }
 
+function mapImageModelsToOptions(models?: AiModelDescriptor[]): AiModelOption[] {
+	if (!Array.isArray(models) || models.length === 0) return [];
+	return models.map((descriptor) => ({
+		id: descriptor.name,
+		name: descriptor.displayName || descriptor.name,
+		description: descriptor.description || "Модель генерації зображень",
+		contextWindow: formatContextWindow(descriptor.inputTokenLimit),
+		inputTokenLimit: descriptor.inputTokenLimit,
+	}));
+}
+
 function toFrontendSession(record: AiChatRecord): AiChatSession {
 	return {
 		id: record.id,
 		campaignSlug: record.campaignSlug,
 		title: record.title,
 		isAutoTitled: record.isAutoTitled,
+		...(record.isLegacyArchive ? { isLegacyArchive: true } : {}),
 		createdAt: record.createdAt,
 		updatedAt: record.updatedAt,
 		model: record.model || DEFAULT_AI_MODEL,
 		messages: Array.isArray(record.messages) ? (record.messages as ChatMessage[]) : [],
 		autoApply: Boolean(record.autoApply),
-		contextSettings: record.contextSettings || INITIAL_CONTEXT_SETTINGS,
+		contextSettings: normalizeClientContextSettings(record.contextSettings),
 		anchor: record.anchor || null,
 		summary: record.summary,
+		summarizedMessageCount: record.summarizedMessageCount ?? 0,
 		tokenEstimate: record.tokenEstimate,
 		maxTokens: record.maxTokens,
 	};
@@ -124,6 +182,7 @@ function toSummaryFromSession(session: AiChatSession): AiChatSessionSummary {
 		campaignSlug: session.campaignSlug,
 		title: session.title,
 		isAutoTitled: session.isAutoTitled,
+		...(session.isLegacyArchive ? { isLegacyArchive: true } : {}),
 		createdAt: session.createdAt,
 		updatedAt: session.updatedAt,
 		model: session.model,
@@ -178,16 +237,21 @@ export function useAiChatState({
 	const activeCampaign = runtime.activeCampaign as CampaignShape | null;
 	const runtimeSession = runtime.activeSession as SessionShape | null;
 	const activeEncounter = runtime.activeEncounter as EncounterShape | null;
-	const campaignSlug = String(
+	const rawCampaignSlug = String(
 		runtime.navigation.activeCampaignSlug || activeCampaign?.slug || "",
 	).trim();
-	const activeSessionFileName =
-		runtime.navigation.activeSessionFileName || runtimeSession?.fileName || null;
-	const activeEncounterId =
-		runtime.navigation.activeEncounterId ?? activeEncounter?.id ?? null;
+	const isBestiaryScope = !rawCampaignSlug;
+	const campaignSlug = rawCampaignSlug || "bestiary";
+	const activeSessionFileName = isBestiaryScope
+		? null
+		: runtime.navigation.activeSessionFileName || runtimeSession?.fileName || null;
+	const activeEncounterId = isBestiaryScope
+		? null
+		: runtime.navigation.activeEncounterId ?? activeEncounter?.id ?? null;
 
 	// Detect active scene from URL hash when in session view
 	const detectedScene = useMemo(() => {
+		if (isBestiaryScope) return null;
 		const scenes = Array.isArray(runtimeSession?.data?.scenes)
 			? runtimeSession.data.scenes
 			: [];
@@ -201,18 +265,20 @@ export function useAiChatState({
 			}
 		}
 		return null;
-	}, [runtimeSession, location.hash]);
+	}, [isBestiaryScope, runtimeSession, location.hash]);
 
 	const activeSection = useMemo(() => {
 		const params = new URLSearchParams(location.search || "");
 		return params.get("section") || "";
 	}, [location.search]);
 
-	const workspaceViewType: AiWorkspaceContext["viewType"] = activeEncounterId
-		? "encounter"
-		: activeSessionFileName
-			? "session"
-			: "campaign";
+	const workspaceViewType: AiWorkspaceContext["viewType"] = isBestiaryScope
+		? "bestiary"
+		: activeEncounterId
+			? "encounter"
+			: activeSessionFileName
+				? "session"
+				: "campaign";
 
 	const workspaceContext = useMemo<AiWorkspaceContext>(
 		() => ({
@@ -238,7 +304,7 @@ export function useAiChatState({
 		campaignSlug,
 		encounterId: activeEncounterId,
 		fallbackSessionFileName: activeSessionFileName || undefined,
-		isBestiary: false,
+		isBestiary: isBestiaryScope,
 		isCampaign: workspaceViewType === "campaign",
 		isEncounter: workspaceViewType === "encounter",
 		publishSyncEvent: runtime.publishSyncEvent,
@@ -259,6 +325,8 @@ export function useAiChatState({
 	const [inputValue, setInputValue] = useState("");
 	const [availableModels, setAvailableModels] = useState<AiModelOption[]>([...AI_MODELS]);
 	const [selectedModel, setSelectedModelState] = useState<string>(DEFAULT_AI_MODEL);
+	const [availableImageModels, setAvailableImageModels] = useState<AiModelOption[]>([]);
+	const [selectedImageModel, setSelectedImageModel] = useState<string>("");
 	const [autoApply, setAutoApplyState] = useState<boolean>(false);
 	const [contextSettings, setContextSettingsState] =
 		useState<AiContextSettings>(INITIAL_CONTEXT_SETTINGS);
@@ -280,7 +348,16 @@ export function useAiChatState({
 	const [isContextSettingsOpen, setIsContextSettingsOpen] = useState(false);
 	const [isCommandsInfoOpen, setIsCommandsInfoOpen] = useState(false);
 	const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
+	const [isImageGeneratorOpen, setIsImageGeneratorOpen] = useState(false);
+	const [imageGeneratorPromptDraft, setImageGeneratorPromptDraft] = useState("");
 	const [diffModalCard, setDiffModalCard] = useState<AiActionCard | null>(null);
+
+	// Live context catalog & token estimation
+	const [contextPreview, setContextPreview] = useState<AiChatContextPreview | null>(null);
+	const [isLoadingContextPreview, setIsLoadingContextPreview] = useState(false);
+	const [isCompactingContext, setIsCompactingContext] = useState(false);
+	const [compactContextFeedback, setCompactContextFeedback] = useState<string | null>(null);
+	const contextPreviewReqIdRef = useRef(0);
 
 	// Load available models on mount
 	const loadModels = useCallback(async () => {
@@ -289,6 +366,13 @@ export function useAiChatState({
 			const models = Array.isArray(result?.models) ? result.models : [];
 			const mapped = mapApiModelsToOptions(models);
 			setAvailableModels(mapped);
+			const mappedImageModels = mapImageModelsToOptions(result?.imageModels);
+			setAvailableImageModels(mappedImageModels);
+			if (mappedImageModels.length > 0) {
+				setSelectedImageModel((prev) =>
+					mappedImageModels.some((m) => m.id === prev) ? prev : mappedImageModels[0].id,
+				);
+			}
 			const keyMissing = result?.source === "fallback" && models.length === 0;
 			setIsApiKeyMissing(keyMissing);
 			if (models.length > 0 && result) {
@@ -332,6 +416,7 @@ export function useAiChatState({
 					campaignSlug: s.campaignSlug,
 					title: s.title,
 					isAutoTitled: s.isAutoTitled,
+					...(s.isLegacyArchive ? { isLegacyArchive: true } : {}),
 					createdAt: s.createdAt,
 					updatedAt: s.updatedAt,
 					model: s.model,
@@ -369,6 +454,13 @@ export function useAiChatState({
 
 	// Current live workspace anchor label
 	const liveWorkspaceAnchor = useMemo<AiChatAnchorData>(() => {
+		if (isBestiaryScope) {
+			return {
+				type: "bestiary",
+				title: "Бестіарій",
+				pinned: false,
+			};
+		}
 		const effectiveCampaignName = activeCampaign?.name || campaignTitle || campaignSlug || "Кампанія";
 		const effectiveSessionName = runtimeSession?.name || sessionTitle || "";
 		const effectiveEncounterName = activeEncounter?.name || "";
@@ -396,6 +488,7 @@ export function useAiChatState({
 			pinned: false,
 		};
 	}, [
+		isBestiaryScope,
 		activeCampaign?.name,
 		campaignTitle,
 		campaignSlug,
@@ -438,13 +531,115 @@ export function useAiChatState({
 	]);
 
 	// Effective anchor & sync indicator
+	const liveTokenBreakdown = useMemo(
+		() => calculateLiveContextTokens(contextPreview, contextSettings),
+		[contextPreview, contextSettings],
+	);
+
+	const refreshContextPreview = useCallback(async () => {
+		if (!campaignSlug) {
+			setContextPreview(null);
+			return;
+		}
+		const requestId = ++contextPreviewReqIdRef.current;
+		setIsLoadingContextPreview(true);
+		try {
+			const effectiveAnchor = activeSessionRecord ? activeSessionRecord.anchor : draftAnchor;
+			const preview = await aiApi.previewAiChatContext(campaignSlug, {
+				...(activeSessionRecord?.id ? { chatId: activeSessionRecord.id } : {}),
+				model: selectedModel,
+				anchor: effectiveAnchor || liveWorkspaceAnchor,
+				workspaceContext,
+				contextSettings,
+			});
+			if (requestId !== contextPreviewReqIdRef.current) return;
+			if (preview) {
+				setContextPreview(preview);
+			}
+		} catch {
+			// Ignore transient preview errors silently
+		} finally {
+			if (requestId === contextPreviewReqIdRef.current) {
+				setIsLoadingContextPreview(false);
+			}
+		}
+	}, [
+		campaignSlug,
+		activeSessionRecord,
+		draftAnchor,
+		liveWorkspaceAnchor,
+		selectedModel,
+		workspaceContext,
+		contextSettings,
+	]);
+
+	const activeMessageCount = activeSessionRecord?.messages?.length ?? 0;
+	const activeSummarizedCount = activeSessionRecord?.summarizedMessageCount ?? 0;
+	useEffect(() => {
+		void refreshContextPreview();
+	}, [
+		campaignSlug,
+		workspaceContext.sessionFileName,
+		workspaceContext.encounterId,
+		workspaceContext.sceneId,
+		activeSessionRecord?.id,
+		activeMessageCount,
+		activeSummarizedCount,
+		selectedModel,
+		contextSettings.responseTone,
+		contextSettings.rulesEdition,
+		isContextSettingsOpen,
+	]);
+
+	const unsummarizedMessageCount = Math.max(0, activeMessageCount - activeSummarizedCount);
+	const hasCompactedSummary = Boolean(activeSessionRecord?.summary);
+
+	const compactChatContext = useCallback(async () => {
+		if (!campaignSlug || !activeSessionRecord?.id || isSending || isCompactingContext) return;
+		setIsCompactingContext(true);
+		setErrorMessage(null);
+		setCompactContextFeedback(null);
+		try {
+			const res = await aiApi.compactAiChatContext(campaignSlug, activeSessionRecord.id, {
+				model: selectedModel,
+			});
+			if (res?.chat) {
+				const converted = toFrontendSession(res.chat);
+				setActiveSessionRecord(converted);
+				setSessions((prev) => upsertSummaryList(prev, toSummaryFromSession(converted)));
+			}
+			await refreshContextPreview();
+			if (res?.compacted) {
+				setCompactContextFeedback(
+					`Стиснуто ${res.compactedCount} повід. (~${res.previousHistoryTokens} → ~${res.nextHistoryTokens} ток.)`,
+				);
+			} else {
+				setCompactContextFeedback("Контекст діалогу вже стиснуто");
+			}
+		} catch (error) {
+			setErrorMessage(getErrorMessage(error, "Не вдалося стиснути контекст діалогу."));
+		} finally {
+			setIsCompactingContext(false);
+		}
+	}, [
+		campaignSlug,
+		activeSessionRecord?.id,
+		isSending,
+		isCompactingContext,
+		selectedModel,
+		refreshContextPreview,
+	]);
+
 	const contextAnchor = useMemo<AiContextAnchor>(() => {
 		const activeModelObj = availableModels.find((m) => m.id === selectedModel);
 		const maxTokens =
+			contextPreview?.maxTokens ||
 			activeSessionRecord?.maxTokens ||
 			activeModelObj?.inputTokenLimit ||
 			1000000;
-		const tokenEstimate = activeSessionRecord?.tokenEstimate || 0;
+		const tokenEstimate = contextPreview
+			? liveTokenBreakdown.totalTokens
+			: activeSessionRecord?.tokenEstimate || 0;
 
 		const storedAnchor = activeSessionRecord ? activeSessionRecord.anchor : draftAnchor;
 		const isPinned = Boolean(storedAnchor?.pinned);
@@ -486,6 +681,8 @@ export function useAiChatState({
 		activeSessionRecord,
 		draftAnchor,
 		liveWorkspaceAnchor,
+		contextPreview,
+		liveTokenBreakdown.totalTokens,
 	]);
 
 	// Persist partial patch when backend chat exists
@@ -513,6 +710,8 @@ export function useAiChatState({
 		sendAbortRef.current?.abort();
 		setIsSending(false);
 		setActiveSessionRecord(null);
+		setContextSettingsState(INITIAL_CONTEXT_SETTINGS);
+		setCompactContextFeedback(null);
 		setDraftAnchor(null);
 		setErrorMessage(null);
 		setIsHistoryOpen(false);
@@ -527,6 +726,7 @@ export function useAiChatState({
 			sendAbortRef.current?.abort();
 			setIsSending(false);
 			setIsLoadingChats(true);
+			setCompactContextFeedback(null);
 			setErrorMessage(null);
 			try {
 				const fetched = await aiApi.getAiChat(campaignSlug, chatId);
@@ -859,6 +1059,313 @@ export function useAiChatState({
 		],
 	);
 
+	const editAndResendMessage = useCallback(
+		async (userMessageId: string, nextContent: string) => {
+			if (!campaignSlug || isSending || !activeSessionRecord?.id || activeSessionRecord.isLegacyArchive) {
+				return;
+			}
+			const trimmed = nextContent.trim();
+			if (!trimmed) return;
+
+			const messages = activeSessionRecord.messages || [];
+			const cutIndex = messages.findIndex((m) => m.id === userMessageId);
+			if (cutIndex === -1) return;
+
+			const hasAppliedCards = messages
+				.slice(cutIndex)
+				.some((m) => m.actionCards?.some((c) => c.status === "applied"));
+			if (hasAppliedCards) {
+				const confirmed = await runtime.requestConfirmation({
+					title: "Замінити повідомлення?",
+					message:
+						"У попередній відповіді є вже застосовані зміни в кампанії. Вони залишаться у кампанії, але попередня відповідь у чаті буде замінена новою. Продовжити?",
+				});
+				if (!confirmed) return;
+			}
+
+			setErrorMessage(null);
+			setIsSending(true);
+
+			const now = Date.now();
+			const targetMsg = messages[cutIndex];
+			const optimisticUserMsg: ChatMessage = {
+				id: `temp-user-${now}`,
+				role: "user",
+				content: trimmed,
+				timestamp: now,
+				status: "done",
+				...(targetMsg?.attachments?.length ? { attachments: targetMsg.attachments } : {}),
+			};
+			const streamingPlaceholder: ChatMessage = {
+				id: `temp-assistant-${now + 1}`,
+				role: "assistant",
+				content: "",
+				timestamp: now + 1,
+				status: "streaming",
+				streamPhase: "thinking",
+			};
+
+			const prevRecordSnapshot = activeSessionRecord;
+			setActiveSessionRecord((prev) =>
+				prev
+					? {
+							...prev,
+							messages: [
+								...prev.messages.slice(0, cutIndex),
+								optimisticUserMsg,
+								streamingPlaceholder,
+							],
+						}
+					: prev,
+			);
+
+			const controller = new AbortController();
+			sendAbortRef.current = controller;
+
+			try {
+				const result = await aiApi.sendAiChatMessageStream(
+					campaignSlug,
+					activeSessionRecord.id,
+					{
+						content: trimmed,
+						model: selectedModel,
+						autoApply,
+						contextSettings,
+						anchor: contextAnchor.pinned
+							? activeSessionRecord.anchor || draftAnchor
+							: liveWorkspaceAnchor,
+						workspaceContext,
+						language: runtime.currentLanguage || "uk",
+						truncateFromMessageId: userMessageId,
+						attachedImages: [],
+						attachedFiles: [],
+					},
+					{
+						signal: controller.signal,
+						onStatus: (phase) => {
+							setActiveSessionRecord((prev) => {
+								if (!prev) return prev;
+								return {
+									...prev,
+									messages: prev.messages.map((msg) =>
+										msg.id === streamingPlaceholder.id
+											? { ...msg, streamPhase: phase }
+											: msg,
+									),
+								};
+							});
+						},
+						onDelta: (partialText, replyComplete) => {
+							setActiveSessionRecord((prev) => {
+								if (!prev) return prev;
+								return {
+									...prev,
+									messages: prev.messages.map((msg) =>
+										msg.id === streamingPlaceholder.id
+											? {
+													...msg,
+													content: partialText,
+													streamPhase: replyComplete ? "preparing_actions" : "streaming",
+												}
+											: msg,
+									),
+								};
+							});
+						},
+					},
+				);
+				if (!result?.chat) throw new Error("Некоректна відповідь сервера.");
+
+				const persistedSession = toFrontendSession(result.chat);
+				setActiveSessionRecord(persistedSession);
+				setSessions((prev) =>
+					upsertSummaryList(prev, toSummaryFromSession(persistedSession)),
+				);
+				const appliedCards = persistedSession.messages.flatMap((m) => m.actionCards || []);
+				const appliedCard = appliedCards.find((c) =>
+					result.appliedActionIds?.includes(c.id),
+				);
+				syncMutationResultToWorkspace({
+					updated: result.updated,
+					changedEntityTypes: result.changedEntityTypes,
+					actionCard: appliedCard,
+				});
+			} catch (error) {
+				setActiveSessionRecord(prevRecordSnapshot);
+				if (!isAbortError(error)) {
+					if (isMissingApiKeyError(error)) {
+						setIsApiKeyMissing(true);
+					}
+					setErrorMessage(
+						getErrorMessage(error, "Не вдалося отримати відповідь від AI-асистента."),
+					);
+				}
+			} finally {
+				if (sendAbortRef.current === controller) {
+					sendAbortRef.current = null;
+				}
+				setIsSending(false);
+			}
+		},
+		[
+			campaignSlug,
+			isSending,
+			activeSessionRecord,
+			runtime,
+			selectedModel,
+			autoApply,
+			contextSettings,
+			contextAnchor.pinned,
+			draftAnchor,
+			liveWorkspaceAnchor,
+			workspaceContext,
+			syncMutationResultToWorkspace,
+		],
+	);
+
+	const regenerateLastResponse = useCallback(async () => {
+		if (!activeSessionRecord || isSending || activeSessionRecord.isLegacyArchive) return;
+		const messages = activeSessionRecord.messages || [];
+		for (let i = messages.length - 1; i >= 0; i -= 1) {
+			if (messages[i].role === "user" && messages[i].content.trim()) {
+				await editAndResendMessage(messages[i].id, messages[i].content);
+				return;
+			}
+		}
+	}, [activeSessionRecord, isSending, editAndResendMessage]);
+
+	const openImageGenerator = useCallback(
+		(prefillPrompt?: string) => {
+			const fallbackPrompt = prefillPrompt !== undefined ? prefillPrompt : inputValue;
+			setImageGeneratorPromptDraft(
+				String(fallbackPrompt || "").replace(/(^|\s)@image\b\s*/i, "$1").trim(),
+			);
+			setIsCommandsInfoOpen(false);
+			setIsModelPickerOpen(false);
+			setIsImageGeneratorOpen(true);
+		},
+		[inputValue],
+	);
+
+	const generateChatImage = useCallback(
+		async (promptText: string, modelName?: string) => {
+			if (!campaignSlug || isSending) return;
+			const trimmed = promptText.trim();
+			if (!trimmed) return;
+
+			setErrorMessage(null);
+			setIsSending(true);
+			setIsImageGeneratorOpen(false);
+			const pendingImages = attachments.filter((a) => a.kind === "image");
+			setAttachments((prev) => prev.filter((a) => a.kind !== "image"));
+
+			const now = Date.now();
+			const optimisticUserMsg: ChatMessage = {
+				id: `temp-user-img-${now}`,
+				role: "user",
+				content: `@image ${trimmed}`,
+				timestamp: now,
+				status: "done",
+				...(pendingImages.length > 0 ? { attachments: pendingImages } : {}),
+			};
+			const loadingAssistantMsg: ChatMessage = {
+				id: `temp-assistant-img-${now + 1}`,
+				role: "assistant",
+				content: "Генерую зображення...",
+				timestamp: now + 1,
+				status: "streaming",
+				streamPhase: "thinking",
+			};
+
+			const prevRecordSnapshot = activeSessionRecord;
+			setActiveSessionRecord((prev) => ({
+				...(prev || {
+					id: "draft-new",
+					campaignSlug,
+					title: "Новий діалог",
+					createdAt: now,
+					updatedAt: now,
+					model: selectedModel,
+					autoApply,
+					contextSettings,
+					anchor: draftAnchor || liveWorkspaceAnchor,
+					messages: [],
+				}),
+				messages: [
+					...(prev?.messages || []),
+					optimisticUserMsg,
+					loadingAssistantMsg,
+				],
+			}));
+
+			try {
+				let targetChatId = activeSessionRecord?.id;
+				if (!targetChatId || targetChatId === "draft-new") {
+					const created = await aiApi.createAiChat(campaignSlug, {
+						model: selectedModel,
+						autoApply,
+						contextSettings,
+						anchor: draftAnchor || liveWorkspaceAnchor,
+					});
+					if (!created?.id) throw new Error("Не вдалося створити новий чат.");
+					targetChatId = created.id;
+				}
+
+				const result = await aiApi.generateAiChatImage(campaignSlug, targetChatId, {
+					prompt: trimmed,
+					displayPrompt: `@image ${trimmed}`,
+					modelName: modelName || selectedImageModel,
+					chatModel: selectedModel,
+					autoApply,
+					contextSettings,
+					anchor: contextAnchor.pinned
+						? activeSessionRecord?.anchor || draftAnchor
+						: liveWorkspaceAnchor,
+					attachedImages: pendingImages,
+				});
+				if (!result?.chat) throw new Error("Некоректна відповідь генератора зображень.");
+
+				const persistedSession = toFrontendSession(result.chat);
+				setActiveSessionRecord(persistedSession);
+				setSessions((prev) =>
+					upsertSummaryList(prev, toSummaryFromSession(persistedSession)),
+				);
+				runtime.publishSyncEvent({
+					resource: "images",
+					campaignSlug: isBestiaryScope ? "general" : campaignSlug,
+				});
+			} catch (error) {
+				setActiveSessionRecord(prevRecordSnapshot);
+				if (pendingImages.length > 0) {
+					setAttachments((prev) => [...pendingImages, ...prev]);
+				}
+				if (isMissingApiKeyError(error)) {
+					setIsApiKeyMissing(true);
+				}
+				setErrorMessage(
+					getErrorMessage(error, "Не вдалося згенерувати зображення."),
+				);
+			} finally {
+				setIsSending(false);
+			}
+		},
+		[
+			campaignSlug,
+			isBestiaryScope,
+			isSending,
+			attachments,
+			activeSessionRecord,
+			selectedModel,
+			selectedImageModel,
+			autoApply,
+			contextSettings,
+			draftAnchor,
+			liveWorkspaceAnchor,
+			contextAnchor.pinned,
+			runtime,
+		],
+	);
+
 	const runActionMutation = useCallback(
 		async (
 			cardId: string,
@@ -1049,6 +1556,13 @@ export function useAiChatState({
 			if (res.status === "saved" && res.modelSelection) {
 				const mapped = mapApiModelsToOptions(res.modelSelection.models);
 				if (mapped.length > 0) setAvailableModels(mapped);
+				const mappedImage = mapImageModelsToOptions(res.modelSelection.imageModels);
+				if (mappedImage.length > 0) {
+					setAvailableImageModels(mappedImage);
+					setSelectedImageModel((prev) =>
+						mappedImage.some((m) => m.id === prev) ? prev : mappedImage[0].id,
+					);
+				}
 				if (res.modelSelection.selectedModel) {
 					setSelectedModelState(res.modelSelection.selectedModel);
 				}
@@ -1105,15 +1619,25 @@ export function useAiChatState({
 
 	return {
 		campaignSlug,
+		isBestiaryScope,
 		sessions,
 		activeSession,
 		activeSessionId: activeSession.id,
 		availableModels,
+		availableImageModels,
+		selectedImageModel,
 		inputValue,
 		selectedModel,
 		autoApply,
 		contextSettings,
 		contextAnchor,
+		contextPreview,
+		isLoadingContextPreview,
+		isCompactingContext,
+		compactContextFeedback,
+		unsummarizedMessageCount,
+		hasCompactedSummary,
+		liveTokenBreakdown,
 		attachments,
 		isSending,
 		isLoadingChats,
@@ -1125,21 +1649,30 @@ export function useAiChatState({
 		isContextSettingsOpen,
 		isCommandsInfoOpen,
 		isModelPickerOpen,
+		isImageGeneratorOpen,
+		imageGeneratorPromptDraft,
 		diffModalCard,
 		setInputValue,
 		setAutoApply,
 		setSelectedModel,
+		setSelectedImageModel,
 		setContextSettings,
 		setErrorMessage,
 		setIsHistoryOpen,
 		setIsContextSettingsOpen,
 		setIsCommandsInfoOpen,
 		setIsModelPickerOpen,
+		setIsImageGeneratorOpen,
+		setImageGeneratorPromptDraft,
 		setDiffModalCard,
 		createNewChat,
 		selectSession,
 		deleteSession,
 		sendMessage,
+		editAndResendMessage,
+		regenerateLastResponse,
+		openImageGenerator,
+		generateChatImage,
 		cancelSending,
 		applyActionCard,
 		saveCardDraftResources,
@@ -1151,5 +1684,7 @@ export function useAiChatState({
 		togglePinAnchor,
 		resyncAnchorToCurrentWorkspace,
 		insertCommand,
+		refreshContextPreview,
+		compactChatContext,
 	};
 }

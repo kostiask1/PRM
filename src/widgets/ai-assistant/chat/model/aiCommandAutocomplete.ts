@@ -22,6 +22,7 @@ const COMMAND_KEYWORDS: Record<string, readonly string[]> = {
 	"@encounter": ["бій", "бойова", "сутичка", "енкаунтер", "баланс", "encounter", "combat", "fight"],
 	"@bestiary": ["бестіарій", "монстр", "істота", "статблок", "bestiary", "monster", "creature"],
 	"@location": ["локація", "місце", "таверна", "місто", "фракція", "location", "place", "dungeon"],
+	"@image": ["image", "img", "art", "portrait", "picture", "зображення", "картинка", "арт", "портрет", "промпт", "ілюстрація"],
 	"@notes": ["нотатки", "замітки", "підсумок", "квест", "notes", "summary", "recap"],
 	"@rules": ["правила", "заклинання", "стан", "механіка", "rules", "spell", "condition"],
 	"@dice": ["дайси", "кубик", "кидок", "перевірка", "dice", "roll", "d20"],

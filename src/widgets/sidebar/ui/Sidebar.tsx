@@ -400,15 +400,8 @@ export default function Sidebar({
 			}
 
 			if (action === "aiAssistant") {
-				const toggles = Array.from(
-					document.querySelectorAll<HTMLButtonElement>(
-						".AiAssistantPanel__toggle button",
-					),
-				).filter((btn) => btn.getClientRects().length > 0);
-				const activeToggle = toggles[toggles.length - 1];
-				if (!activeToggle) return;
 				event.preventDefault();
-				activeToggle.click();
+				window.dispatchEvent(new CustomEvent("prm:toggle-ai-chat"));
 				return;
 			}
 

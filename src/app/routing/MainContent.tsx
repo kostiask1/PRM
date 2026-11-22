@@ -2,7 +2,6 @@ import { CampaignPage } from "../../pages/campaign/index.js";
 import { SessionPage } from "../../pages/session/index.js";
 import { EncounterBestiary, EncounterPage } from "../../pages/encounter/index.js";
 import ProjectGuide from "./ProjectGuide";
-import { AiAssistantPanel } from "../../widgets/ai-assistant/index.js";
 import { AiAssistantV2 } from "../../widgets/ai-assistant/index.js";
 import { createAiResponseModalComponent } from "../../widgets/ai-response-modal/index.js";
 import {
@@ -42,40 +41,40 @@ const MainContentAiResponseModal = createAiResponseModalComponent({
 	MonsterEditorModal: MainContentMonsterEditorModal,
 });
 
-function EmptyState({ className = "" }: { className?: string }) {
+function EmptyState({
+	className = "",
+	showAssistant = false,
+}: {
+	className?: string;
+	showAssistant?: boolean;
+}) {
+	const content = (
+		<section className="MainContent__emptyState Panel">
+			<h2>{lang.t("Choose a campaign or create a new one")}</h2>
+			<p>{lang.t("The campaign menu is on the left.")}</p>
+			<ProjectGuide />
+		</section>
+	);
+
+	if (!showAssistant) {
+		return content;
+	}
+
 	return (
 		<main className={classNames("MainContent", className)}>
-			<section className="MainContent__emptyState Panel">
-				<h2>{lang.t("Choose a campaign or create a new one")}</h2>
-				<p>{lang.t("The campaign menu is on the left.")}</p>
-				<ProjectGuide />
-			</section>
+			<div className="MainContent__workspaceArea">{content}</div>
+			<AiAssistantV2 ResponseModal={MainContentAiResponseModal} />
 		</main>
 	);
 }
 
-function MainContentLayout({
-	className = "",
-	showAiAssistant = false,
-}: {
-	className?: string;
-	showAiAssistant?: boolean;
-}) {
-	const location = useLocation();
+function MainContentLayout({ className = "" }: { className?: string }) {
 	const activeCampaign = useAppSelector(
 		(state) => state.active.campaign as CampaignRecord | null,
 	);
 	const activeSession = useAppSelector(
 		(state) => state.active.session as { name?: string } | null,
 	);
-	const { activeSessionFileName, activeEncounterId } = useAppSelector(
-		(state) => state.navigation,
-	);
-	const aiAssistantRouteKey = [
-		location.pathname,
-		activeSessionFileName || "",
-		activeEncounterId ?? "",
-	].join(":");
 
 	return (
 		<main className={classNames("MainContent", className)}>
@@ -86,21 +85,13 @@ function MainContentLayout({
 							<Outlet />
 						</CampaignSearchRuntimeHost>
 					</BestiaryBrowserRuntimeHost>
-					{showAiAssistant && (
-						<AiAssistantPanel
-							key={aiAssistantRouteKey}
-							ResponseModal={MainContentAiResponseModal}
-						/>
-					)}
 				</AiAssistantRuntimeHost>
 			</div>
-			{activeCampaign && (
-				<AiAssistantV2
-					campaignTitle={activeCampaign.name}
-					sessionTitle={activeSession?.name}
-					ResponseModal={MainContentAiResponseModal}
-				/>
-			)}
+			<AiAssistantV2
+				campaignTitle={activeCampaign?.name}
+				sessionTitle={activeSession?.name}
+				ResponseModal={MainContentAiResponseModal}
+			/>
 		</main>
 	);
 }
@@ -150,8 +141,8 @@ function EncounterRoute() {
 export default function MainContent() {
 	return (
 		<Routes>
-			<Route path="/" element={<EmptyState />} />
-			<Route element={<MainContentLayout showAiAssistant />}>
+			<Route path="/" element={<EmptyState showAssistant />} />
+			<Route element={<MainContentLayout />}>
 				<Route path="/campaign/:slug" element={<CampaignRoute />} />
 				<Route
 					path="/campaign/:slug/session/:fileName"
@@ -162,7 +153,7 @@ export default function MainContent() {
 					element={<EncounterRoute />}
 				/>
 			</Route>
-			<Route path="*" element={<EmptyState />} />
+			<Route path="*" element={<EmptyState showAssistant />} />
 		</Routes>
 	);
 }

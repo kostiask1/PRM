@@ -12,38 +12,6 @@
 	width: min(2200px, 96vw);
 }
 
-.AiAssistantPanel__toggle {
-	position: fixed;
-	bottom: 85px;
-	right: calc(var(--space-4) + var(--ai-chat-sidebar-offset, 0px));
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	z-index: 100;
-}
-
-.MainContent:has(.AiAssistantSidebarV2, .AiCollapsedRailV2, .AiFloatingTriggerV2) .MainContent__workspaceArea > .AiAssistant .AiAssistantPanel__toggle {
-	display: none;
-}
-
-.AiAssistantPanel__toggle button {
-	width: var(--size-10);
-	height: var(--size-10);
-	border-radius: 50%;
-	background: var(--bg-2);
-	border: 1px solid var(--border);
-	color: var(--accent);
-	box-shadow: 0 4px 15px color-mix(in srgb, var(--shadow-ink), transparent 70%);
-	transition: all 0.2s ease;
-}
-
-.AiAssistantPanel__toggle:hover button {
-	background: var(--panel-2);
-	transform: scale(1.1) translateY(-2px);
-	border-color: var(--accent);
-}
-
 .AiAssistantPanel__header {
 	display: flex;
 	align-items: center;

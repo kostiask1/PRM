@@ -5,26 +5,51 @@ import AiChatMessageItemV2 from "./AiChatMessageItemV2.tsx";
 interface AiChatMessagesListV2Props {
 	messages: ChatMessage[];
 	isLoadingChats?: boolean;
+	isSending?: boolean;
+	isLegacyArchive?: boolean;
+	canGenerateImages?: boolean;
 	busyActionIds?: Set<string>;
 	onApplyActionCard: (cardId: string) => void;
 	onUndoActionCard?: (cardId: string) => void;
 	onRejectActionCard?: (cardId: string) => void;
 	onOpenDiff: (card: AiActionCard) => void;
 	onSelectSuggestion?: (text: string) => void;
+	onEditUserMessage?: (messageId: string, nextContent: string) => void;
+	onRegenerateAssistant?: () => void;
+	onGenerateImageFromPrompt?: (prompt: string) => void;
 }
 
 export default function AiChatMessagesListV2({
 	messages,
 	isLoadingChats = false,
+	isSending = false,
+	isLegacyArchive = false,
+	canGenerateImages = false,
 	busyActionIds,
 	onApplyActionCard,
 	onUndoActionCard,
 	onRejectActionCard,
 	onOpenDiff,
 	onSelectSuggestion,
+	onEditUserMessage,
+	onRegenerateAssistant,
+	onGenerateImageFromPrompt,
 }: AiChatMessagesListV2Props) {
 	const bottomRef = useRef<HTMLDivElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
+
+	let lastUserMessageId: string | null = null;
+	let lastAssistantMessageId: string | null = null;
+	for (let i = messages.length - 1; i >= 0; i -= 1) {
+		const m = messages[i];
+		if (!lastAssistantMessageId && m.role === "assistant") {
+			lastAssistantMessageId = m.id;
+		}
+		if (!lastUserMessageId && m.role === "user") {
+			lastUserMessageId = m.id;
+		}
+		if (lastUserMessageId && lastAssistantMessageId) break;
+	}
 
 	useEffect(() => {
 		if (bottomRef.current) {
@@ -36,7 +61,7 @@ export default function AiChatMessagesListV2({
 		<div className="AiChatMessagesListV2" ref={listRef}>
 			{messages.length > 0 && (
 				<div className="AiChatMessagesListV2__divider">
-					<span>Початок діалогу</span>
+					<span>{isLegacyArchive ? "Архів старого асистента" : "Початок діалогу"}</span>
 				</div>
 			)}
 
@@ -81,17 +106,33 @@ export default function AiChatMessagesListV2({
 					)}
 				</div>
 			) : (
-				messages.map((message) => (
-					<AiChatMessageItemV2
-						key={message.id}
-						message={message}
-						busyActionIds={busyActionIds}
-						onApplyActionCard={onApplyActionCard}
-						onUndoActionCard={onUndoActionCard}
-						onRejectActionCard={onRejectActionCard}
-						onOpenDiff={onOpenDiff}
-					/>
-				))
+				messages.map((message, idx) => {
+					const prevMsg = idx > 0 ? messages[idx - 1] : null;
+					const isImagePromptReply =
+						message.role === "assistant" &&
+						prevMsg?.role === "user" &&
+						/(^|\s)@image\b/i.test(prevMsg.content || "");
+					return (
+						<AiChatMessageItemV2
+							key={message.id}
+							message={message}
+							isLastUserMessage={message.id === lastUserMessageId}
+							isLastAssistantMessage={message.id === lastAssistantMessageId}
+							isSending={isSending}
+							isLegacyArchive={isLegacyArchive}
+							canGenerateImages={canGenerateImages}
+							isImagePromptReply={isImagePromptReply}
+							busyActionIds={busyActionIds}
+							onApplyActionCard={onApplyActionCard}
+							onUndoActionCard={onUndoActionCard}
+							onRejectActionCard={onRejectActionCard}
+							onOpenDiff={onOpenDiff}
+							onEditUserMessage={onEditUserMessage}
+							onRegenerateAssistant={onRegenerateAssistant}
+							onGenerateImageFromPrompt={onGenerateImageFromPrompt}
+						/>
+					);
+				})
 			)}
 
 			<div ref={bottomRef} style={{ height: 1 }} />

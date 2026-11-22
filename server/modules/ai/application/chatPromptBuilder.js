@@ -18,6 +18,7 @@ const COMMAND_INSTRUCTIONS = Object.freeze({
 	notes: "@notes: Structure raw notes into scannable Markdown bullets, quests, clues, or session recaps without losing facts.",
 	rules: "@rules: Explain D&D 5e/5.5e rules clearly with edge cases and examples. Return actions: [] unless the user explicitly asks to save a note.",
 	dice: "@dice: Use the provided SERVER DICE ROLL RESULTS verbatim. Do not invent different numbers. Explain outcomes in context and return actions: [] unless saving notes was requested.",
+	image: "@image: Craft ONE vivid, ready-to-use English image-generation prompt (suitable for Imagen / Gemini Image / Midjourney) based on the referenced [Entity], scene, creature, or user request. Include subject details, pose/composition, environment, lighting, mood, and any IMAGE BASE STYLE PROMPT if provided. Present the prompt cleanly inside a fenced text block or concise paragraph in reply, and return \"actions\": [].",
 });
 
 function estimateTokensFromText(text) {
@@ -62,6 +63,25 @@ function compactMonsterForContext(monster = {}) {
 		ac: monster.ac,
 		hp: monster.hp,
 	};
+}
+
+function getEntitySelectionKey(entity = {}) {
+	return String(entity?.id ?? entity?.slug ?? resolveEntityDisplayName(entity)).trim();
+}
+
+function getSceneSelectionKey(scene = {}) {
+	return String(scene?.id ?? scene?.name ?? scene?.title ?? "").trim();
+}
+
+function getMonsterSelectionKey(monster = {}) {
+	return String(monster?.id ?? monster?.name ?? "").trim();
+}
+
+function filterByOptionalIds(items, selectedIds, getKey) {
+	const list = Array.isArray(items) ? items : [];
+	if (!Array.isArray(selectedIds)) return list;
+	const allowed = new Set(selectedIds.map((id) => String(id ?? "").trim()).filter(Boolean));
+	return list.filter((item) => allowed.has(getKey(item)));
 }
 
 function resolveMentionedEntities({
@@ -138,21 +158,22 @@ async function buildChatWorkspaceContext(
 	{ storage, filterSessionDataForAiContext },
 	{ campaignSlug, workspaceContext = {}, contextSettings = {}, mentionedNames = [], commands = [] },
 ) {
-	const campaign = await storage.readCampaign(campaignSlug);
-	const sessionFileName = workspaceContext.sessionFileName
+	const isBestiaryScope = campaignSlug === "bestiary";
+	const campaign = isBestiaryScope ? null : await storage.readCampaign(campaignSlug);
+	const sessionFileName = !isBestiaryScope && workspaceContext.sessionFileName
 		? String(workspaceContext.sessionFileName).trim()
 		: "";
-	const encounterId = workspaceContext.encounterId !== undefined && workspaceContext.encounterId !== null && workspaceContext.encounterId !== ""
+	const encounterId = !isBestiaryScope && workspaceContext.encounterId !== undefined && workspaceContext.encounterId !== null && workspaceContext.encounterId !== ""
 		? String(workspaceContext.encounterId)
 		: "";
-	const sceneId = workspaceContext.sceneId !== undefined && workspaceContext.sceneId !== null && workspaceContext.sceneId !== ""
+	const sceneId = !isBestiaryScope && workspaceContext.sceneId !== undefined && workspaceContext.sceneId !== null && workspaceContext.sceneId !== ""
 		? String(workspaceContext.sceneId)
 		: "";
 
 	const [characters, npcs, locations, session, customBestiaryRaw] = await Promise.all([
-		storage.listEntities(campaignSlug, "characters").catch(() => []),
-		storage.listEntities(campaignSlug, "npc").catch(() => []),
-		storage.listEntities(campaignSlug, "locations").catch(() => []),
+		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "characters").catch(() => []),
+		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "npc").catch(() => []),
+		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "locations").catch(() => []),
 		sessionFileName
 			? storage.readSession(campaignSlug, sessionFileName).catch(() => null)
 			: Promise.resolve(null),
@@ -170,49 +191,83 @@ async function buildChatWorkspaceContext(
 	const currentScene = sceneId ? scenes.find((s) => String(s?.id ?? "") === sceneId) || null : null;
 	const currentEncounter = encounterId ? encounters.find((e) => String(e?.id ?? "") === encounterId) || null : null;
 
-	const viewType = encounterId
-		? "encounter"
-		: workspaceContext.viewType || (session ? "session" : "campaign");
+	const viewType = isBestiaryScope
+		? "bestiary"
+		: encounterId
+			? "encounter"
+			: workspaceContext.viewType || (session ? "session" : "campaign");
 
 	const contextPayload = {
 		workspace: {
 			viewType,
 			campaignSlug,
-			campaignName: campaign?.name || campaignSlug,
+			campaignName: isBestiaryScope ? "Бестіарій" : campaign?.name || campaignSlug,
 			...(sessionFileName ? { sessionFileName, sessionName: session?.name || sessionFileName } : {}),
 			...(currentEncounter ? { encounterId, encounterName: currentEncounter.name || "" } : encounterId ? { encounterId } : {}),
 			...(currentScene ? { sceneId, sceneTitle: currentScene.name || currentScene.title || "" } : sceneId ? { sceneId } : {}),
 			...(workspaceContext.activeSection ? { activeSection: String(workspaceContext.activeSection) } : {}),
 		},
-		campaign: {
-			name: campaign?.name || campaignSlug,
-			description: campaign?.description || "",
-			notes: Array.isArray(campaign?.notes)
-				? campaign.notes.filter((note) => !note?._aiIgnored)
-				: [],
-		},
+		...(isBestiaryScope
+			? {}
+			: {
+					campaign: {
+						name: campaign?.name || campaignSlug,
+						description: campaign?.description || "",
+						notes: Array.isArray(campaign?.notes)
+							? campaign.notes.filter((note) => !note?._aiIgnored)
+							: [],
+					},
+				}),
 	};
 
+	const hasExplicitCharactersSetting = contextSettings.includeCampaignCharacters !== undefined;
 	const includeCharacters =
-		contextSettings.includeCampaignNpc !== false ||
-		viewType === "encounter" ||
-		commands.includes("encounter");
+		!isBestiaryScope &&
+		(hasExplicitCharactersSetting
+			? contextSettings.includeCampaignCharacters !== false
+			: contextSettings.includeCampaignNpc !== false ||
+				viewType === "encounter" ||
+				commands.includes("encounter"));
 
-	if (includeCharacters) {
-		contextPayload.campaign.characters = visibleCharacters;
-	}
-	if (contextSettings.includeCampaignNpc !== false) {
-		contextPayload.campaign.npcs = visibleNpcs;
-	}
-	if (contextSettings.includeCampaignLocations !== false) {
-		contextPayload.campaign.locations = visibleLocations;
+	if (!isBestiaryScope && contextPayload.campaign) {
+		if (includeCharacters) {
+			contextPayload.campaign.characters = filterByOptionalIds(
+				visibleCharacters,
+				contextSettings.selectedCharacterIds,
+				getEntitySelectionKey,
+			);
+		}
+		if (contextSettings.includeCampaignNpc !== false) {
+			contextPayload.campaign.npcs = filterByOptionalIds(
+				visibleNpcs,
+				contextSettings.selectedNpcIds,
+				getEntitySelectionKey,
+			);
+		}
+		if (contextSettings.includeCampaignLocations !== false) {
+			contextPayload.campaign.locations = filterByOptionalIds(
+				visibleLocations,
+				contextSettings.selectedLocationIds,
+				getEntitySelectionKey,
+			);
+		}
 	}
 
 	if (session && filteredSessionData && contextSettings.includeCurrentScene !== false) {
+		const sessionDataForPrompt = Array.isArray(contextSettings.selectedSceneIds)
+			? {
+					...filteredSessionData,
+					scenes: filterByOptionalIds(
+						scenes,
+						contextSettings.selectedSceneIds,
+						getSceneSelectionKey,
+					),
+				}
+			: filteredSessionData;
 		contextPayload.currentSession = {
 			fileName: sessionFileName,
 			name: session.name,
-			data: filteredSessionData,
+			data: sessionDataForPrompt,
 		};
 	} else if (session && (currentScene || currentEncounter)) {
 		contextPayload.currentSessionSummary = {
@@ -230,10 +285,19 @@ async function buildChatWorkspaceContext(
 
 	if (contextSettings.includeRecentSessionHistory) {
 		const allSessions = await storage.listSessions(campaignSlug).catch(() => []);
-		const recentMeta = allSessions
-			.filter((s) => s.fileName !== sessionFileName)
-			.slice(-3)
-			.reverse();
+		const otherSessions = allSessions.filter((s) => s.fileName !== sessionFileName);
+		let recentMeta;
+		if (Array.isArray(contextSettings.selectedSessionFileNames)) {
+			const allowedSessions = new Set(
+				contextSettings.selectedSessionFileNames.map((f) => String(f ?? "").trim()).filter(Boolean),
+			);
+			recentMeta = otherSessions
+				.filter((s) => allowedSessions.has(String(s.fileName || "").trim()))
+				.reverse()
+				.slice(0, 12);
+		} else {
+			recentMeta = otherSessions.slice(-3).reverse();
+		}
 		const recentSessions = [];
 		for (const meta of recentMeta) {
 			const loaded = await storage.readSession(campaignSlug, meta.fileName).catch(() => null);
@@ -258,10 +322,19 @@ async function buildChatWorkspaceContext(
 		viewType === "encounter" ||
 		viewType === "bestiary"
 	) {
+		const hasExplicitBestiary = Array.isArray(contextSettings.selectedBestiaryIds);
+		const filteredCustomMonsters = hasExplicitBestiary
+			? filterByOptionalIds(customMonsters, contextSettings.selectedBestiaryIds, getMonsterSelectionKey)
+			: customMonsters;
 		contextPayload.customBestiary = {
-			monsterNames: customMonsters.map((m) => m?.name).filter(Boolean),
+			monsterNames: filteredCustomMonsters.map((m) => m?.name).filter(Boolean),
 			...(commands.includes("bestiary") || contextSettings.includeBestiary
-				? { monsters: customMonsters.slice(0, 25).map(compactMonsterForContext) }
+				? {
+						monsters: (hasExplicitBestiary
+							? filteredCustomMonsters
+							: filteredCustomMonsters.slice(0, 25)
+						).map(compactMonsterForContext),
+					}
 				: {}),
 		};
 	}
@@ -335,28 +408,41 @@ async function buildChatWorkspaceContext(
 function buildChatSystemInstruction({
 	responseLanguage = "uk",
 	responseTone = "narrative",
+	rulesEdition = "5.5e",
 	commands = [],
 	workspaceViewType = "campaign",
 	needsTitle = false,
 	globalBasePrompt = "",
 	campaignBasePrompt = "",
+	imageBasePrompt = "",
 	simplifiedNotes = false,
 }) {
 	const langLabel = String(responseLanguage).toLowerCase().startsWith("en")
 		? "English"
 		: "Ukrainian";
-	const toneText = TONE_GUIDANCE[responseTone] || TONE_GUIDANCE.narrative;
+	const normalizedEdition = rulesEdition === "5e" ? "5e" : "5.5e";
+	const editionLabel =
+		normalizedEdition === "5e"
+			? "D&D 5e (2014 Classic Rules)"
+			: "D&D 5.5e (2024 Revised Rules)";
+	const toneText =
+		responseTone === "rules_strict"
+			? `Prioritize exact ${editionLabel} mechanics, DCs, action economy, and official terminology.`
+			: TONE_GUIDANCE[responseTone] || TONE_GUIDANCE.narrative;
 	const commandHints = commands
 		.map((cmd) => COMMAND_INSTRUCTIONS[cmd])
 		.filter(Boolean);
 
 	const parts = [
-		"You are an expert Dungeons & Dragons 5e / 5.5e (2024) AI Assistant integrated inside the PRM Campaign Manager.",
+		`You are an expert Dungeons & Dragons AI Assistant integrated inside the PRM Campaign Manager. Primary ruleset: ${editionLabel}.`,
 		`CRITICAL: Always write your natural-language "reply", action "title", "subtitle", "description", and any new game content in ${langLabel}. Keep D&D 5eTools lookup tags ({@spell ...}, {@condition ...}, {@damage ...}) and official English monster names in English.`,
 		`Tone guidance: ${toneText}`,
 		`Current workspace view: "${workspaceViewType}".${simplifiedNotes ? " Note: simplified notes mode is enabled (omit redundant note titles unless essential)." : ""}`,
 		globalBasePrompt ? `Global DM Instructions: ${globalBasePrompt}` : "",
 		campaignBasePrompt ? `Campaign DM Instructions: ${campaignBasePrompt}` : "",
+		commands.includes("image") && imageBasePrompt
+			? `Image style base prompt to incorporate: ${imageBasePrompt}`
+			: "",
 		`OUTPUT FORMAT — Return ONE raw JSON object only (no Markdown fences around the outer JSON). Always output JSON keys in this exact order: ${needsTitle ? '"chatTitle", then ' : ""}"reply", then "actions":
 {
   ${needsTitle ? '"chatTitle": "3-6 word summary title in ' + langLabel + '",\n  ' : ""}"reply": "Helpful Markdown response for the DM. Reference existing campaign/session entities using [Exact Name].",
@@ -421,6 +507,7 @@ function formatRecentMessage(msg) {
  */
 function buildChatTurnPrompt({
 	summary = "",
+	summarizedMessageCount = 0,
 	recentMessages = [],
 	contextPayload = {},
 	userMessage = "",
@@ -436,7 +523,11 @@ function buildChatTurnPrompt({
 		sections.push(`CONVERSATION SUMMARY SO FAR:\n${summary}`);
 	}
 
-	const sliced = recentMessages.slice(-MAX_RECENT_CHAT_MESSAGES);
+	const startIdx =
+		Number.isFinite(Number(summarizedMessageCount)) && Number(summarizedMessageCount) > 0
+			? Math.min(recentMessages.length, Number(summarizedMessageCount))
+			: 0;
+	const sliced = recentMessages.slice(startIdx).slice(-MAX_RECENT_CHAT_MESSAGES);
 	if (sliced.length > 0) {
 		sections.push(`RECENT CONVERSATION:\n${sliced.map(formatRecentMessage).join("\n\n")}`);
 	}
@@ -476,33 +567,70 @@ function buildFallbackDigest(previousSummary, messagesToCompact) {
 }
 
 /**
- * Compacts older chat turns into a rolling summary when the unsummarized window grows too large.
+ * Estimates tokens consumed by conversation summary plus unsummarized recent turns.
+ */
+function estimateChatHistoryTokens(chat) {
+	if (!chat || typeof chat !== "object") return 0;
+	const historyParts = [];
+	if (chat.summary) {
+		historyParts.push(`CONVERSATION SUMMARY SO FAR:\n${chat.summary}`);
+	}
+	const allMessages = Array.isArray(chat.messages) ? chat.messages : [];
+	const currentSummarized = Math.max(0, Number(chat.summarizedMessageCount) || 0);
+	const startIdx = Math.min(allMessages.length, currentSummarized);
+	const sliced = allMessages.slice(startIdx).slice(-MAX_RECENT_CHAT_MESSAGES);
+	if (sliced.length > 0) {
+		historyParts.push(`RECENT CONVERSATION:\n${sliced.map(formatRecentMessage).join("\n\n")}`);
+	}
+	return historyParts.length > 0 ? estimateTokensFromText(historyParts.join("\n\n---\n\n")) : 0;
+}
+
+/**
+ * Compacts older chat turns into a rolling summary when the unsummarized window grows too large or forced manually.
  */
 async function compactChatHistoryIfNeeded(
 	{ geminiGateway },
-	{ chat, modelName, responseLanguage = "uk" },
+	{ chat, modelName, responseLanguage = "uk", force = false, keepRecent = SUMMARY_KEEP_RECENT },
 ) {
 	const messages = Array.isArray(chat?.messages) ? chat.messages : [];
 	const currentSummarized = Math.max(0, Number(chat?.summarizedMessageCount) || 0);
 	const unsummarizedCount = messages.length - currentSummarized;
+	const effectiveKeepRecent = Math.max(0, Number(keepRecent) || 0);
 
-	if (unsummarizedCount < SUMMARY_TRIGGER_UNSUMMARIZED || messages.length <= SUMMARY_KEEP_RECENT) {
+	if (
+		!force &&
+		(unsummarizedCount < SUMMARY_TRIGGER_UNSUMMARIZED || messages.length <= effectiveKeepRecent)
+	) {
 		return {
 			summary: String(chat?.summary || ""),
 			summarizedMessageCount: currentSummarized,
+			compacted: false,
+			compactedCount: 0,
 		};
 	}
 
-	const nextSummarizedCount = messages.length - SUMMARY_KEEP_RECENT;
+	const nextSummarizedCount = messages.length - effectiveKeepRecent;
 	if (nextSummarizedCount <= currentSummarized) {
 		return {
 			summary: String(chat?.summary || ""),
 			summarizedMessageCount: currentSummarized,
+			compacted: false,
+			compactedCount: 0,
 		};
 	}
 
 	const sliceToCompact = messages.slice(currentSummarized, nextSummarizedCount);
+	const compactedCount = sliceToCompact.length;
 	const targetLang = String(responseLanguage).toLowerCase().startsWith("en") ? "English" : "Ukrainian";
+
+	if (!modelName || typeof geminiGateway?.generateText !== "function") {
+		return {
+			summary: buildFallbackDigest(chat?.summary, sliceToCompact),
+			summarizedMessageCount: nextSummarizedCount,
+			compacted: true,
+			compactedCount,
+		};
+	}
 
 	try {
 		const summaryText = await geminiGateway.generateText({
@@ -518,13 +646,265 @@ async function compactChatHistoryIfNeeded(
 		return {
 			summary: cleaned || buildFallbackDigest(chat?.summary, sliceToCompact),
 			summarizedMessageCount: nextSummarizedCount,
+			compacted: true,
+			compactedCount,
 		};
 	} catch {
 		return {
 			summary: buildFallbackDigest(chat?.summary, sliceToCompact),
 			summarizedMessageCount: nextSummarizedCount,
+			compacted: true,
+			compactedCount,
 		};
 	}
+}
+
+/**
+ * Returns selectable context catalog items with per-item token estimates and live totals for empty or active chats.
+ */
+async function buildChatContextPreview(
+	{ storage, filterSessionDataForAiContext },
+	{
+		campaignSlug,
+		workspaceContext = {},
+		contextSettings = {},
+		chat = null,
+		responseLanguage = "uk",
+		globalBasePrompt = "",
+		campaignBasePrompt = "",
+		maxTokens = 1000000,
+	},
+) {
+	const isBestiaryScope = campaignSlug === "bestiary";
+	const campaign = isBestiaryScope
+		? null
+		: await storage.readCampaign(campaignSlug).catch(() => null);
+	const sessionFileName = !isBestiaryScope && workspaceContext.sessionFileName
+		? String(workspaceContext.sessionFileName).trim()
+		: "";
+	const encounterId =
+		!isBestiaryScope &&
+		workspaceContext.encounterId !== undefined &&
+		workspaceContext.encounterId !== null &&
+		workspaceContext.encounterId !== ""
+			? String(workspaceContext.encounterId)
+			: "";
+	const sceneId =
+		!isBestiaryScope &&
+		workspaceContext.sceneId !== undefined &&
+		workspaceContext.sceneId !== null &&
+		workspaceContext.sceneId !== ""
+			? String(workspaceContext.sceneId)
+			: "";
+
+	const [characters, npcs, locations, session, allSessions, customBestiaryRaw] = await Promise.all([
+		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "characters").catch(() => []),
+		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "npc").catch(() => []),
+		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "locations").catch(() => []),
+		sessionFileName
+			? storage.readSession(campaignSlug, sessionFileName).catch(() => null)
+			: Promise.resolve(null),
+		isBestiaryScope ? Promise.resolve([]) : storage.listSessions(campaignSlug).catch(() => []),
+		storage.readCustomBestiary().catch(() => ({ monster: [] })),
+	]);
+
+	const visibleCharacters = characters.filter((c) => !c?._aiIgnored).map(stripIgnoredNotesFromEntity);
+	const visibleNpcs = npcs.filter((n) => !n?._aiIgnored).map(stripIgnoredNotesFromEntity);
+	const visibleLocations = locations.filter((l) => !l?._aiIgnored).map(stripIgnoredNotesFromEntity);
+	const customMonsters = Array.isArray(customBestiaryRaw?.monster) ? customBestiaryRaw.monster : [];
+	const filteredSessionData = session?.data ? filterSessionDataForAiContext(session.data) : null;
+	const scenes = Array.isArray(filteredSessionData?.scenes) ? filteredSessionData.scenes : [];
+	const encounters = Array.isArray(filteredSessionData?.encounters) ? filteredSessionData.encounters : [];
+	const currentScene = sceneId ? scenes.find((s) => String(s?.id ?? "") === sceneId) || null : null;
+	const currentEncounter = encounterId
+		? encounters.find((e) => String(e?.id ?? "") === encounterId) || null
+		: null;
+
+	const viewType = isBestiaryScope
+		? "bestiary"
+		: encounterId
+			? "encounter"
+			: workspaceContext.viewType || (session ? "session" : "campaign");
+
+	const otherMeta = (Array.isArray(allSessions) ? allSessions : [])
+		.filter((s) => s?.fileName && s.fileName !== sessionFileName)
+		.slice()
+		.reverse()
+		.slice(0, 20);
+	const loadedOtherSessions = await Promise.all(
+		otherMeta.map(async (meta) => {
+			const loaded = await storage.readSession(campaignSlug, meta.fileName).catch(() => null);
+			if (!loaded) return null;
+			const clean = filterSessionDataForAiContext(loaded.data || {});
+			const sceneTitles = (clean.scenes || []).map((sc) => sc.name || sc.title || "").filter(Boolean);
+			const summaryObj = {
+				fileName: meta.fileName,
+				name: loaded.name,
+				notes: clean.notes,
+				sceneTitles,
+			};
+			return {
+				id: String(meta.fileName),
+				name: String(loaded.name || meta.name || meta.fileName),
+				meta: sceneTitles.length > 0 ? `${sceneTitles.length} сцен` : "",
+				tokenEstimate: estimateTokensFromText(JSON.stringify(summaryObj)),
+			};
+		}),
+	);
+
+	const catalog = {
+		characters: visibleCharacters.map((c) => {
+			const levelText = c?.level ? `Рів. ${c.level}` : "";
+			return {
+				id: getEntitySelectionKey(c),
+				name: resolveEntityDisplayName(c) || getEntitySelectionKey(c),
+				meta: [c?.class || c?.role, levelText].filter(Boolean).join(" · "),
+				tokenEstimate: estimateTokensFromText(JSON.stringify(c)),
+			};
+		}),
+		npcs: visibleNpcs.map((n) => ({
+			id: getEntitySelectionKey(n),
+			name: resolveEntityDisplayName(n) || getEntitySelectionKey(n),
+			meta: [n?.role || n?.class, n?.race].filter(Boolean).join(" · "),
+			tokenEstimate: estimateTokensFromText(JSON.stringify(n)),
+		})),
+		locations: visibleLocations.map((l) => ({
+			id: getEntitySelectionKey(l),
+			name: resolveEntityDisplayName(l) || getEntitySelectionKey(l),
+			meta: String(l?.type || l?.region || "").trim(),
+			tokenEstimate: estimateTokensFromText(JSON.stringify(l)),
+		})),
+		scenes: scenes.map((sc) => ({
+			id: getSceneSelectionKey(sc),
+			name: String(sc?.name || sc?.title || getSceneSelectionKey(sc)),
+			meta: Array.isArray(sc?.notes) && sc.notes.length > 0 ? `${sc.notes.length} нот.` : "",
+			tokenEstimate: estimateTokensFromText(JSON.stringify(sc)),
+		})),
+		sessions: loadedOtherSessions.filter(Boolean),
+		bestiary: customMonsters.map((m) => {
+			const crText =
+				typeof m?.cr === "object" && m.cr !== null ? m.cr.cr : m?.cr;
+			return {
+				id: getMonsterSelectionKey(m),
+				name: String(m?.name || getMonsterSelectionKey(m)),
+				meta: crText !== undefined && crText !== null && crText !== "" ? `CR ${crText}` : "CUSTOM",
+				tokenEstimate: estimateTokensFromText(JSON.stringify(compactMonsterForContext(m))),
+			};
+		}),
+	};
+
+	const baseWorkspacePayload = {
+		workspace: {
+			viewType,
+			campaignSlug,
+			campaignName: isBestiaryScope ? "Бестіарій" : campaign?.name || campaignSlug,
+			...(sessionFileName ? { sessionFileName, sessionName: session?.name || sessionFileName } : {}),
+			...(currentEncounter ? { encounterId, encounterName: currentEncounter.name || "" } : encounterId ? { encounterId } : {}),
+			...(currentScene ? { sceneId, sceneTitle: currentScene.name || currentScene.title || "" } : sceneId ? { sceneId } : {}),
+		},
+		...(isBestiaryScope
+			? {}
+			: {
+					campaign: {
+						name: campaign?.name || campaignSlug,
+						description: campaign?.description || "",
+						notes: Array.isArray(campaign?.notes)
+							? campaign.notes.filter((note) => !note?._aiIgnored)
+							: [],
+					},
+				}),
+	};
+	const campaignBaseTokens = estimateTokensFromText(
+		`WORKSPACE CONTEXT:\n${JSON.stringify(baseWorkspacePayload, null, 2)}`,
+	);
+
+	const currentSessionBaseTokens = filteredSessionData
+		? estimateTokensFromText(
+				JSON.stringify({
+					fileName: sessionFileName,
+					name: session.name,
+					data: { ...filteredSessionData, scenes: [] },
+				}),
+			)
+		: 0;
+
+	const needsTitle =
+		!chat?.isAutoTitled &&
+		(!Array.isArray(chat?.messages) ||
+			chat.messages.filter((msg) => msg.role === "user").length === 0);
+	const systemInstruction = buildChatSystemInstruction({
+		responseLanguage,
+		responseTone: contextSettings.responseTone || "narrative",
+		rulesEdition: contextSettings.rulesEdition || "5.5e",
+		commands: [],
+		workspaceViewType: viewType,
+		needsTitle,
+		globalBasePrompt,
+		campaignBasePrompt,
+		simplifiedNotes: Boolean(campaign?.simplifiedNotes),
+	});
+	const systemTokens = estimateTokensFromText(systemInstruction);
+
+	const historyTokens = estimateChatHistoryTokens(chat);
+
+	const sumSelected = (items, enabled, selectedIds, limitDefault = null) => {
+		if (!enabled || items.length === 0) return 0;
+		if (Array.isArray(selectedIds)) {
+			const set = new Set(selectedIds.map((id) => String(id ?? "").trim()).filter(Boolean));
+			return items.reduce((acc, item) => (set.has(item.id) ? acc + item.tokenEstimate : acc), 0);
+		}
+		const list = limitDefault ? items.slice(0, limitDefault) : items;
+		return list.reduce((acc, item) => acc + item.tokenEstimate, 0);
+	};
+
+	const includeCharacters =
+		contextSettings.includeCampaignCharacters !== undefined
+			? contextSettings.includeCampaignCharacters !== false
+			: contextSettings.includeCampaignNpc !== false || viewType === "encounter";
+
+	const contextTokens =
+		campaignBaseTokens +
+		(filteredSessionData && contextSettings.includeCurrentScene !== false
+			? currentSessionBaseTokens +
+				sumSelected(catalog.scenes, true, contextSettings.selectedSceneIds)
+			: 0) +
+		sumSelected(catalog.characters, includeCharacters, contextSettings.selectedCharacterIds) +
+		sumSelected(catalog.npcs, contextSettings.includeCampaignNpc !== false, contextSettings.selectedNpcIds) +
+		sumSelected(
+			catalog.locations,
+			contextSettings.includeCampaignLocations !== false,
+			contextSettings.selectedLocationIds,
+		) +
+		sumSelected(
+			catalog.sessions,
+			Boolean(contextSettings.includeRecentSessionHistory),
+			contextSettings.selectedSessionFileNames,
+			3,
+		) +
+		sumSelected(
+			catalog.bestiary,
+			Boolean(contextSettings.includeBestiary || isBestiaryScope),
+			contextSettings.selectedBestiaryIds,
+			25,
+		);
+
+	return {
+		systemTokens,
+		campaignBaseTokens,
+		currentSessionBaseTokens,
+		historyTokens,
+		hasActiveSession: Boolean(session && filteredSessionData),
+		activeSessionName: session?.name || sessionFileName || "",
+		defaultRecentSessionCount: 3,
+		maxTokens,
+		catalog,
+		totals: {
+			systemTokens,
+			contextTokens,
+			historyTokens,
+			totalTokens: systemTokens + contextTokens + historyTokens,
+		},
+	};
 }
 
 module.exports = {
@@ -532,7 +912,9 @@ module.exports = {
 	SUMMARY_TRIGGER_UNSUMMARIZED,
 	SUMMARY_KEEP_RECENT,
 	estimateTokensFromText,
+	estimateChatHistoryTokens,
 	buildChatWorkspaceContext,
+	buildChatContextPreview,
 	buildChatSystemInstruction,
 	buildChatTurnPrompt,
 	compactChatHistoryIfNeeded,

@@ -358,13 +358,21 @@ async function prepareChatActionCards(
 
 		const cardId = `act-${createId()}`;
 		const title = asText(raw.title) || "Дія асистента";
-		const beforeApplyBundle = await storage.exportCampaignBundle(campaignSlug);
+		const beforeApplyBundle =
+			campaignSlug === "bestiary"
+				? { meta: { slug: "bestiary", name: "Bestiary" }, sessions: [], entities: {}, aiResponses: [] }
+				: await storage.exportCampaignBundle(campaignSlug);
 		const applied = await applyAiOperations({
 			payload: generatedPayload,
 			campaignSlug,
 			sessionFile: sessionFileName || null,
 			encounterId: encounterId ?? null,
-			entityScope: sessionFileName ? "mixed" : "campaign",
+			entityScope:
+				campaignSlug === "bestiary"
+					? "custom-bestiary"
+					: sessionFileName
+						? "mixed"
+						: "campaign",
 			simplifiedNotes: Boolean(simplifiedNotes),
 			permissions: FULL_PERMISSIONS,
 		});
@@ -536,13 +544,21 @@ async function applyChatActionCard(
 	}
 
 	const responsePath = buildActionHistoryPath(campaignSlug, sessionFileName, encounterId);
-	const beforeApplyBundle = await storage.exportCampaignBundle(campaignSlug);
+	const beforeApplyBundle =
+		campaignSlug === "bestiary"
+			? { meta: { slug: "bestiary", name: "Bestiary" }, sessions: [], entities: {}, aiResponses: [] }
+			: await storage.exportCampaignBundle(campaignSlug);
 	const applied = await applyAiOperations({
 		payload,
 		campaignSlug,
 		sessionFile: sessionFileName || null,
 		encounterId: encounterId ?? null,
-		entityScope: sessionFileName ? "mixed" : "campaign",
+		entityScope:
+			campaignSlug === "bestiary"
+				? "custom-bestiary"
+				: sessionFileName
+					? "mixed"
+					: "campaign",
 		simplifiedNotes: Boolean(simplifiedNotes),
 		permissions: FULL_PERMISSIONS,
 	});

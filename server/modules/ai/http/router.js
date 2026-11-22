@@ -72,6 +72,9 @@ const {
 	createFileAiChatRepository,
 } = require("../infrastructure/fileAiChatRepository");
 const {
+	createLegacyAiHistoryChatMigration,
+} = require("../infrastructure/legacyAiHistoryChatMigration");
+const {
 	createAiChatCommands,
 } = require("../application/aiChatCommands");
 const {
@@ -93,8 +96,13 @@ const aiHistoryCommands = createAiHistoryCommands({
 	buildChangeSummary: buildAiChangeSummary,
 });
 const aiChatRepository = createFileAiChatRepository({ storage });
+const legacyAiHistoryChatMigration = createLegacyAiHistoryChatMigration({
+	storage,
+	chatRepository: aiChatRepository,
+});
 const aiChatCommands = createAiChatCommands({
 	chatRepository: aiChatRepository,
+	legacyMigration: legacyAiHistoryChatMigration,
 	storage,
 	aiService,
 	geminiGateway,
@@ -427,6 +435,15 @@ router.post("/chats", (req, res, next) =>
 	),
 );
 
+router.post("/chats/context-preview", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.previewContext({
+			campaignSlug,
+			payload: req.body && typeof req.body === "object" ? req.body : {},
+		}),
+	),
+);
+
 router.get("/chats/:chatId", (req, res, next) =>
 	handleAiChatRequest(req, res, next, (campaignSlug) =>
 		aiChatCommands.getChat({
@@ -455,9 +472,29 @@ router.delete("/chats/:chatId", (req, res, next) =>
 	),
 );
 
+router.post("/chats/:chatId/compact", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.compactContext({
+			campaignSlug,
+			chatId: req.params.chatId,
+			payload: req.body && typeof req.body === "object" ? req.body : {},
+		}),
+	),
+);
+
 router.post("/chats/:chatId/messages", (req, res, next) =>
 	handleAiChatRequest(req, res, next, (campaignSlug) =>
 		aiChatCommands.sendMessage({
+			campaignSlug,
+			chatId: req.params.chatId,
+			payload: req.body && typeof req.body === "object" ? req.body : {},
+		}),
+	),
+);
+
+router.post("/chats/:chatId/generate-image", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.generateImage({
 			campaignSlug,
 			chatId: req.params.chatId,
 			payload: req.body && typeof req.body === "object" ? req.body : {},

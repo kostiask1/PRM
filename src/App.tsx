@@ -235,6 +235,7 @@ export default function App() {
 
 						{modalState.config && (
 							<Modal
+								key={modalState.requestId ?? "modal"}
 								{...modalState.config}
 								onConfirm={(value) =>
 									resolveModalRequest(modalState.requestId, value)

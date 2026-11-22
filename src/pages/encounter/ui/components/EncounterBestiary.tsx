@@ -3,7 +3,6 @@ import {
 	type BestiaryBrowserProps,
 } from "../../../../widgets/bestiary-browser/index.js";
 import { createAiResponseModalComponent } from "../../../../widgets/ai-response-modal/index.js";
-import { AiAssistantPanel } from "../../../../widgets/ai-assistant/index.js";
 import { createMonsterEditorModalComponent } from "../../../../widgets/monster-editor-modal/index.js";
 import { MonsterStatBlock } from "../../../../widgets/monster-stat-block/index.js";
 import { SpellsBrowser } from "../../../../widgets/spells-browser/index.js";
@@ -35,7 +34,6 @@ const EncounterAiResponseModal = createAiResponseModalComponent({
 type EncounterBestiaryProps = Omit<
 	BestiaryBrowserProps,
 	| "BestiaryAiModals"
-	| "AiAssistantPanel"
 	| "MonsterStatBlock"
 	| "ResponseModal"
 	| "MonsterEditorModal"
@@ -46,7 +44,6 @@ export function EncounterBestiary(props: EncounterBestiaryProps) {
 		<Bestiary
 			{...props}
 			BestiaryAiModals={EncounterBestiaryAiModals}
-			AiAssistantPanel={AiAssistantPanel}
 			MonsterStatBlock={MonsterStatBlock}
 			ResponseModal={EncounterAiResponseModal}
 			MonsterEditorModal={EncounterMonsterEditorModal}

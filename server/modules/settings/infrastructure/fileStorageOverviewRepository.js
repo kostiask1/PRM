@@ -47,16 +47,37 @@ async function getDirectoryBytes(dirPath, { excludeTopLevel = null } = {}) {
 }
 
 function createFileStorageOverviewRepository(storage) {
+	function getAiChatsPath(slug) {
+		return slug === "bestiary"
+			? path.join(storage.DATA_DIR, "_aiChats-bestiary.json")
+			: path.join(storage.campaignDir(slug), "_aiChats.json");
+	}
+
+	async function readAiChatsCount(filePath) {
+		try {
+			const doc = await storage.readJson(filePath);
+			if (Array.isArray(doc)) return doc.length;
+			if (doc && typeof doc === "object" && Array.isArray(doc.chats)) {
+				return doc.chats.length;
+			}
+			return 0;
+		} catch {
+			return 0;
+		}
+	}
+
 	async function readAiHistoryMetric(slug) {
 		const responses = await storage.readAiResponses(slug);
-		const entryCount = Array.isArray(responses) ? responses.length : 0;
-		if (entryCount === 0) {
-			return { bytes: 0, entryCount: 0 };
-		}
-		const stats = await storage.getAiResponsesStorageStats(slug);
+		const responsesCount = Array.isArray(responses) ? responses.length : 0;
+		const responseStats = responsesCount > 0
+			? await storage.getAiResponsesStorageStats(slug)
+			: { bytes: 0 };
+		const chatsFile = getAiChatsPath(slug);
+		const chatsBytes = await getFileBytes(chatsFile);
+		const chatsCount = chatsBytes > 0 ? await readAiChatsCount(chatsFile) : 0;
 		return {
-			bytes: Number(stats?.bytes) || 0,
-			entryCount,
+			bytes: (Number(responseStats?.bytes) || 0) + chatsBytes,
+			entryCount: responsesCount + chatsCount,
 		};
 	}
 
@@ -149,7 +170,11 @@ function createFileStorageOverviewRepository(storage) {
 				.readJson(storage.campaignMetaPath(slug))
 				.catch(() => ({}));
 			const contentBytes = await getDirectoryBytes(storage.campaignDir(slug), {
-				excludeTopLevel: new Set(["_aiResponses.json", "_changeHistory.json"]),
+				excludeTopLevel: new Set([
+					"_aiResponses.json",
+					"_aiChats.json",
+					"_changeHistory.json",
+				]),
 			});
 			const imagesBytes = await getDirectoryBytes(
 				path.join(storage.IMAGES_DIR, slug),
@@ -254,19 +279,23 @@ function createFileStorageOverviewRepository(storage) {
 
 	async function clearCampaignAiHistory(slug) {
 		await storage.clearAiResponses(slug);
+		await fs.rm(getAiChatsPath(slug), { force: true });
 	}
 
 	async function clearBestiaryAiHistory() {
 		await storage.clearAiResponses("bestiary");
+		await fs.rm(getAiChatsPath("bestiary"), { force: true });
 	}
 
 	async function clearAllAiHistory() {
 		await storage.clearAiResponses("bestiary");
+		await fs.rm(getAiChatsPath("bestiary"), { force: true });
 		const slugs = (await storage.listExportableCampaignSlugs()).filter(
 			(slug) => !isRestoreArtifactName(slug),
 		);
 		for (const slug of slugs) {
 			await storage.clearAiResponses(slug);
+			await fs.rm(getAiChatsPath(slug), { force: true });
 		}
 	}
 

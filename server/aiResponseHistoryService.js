@@ -394,9 +394,10 @@ async function buildParsedAiChanges(
 	responsePath,
 	extraChangeResources = [],
 ) {
-	const afterApplyBundle = await storage.exportCampaignBundle(
-		responsePath.campaign,
-	);
+	const afterApplyBundle =
+		responsePath?.campaign === "bestiary"
+			? beforeApplyBundle
+			: await storage.exportCampaignBundle(responsePath.campaign);
 	const changes = buildAiChangeSet(
 		beforeApplyBundle,
 		afterApplyBundle,

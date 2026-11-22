@@ -4,6 +4,7 @@ const STORAGE_KEY_COLLAPSED = "prm_ai_chat_collapsed";
 const STORAGE_KEY_MOBILE_OPEN = "prm_ai_chat_mobile_open";
 const DESKTOP_MEDIA_QUERY = "(min-width: 1401px)";
 const AI_CHAT_SIDEBAR_OFFSET_VAR = "--ai-chat-sidebar-offset";
+const activeSidebarOffsets = new Map<symbol, string>();
 
 export interface AiChatLayoutState {
 	isDesktop: boolean;
@@ -52,10 +53,21 @@ export function useAiChatLayout(): AiChatLayoutState {
 	// Sync active desktop sidebar width to root CSS variable so fixed overlays/modals leave chat exposed
 	useEffect(() => {
 		if (typeof document === "undefined") return;
+		const ownerId = Symbol("ai-chat-sidebar-offset");
 		const offset = isDesktop ? (isCollapsed ? "44px" : "380px") : "0px";
+		activeSidebarOffsets.set(ownerId, offset);
 		document.documentElement.style.setProperty(AI_CHAT_SIDEBAR_OFFSET_VAR, offset);
 		return () => {
-			document.documentElement.style.removeProperty(AI_CHAT_SIDEBAR_OFFSET_VAR);
+			activeSidebarOffsets.delete(ownerId);
+			if (activeSidebarOffsets.size === 0) {
+				document.documentElement.style.removeProperty(AI_CHAT_SIDEBAR_OFFSET_VAR);
+			} else {
+				let fallbackOffset = "0px";
+				for (const value of activeSidebarOffsets.values()) {
+					fallbackOffset = value;
+				}
+				document.documentElement.style.setProperty(AI_CHAT_SIDEBAR_OFFSET_VAR, fallbackOffset);
+			}
 		};
 	}, [isDesktop, isCollapsed]);
 

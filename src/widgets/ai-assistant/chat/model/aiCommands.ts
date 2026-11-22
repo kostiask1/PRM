@@ -37,6 +37,13 @@ export const AI_COMMANDS: readonly AiCommandItem[] = [
 		category: "entities",
 	},
 	{
+		command: "@image",
+		name: "Зображення / Промпт",
+		description: "Створити детальний промпт для генерації зображення сутності, сцени або монстра",
+		example: "@image портрет [NPC] у темній таверні при світлі свічок",
+		category: "entities",
+	},
+	{
 		command: "@notes",
 		name: "Нотатки",
 		description: "Структурувати сирі нотатки майстра або виділити квести",
