@@ -75229,6 +75229,448 @@ await run(
 	},
 );
 
+await run(
+	"AI Chat V2 auto-pairs standalone encounter creation, expands monster counts, saves chat-action snapshots, applies, and undoes",
+	async () => {
+		await withTestSlug("ai-chat-encounter-autopair", async (slug) => {
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: storage.createId(),
+				slug,
+				name: "YAr Test",
+			});
+			await storage.writeJson(storage.sessionPath(slug, "1.json"), {
+				id: "sess-1",
+				name: "1",
+				data: {
+					scenes: [],
+					npcs: [],
+					locations: [],
+					notes: [],
+					encounters: [],
+				},
+			});
+
+			const chatRepo = createFileAiChatRepository({ storage });
+			const commands = createAiChatCommands({
+				chatRepository: chatRepo,
+				storage,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: {
+					generateText: async () =>
+						JSON.stringify({
+							chatTitle: "Тестова сутичка з кобольдами",
+							reply: "Створено бойову сутичку.",
+							actions: [
+								{
+									kind: "diff",
+									title: "Засада кобольдів",
+									operations: [
+										{
+											op: "create",
+											entity: "encounter",
+											scope: "session",
+											data: {
+												name: "Засада в тунелі",
+												description: "Кобольди атакують із темряви.",
+												monsters: [
+													{
+														monsterName: "Kobold",
+														name: "Кобольд-розвідник",
+														count: 2,
+													},
+												],
+											},
+										},
+									],
+								},
+							],
+						}),
+				},
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent:
+					mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions:
+					mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => true,
+			});
+
+			const sent = await commands.sendMessage({
+				campaignSlug: slug,
+				chatId: "new",
+				payload: {
+					content: "@encounter Створи сутичку",
+					autoApply: false,
+					workspaceContext: {
+						viewType: "session",
+						campaignSlug: slug,
+						sessionFileName: "1.json",
+					},
+				},
+			});
+
+			assert.equal(sent.assistantMessage.actionCards.length, 1);
+			const card = sent.assistantMessage.actionCards[0];
+			assert.equal(card.status, "pending");
+			const statLabels = (card.stats || []).map((s) => s.value);
+			assert.ok(statLabels.some((v) => v.includes("+1 сцена")));
+			assert.ok(statLabels.some((v) => v.includes("+1 бій")));
+
+			// Draft snapshot recorded with type === "chat-action" while session stays unmodified
+			const responsesAfterDraft = await storage.readAiResponses(slug);
+			assert.equal(responsesAfterDraft.length, 1);
+			assert.equal(responsesAfterDraft[0].type, "chat-action");
+			const beforeApplySession = await storage.readSession(slug, "1.json");
+			assert.equal(beforeApplySession.data.scenes.length, 0);
+			assert.equal(beforeApplySession.data.encounters.length, 0);
+
+			// Apply card -> creates linked scene + encounter with 2 resolved Kobolds
+			const applied = await commands.applyAction({
+				campaignSlug: slug,
+				chatId: sent.chat.id,
+				actionId: card.id,
+				payload: { useDraftSnapshot: true },
+			});
+			assert.equal(applied.actionCard.status, "applied");
+			const afterApplySession = await storage.readSession(slug, "1.json");
+			assert.equal(afterApplySession.data.scenes.length, 1);
+			assert.equal(afterApplySession.data.encounters.length, 1);
+			assert.equal(
+				afterApplySession.data.scenes[0].encounterId,
+				afterApplySession.data.encounters[0].id,
+			);
+			assert.equal(afterApplySession.data.encounters[0].monsters.length, 2);
+			assert.equal(afterApplySession.data.encounters[0].monsters[0].name, "Кобольд-розвідник 1");
+			assert.equal(afterApplySession.data.encounters[0].monsters[1].name, "Кобольд-розвідник 2");
+			assert.ok(Number(afterApplySession.data.encounters[0].monsters[0].hit_points) > 0);
+
+			// Undo restores clean empty session
+			const undone = await commands.undoAction({
+				campaignSlug: slug,
+				chatId: sent.chat.id,
+				actionId: card.id,
+			});
+			assert.equal(undone.actionCard.status, "undone");
+			const afterUndoSession = await storage.readSession(slug, "1.json");
+			assert.equal(afterUndoSession.data.scenes.length, 0);
+			assert.equal(afterUndoSession.data.encounters.length, 0);
+		});
+	},
+);
+
+await run(
+	"AI Chat V2 merges split encounter and scene actions sharing clientId into one valid action card",
+	async () => {
+		await withTestSlug("ai-chat-merge-actions", async (slug) => {
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: storage.createId(),
+				slug,
+				name: "Merge Actions",
+			});
+			await storage.writeJson(storage.sessionPath(slug, "s1.json"), {
+				id: "s1",
+				name: "Session 1",
+				data: {
+					scenes: [],
+					npcs: [],
+					locations: [],
+					notes: [],
+					encounters: [],
+				},
+			});
+
+			const chatRepo = createFileAiChatRepository({ storage });
+			const commands = createAiChatCommands({
+				chatRepository: chatRepo,
+				storage,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: {
+					generateText: async () =>
+						JSON.stringify({
+							chatTitle: "Розділені картки",
+							reply: "Підготував бій та сцену.",
+							actions: [
+								{
+									kind: "diff",
+									title: "Створити бій",
+									operations: [
+										{
+											op: "create",
+											entity: "encounter",
+											scope: "session",
+											clientId: "enc-1",
+											data: {
+												name: "Охоронці брами",
+												monsters: [{ monsterName: "Kobold" }],
+											},
+										},
+									],
+								},
+								{
+									kind: "diff",
+									title: "Створити сцену",
+									operations: [
+										{
+											op: "create",
+											entity: "scene",
+											scope: "campaign",
+											data: {
+												summary: "Бій біля входу в печеру.",
+												encounterClientId: "enc-1",
+											},
+										},
+									],
+								},
+							],
+						}),
+				},
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent:
+					mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions:
+					mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => true,
+			});
+
+			const sent = await commands.sendMessage({
+				campaignSlug: slug,
+				chatId: "new",
+				payload: {
+					content: "Створи сутичку і сцену",
+					workspaceContext: {
+						viewType: "session",
+						campaignSlug: slug,
+						sessionFileName: "s1.json",
+					},
+				},
+			});
+			assert.equal(sent.assistantMessage.actionCards.length, 1);
+			const mergedCard = sent.assistantMessage.actionCards[0];
+			const applied = await commands.applyAction({
+				campaignSlug: slug,
+				chatId: sent.chat.id,
+				actionId: mergedCard.id,
+				payload: {},
+			});
+			assert.equal(applied.actionCard.status, "applied");
+			const sessionAfter = await storage.readSession(slug, "s1.json");
+			assert.equal(sessionAfter.data.scenes.length, 1);
+			assert.equal(sessionAfter.data.encounters.length, 1);
+			assert.equal(
+				sessionAfter.data.scenes[0].encounterId,
+				sessionAfter.data.encounters[0].id,
+			);
+			assert.equal(
+				sessionAfter.data.scenes[0].texts.summary,
+				"Бій біля входу в печеру.",
+			);
+		});
+	},
+);
+
+await run(
+	"AI Chat V2 resolves target session from Campaign view for encounter creation and warns clearly when campaign has no sessions",
+	async () => {
+		await withTestSlug("ai-chat-campaign-encounter", async (slug) => {
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: storage.createId(),
+				slug,
+				name: "Campaign Scope Encounters",
+			});
+
+			const chatRepo = createFileAiChatRepository({ storage });
+			const geminiPayload = {
+				chatTitle: "Сутичка з рівня кампанії",
+				reply: "Сутичку підготовлено.",
+				actions: [
+					{
+						kind: "diff",
+						title: "Додати сутичку",
+						operations: [
+							{
+								op: "create",
+								entity: "encounter",
+								scope: "session",
+								data: {
+									name: "Зіткнення в підземеллі",
+									monsters: [{ monsterName: "Kobold" }],
+								},
+							},
+						],
+					},
+				],
+			};
+
+			const commands = createAiChatCommands({
+				chatRepository: chatRepo,
+				storage,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: {
+					generateText: async () => JSON.stringify(geminiPayload),
+				},
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent:
+					mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions:
+					mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => true,
+			});
+
+			// 0 sessions -> returns visible warning in assistant message instead of silent drop
+			const emptyCampaignTurn = await commands.sendMessage({
+				campaignSlug: slug,
+				chatId: "new",
+				payload: {
+					content: "Створи сутичку",
+					workspaceContext: { viewType: "campaign", campaignSlug: slug },
+				},
+			});
+			assert.equal(emptyCampaignTurn.assistantMessage.actionCards?.length || 0, 0);
+			assert.ok(emptyCampaignTurn.assistantMessage.content.includes("немає жодної сесії"));
+
+			// Create session -> sending from campaign view (no sessionFileName) targets that session
+			await storage.writeJson(storage.sessionPath(slug, "1.json"), {
+				id: "sess-one",
+				name: "1",
+				data: { scenes: [], npcs: [], locations: [], notes: [], encounters: [] },
+			});
+			const withSessionTurn = await commands.sendMessage({
+				campaignSlug: slug,
+				chatId: emptyCampaignTurn.chat.id,
+				payload: {
+					content: "Створи сутичку тепер",
+					workspaceContext: { viewType: "campaign", campaignSlug: slug },
+				},
+			});
+			assert.equal(withSessionTurn.assistantMessage.actionCards.length, 1);
+			const card = withSessionTurn.assistantMessage.actionCards[0];
+			assert.equal(card.targetSessionFileName, "1.json");
+
+			const applied = await commands.applyAction({
+				campaignSlug: slug,
+				chatId: withSessionTurn.chat.id,
+				actionId: card.id,
+				payload: {},
+			});
+			assert.equal(applied.actionCard.status, "applied");
+			const updatedSession = await storage.readSession(slug, "1.json");
+			assert.equal(updatedSession.data.scenes.length, 1);
+			assert.equal(updatedSession.data.encounters.length, 1);
+		});
+	},
+);
+
+await run(
+	"buildChatSystemInstruction includes encounterClientId pairing and scene texts schema guidance",
+	async () => {
+		const instruction = buildChatSystemInstruction({
+			responseLanguage: "uk",
+			commands: ["encounter"],
+			workspaceViewType: "session",
+		});
+		assert.ok(instruction.includes("encounterClientId"));
+		assert.ok(instruction.includes('"texts"'));
+		assert.ok(instruction.includes('"summary"'));
+	},
+);
+
+await run(
+	"geminiGateway.generateTextStream suppresses rejected response promises and falls back cleanly on stream parse errors",
+	async () => {
+		const {
+			createGeminiGateway,
+		} = require("../server/modules/ai/infrastructure/geminiGateway.js");
+		let unhandled = null;
+		const onUnhandled = (reason) => {
+			unhandled = reason;
+		};
+		process.on("unhandledRejection", onUnhandled);
+		try {
+			const gw = createGeminiGateway({
+				getApiKey: () => "test-key",
+				createClient: () => ({
+					getGenerativeModel: () => ({
+						generateContentStream: async () => ({
+							stream: (async function* () {
+								yield { text: () => '{"reply":"partial' };
+								throw new Error("[GoogleGenerativeAI Error]: Failed to parse stream");
+							})(),
+							response: Promise.reject(new Error("Stream parse boom")),
+						}),
+						generateContent: async () => ({
+							response: Promise.resolve({
+								text: () => '{"reply":"Recovered JSON","actions":[]}',
+							}),
+						}),
+					}),
+				}),
+			});
+
+			const chunks = [];
+			const text = await gw.generateTextStream({
+				modelName: "gemini-flash-lite-latest",
+				systemInstruction: "sys",
+				useJsonResponse: true,
+				userPrompt: "prompt",
+				onChunk: (_delta, full) => chunks.push(full),
+			});
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			assert.equal(unhandled, null);
+			assert.equal(text, '{"reply":"Recovered JSON","actions":[]}');
+			assert.equal(chunks.at(-1), '{"reply":"Recovered JSON","actions":[]}');
+		} finally {
+			process.off("unhandledRejection", onUnhandled);
+		}
+	},
+);
+
 const failed = results.filter((r) => !r.ok);
 console.log(
 	`\nTotal: ${results.length}, Passed: ${results.length - failed.length}, Failed: ${failed.length}`,

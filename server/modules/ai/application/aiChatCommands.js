@@ -618,10 +618,23 @@ function createAiChatCommands({
 		);
 
 		const normalizedReplySyntax = normalizeChatMentionsSyntax(parsed.reply);
-		const processedReply =
+		const processedBaseReply =
 			allMentionCandidates.length > 0
 				? processGeneratedTextMentions(normalizedReplySyntax, allMentionCandidates)
 				: normalizedReplySyntax;
+		const uniqueWarnings = Array.from(
+			new Set(
+				(Array.isArray(actionResult.warnings) ? actionResult.warnings : [])
+					.map((item) => asText(item))
+					.filter(Boolean),
+			),
+		);
+		const processedReply =
+			parsed.actions.length > 0 &&
+			actionResult.actionCards.length === 0 &&
+			uniqueWarnings.length > 0
+				? `${processedBaseReply}${processedBaseReply ? "\n\n" : ""}> ⚠️ **Зміни не були підготовлені:** ${uniqueWarnings.join(" ")}`
+				: processedBaseReply;
 
 		const now = Date.now();
 		const userMessage = {
@@ -803,7 +816,11 @@ function createAiChatCommands({
 		const workspaceContext = payload.workspaceContext && typeof payload.workspaceContext === "object"
 			? payload.workspaceContext
 			: {};
-		const sessionFileName = asText(workspaceContext.sessionFileName || chat.anchor?.sessionFileName);
+		const sessionFileName = asText(
+			location.card.targetSessionFileName ||
+				workspaceContext.sessionFileName ||
+				chat.anchor?.sessionFileName,
+		);
 		const encounterId = workspaceContext.encounterId ?? chat.anchor?.encounterId ?? null;
 		const sceneId = workspaceContext.sceneId ?? chat.anchor?.sceneId ?? null;
 

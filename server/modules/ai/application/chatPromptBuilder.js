@@ -12,7 +12,7 @@ const TONE_GUIDANCE = Object.freeze({
 const COMMAND_INSTRUCTIONS = Object.freeze({
 	scene: "@scene: Focus on sensory details, secrets/clues, skill checks (DCs), NPC presence, and actionable scene updates or notes.",
 	npc: "@npc: Focus on memorable personality traits, motivation, secrets, appearance, and D&D role/race/class/level.",
-	encounter: "@encounter: Balance encounter difficulty against the party levels/count in WORKSPACE CONTEXT. Use exact official English 5e bestiary names or exact customBestiary names in encounter monsters.",
+	encounter: "@encounter: Balance encounter difficulty against the party levels/count in WORKSPACE CONTEXT. Use exact official English 5e bestiary names or exact customBestiary names in monsters[] (one array element per creature instance). Every newly created encounter MUST set \"clientId\" and MUST be paired in the SAME action's \"operations\" array with a \"scene\" create or update operation referencing it via \"encounterClientId\".",
 	bestiary: "@bestiary: Create/update custom 5.5e (2024) monsters using full 5eTools JSON structure (`name`, `source: \"CUSTOM\"`, `size: [\"M\"]`, `type`, `alignment: [\"N\"]`, `ac: [{ \"ac\": 13, \"from\": [\"natural armor\"] }]`, `hp: { \"average\": 45, \"formula\": \"6d8 + 18\" }`, `speed: { \"walk\": 30 }`, `str`, `dex`, `con`, `int`, `wis`, `cha`, `save`, `skill`, `senses`, `languages`, `cr`, `spellcasting`, `trait`, `action`, `bonus`, `reaction`, `legendary` with `{@atk mw}`, `{@hit N}`, `{@damage ...}`, `{@dc N}`, `{@actSave ...}`, `{@spell ...}` tags). Keep targetType: \"monster\" and omit \"scope\".",
 	location: "@location: Describe vivid landmarks, sensory atmosphere, inhabitants, factions, hazards, secrets, and tabletop hooks.",
 	notes: "@notes: Structure raw notes into scannable Markdown bullets, quests, clues, or session recaps without losing facts.",
@@ -170,7 +170,7 @@ async function buildChatWorkspaceContext(
 		? String(workspaceContext.sceneId)
 		: "";
 
-	const [characters, npcs, locations, session, customBestiaryRaw] = await Promise.all([
+	const [characters, npcs, locations, session, customBestiaryRaw, allSessions] = await Promise.all([
 		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "characters").catch(() => []),
 		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "npc").catch(() => []),
 		isBestiaryScope ? Promise.resolve([]) : storage.listEntities(campaignSlug, "locations").catch(() => []),
@@ -178,6 +178,11 @@ async function buildChatWorkspaceContext(
 			? storage.readSession(campaignSlug, sessionFileName).catch(() => null)
 			: Promise.resolve(null),
 		storage.readCustomBestiary().catch(() => ({ monster: [] })),
+		!isBestiaryScope &&
+		(!sessionFileName || contextSettings.includeRecentSessionHistory) &&
+		typeof storage.listSessions === "function"
+			? storage.listSessions(campaignSlug).catch(() => [])
+			: Promise.resolve([]),
 	]);
 
 	const visibleCharacters = characters.filter((c) => !c?._aiIgnored).map(stripIgnoredNotesFromEntity);
@@ -197,12 +202,21 @@ async function buildChatWorkspaceContext(
 			? "encounter"
 			: workspaceContext.viewType || (session ? "session" : "campaign");
 
+	const availableSessions =
+		!isBestiaryScope && !session && Array.isArray(allSessions) && allSessions.length > 0
+			? allSessions.map((s) => ({
+					fileName: s.fileName,
+					name: s.name || s.fileName,
+				}))
+			: [];
+
 	const contextPayload = {
 		workspace: {
 			viewType,
 			campaignSlug,
 			campaignName: isBestiaryScope ? "Бестіарій" : campaign?.name || campaignSlug,
 			...(sessionFileName ? { sessionFileName, sessionName: session?.name || sessionFileName } : {}),
+			...(availableSessions.length > 0 ? { availableSessions } : {}),
 			...(currentEncounter ? { encounterId, encounterName: currentEncounter.name || "" } : encounterId ? { encounterId } : {}),
 			...(currentScene ? { sceneId, sceneTitle: currentScene.name || currentScene.title || "" } : sceneId ? { sceneId } : {}),
 			...(workspaceContext.activeSection ? { activeSection: String(workspaceContext.activeSection) } : {}),
@@ -284,8 +298,8 @@ async function buildChatWorkspaceContext(
 	}
 
 	if (contextSettings.includeRecentSessionHistory) {
-		const allSessions = await storage.listSessions(campaignSlug).catch(() => []);
-		const otherSessions = allSessions.filter((s) => s.fileName !== sessionFileName);
+		const sessionList = Array.isArray(allSessions) ? allSessions : [];
+		const otherSessions = sessionList.filter((s) => s.fileName !== sessionFileName);
 		let recentMeta;
 		if (Array.isArray(contextSettings.selectedSessionFileNames)) {
 			const allowedSessions = new Set(
@@ -474,11 +488,15 @@ function buildChatSystemInstruction({
 
 RULES FOR OPERATIONS:
 1. NEVER invent existing IDs. Always use the exact "id" (or "slug"/"name" if id absent) found in WORKSPACE CONTEXT or mentionedEntities.
-2. When a current session is active, always specify "scope": "campaign" or "scope": "session" on npc/location operations.
-3. For "encounter" updates, patch { "name": "...", "monsters": [{ "monsterName": "Official English Name or Custom Monster Name", "name": "Optional label" }] }.
-4. Omit "scope" for "monster" (custom bestiary) and "encounter-creature" operations.
-5. For "monster" creation, populate full 5eTools JSON inside "data" (name, source: "CUSTOM", size: ["M"], type, alignment, ac: [{ "ac": 13, "from": ["natural armor"] }], hp: { "average": 45, "formula": "6d8 + 18" }, speed: { "walk": 30 }, str, dex, con, int, wis, cha, save, skill, senses, languages, cr, trait, action, bonus, reaction, legendary, spellcasting). If creating a new custom creature based on an official or referenced creature in "mentionedEntities", emit { "op": "create", "entity": "monster", "data": { ...adapted full 5eTools JSON with "source": "CUSTOM"... } } without modifying the original official creature. For updating an existing custom monster, use { "op": "update", "entity": "monster", "id": "EXACT_MONSTER_ID", "patch": { ...changedFieldsOnly... } } — never duplicate unchanged fields.
-6. Do not split a cohesive multi-op creation (e.g., creating an NPC + moving/linking it) into disconnected cards that depend on each other's temp clientId — keep dependent ops inside one action card.`,
+2. When a current session is active, always specify "scope": "campaign" or "scope": "session" on npc/location operations. Scenes ALWAYS use "scope": "session" (never "scope": "campaign") and "data": { "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." } } with non-empty fields in ${langLabel}.
+3. For NEW encounters: every "create" "encounter" operation MUST use "scope": "session", MUST define a unique "clientId" (e.g. "encounter-1"), MUST omit final "id", MUST list each creature instance as its own item in "monsters": [{ "monsterName": "Official English Name or Custom Monster Name", "name": "Optional label" }] (do NOT use count/quantity), and MUST be paired inside the SAME action's "operations" array with either:
+   - { "op": "update", "entity": "scene", "scope": "session", "id": "EXACT_EXISTING_SCENE_ID", "patch": { "encounterClientId": "encounter-1" } } (only if the existing scene does not already have an "encounterId"), OR
+   - { "op": "create", "entity": "scene", "scope": "session", "clientId": "scene-1", "data": { "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "encounterClientId": "encounter-1" } }.
+   Optionally include a tactical combat-mechanics note on that scene via appendNote ("targetClientId": "scene-1" or existing scene "id") in the same action card.
+4. For EXISTING encounter updates, patch { "name": "...", "monsters": [{ "monsterName": "Official English Name or Custom Monster Name", "name": "Optional label" }] } using exact "id".
+5. Omit "scope" for "monster" (custom bestiary) and "encounter-creature" operations.
+6. For "monster" creation, populate full 5eTools JSON inside "data" (name, source: "CUSTOM", size: ["M"], type, alignment, ac: [{ "ac": 13, "from": ["natural armor"] }], hp: { "average": 45, "formula": "6d8 + 18" }, speed: { "walk": 30 }, str, dex, con, int, wis, cha, save, skill, senses, languages, cr, trait, action, bonus, reaction, legendary, spellcasting). If creating a new custom creature based on an official or referenced creature in "mentionedEntities", emit { "op": "create", "entity": "monster", "data": { ...adapted full 5eTools JSON with "source": "CUSTOM"... } } without modifying the original official creature. For updating an existing custom monster, use { "op": "update", "entity": "monster", "id": "EXACT_MONSTER_ID", "patch": { ...changedFieldsOnly... } } — never duplicate unchanged fields.
+7. Do not split dependent operations across separate cards (e.g. creating an encounter and linking a scene with "encounterClientId", or creating an NPC and appending/moving it via "targetClientId") — keep all dependent ops inside one action card.`,
 	];
 
 	if (commandHints.length > 0) {

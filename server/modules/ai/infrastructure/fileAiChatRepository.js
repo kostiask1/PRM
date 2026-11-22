@@ -186,6 +186,7 @@ function normalizeActionCard(card, createId) {
 		...(card.description ? { description: String(card.description).trim() } : {}),
 		...(card.targetEntity ? { targetEntity: String(card.targetEntity).trim() } : {}),
 		...(card.targetType ? { targetType: String(card.targetType).trim() } : {}),
+		...(card.targetSessionFileName ? { targetSessionFileName: String(card.targetSessionFileName).trim() } : {}),
 		...(stats.length > 0 ? { stats } : {}),
 		status,
 		...(diffSnippet ? { diffSnippet } : {}),

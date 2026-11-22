@@ -1,5 +1,13 @@
 const DESTRUCTIVE_OPS = new Set(["delete", "deletenote"]);
 const MAX_PREVIEW_CHARS = 6000;
+const SESSION_REQUIRED_ENTITIES = new Set([
+	"session",
+	"scene",
+	"scenes",
+	"encounter",
+	"encounters",
+	"encounter-creature",
+]);
 
 function isObject(value) {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -7,6 +15,319 @@ function isObject(value) {
 
 function asText(value) {
 	return String(value ?? "").trim();
+}
+
+function collectReferencedClientIds(operations = []) {
+	const refs = [];
+	for (const op of Array.isArray(operations) ? operations : []) {
+		if (!isObject(op)) continue;
+		const targetClientId = asText(op.targetClientId);
+		const ownerClientId = asText(op.ownerClientId);
+		const dataEncounterClientId = asText(op.data?.encounterClientId);
+		const patchEncounterClientId = asText(op.patch?.encounterClientId);
+		if (targetClientId) refs.push(targetClientId);
+		if (ownerClientId) refs.push(ownerClientId);
+		if (dataEncounterClientId) refs.push(dataEncounterClientId);
+		if (patchEncounterClientId) refs.push(patchEncounterClientId);
+	}
+	return refs;
+}
+
+/**
+ * Merges action cards whose operations share clientId / targetClientId / encounterClientId links.
+ */
+function mergeDependentRawActions(rawActions = []) {
+	const valid = (Array.isArray(rawActions) ? rawActions : []).filter(
+		(raw) => isObject(raw) && Array.isArray(raw.operations) && raw.operations.length > 0,
+	);
+	if (valid.length <= 1) return valid;
+
+	const definedIn = new Map();
+	valid.forEach((raw, idx) => {
+		for (const op of raw.operations) {
+			const cid = asText(op?.clientId);
+			if (cid && !definedIn.has(cid)) {
+				definedIn.set(cid, idx);
+			}
+		}
+	});
+
+	const parent = valid.map((_, idx) => idx);
+	const find = (x) => {
+		let cur = x;
+		while (parent[cur] !== cur) {
+			parent[cur] = parent[parent[cur]];
+			cur = parent[cur];
+		}
+		return cur;
+	};
+	const union = (a, b) => {
+		const ra = find(a);
+		const rb = find(b);
+		if (ra !== rb) {
+			const minRoot = Math.min(ra, rb);
+			const maxRoot = Math.max(ra, rb);
+			parent[maxRoot] = minRoot;
+		}
+	};
+
+	valid.forEach((raw, idx) => {
+		for (const ref of collectReferencedClientIds(raw.operations)) {
+			if (definedIn.has(ref)) {
+				union(idx, definedIn.get(ref));
+			}
+		}
+	});
+
+	const groups = new Map();
+	valid.forEach((raw, idx) => {
+		const root = find(idx);
+		if (!groups.has(root)) groups.set(root, []);
+		groups.get(root).push(raw);
+	});
+
+	const merged = [];
+	for (const group of groups.values()) {
+		if (group.length === 1) {
+			merged.push(group[0]);
+		} else {
+			const primary = group[0];
+			merged.push({
+				...primary,
+				kind: group.some((item) => asText(item.kind) === "diff") ? "diff" : primary.kind,
+				operations: group.flatMap((item) => item.operations),
+			});
+		}
+	}
+	return merged;
+}
+
+function operationsRequireSession(operations = []) {
+	if (!Array.isArray(operations)) return false;
+	return operations.some((op) => {
+		if (!isObject(op)) return false;
+		const entity = asText(op.entity).toLowerCase();
+		const scope = asText(op.scope).toLowerCase();
+		const opName = asText(op.op).toLowerCase();
+		if (SESSION_REQUIRED_ENTITIES.has(entity)) return true;
+		if (scope === "session") return true;
+		if (
+			opName === "movescope" &&
+			(asText(op.from).toLowerCase() === "session" ||
+				asText(op.to).toLowerCase() === "session")
+		) {
+			return true;
+		}
+		return false;
+	});
+}
+
+function expandEncounterMonsters(monsters) {
+	if (!Array.isArray(monsters)) return monsters;
+	const expanded = [];
+	for (const entry of monsters) {
+		if (!isObject(entry)) {
+			expanded.push(entry);
+			continue;
+		}
+		const rawCount = entry.count ?? entry.quantity;
+		const parsedCount = Number(rawCount);
+		const cleanEntry = { ...entry };
+		delete cleanEntry.count;
+		delete cleanEntry.quantity;
+		if (Number.isInteger(parsedCount) && parsedCount >= 2 && parsedCount <= 12) {
+			const customName = asText(cleanEntry.name);
+			for (let idx = 0; idx < parsedCount; idx += 1) {
+				expanded.push({
+					...cleanEntry,
+					...(customName ? { name: `${customName} ${idx + 1}` } : {}),
+				});
+			}
+		} else {
+			expanded.push(cleanEntry);
+		}
+	}
+	return expanded;
+}
+
+function normalizeActionOperationsForExecution(operations, { sessionData = null, sceneId = null } = {}) {
+	const cloned = (Array.isArray(operations) ? operations : []).map((op) =>
+		isObject(op) ? JSON.parse(JSON.stringify(op)) : op,
+	);
+	const usedClientIds = new Set(
+		cloned.map((op) => asText(op?.clientId)).filter(Boolean),
+	);
+	const allocateClientId = (prefix) => {
+		let idx = 1;
+		while (usedClientIds.has(`${prefix}-${idx}`)) {
+			idx += 1;
+		}
+		const id = `${prefix}-${idx}`;
+		usedClientIds.add(id);
+		return id;
+	};
+
+	cloned.forEach((op) => {
+		if (!isObject(op)) return;
+		const opName = asText(op.op).toLowerCase();
+		const entity = asText(op.entity).toLowerCase();
+
+		if (entity === "scene" || entity === "scenes") {
+			if (asText(op.scope).toLowerCase() === "campaign") {
+				op.scope = "session";
+			}
+			if (opName === "create") {
+				if (!isObject(op.data) && isObject(op.value)) {
+					op.data = { ...op.value };
+				}
+				if (isObject(op.data)) {
+					const texts = isObject(op.data.texts) ? { ...op.data.texts } : {};
+					const fallbackSummary = asText(
+						texts.summary ||
+							op.data.summary ||
+							op.data.description ||
+							op.data.title ||
+							op.data.name,
+					);
+					if (fallbackSummary && !asText(texts.summary)) {
+						texts.summary = fallbackSummary;
+					}
+					if (!asText(texts.goal) && asText(op.data.goal)) {
+						texts.goal = asText(op.data.goal);
+					}
+					if (!asText(texts.stakes) && asText(op.data.stakes)) {
+						texts.stakes = asText(op.data.stakes);
+					}
+					if (!asText(texts.location) && asText(op.data.location)) {
+						texts.location = asText(op.data.location);
+					}
+					op.data = { ...op.data, texts };
+				}
+			}
+			return;
+		}
+
+		if (entity === "encounter" || entity === "encounters") {
+			if (opName === "create") {
+				op.scope = "session";
+				if (!isObject(op.data) && isObject(op.value)) {
+					op.data = { ...op.value };
+				}
+				if (!isObject(op.data)) {
+					op.data = {};
+				}
+				if (Array.isArray(op.data.monsters)) {
+					op.data.monsters = expandEncounterMonsters(op.data.monsters);
+				}
+				if (!asText(op.clientId)) {
+					op.clientId = allocateClientId("enc-auto");
+				}
+			} else if (opName === "update") {
+				if (isObject(op.patch) && Array.isArray(op.patch.monsters)) {
+					op.patch.monsters = expandEncounterMonsters(op.patch.monsters);
+				}
+				if (isObject(op.data) && Array.isArray(op.data.monsters)) {
+					op.data.monsters = expandEncounterMonsters(op.data.monsters);
+				}
+			}
+		}
+	});
+
+	const linkedEncounterClientIds = new Set();
+	for (const op of cloned) {
+		if (!isObject(op)) continue;
+		const opName = asText(op.op).toLowerCase();
+		const entity = asText(op.entity).toLowerCase();
+		if ((entity === "scene" || entity === "scenes") && (opName === "create" || opName === "update")) {
+			const refId = asText(op.data?.encounterClientId || op.patch?.encounterClientId);
+			if (refId) linkedEncounterClientIds.add(refId);
+		}
+	}
+
+	const existingScenes = Array.isArray(sessionData?.data?.scenes) ? sessionData.data.scenes : [];
+	const targetSceneId =
+		sceneId !== undefined && sceneId !== null && sceneId !== "" ? String(sceneId) : "";
+	const existingTargetScene = targetSceneId
+		? existingScenes.find((s) => String(s?.id ?? "") === targetSceneId) || null
+		: null;
+	let canUseExistingTargetScene =
+		Boolean(existingTargetScene && !asText(existingTargetScene.encounterId)) &&
+		!cloned.some((op) => {
+			if (!isObject(op)) return false;
+			const opEntity = asText(op.entity).toLowerCase();
+			return (
+				asText(op.op).toLowerCase() === "update" &&
+				(opEntity === "scene" || opEntity === "scenes") &&
+				String(op.id ?? "") === targetSceneId &&
+				Boolean(asText(op.patch?.encounterClientId || op.data?.encounterClientId))
+			);
+		});
+
+	const createdEncounters = cloned.filter((op) => {
+		if (!isObject(op)) return false;
+		const opEntity = asText(op.entity).toLowerCase();
+		return (
+			asText(op.op).toLowerCase() === "create" &&
+			(opEntity === "encounter" || opEntity === "encounters")
+		);
+	});
+
+	for (const encOp of createdEncounters) {
+		const cid = asText(encOp.clientId);
+		if (!cid || linkedEncounterClientIds.has(cid)) continue;
+		linkedEncounterClientIds.add(cid);
+
+		const unlinkedCreatedSceneOp = cloned.find((op) => {
+			if (!isObject(op)) return false;
+			const opEntity = asText(op.entity).toLowerCase();
+			return (
+				asText(op.op).toLowerCase() === "create" &&
+				(opEntity === "scene" || opEntity === "scenes") &&
+				isObject(op.data) &&
+				!asText(op.data.encounterClientId || op.data.encounterId)
+			);
+		});
+
+		if (unlinkedCreatedSceneOp) {
+			unlinkedCreatedSceneOp.data.encounterClientId = cid;
+		} else if (canUseExistingTargetScene) {
+			canUseExistingTargetScene = false;
+			cloned.push({
+				op: "update",
+				entity: "scene",
+				scope: "session",
+				id: targetSceneId,
+				patch: { encounterClientId: cid },
+			});
+		} else {
+			const encData = isObject(encOp.data) ? encOp.data : {};
+			let sceneCid = `scene-${cid}`;
+			if (usedClientIds.has(sceneCid)) {
+				sceneCid = allocateClientId("scene-auto");
+			} else {
+				usedClientIds.add(sceneCid);
+			}
+			cloned.push({
+				op: "create",
+				entity: "scene",
+				scope: "session",
+				clientId: sceneCid,
+				data: {
+					texts: {
+						summary:
+							asText(encData.description || encData.summary || encData.name) ||
+							"Бойова сутичка",
+						goal: asText(encData.goal),
+						stakes: asText(encData.stakes),
+						location: asText(encData.location),
+					},
+					encounterClientId: cid,
+				},
+			});
+		}
+	}
+
+	return cloned;
 }
 
 /**
@@ -242,7 +563,7 @@ function buildActionHistoryContext({
 	historyWriter,
 }) {
 	const requestSnapshot = historyWriter.buildRequestSnapshot({
-		type: "campaign",
+		type: "chat-action",
 		modelName,
 		userInstructions: title,
 		path: responsePath,
@@ -262,7 +583,7 @@ function buildActionHistoryContext({
 	return {
 		payload,
 		path: responsePath,
-		type: "campaign",
+		type: "chat-action",
 		modelName,
 		responseLanguage: language,
 		historyUserInstructions: title,
@@ -330,19 +651,63 @@ async function prepareChatActionCards(
 		mentionCandidateNames = [],
 	},
 ) {
-	const responsePath = buildActionHistoryPath(campaignSlug, sessionFileName, encounterId);
 	const actionCards = [];
 	const appliedActionIds = [];
 	const changedEntityTypesSet = new Set();
+	const warnings = [];
 	let lastUpdated = null;
+	let cachedSessions = null;
 
-	for (const raw of Array.isArray(rawActions) ? rawActions : []) {
+	const mergedRawActions = mergeDependentRawActions(rawActions);
+
+	for (const raw of mergedRawActions) {
 		if (!isObject(raw) || !Array.isArray(raw.operations) || raw.operations.length === 0) {
 			continue;
 		}
+
+		let effectiveSessionFileName = asText(sessionFileName);
+		if (
+			!effectiveSessionFileName &&
+			campaignSlug !== "bestiary" &&
+			operationsRequireSession(raw.operations)
+		) {
+			if (!cachedSessions) {
+				cachedSessions =
+					typeof storage.listSessions === "function"
+						? await storage.listSessions(campaignSlug).catch(() => [])
+						: [];
+			}
+			if (Array.isArray(cachedSessions) && cachedSessions.length > 0) {
+				const lastSession = cachedSessions[cachedSessions.length - 1];
+				effectiveSessionFileName = asText(lastSession?.fileName);
+			}
+			if (!effectiveSessionFileName) {
+				warnings.push(
+					"У кампанії ще немає жодної сесії — спочатку створіть сесію, щоб додати сцену або сутичку.",
+				);
+				continue;
+			}
+		}
+
+		const cardResponsePath = buildActionHistoryPath(
+			campaignSlug,
+			effectiveSessionFileName,
+			encounterId,
+		);
+		const targetSessionData =
+			effectiveSessionFileName &&
+			campaignSlug !== "bestiary" &&
+			typeof storage.readSession === "function"
+				? await storage.readSession(campaignSlug, effectiveSessionFileName).catch(() => null)
+				: null;
+		const normalizedOperations = normalizeActionOperationsForExecution(raw.operations, {
+			sessionData: targetSessionData,
+			sceneId,
+		});
+
 		const generatedPayload = buildGeneratedOperationPayload({
-			operations: raw.operations,
-			responsePath,
+			operations: normalizedOperations,
+			responsePath: cardResponsePath,
 			sceneId,
 			mentionCandidateNames,
 			fillCurrentTargetIds,
@@ -353,6 +718,13 @@ async function prepareChatActionCards(
 			requireExplicitEntityScope: false,
 		});
 		if (!validation.valid || generatedPayload.operations.length === 0) {
+			if (!validation.valid && Array.isArray(validation.errors) && validation.errors.length > 0) {
+				const reason = validation.errors
+					.slice(0, 2)
+					.map((err) => `${err.path || "op"}: ${err.message}`)
+					.join("; ");
+				warnings.push(`Операції відхилено валідацією (${reason}).`);
+			}
 			continue;
 		}
 
@@ -365,12 +737,12 @@ async function prepareChatActionCards(
 		const applied = await applyAiOperations({
 			payload: generatedPayload,
 			campaignSlug,
-			sessionFile: sessionFileName || null,
+			sessionFile: effectiveSessionFileName || null,
 			encounterId: encounterId ?? null,
 			entityScope:
 				campaignSlug === "bestiary"
 					? "custom-bestiary"
-					: sessionFileName
+					: effectiveSessionFileName
 						? "mixed"
 						: "campaign",
 			simplifiedNotes: Boolean(simplifiedNotes),
@@ -387,7 +759,7 @@ async function prepareChatActionCards(
 			!isDestructiveOperationList(generatedPayload.operations);
 		const historyContext = buildActionHistoryContext({
 			payload: generatedPayload,
-			responsePath,
+			responsePath: cardResponsePath,
 			modelName,
 			language,
 			title,
@@ -400,8 +772,8 @@ async function prepareChatActionCards(
 			? await historyWriter.saveParsed({
 					beforeApplyBundle,
 					generatedContent: generatedPayload,
-					path: responsePath,
-					type: "campaign",
+					path: cardResponsePath,
+					type: "chat-action",
 					modelName,
 					language,
 					userInstructions: title,
@@ -412,8 +784,8 @@ async function prepareChatActionCards(
 			: await historyWriter.saveDraftParsed({
 					beforeApplyBundle,
 					generatedContent: generatedPayload,
-					path: responsePath,
-					type: "campaign",
+					path: cardResponsePath,
+					type: "chat-action",
 					modelName,
 					language,
 					userInstructions: title,
@@ -424,6 +796,11 @@ async function prepareChatActionCards(
 
 		const resources = aiResponse?.changes?.resources || [];
 		if (resources.length === 0) {
+			if (Array.isArray(applied.warnings) && applied.warnings.length > 0) {
+				warnings.push(...applied.warnings);
+			} else {
+				warnings.push(`Дія «${title}» не внесла змін у кампанію.`);
+			}
 			continue;
 		}
 
@@ -436,6 +813,7 @@ async function prepareChatActionCards(
 			...(raw.description ? { description: asText(raw.description) } : {}),
 			...(raw.targetEntity ? { targetEntity: asText(raw.targetEntity) } : {}),
 			...(raw.targetType ? { targetType: asText(raw.targetType) } : {}),
+			...(effectiveSessionFileName ? { targetSessionFileName: effectiveSessionFileName } : {}),
 			...(preview.stats.length > 0 ? { stats: preview.stats } : {}),
 			status: shouldAutoApply ? "applied" : "pending",
 			diffSnippet: preview.diffSnippet,
@@ -460,6 +838,7 @@ async function prepareChatActionCards(
 		updated: lastUpdated,
 		appliedActionIds,
 		changedEntityTypes: Array.from(changedEntityTypesSet),
+		warnings,
 	};
 }
 
@@ -528,9 +907,20 @@ async function applyChatActionCard(
 		throw error;
 	}
 
+	const effectiveSessionFileName = asText(actionCard?.targetSessionFileName || sessionFileName);
+	const targetSessionData =
+		effectiveSessionFileName &&
+		campaignSlug !== "bestiary" &&
+		typeof storage.readSession === "function"
+			? await storage.readSession(campaignSlug, effectiveSessionFileName).catch(() => null)
+			: null;
+	const normalizedOperations = normalizeActionOperationsForExecution(actionCard.operations, {
+		sessionData: targetSessionData,
+		sceneId,
+	});
 	const payload = {
 		version: 2,
-		operations: JSON.parse(JSON.stringify(actionCard.operations)),
+		operations: normalizedOperations,
 	};
 	const validation = validateAiGeneratedContent(payload, {
 		type: "campaign",
@@ -543,7 +933,7 @@ async function applyChatActionCard(
 		throw error;
 	}
 
-	const responsePath = buildActionHistoryPath(campaignSlug, sessionFileName, encounterId);
+	const responsePath = buildActionHistoryPath(campaignSlug, effectiveSessionFileName, encounterId);
 	const beforeApplyBundle =
 		campaignSlug === "bestiary"
 			? { meta: { slug: "bestiary", name: "Bestiary" }, sessions: [], entities: {}, aiResponses: [] }
@@ -551,12 +941,12 @@ async function applyChatActionCard(
 	const applied = await applyAiOperations({
 		payload,
 		campaignSlug,
-		sessionFile: sessionFileName || null,
+		sessionFile: effectiveSessionFileName || null,
 		encounterId: encounterId ?? null,
 		entityScope:
 			campaignSlug === "bestiary"
 				? "custom-bestiary"
-				: sessionFileName
+				: effectiveSessionFileName
 					? "mixed"
 					: "campaign",
 		simplifiedNotes: Boolean(simplifiedNotes),
@@ -582,7 +972,7 @@ async function applyChatActionCard(
 		beforeApplyBundle,
 		generatedContent: payload,
 		path: responsePath,
-		type: "campaign",
+		type: "chat-action",
 		modelName,
 		language,
 		userInstructions: actionCard.title || "Дія асистента",
