@@ -1127,6 +1127,31 @@ const {
 	updateEnvValue,
 } = require("../server/modules/ai/infrastructure/envApiKeyStore.js");
 const {
+	fillCurrentTargetIds,
+} = require("../server/modules/ai/application/fillCurrentTargetIds.js");
+const {
+	createFileAiChatRepository,
+	MAX_STORED_CHAT_MESSAGES,
+} = require("../server/modules/ai/infrastructure/fileAiChatRepository.js");
+const {
+	parseChatCommands,
+	extractMentionedEntityNames,
+	normalizeChatMentionsSyntax,
+	evaluateDiceExpressions,
+} = require("../server/modules/ai/application/chatCommandParser.js");
+const {
+	SUMMARY_TRIGGER_UNSUMMARIZED,
+	SUMMARY_KEEP_RECENT,
+	buildChatWorkspaceContext,
+	buildChatSystemInstruction,
+	buildChatTurnPrompt,
+	compactChatHistoryIfNeeded,
+} = require("../server/modules/ai/application/chatPromptBuilder.js");
+const {
+	createAiChatCommands,
+	extractStreamingReplyPreview,
+} = require("../server/modules/ai/application/aiChatCommands.js");
+const {
 	CAMPAIGN_ENTITY_TYPES,
 	createCampaignEntityCommands,
 	getEntityDisplayName: getServerCampaignEntityDisplayName,
@@ -74260,6 +74285,743 @@ await run(
 		assert.deepEqual(fallbackSummary.segments, []);
 	},
 );
+
+await run("AI chat command parser handles commands, mentions, and dice rolls", () => {
+	const parsed = parseChatCommands(
+		"@scene Перевір [Брунгор] і @npc[Морден] та зроби @dice кидок 2d6+3",
+	);
+	assert.deepEqual(parsed.commands, ["scene", "dice"]);
+	assert.equal(parsed.primaryCommand, "scene");
+	assert.match(parsed.cleanedText, /@npc\[Морден\]/);
+	assert.doesNotMatch(parsed.cleanedText, /(^|\s)@scene\b/);
+
+	const mentions = extractMentionedEntityNames(
+		"Зустріч з @npc[Брунгор], [[Село Озерне]] та [Таверна] в [лінку](https://example.com)",
+	);
+	assert.deepEqual(mentions, ["Брунгор", "Село Озерне", "Таверна"]);
+
+	assert.equal(
+		normalizeChatMentionsSyntax("Привіт @npc[Брунгор] у [[Село Озерне]]"),
+		"Привіт [Брунгор] у [Село Озерне]",
+	);
+
+	const rolls = evaluateDiceExpressions("Кинь 2d6+3 та 1d20-2", () => 0.5);
+	assert.equal(rolls.length, 2);
+	assert.deepEqual(rolls[0], {
+		expression: "2d6+3",
+		rolls: [4, 4],
+		modifier: 3,
+		total: 11,
+	});
+	assert.deepEqual(rolls[1], {
+		expression: "1d20-2",
+		rolls: [11],
+		modifier: -2,
+		total: 9,
+	});
+});
+
+await run("AI chat file repository persists chats, strips base64 attachments, validates slugs, and caps history", async () => {
+	const repo = createFileAiChatRepository({ storage });
+
+	await assert.rejects(
+		() => repo.list("../bad-slug"),
+		(err) => err?.status === 400,
+	);
+
+	await withTestSlug("ai-chat-repo", async (slug) => {
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: storage.createId(),
+			slug,
+			name: "Тестова Кампанія",
+		});
+
+		const created = await repo.create(slug, {
+			title: "Секретний чат",
+			model: "gemini-2.5-flash",
+			autoApply: true,
+		});
+		assert.ok(created.id.startsWith("chat-"));
+		assert.equal(created.title, "Секретний чат");
+		assert.equal(created.autoApply, true);
+
+		const messages = Array.from({ length: MAX_STORED_CHAT_MESSAGES + 15 }, (_, idx) => ({
+			id: `m-${idx}`,
+			role: idx % 2 === 0 ? "user" : "assistant",
+			content: `Повідомлення ${idx}`,
+			timestamp: 1000 + idx,
+			attachments: idx === 20 ? [{ name: "map.png", mimeType: "image/png", sizeBytes: 120, data: "SECRET_BASE64" }] : [],
+		}));
+
+		const updated = await repo.update(slug, created.id, {
+			messages,
+			summarizedMessageCount: 25,
+		});
+		assert.equal(updated.messages.length, MAX_STORED_CHAT_MESSAGES);
+		assert.equal(updated.summarizedMessageCount, 10);
+		const msgWithAtt = updated.messages.find((m) => m.id === "m-20");
+		assert.ok(msgWithAtt);
+		assert.equal(msgWithAtt.attachments[0].name, "map.png");
+		assert.equal(msgWithAtt.attachments[0].data, undefined);
+
+		const list = await repo.list(slug);
+		assert.equal(list.length, 1);
+		assert.equal(list[0].messageCount, MAX_STORED_CHAT_MESSAGES);
+
+		const afterDelete = await repo.delete(slug, created.id);
+		assert.deepEqual(afterDelete, []);
+	});
+});
+
+await run("AI chat prompt builder assembles workspace context, explicit mentions, and rolling compaction", async () => {
+	await withTestSlug("ai-chat-prompt", async (slug) => {
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: storage.createId(),
+			slug,
+			name: "Хроніки Озерного",
+			description: "Опис кампанії",
+		});
+		await storage.writeEntity(slug, "npc", "brungor", {
+			id: "npc-brungor-1",
+			slug: "brungor",
+			firstName: "Брунгор",
+			lastName: "Залізний",
+			role: "Трактирник",
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session-1.json"), {
+			id: "sess-1",
+			name: "Сесія 01",
+			data: {
+				scenes: [{ id: "sc-1", name: "Таверна", notes: [] }],
+				npcs: [],
+				locations: [],
+				notes: [],
+				encounters: [],
+			},
+		});
+
+		const built = await buildChatWorkspaceContext(
+			{ storage, filterSessionDataForAiContext },
+			{
+				campaignSlug: slug,
+				workspaceContext: {
+					viewType: "session",
+					sessionFileName: "session-1.json",
+					sceneId: "sc-1",
+				},
+				contextSettings: {
+					includeCurrentScene: true,
+					includeCampaignNpc: false,
+					includeCampaignLocations: false,
+				},
+				mentionedNames: ["Брунгор Залізний"],
+				commands: ["scene"],
+			},
+		);
+
+		assert.equal(built.contextPayload.campaign.npcs, undefined);
+		assert.equal(built.contextPayload.currentScene.id, "sc-1");
+		assert.equal(built.contextPayload.mentionedEntities.length, 1);
+		assert.equal(built.contextPayload.mentionedEntities[0].id, "npc-brungor-1");
+
+		const sysInstr = buildChatSystemInstruction({
+			responseLanguage: "uk",
+			responseTone: "concise",
+			commands: ["scene"],
+			workspaceViewType: "session",
+			needsTitle: true,
+		});
+		assert.match(sysInstr, /"chatTitle"/);
+		assert.match(sysInstr, /moveScope/);
+		assert.match(sysInstr, /Ukrainian/);
+
+		const turnPrompt = buildChatTurnPrompt({
+			summary: "Попередній підсумок.",
+			recentMessages: [{ role: "user", content: "Привіт" }],
+			contextPayload: built.contextPayload,
+			userMessage: "@dice 1d20",
+			diceRolls: [{ expression: "1d20", rolls: [17], modifier: 0, total: 17 }],
+			needsTitle: true,
+		});
+		assert.match(turnPrompt.userPrompt, /TOTAL=17/);
+		assert.ok(turnPrompt.tokenEstimate > 0);
+
+		const messagesToCompact = Array.from(
+			{ length: SUMMARY_TRIGGER_UNSUMMARIZED + 2 },
+			(_, i) => ({ role: i % 2 === 0 ? "user" : "assistant", content: `Turn ${i}` }),
+		);
+		const compacted = await compactChatHistoryIfNeeded(
+			{
+				geminiGateway: {
+					generateText: async () => "Стислий підсумок діалогу.",
+				},
+			},
+			{
+				chat: { messages: messagesToCompact, summarizedMessageCount: 0, summary: "" },
+				modelName: "gemini-2.5-flash",
+				responseLanguage: "uk",
+			},
+		);
+		assert.equal(compacted.summary, "Стислий підсумок діалогу.");
+		assert.equal(
+			compacted.summarizedMessageCount,
+			messagesToCompact.length - SUMMARY_KEEP_RECENT,
+		);
+
+		const fallbackCompacted = await compactChatHistoryIfNeeded(
+			{
+				geminiGateway: {
+					generateText: async () => {
+						throw new Error("Network failure");
+					},
+				},
+			},
+			{
+				chat: { messages: messagesToCompact, summarizedMessageCount: 0, summary: "" },
+				modelName: "gemini-2.5-flash",
+				responseLanguage: "uk",
+			},
+		);
+		assert.ok(fallbackCompacted.summary.includes("Turn "));
+		assert.equal(
+			fallbackCompacted.summarizedMessageCount,
+			messagesToCompact.length - SUMMARY_KEEP_RECENT,
+		);
+	});
+});
+
+await run("AI chat commands execute full lifecycle: auto-titling, draft diff preview, moveScope apply, undo, safe autoApply, reject, and missing API key", async () => {
+	await withTestSlug("ai-chat-lifecycle", async (slug) => {
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: storage.createId(),
+			slug,
+			name: "Забуті Береги",
+		});
+		await storage.writeEntity(slug, "npc", "brungor", {
+			id: "npc-brungor",
+			slug: "brungor",
+			firstName: "Брунгор",
+			lastName: "Залізний",
+			role: "Коваль",
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session-08.json"), {
+			id: "sess-08",
+			name: "Сесія 08",
+			data: {
+				scenes: [{ id: "scene-1", name: "Таверна", notes: [] }],
+				npcs: [],
+				locations: [],
+				notes: [],
+				encounters: [],
+			},
+		});
+
+		const chatRepo = createFileAiChatRepository({ storage });
+		let nextGeminiJson = null;
+		const makeCommands = (apiKeyConfigured = true) =>
+			createAiChatCommands({
+				chatRepository: chatRepo,
+				storage,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: {
+					generateText: async () => JSON.stringify(nextGeminiJson),
+				},
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent: mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions: mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => apiKeyConfigured,
+			});
+
+		// Missing API key guard
+		const noKeyCommands = makeCommands(false);
+		await assert.rejects(
+			() =>
+				noKeyCommands.sendMessage({
+					campaignSlug: slug,
+					chatId: "new",
+					payload: { content: "Привіт" },
+				}),
+			(err) => err?.status === 400 && err?.code === "API_KEY_MISSING",
+		);
+
+		const commands = makeCommands(true);
+
+		// Turn 1: draft mode with auto-title + atomic moveScope action (campaign -> session)
+		nextGeminiJson = {
+			chatTitle: "Перенесення Брунгора в сесію",
+			reply: "Можу перенести @npc[Брунгор Залізний] до сесії.",
+			actions: [
+				{
+					kind: "atomic",
+					title: "Перенести Брунгора в Сесія 08",
+					subtitle: "Переміщення NPC",
+					description: "Переміщує [Брунгор Залізний] у поточну сесію.",
+					targetEntity: "Сесія 08",
+					targetType: "npc",
+					operations: [
+						{
+							op: "moveScope",
+							entity: "npc",
+							id: "npc-brungor",
+							from: "campaign",
+							to: "session",
+						},
+					],
+				},
+			],
+		};
+
+		const turn1 = await commands.sendMessage({
+			campaignSlug: slug,
+			chatId: "new",
+			payload: {
+				content: "Перенеси [Брунгор Залізний] до поточної сесії",
+				autoApply: false,
+				workspaceContext: {
+					viewType: "session",
+					campaignSlug: slug,
+					sessionFileName: "session-08.json",
+					sceneId: "scene-1",
+				},
+			},
+		});
+
+		assert.equal(turn1.chat.title, "Перенесення Брунгора в сесію");
+		assert.equal(turn1.chat.isAutoTitled, true);
+		assert.equal(turn1.appliedActionIds.length, 0);
+		assert.equal(turn1.assistantMessage.actionCards.length, 1);
+		const moveCard = turn1.assistantMessage.actionCards[0];
+		assert.equal(moveCard.status, "pending");
+		assert.ok(moveCard.diffSnippet?.after);
+
+		// Draft mode must have left campaign NPC intact & session NPCs empty
+		assert.equal((await storage.listEntities(slug, "npc")).length, 1);
+		assert.equal(
+			(await storage.readSession(slug, "session-08.json")).data.npcs.length,
+			0,
+		);
+
+		// Apply action explicitly -> moves NPC into session
+		const appliedMove = await commands.applyAction({
+			campaignSlug: slug,
+			chatId: turn1.chat.id,
+			actionId: moveCard.id,
+			payload: {},
+		});
+		assert.equal(appliedMove.actionCard.status, "applied");
+		assert.equal((await storage.listEntities(slug, "npc")).length, 0);
+		assert.equal(
+			(await storage.readSession(slug, "session-08.json")).data.npcs.length,
+			1,
+		);
+
+		// Undo applied action -> restores NPC back to campaign
+		const undoneMove = await commands.undoAction({
+			campaignSlug: slug,
+			chatId: turn1.chat.id,
+			actionId: moveCard.id,
+		});
+		assert.equal(undoneMove.actionCard.status, "undone");
+		assert.equal((await storage.listEntities(slug, "npc")).length, 1);
+		assert.equal(
+			(await storage.readSession(slug, "session-08.json")).data.npcs.length,
+			0,
+		);
+
+		// Turn 2: autoApply=true applies safe appendNote automatically, keeps destructive delete pending
+		nextGeminiJson = {
+			reply: "Додано нотатку і запропоновано видалення NPC.",
+			actions: [
+				{
+					kind: "atomic",
+					title: "Додати нотатку до кампанії",
+					targetType: "note",
+					operations: [
+						{
+							op: "appendNote",
+							entity: "campaign",
+							note: { title: "Зачіпка", text: "Сліди ведуть до руїн." },
+						},
+					],
+				},
+				{
+					kind: "atomic",
+					title: "Видалити Брунгора",
+					targetType: "npc",
+					operations: [
+						{
+							op: "delete",
+							entity: "npc",
+							scope: "campaign",
+							id: "npc-brungor",
+						},
+					],
+				},
+			],
+		};
+
+		const turn2 = await commands.sendMessage({
+			campaignSlug: slug,
+			chatId: turn1.chat.id,
+			payload: {
+				content: "Додай нотатку про руїни і запропонуй видалити Брунгора",
+				autoApply: true,
+			},
+		});
+
+		const cards2 = turn2.assistantMessage.actionCards;
+		assert.equal(cards2.length, 2);
+		assert.equal(cards2[0].status, "applied");
+		assert.equal(cards2[1].status, "pending");
+		assert.equal((await storage.readCampaign(slug)).notes.length, 1);
+		assert.equal((await storage.listEntities(slug, "npc")).length, 1);
+
+		// Reject the pending destructive card
+		const rejected = await commands.rejectAction({
+			campaignSlug: slug,
+			chatId: turn1.chat.id,
+			actionId: cards2[1].id,
+		});
+		assert.equal(rejected.actionCard.status, "rejected");
+	});
+});
+
+await run("AI chat streaming reply extractor decodes incremental JSON and plain text safely", () => {
+	assert.deepEqual(extractStreamingReplyPreview(""), {
+		text: "",
+		replyComplete: false,
+	});
+
+	assert.deepEqual(extractStreamingReplyPreview('{"chatTitle":"Те'), {
+		text: "",
+		replyComplete: false,
+	});
+
+	// Incomplete trailing escape and incomplete \uXXXX must wait safely
+	assert.deepEqual(
+		extractStreamingReplyPreview('{"chatTitle":"Сцена","reply":"Рядок 1\\n\\'),
+		{
+			text: "Рядок 1\n",
+			replyComplete: false,
+		},
+	);
+	assert.deepEqual(
+		extractStreamingReplyPreview('{"reply":"Літера \\u041'),
+		{
+			text: "Літера ",
+			replyComplete: false,
+		},
+	);
+	assert.deepEqual(
+		extractStreamingReplyPreview('{"reply":"Літера \\u0410 і \\"цитата\\"'),
+		{
+			text: 'Літера А і "цитата"',
+			replyComplete: false,
+		},
+	);
+
+	// Completed reply stops before trailing actions
+	assert.deepEqual(
+		extractStreamingReplyPreview('{"reply":"Готово!","actions":[{"kind":"diff"}]}'),
+		{
+			text: "Готово!",
+			replyComplete: true,
+		},
+	);
+
+	// Plain-text fallback
+	assert.deepEqual(extractStreamingReplyPreview("Звичайний текст\\nрядок 2"), {
+		text: "Звичайний текст\nрядок 2",
+		replyComplete: false,
+	});
+});
+
+await run("AI chat streaming sendMessage emits status/delta events and attaches diffResources on cards", async () => {
+	await withTestSlug("ai-chat-streaming", async (slug) => {
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: storage.createId(),
+			slug,
+			name: "Стрім Тест",
+		});
+
+		const chatRepo = createFileAiChatRepository({ storage });
+		const finalJson = JSON.stringify({
+			chatTitle: "Створення коваля",
+			reply: "Створено чернетку NPC [Торін].",
+			actions: [
+				{
+					kind: "diff",
+					title: "Створити Торіна",
+					description: "Додає нового коваля [Торін].",
+					targetEntity: "Торін",
+					targetType: "npc",
+					operations: [
+						{
+							op: "create",
+							entity: "npc",
+							scope: "campaign",
+							data: {
+								firstName: "Торін",
+								race: "Dwarf",
+								class: "Artificer",
+							},
+						},
+					],
+				},
+			],
+		});
+
+		const chunks = [
+			finalJson.slice(0, 35),
+			finalJson.slice(35, 62),
+			finalJson.slice(62, 85),
+			finalJson.slice(85),
+		];
+
+		const commands = createAiChatCommands({
+			chatRepository: chatRepo,
+			storage,
+			aiService: {
+				listAvailableModels: async () => ({
+					models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+					defaultModel: "gemini-2.5-flash",
+				}),
+			},
+			geminiGateway: {
+				generateText: async () => {
+					throw new Error("Non-streaming generateText should not be called when onStreamEvent is provided");
+				},
+				generateTextStream: async ({ onChunk }) => {
+					let acc = "";
+					for (const part of chunks) {
+						acc += part;
+						onChunk?.(part, acc);
+					}
+					return acc;
+				},
+			},
+			historyWriter: new AiHistoryWriter(),
+			applyAiOperations: aiPatchService.applyAiOperations,
+			restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+			buildCustomMonsterChangeResources:
+				aiResponseHistoryService.buildCustomMonsterChangeResources,
+			filterSessionDataForAiContext,
+			fillCurrentTargetIds,
+			applyMentionsToGeneratedContent: mentionProcessing.applyMentionsToGeneratedContent,
+			processGeneratedTextMentions: mentionProcessing.processGeneratedTextMentions,
+			validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+			extractFirstJsonObject,
+			normalizeEscapedNewLines,
+			buildImageParts,
+			buildFileParts,
+			isApiKeyConfigured: () => true,
+		});
+
+		const events = [];
+		const result = await commands.sendMessage({
+			campaignSlug: slug,
+			chatId: "new",
+			payload: { content: "@npc створи коваля Торіна", autoApply: false },
+			onStreamEvent: (ev) => events.push(ev),
+		});
+
+		assert.equal(events[0]?.type, "status");
+		assert.equal(events[0]?.phase, "thinking");
+		assert.ok(events.some((e) => e.type === "delta" && e.text.includes("Створено")));
+		assert.ok(events.some((e) => e.type === "status" && e.phase === "preparing_actions"));
+
+		const card = result.assistantMessage.actionCards[0];
+		assert.ok(card);
+		assert.equal(card.status, "pending");
+		assert.ok(Array.isArray(card.diffResources) && card.diffResources.length > 0);
+		assert.equal(card.diffResources[0].kind, "entity");
+		assert.equal(card.diffResources[0].type, "npc");
+		assert.equal(card.diffResources[0].before, null);
+		assert.equal(card.diffResources[0].after?.firstName, "Торін");
+	});
+});
+
+await run("buildChatWorkspaceContext resolves official bestiary mentions from getBestiaryIndex", async () => {
+	const { buildChatWorkspaceContext } = require("../server/modules/ai/application/chatPromptBuilder.js");
+	const abigor = {
+		name: "Abigor",
+		source: "MFF",
+		size: ["L"],
+		type: "fiend",
+		cr: "9",
+		ac: [{ ac: 17 }],
+		hp: { average: 136, formula: "16d10 + 48" },
+	};
+	const storageStub = {
+		readCampaign: async () => ({ name: "Тест", description: "", notes: [] }),
+		listEntities: async () => [],
+		readSession: async () => null,
+		readCustomBestiary: async () => ({ monster: [] }),
+		getBestiaryIndex: async () =>
+			new Map([
+				["abigor|MFF", abigor],
+			]),
+	};
+	const result = await buildChatWorkspaceContext(
+		{
+			storage: storageStub,
+			filterSessionDataForAiContext: (data) => data,
+		},
+		{
+			campaignSlug: "test",
+			mentionedNames: ["Abigor"],
+			commands: ["bestiary"],
+		},
+	);
+	assert.equal(result.contextPayload.mentionedEntities?.length, 1);
+	assert.equal(result.contextPayload.mentionedEntities?.[0]?.name, "Abigor");
+	assert.equal(result.contextPayload.mentionedEntities?.[0]?.entityType, "monster");
+	assert.equal(result.contextPayload.mentionedEntities?.[0]?.scope, "bestiary");
+	assert.equal(result.contextPayload.mentionedEntities?.[0]?.source, "MFF");
+	assert.deepEqual(result.contextPayload.mentionedEntities?.[0]?.data, abigor);
+	assert.ok(result.mentionCandidateNames.includes("Abigor"));
+});
+
+await run("requestMentionSelection forwards includeBestiary option when provided", async () => {
+	const { requestMentionSelection } = await import("../src/features/editor/model.js");
+	let capturedRequest = null;
+	const selectionPromise = requestMentionSelection(
+		(request) => {
+			capturedRequest = request;
+			request.select("Abigor");
+		},
+		"",
+		{ includeBestiary: true },
+	);
+	const resolved = await selectionPromise;
+	assert.equal(capturedRequest?.includeBestiary, true);
+	assert.deepEqual(resolved, { status: "selected", name: "Abigor" });
+});
+
+await run("AI chat @ command autocomplete detects triggers, contextual ranking, Ukrainian search, and safe insertion", async () => {
+	const {
+		findActiveCommandTrigger,
+		extractUsedCommands,
+		getSuggestedAiCommands,
+		applyCommandAutocomplete,
+	} = await import("../src/widgets/ai-assistant/chat/model/aiCommandAutocomplete.ts");
+
+	// Trigger detection at start, after whitespace, punctuation, and after [Mention]
+	assert.deepEqual(findActiveCommandTrigger("@", 1), {
+		start: 0,
+		end: 1,
+		rawToken: "@",
+		query: "",
+	});
+	assert.deepEqual(findActiveCommandTrigger("@be", 3), {
+		start: 0,
+		end: 3,
+		rawToken: "@be",
+		query: "be",
+	});
+	assert.deepEqual(findActiveCommandTrigger("привіт @бес", 11), {
+		start: 7,
+		end: 11,
+		rawToken: "@бес",
+		query: "бес",
+	});
+	assert.deepEqual(findActiveCommandTrigger("[Abigor] @d", 11), {
+		start: 9,
+		end: 11,
+		rawToken: "@d",
+		query: "d",
+	});
+	assert.deepEqual(findActiveCommandTrigger("@sc створи", 3), {
+		start: 0,
+		end: 3,
+		rawToken: "@sc",
+		query: "sc",
+	});
+
+	// Non-trigger cases: email, completed command with space, cursor mid-word
+	assert.equal(findActiveCommandTrigger("test@mail.com", 13), null);
+	assert.equal(findActiveCommandTrigger("@bestiary ", 10), null);
+	assert.equal(findActiveCommandTrigger("@bestiary", 2), null);
+
+	// Contextual ordering & badges
+	const bestiaryRanked = getSuggestedAiCommands({
+		query: "",
+		anchorType: "campaign",
+		isBestiaryOpen: true,
+	});
+	assert.equal(bestiaryRanked[0]?.item.command, "@bestiary");
+	assert.equal(bestiaryRanked[0]?.isContextual, true);
+
+	const encounterRanked = getSuggestedAiCommands({
+		query: "",
+		anchorType: "encounter",
+		isBestiaryOpen: false,
+	});
+	assert.equal(encounterRanked[0]?.item.command, "@encounter");
+	assert.equal(encounterRanked[0]?.isContextual, true);
+	assert.equal(encounterRanked[1]?.item.command, "@bestiary");
+	assert.equal(encounterRanked[1]?.isContextual, true);
+
+	const sessionRanked = getSuggestedAiCommands({
+		query: "",
+		anchorType: "session",
+		isBestiaryOpen: false,
+	});
+	assert.equal(sessionRanked[0]?.item.command, "@scene");
+	assert.equal(sessionRanked[0]?.isContextual, true);
+	assert.equal(sessionRanked[1]?.item.command, "@notes");
+	assert.equal(sessionRanked[1]?.isContextual, true);
+
+	// Ukrainian keyword search
+	assert.equal(getSuggestedAiCommands({ query: "бес" })[0]?.item.command, "@bestiary");
+	assert.equal(getSuggestedAiCommands({ query: "монстр" })[0]?.item.command, "@bestiary");
+	assert.equal(getSuggestedAiCommands({ query: "бій" })[0]?.item.command, "@encounter");
+	assert.deepEqual(getSuggestedAiCommands({ query: "zzzzunknown" }), []);
+
+	// Used command extraction & demotion
+	const used = extractUsedCommands("@bestiary [Abigor] @d", { start: 19, end: 21 });
+	assert.equal(used.has("@bestiary"), true);
+	assert.equal(used.size, 1);
+	const demoted = getSuggestedAiCommands({
+		query: "",
+		isBestiaryOpen: true,
+		usedCommands: used,
+	});
+	const bestiaryEntry = demoted.find((entry) => entry.item.command === "@bestiary");
+	assert.equal(bestiaryEntry?.isAlreadyUsed, true);
+	assert.notEqual(demoted[0]?.item.command, "@bestiary");
+
+	// Replacement & spacing
+	const triggerEnd = findActiveCommandTrigger("@be", 3);
+	assert.ok(triggerEnd);
+	assert.deepEqual(applyCommandAutocomplete("@be", triggerEnd, "@bestiary"), {
+		nextValue: "@bestiary ",
+		nextCaretOffset: 10,
+	});
+
+	const triggerMid = findActiveCommandTrigger("@sc створи", 3);
+	assert.ok(triggerMid);
+	assert.deepEqual(applyCommandAutocomplete("@sc створи", triggerMid, "@scene"), {
+		nextValue: "@scene створи",
+		nextCaretOffset: 7,
+	});
+});
 
 const failed = results.filter((r) => !r.ok);
 console.log(

@@ -39,6 +39,52 @@ function createGeminiGateway({
 		return response.text();
 	}
 
+	async function generateTextStream({
+		modelName,
+		systemInstruction,
+		useJsonResponse,
+		userPrompt,
+		attachmentParts = [],
+		onChunk,
+		signal,
+	}) {
+		if (signal?.aborted) {
+			const abortErr = new Error("Aborted");
+			abortErr.name = "AbortError";
+			throw abortErr;
+		}
+		const model = getClient().getGenerativeModel({
+			model: modelName,
+			...(useJsonResponse
+				? { generationConfig: { responseMimeType: "application/json" } }
+				: {}),
+			systemInstruction,
+		});
+		const requestParts =
+			attachmentParts.length > 0
+				? [{ text: userPrompt }, ...attachmentParts]
+				: userPrompt;
+		const streamResult = await model.generateContentStream(requestParts);
+		let fullText = "";
+		for await (const chunk of streamResult.stream) {
+			if (signal?.aborted) {
+				const abortErr = new Error("Aborted");
+				abortErr.name = "AbortError";
+				throw abortErr;
+			}
+			const delta = typeof chunk?.text === "function" ? chunk.text() : "";
+			if (delta) {
+				fullText += delta;
+				onChunk?.(delta, fullText);
+			}
+		}
+		if (!fullText) {
+			const response = await streamResult.response;
+			fullText = response.text();
+		}
+		return fullText;
+	}
+
 	async function generateImage({ modelName, prompt, attachmentParts = [] }) {
 		const model = getClient().getGenerativeModel({ model: modelName });
 		const result = await model.generateContent([{ text: prompt }, ...attachmentParts]);
@@ -49,7 +95,7 @@ function createGeminiGateway({
 		return { data: image.data, mimeType: image.mimeType, text: parts.map((part) => part.text || "").filter(Boolean).join("\n") };
 	}
 
-	return { generateText, generateImage };
+	return { generateText, generateTextStream, generateImage };
 }
 
 const geminiGateway = createGeminiGateway();

@@ -93,6 +93,7 @@ export interface SettingsModalViewProps {
 	ai: SettingsAiViewProps;
 	storage: SettingsStorageViewProps;
 	onNotificationClose: () => void;
+	onCancel?: () => void;
 }
 
 type SettingsAiGroupProps = SettingsAiViewProps & SettingsModalCompositionSlots;

@@ -104,6 +104,17 @@ p {
 	background-color: var(--accent);
 }
 
+::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in srgb, var(--muted), transparent 58%) transparent;
+	}
+}
+
 blockquote {
 	position: relative;
 	margin-left: 0;

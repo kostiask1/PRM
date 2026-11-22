@@ -20,6 +20,7 @@ export {
 } from "./Input.tsx";
 export {
 	default as MentionPickerModalContent,
+	type BestiaryMentionOption,
 	type MentionPickerModalContentProps,
 } from "./MentionPickerModalContent.tsx";
 export type {

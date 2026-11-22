@@ -47,6 +47,10 @@ function isTopModal(card: HTMLElement | null): boolean {
 	return Boolean(card && getTopModal() === card);
 }
 
+function isInsideAiChatSidebar(node: EventTarget | Element | null): boolean {
+	return node instanceof Element && Boolean(node.closest(".AiAssistantSidebarV2, .AiCollapsedRailV2"));
+}
+
 function useModalFocusBoundary(cardRef: React.RefObject<HTMLDivElement | null>): void {
 	useEffect(() => {
 		const card = cardRef.current;
@@ -55,6 +59,7 @@ function useModalFocusBoundary(cardRef: React.RefObject<HTMLDivElement | null>):
 		if (isTopModal(card) && !card.contains(document.activeElement)) card.focus({ preventScroll: true });
 		const handleTab = (event: KeyboardEvent) => {
 			if (event.key !== "Tab" || event.defaultPrevented || !isTopModal(card)) return;
+			if (isInsideAiChatSidebar(document.activeElement)) return;
 			const portals = Array.from(document.querySelectorAll<HTMLElement>("[data-modal-owner]"))
 				.filter((element) => element.dataset.modalOwner === card.id);
 			const focusable = [card, ...portals].flatMap((root) => Array.from(root.querySelectorAll<HTMLElement>(
@@ -150,6 +155,7 @@ function useModalKeyboard({
 	useEffect(() => {
 		const handleGlobalKeyDown = (event: KeyboardEvent) => {
 			if (!isTopModal(cardRef.current)) return;
+			if (isInsideAiChatSidebar(event.target)) return;
 			const portal = event.target instanceof Element ? event.target.closest("[data-modal-owner]") : null;
 			if (portal?.getAttribute("data-modal-owner") === cardRef.current?.id) return;
 			executeModalKeyboardPlan(

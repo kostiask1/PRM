@@ -1,8 +1,17 @@
 .MainContent {
 	min-width: 0;
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	height: 100dvh;
+	overflow: hidden;
+}
+
+.MainContent__workspaceArea {
+	flex: 1;
+	min-width: 0;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
 	overflow: hidden;
 }
 
@@ -55,8 +64,10 @@
 	cursor: pointer;
 }
 
-.MainContent>.CampaignView,
-.MainContent>.SessionView {
+.MainContent__workspaceArea > .CampaignView,
+.MainContent__workspaceArea > .SessionView,
+.MainContent > .CampaignView,
+.MainContent > .SessionView {
 	flex: 1;
 	height: auto;
 	border: 0;
@@ -131,6 +142,7 @@
 }
 
 .MainContent__emptyState {
+	flex: 1;
 	padding: var(--space-7);
 	text-align: center;
 	overflow-y: auto;

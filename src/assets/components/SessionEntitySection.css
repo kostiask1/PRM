@@ -38,7 +38,6 @@
 		flex-wrap: nowrap;
 		overflow-x: auto;
 		padding-bottom: var(--space-1);
-		scrollbar-width: thin;
 	}
 
 	.SessionEntitySection__actions .Button {

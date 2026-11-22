@@ -44,7 +44,7 @@ export default function CampaignHeader({
 				</Tooltip>
 			</div>
 			<div className="CampaignHeader__actions">
-			<Button size = {Button.SIZES.SMALL} variant="primary" icon="plus" onClick={onCreateSession}>{lang.t("New session")}</Button>
+			<Button variant="primary" icon="plus" onClick={onCreateSession}>{lang.t("New session")}</Button>
 			<CampaignHeaderActions
 				canRedo={view.canRedo}
 				canUndo={view.canUndo}

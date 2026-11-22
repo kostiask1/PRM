@@ -165,7 +165,6 @@
     max-height: 10em;
     overflow-y: auto;
     overflow-wrap: anywhere;
-    scrollbar-width: thin;
 }
 
 .CampaignOverview__description p {

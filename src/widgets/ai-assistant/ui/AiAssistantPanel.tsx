@@ -44,6 +44,7 @@ import { useAiAssistantTokenEstimate } from "../model/useAiAssistantTokenEstimat
 import { useAiAssistantUpdatedData } from "../model/useAiAssistantUpdatedData.ts";
 import { lang } from "../../../shared/lib/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
+export { renderMentionText };
 import { formatBytes } from "../../../shared/lib/index.js";
 import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,

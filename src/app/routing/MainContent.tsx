@@ -3,6 +3,7 @@ import { SessionPage } from "../../pages/session/index.js";
 import { EncounterBestiary, EncounterPage } from "../../pages/encounter/index.js";
 import ProjectGuide from "./ProjectGuide";
 import { AiAssistantPanel } from "../../widgets/ai-assistant/index.js";
+import { AiAssistantV2 } from "../../widgets/ai-assistant/index.js";
 import { createAiResponseModalComponent } from "../../widgets/ai-response-modal/index.js";
 import {
 	CharacterCard,
@@ -61,6 +62,12 @@ function MainContentLayout({
 	showAiAssistant?: boolean;
 }) {
 	const location = useLocation();
+	const activeCampaign = useAppSelector(
+		(state) => state.active.campaign as CampaignRecord | null,
+	);
+	const activeSession = useAppSelector(
+		(state) => state.active.session as { name?: string } | null,
+	);
 	const { activeSessionFileName, activeEncounterId } = useAppSelector(
 		(state) => state.navigation,
 	);
@@ -72,19 +79,28 @@ function MainContentLayout({
 
 	return (
 		<main className={classNames("MainContent", className)}>
-			<AiAssistantRuntimeHost>
-				<BestiaryBrowserRuntimeHost>
-					<CampaignSearchRuntimeHost>
-						<Outlet />
-					</CampaignSearchRuntimeHost>
-				</BestiaryBrowserRuntimeHost>
-				{showAiAssistant && (
-					<AiAssistantPanel
-						key={aiAssistantRouteKey}
-						ResponseModal={MainContentAiResponseModal}
-					/>
-				)}
-			</AiAssistantRuntimeHost>
+			<div className="MainContent__workspaceArea">
+				<AiAssistantRuntimeHost>
+					<BestiaryBrowserRuntimeHost>
+						<CampaignSearchRuntimeHost>
+							<Outlet />
+						</CampaignSearchRuntimeHost>
+					</BestiaryBrowserRuntimeHost>
+					{showAiAssistant && (
+						<AiAssistantPanel
+							key={aiAssistantRouteKey}
+							ResponseModal={MainContentAiResponseModal}
+						/>
+					)}
+				</AiAssistantRuntimeHost>
+			</div>
+			{activeCampaign && (
+				<AiAssistantV2
+					campaignTitle={activeCampaign.name}
+					sessionTitle={activeSession?.name}
+					ResponseModal={MainContentAiResponseModal}
+				/>
+			)}
 		</main>
 	);
 }

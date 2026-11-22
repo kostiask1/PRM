@@ -1,0 +1,2157 @@
+/* ==========================================================================
+   AI Assistant V2 - Unified Chat & Workspace Push Sidebar
+   ========================================================================== */
+
+/* Layout Container for Desktop Push Sidebar */
+.AiAssistantSidebarV2 {
+	width: 380px;
+	min-width: 380px;
+	max-width: 380px;
+	height: 100%;
+	flex-shrink: 0;
+	border-left: 1px solid var(--border);
+	background: var(--panel);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	position: relative;
+	z-index: 10;
+	box-shadow: -2px 0 12px rgba(0, 0, 0, 0.15);
+	transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Core Panel Container */
+.AiAssistantPanelV2 {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	background: var(--panel);
+	position: relative;
+	overflow: hidden;
+	font-family: inherit;
+}
+
+/* ==========================================================================
+   Top Header
+   ========================================================================== */
+.AiAssistantHeaderV2 {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 14px;
+	height: 52px;
+	min-height: 52px;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel);
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.AiAssistantHeaderV2__left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+	flex: 1;
+}
+
+.AiAssistantHeaderV2__brand {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.AiAssistantHeaderV2__logo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--accent);
+}
+
+.AiAssistantHeaderV2__brandTitle {
+	font-size: 13.5px;
+	font-weight: 700;
+	letter-spacing: -0.2px;
+	color: var(--text-bright);
+	white-space: nowrap;
+}
+
+.AiAssistantHeaderV2__sessionTitleBtn {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 8px;
+	border-radius: var(--radius-sm, 6px);
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--text);
+	cursor: pointer;
+	min-width: 0;
+	max-width: 170px;
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.AiAssistantHeaderV2__sessionTitleBtn:hover,
+.AiAssistantHeaderV2__sessionTitleBtn.is-active {
+	background: var(--panel-2);
+	border-color: var(--border);
+}
+
+.AiAssistantHeaderV2__sessionTitleText {
+	font-size: 12px;
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--muted);
+}
+
+.AiAssistantHeaderV2__sessionTitleBtn:hover .AiAssistantHeaderV2__sessionTitleText {
+	color: var(--text);
+}
+
+.AiAssistantHeaderV2__chevron {
+	color: var(--muted);
+	flex-shrink: 0;
+	transition: transform 0.2s ease;
+}
+
+.AiAssistantHeaderV2__chevron.is-open {
+	transform: rotate(180deg);
+}
+
+.AiAssistantHeaderV2__right {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+.AiAssistantHeaderV2__actionBtn {
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-sm, 6px);
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.AiAssistantHeaderV2__actionBtn:hover {
+	background: var(--panel-2);
+	color: var(--text-bright);
+	border-color: var(--border);
+}
+
+.AiAssistantHeaderV2__actionBtn.is-active {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+
+.AiAssistantHeaderV2__collapseBtn:hover {
+	background: rgba(231, 76, 60, 0.12);
+	color: var(--danger, #e74c3c);
+	border-color: rgba(231, 76, 60, 0.25);
+}
+
+/* ==========================================================================
+   Context Anchor Bar
+   ========================================================================== */
+.AiContextAnchorBarV2 {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 14px;
+	height: 38px;
+	min-height: 38px;
+	background: color-mix(in srgb, var(--panel-2) 65%, var(--panel));
+	border-bottom: 1px solid var(--border);
+	font-size: 12px;
+	flex-shrink: 0;
+}
+
+.AiContextAnchorBarV2__left {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	flex: 1;
+}
+
+.AiContextAnchorBarV2__pin,
+.AiContextAnchorBarV2__pinBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm, 4px);
+	background: transparent;
+	color: var(--muted);
+	flex-shrink: 0;
+	cursor: pointer;
+	transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.AiContextAnchorBarV2__pinBtn:hover,
+.AiContextAnchorBarV2__pinBtn.is-pinned {
+	color: var(--accent);
+	background: var(--accent-soft);
+	border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.AiContextAnchorBarV2__title {
+	font-weight: 500;
+	color: var(--text-bright);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.AiContextAnchorBarV2__resyncBtn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	border-radius: 12px;
+	font-size: 10.5px;
+	font-weight: 600;
+	background: rgba(243, 156, 18, 0.14);
+	color: #f39c12;
+	border: 1px solid rgba(243, 156, 18, 0.35);
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background 0.15s;
+}
+
+.AiContextAnchorBarV2__resyncBtn:hover {
+	background: rgba(243, 156, 18, 0.25);
+}
+
+.AiContextAnchorBarV2__syncBadge {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 2px 7px;
+	border-radius: 12px;
+	font-size: 10.5px;
+	font-weight: 600;
+	background: rgba(46, 204, 113, 0.12);
+	color: #2ecc71;
+	border: 1px solid rgba(46, 204, 113, 0.28);
+	flex-shrink: 0;
+}
+
+.AiContextAnchorBarV2__syncDot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #2ecc71;
+	box-shadow: 0 0 6px #2ecc71;
+}
+
+.AiContextAnchorBarV2__right {
+	display: flex;
+	align-items: center;
+}
+
+.AiContextAnchorBarV2__settingsBtn {
+	width: 26px;
+	height: 26px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-sm, 4px);
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+
+.AiContextAnchorBarV2__settingsBtn:hover,
+.AiContextAnchorBarV2__settingsBtn.is-active {
+	background: var(--panel-2);
+	color: var(--text);
+	border-color: var(--border);
+}
+
+/* ==========================================================================
+   Messages Stream
+   ========================================================================== */
+.AiChatMessagesListV2 {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-height: 0;
+	scroll-behavior: smooth;
+}
+
+.AiChatMessagesListV2__divider {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 4px 0 8px;
+	position: relative;
+}
+
+.AiChatMessagesListV2__divider::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 50%;
+	height: 1px;
+	background: var(--border);
+}
+
+.AiChatMessagesListV2__divider span {
+	position: relative;
+	background: var(--panel);
+	padding: 0 10px;
+	font-size: 11px;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+/* Empty State */
+.AiChatMessagesListV2__empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 30px 16px;
+	gap: 10px;
+	margin: auto 0;
+}
+
+.AiChatMessagesListV2__emptyIcon {
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: var(--accent-soft);
+	color: var(--accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 6px;
+}
+
+.AiChatMessagesListV2__emptyIcon svg {
+	display: block;
+}
+
+.AiChatMessagesListV2__empty h3 {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--text-bright);
+	margin: 0;
+}
+
+.AiChatMessagesListV2__empty p {
+	font-size: 12.5px;
+	color: var(--muted);
+	margin: 0;
+	max-width: 280px;
+	line-height: 1.45;
+}
+
+.AiChatMessagesListV2__suggestions {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: 100%;
+	margin-top: 14px;
+}
+
+.AiChatMessagesListV2__suggestionBtn {
+	padding: 8px 12px;
+	border-radius: var(--radius-sm, 6px);
+	border: 1px solid var(--border);
+	background: var(--panel-2);
+	color: var(--text);
+	font-size: 12px;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.AiChatMessagesListV2__suggestionBtn:hover {
+	background: var(--panel-soft, #2b303c);
+	border-color: var(--accent);
+	transform: translateX(2px);
+}
+
+/* ==========================================================================
+   Message Items
+   ========================================================================== */
+.AiChatMessageItemV2 {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+}
+
+/* User Message Bubble */
+.AiChatMessageItemV2--user {
+	align-items: flex-end;
+}
+
+.AiChatMessageItemV2--user .AiChatMessageItemV2__bubble {
+	max-width: 88%;
+	background: color-mix(in srgb, var(--accent) 15%, var(--panel-2));
+	border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+	border-radius: 12px 12px 2px 12px;
+	padding: 9px 13px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text-bright);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.AiChatMessageItemV2--user .AiChatMessageItemV2__time {
+	font-size: 10.5px;
+	color: var(--muted);
+	text-align: right;
+	margin-top: 4px;
+}
+
+/* Assistant Message */
+.AiChatMessageItemV2--assistant {
+	flex-direction: column;
+	gap: 6px;
+	align-items: stretch;
+}
+
+.AiChatMessageItemV2__avatar {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: var(--accent-soft);
+	color: var(--accent);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.AiChatMessageItemV2__body {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.AiChatMessageItemV2__header {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.AiChatMessageItemV2__sender {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-bright);
+}
+
+.AiChatMessageItemV2__time {
+	font-size: 10.5px;
+	color: var(--muted);
+}
+
+.AiChatMessageItemV2__markdown {
+	font-size: 13px;
+	line-height: 1.55;
+	color: var(--text);
+	overflow-wrap: break-word;
+}
+
+.AiChatMessageItemV2__markdown h1,
+.AiChatMessageItemV2__markdown h2,
+.AiChatMessageItemV2__markdown h3 {
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--text-bright);
+	margin: 10px 0 4px;
+}
+
+.AiChatMessageItemV2__markdown p {
+	margin: 0 0 8px;
+}
+
+.AiChatMessageItemV2__markdown p:last-child {
+	margin-bottom: 0;
+}
+
+.AiChatMessageItemV2__markdown ul,
+.AiChatMessageItemV2__markdown ol {
+	padding-left: 18px;
+	margin: 4px 0 8px;
+}
+
+.AiChatMessageItemV2__markdown li {
+	margin-bottom: 3px;
+}
+
+.AiChatMessageItemV2__markdown code {
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	padding: 1px 5px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-family: monospace;
+}
+
+.AiChatMessageItemV2__markdown pre {
+	background: var(--bg);
+	border: 1px solid var(--border);
+	padding: 10px;
+	border-radius: 6px;
+	overflow-x: auto;
+	font-size: 12px;
+	margin: 6px 0;
+}
+
+.AiChatMessageItemV2__actionCards {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-top: 8px;
+}
+
+/* Typing indicator */
+.AiChatMessageItemV2__streamStatusRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.AiChatMessageItemV2__streamStatus {
+	font-size: 11.5px;
+	font-weight: 500;
+	color: var(--muted);
+}
+
+.AiChatMessageItemV2__typing {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	background: var(--panel-2);
+	border-radius: 12px;
+	width: fit-content;
+}
+
+.AiChatMessageItemV2__dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--muted);
+	animation: aiBlink 1.4s infinite ease-in-out both;
+}
+
+.AiChatMessageItemV2__dot:nth-child(1) { animation-delay: -0.32s; }
+.AiChatMessageItemV2__dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes aiBlink {
+	0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+	40% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ==========================================================================
+   Action Cards (Tier 1 & Tier 2)
+   ========================================================================== */
+.AiActionCardV2 {
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md, 8px);
+	background: var(--bg);
+	padding: 11px 13px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.AiActionCardV2:hover {
+	border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.AiActionCardV2.is-applied {
+	border-color: rgba(46, 204, 113, 0.4);
+	background: color-mix(in srgb, #2ecc71 4%, var(--bg));
+}
+
+.AiActionCardV2__header {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.AiActionCardV2__iconBadge {
+	width: 24px;
+	height: 24px;
+	border-radius: 6px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	margin-top: 1px;
+}
+
+.AiActionCardV2__iconBadge--diff {
+	background: rgba(243, 156, 18, 0.15);
+	color: #f39c12;
+}
+
+.AiActionCardV2__titleGroup {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	flex: 1;
+}
+
+.AiActionCardV2__title {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text-bright);
+	line-height: 1.35;
+}
+
+.AiActionCardV2__subtitle {
+	font-size: 11px;
+	color: var(--muted);
+}
+
+.AiActionCardV2__stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+}
+
+.AiActionCardV2__statPill {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-size: 10.5px;
+	font-weight: 600;
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	color: var(--text);
+}
+
+.AiActionCardV2__statPill--added {
+	background: rgba(46, 204, 113, 0.12);
+	border-color: rgba(46, 204, 113, 0.3);
+	color: #2ecc71;
+}
+
+.AiActionCardV2__statPill--changed {
+	background: rgba(52, 152, 219, 0.12);
+	border-color: rgba(52, 152, 219, 0.3);
+	color: #3498db;
+}
+
+.AiActionCardV2__statPill--info {
+	background: rgba(243, 156, 18, 0.12);
+	border-color: rgba(243, 156, 18, 0.3);
+	color: #f39c12;
+}
+
+.AiActionCardV2__description {
+	font-size: 12px;
+	line-height: 1.45;
+	color: var(--text);
+}
+
+.AiActionCardV2__actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.AiActionCardV2__btn {
+	padding: 6px 12px;
+	border-radius: var(--radius-sm, 6px);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	border: 1px solid transparent;
+	transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.AiActionCardV2__btn--primary {
+	background: var(--accent);
+	color: #ffffff;
+}
+
+.AiActionCardV2__btn--primary:hover {
+	background: var(--accent-hover, #4752c4);
+	transform: translateY(-1px);
+}
+
+.AiActionCardV2__btn--secondary {
+	background: var(--panel-2);
+	border-color: var(--border);
+	color: var(--text);
+}
+
+.AiActionCardV2__btn--secondary:hover {
+	background: var(--panel-soft, #2b303c);
+	border-color: var(--text-bright);
+}
+
+.AiActionCardV2__appliedStatus {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #2ecc71;
+}
+
+.AiActionCardV2__appliedBtns {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   Composer (Input Area)
+   ========================================================================== */
+.AiChatComposerV2 {
+	padding: 10px 14px 14px;
+	border-top: 1px solid var(--border);
+	background: var(--panel);
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	position: relative;
+}
+
+.AiChatComposerV2__inputWrap {
+	position: relative;
+	width: 100%;
+}
+
+.AiChatComposerV2__editor {
+	width: 100%;
+}
+
+.AiChatComposerV2__editor .MarkdownView {
+	width: 100%;
+	min-height: 76px;
+	max-height: 220px;
+	overflow-y: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md, 8px);
+	background: var(--bg);
+	padding: 10px 12px;
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--text-bright);
+	font-family: inherit;
+	outline: none;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.AiChatComposerV2__editor .MarkdownView__active {
+	background: var(--bg);
+	border-color: var(--accent);
+	box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.AiChatComposerV2__editor .MarkdownView__placeholder {
+	top: 10px;
+	left: 12px;
+	right: 12px;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--muted);
+}
+
+.AiChatComposerV2__editor .MarkdownView__disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+}
+
+.AiChatComposerV2__toolbar {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+}
+
+.AiChatComposerV2__toolsLeft {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+
+.AiChatComposerV2__iconBtn {
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-sm, 6px);
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+
+.AiChatComposerV2__iconBtn:hover,
+.AiChatComposerV2__iconBtn.is-active {
+	background: var(--panel-2);
+	color: var(--text-bright);
+	border-color: var(--border);
+}
+
+.AiChatComposerV2__modelPill {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 3px 8px;
+	border-radius: 14px;
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	color: var(--text);
+	font-size: 11.5px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.AiChatComposerV2__modelPill:hover,
+.AiChatComposerV2__modelPill.is-active {
+	background: var(--panel-soft, #2b303c);
+	border-color: var(--accent);
+}
+
+.AiChatComposerV2__modelSparkle {
+	font-size: 11px;
+}
+
+.AiChatComposerV2__modelName {
+	white-space: nowrap;
+}
+
+.AiChatComposerV2__autoApply {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11.5px;
+	color: var(--muted);
+	cursor: pointer;
+	user-select: none;
+	padding: 2px 4px;
+}
+
+.AiChatComposerV2__autoApply input {
+	cursor: pointer;
+	accent-color: var(--accent);
+}
+
+.AiChatComposerV2__toolsRight {
+	display: flex;
+	align-items: center;
+}
+
+.AiChatComposerV2__sendBtn {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	border: none;
+	background: var(--panel-2);
+	color: var(--muted);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: not-allowed;
+	transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.AiChatComposerV2__sendBtn.is-ready {
+	background: var(--accent);
+	color: #ffffff;
+	cursor: pointer;
+}
+
+.AiChatComposerV2__sendBtn.is-ready:hover {
+	background: var(--accent-hover, #4752c4);
+	transform: scale(1.05);
+}
+
+.AiAssistantPanelV2__composerDock {
+	position: relative;
+	flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Popovers: Context Settings, Commands Guide, Model Selector, History
+   ========================================================================== */
+.AiCommandsInfoTooltipV2,
+.AiContextSettingsPopoverV2,
+.AiModelSelectorDropdownV2,
+.AiChatHistoryDropdownV2 {
+	position: absolute;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	border-radius: var(--radius-md, 8px);
+	box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow-ink, #000) 22%, transparent), 0 2px 6px color-mix(in srgb, var(--shadow-ink, #000) 10%, transparent);
+	z-index: 50;
+	animation: popoverFadeIn 0.15s ease-out;
+}
+
+@keyframes popoverFadeIn {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* Commands Guide Tooltip */
+.AiCommandsInfoTooltipV2 {
+	bottom: calc(100% + 8px);
+	left: 0;
+	right: 0;
+	max-height: min(420px, 55dvh);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.AiCommandsInfoTooltipV2__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel-2);
+}
+
+.AiCommandsInfoTooltipV2__title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text-bright);
+}
+
+.AiCommandsInfoTooltipV2__closeBtn {
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	cursor: pointer;
+	padding: 2px;
+	display: flex;
+}
+
+.AiCommandsInfoTooltipV2__closeBtn:hover {
+	color: var(--text-bright);
+}
+
+.AiCommandsInfoTooltipV2__body {
+	padding: 12px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.AiCommandsInfoTooltipV2__intro {
+	font-size: 11.5px;
+	color: var(--muted);
+	margin: 0;
+}
+
+.AiCommandsInfoTooltipV2__list {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 6px;
+}
+
+.AiCommandsInfoTooltipV2__item {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 7px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.AiCommandsInfoTooltipV2__item:hover {
+	background: var(--panel-2);
+	border-color: var(--accent);
+}
+
+.AiCommandsInfoTooltipV2__itemHeader {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.AiCommandsInfoTooltipV2__badge {
+	font-family: monospace;
+	font-size: 11.5px;
+	font-weight: 700;
+	color: var(--accent);
+	background: var(--accent-soft);
+	padding: 1px 5px;
+	border-radius: 4px;
+}
+
+.AiCommandsInfoTooltipV2__name {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-bright);
+}
+
+.AiCommandsInfoTooltipV2__desc {
+	font-size: 11px;
+	color: var(--muted);
+	line-height: 1.35;
+}
+
+.AiCommandsInfoTooltipV2__footer {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 8px;
+	background: rgba(243, 156, 18, 0.08);
+	border: 1px solid rgba(243, 156, 18, 0.2);
+	border-radius: 6px;
+	font-size: 11px;
+	color: var(--text);
+	line-height: 1.4;
+	margin-top: 4px;
+}
+
+/* Command @ Autocomplete Popover */
+.AiCommandAutocompleteV2 {
+	position: absolute;
+	bottom: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	max-height: min(320px, 46dvh);
+	border: 1px solid var(--border);
+	background: var(--panel);
+	border-radius: var(--radius-md, 8px);
+	box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow-ink, #000) 22%, transparent), 0 2px 6px color-mix(in srgb, var(--shadow-ink, #000) 10%, transparent);
+	z-index: 55;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	animation: popoverFadeIn 0.12s ease-out;
+}
+
+.AiCommandAutocompleteV2__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 7px 11px;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel-2);
+	flex-shrink: 0;
+}
+
+.AiCommandAutocompleteV2__title {
+	font-size: 11.5px;
+	font-weight: 700;
+	color: var(--text-bright);
+}
+
+.AiCommandAutocompleteV2__kbdHint {
+	font-size: 10.5px;
+	color: var(--muted);
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.AiCommandAutocompleteV2__list {
+	flex: 1;
+	overflow-y: auto;
+	padding: 5px;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.AiCommandAutocompleteV2__item {
+	text-align: left;
+	padding: 6px 9px;
+	border-radius: var(--radius-sm, 6px);
+	border: 1px solid transparent;
+	background: transparent;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	transition: background 0.12s, border-color 0.12s;
+}
+
+.AiCommandAutocompleteV2__item:hover,
+.AiCommandAutocompleteV2__item.is-active {
+	background: color-mix(in srgb, var(--accent) 12%, var(--panel-2));
+	border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.AiCommandAutocompleteV2__item.is-used {
+	opacity: 0.72;
+}
+
+.AiCommandAutocompleteV2__itemTop {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	min-width: 0;
+}
+
+.AiCommandAutocompleteV2__badge {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11.5px;
+	font-weight: 700;
+	color: var(--accent);
+	background: var(--accent-soft);
+	padding: 1px 6px;
+	border-radius: 4px;
+	flex-shrink: 0;
+}
+
+.AiCommandAutocompleteV2__name {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-bright);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.AiCommandAutocompleteV2__tag {
+	margin-left: auto;
+	font-size: 10px;
+	font-weight: 600;
+	padding: 1px 6px;
+	border-radius: 10px;
+	flex-shrink: 0;
+}
+
+.AiCommandAutocompleteV2__tag--context {
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 15%, transparent);
+	border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.AiCommandAutocompleteV2__tag--used {
+	color: var(--muted);
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+}
+
+.AiCommandAutocompleteV2__desc {
+	font-size: 11px;
+	color: var(--muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.35;
+}
+
+.AiCommandAutocompleteV2__footer {
+	padding: 6px 11px;
+	border-top: 1px solid var(--border);
+	background: var(--panel-2);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	flex-shrink: 0;
+}
+
+.AiCommandAutocompleteV2__example {
+	font-size: 10.5px;
+	color: var(--text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.AiCommandAutocompleteV2__shortcutHint {
+	font-size: 10px;
+	color: var(--muted);
+}
+
+/* Context Settings Popover */
+.AiContextSettingsPopoverV2 {
+	top: 92px;
+	right: 14px;
+	left: 14px;
+	max-height: 480px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.AiContextSettingsPopoverV2__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel-2);
+}
+
+.AiContextSettingsPopoverV2__title {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-bright);
+}
+
+.AiContextSettingsPopoverV2__closeBtn {
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	cursor: pointer;
+	padding: 2px;
+	display: flex;
+}
+
+.AiContextSettingsPopoverV2__body {
+	padding: 14px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.AiContextSettingsPopoverV2__tokenSection {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.AiContextSettingsPopoverV2__tokenLabelRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 11.5px;
+	color: var(--muted);
+}
+
+.AiContextSettingsPopoverV2__tokenLabelRow strong {
+	color: var(--text-bright);
+}
+
+.AiContextSettingsPopoverV2__progressBarBg {
+	height: 6px;
+	background: var(--border);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.AiContextSettingsPopoverV2__progressBarFill {
+	height: 100%;
+	background: var(--accent);
+	border-radius: 3px;
+	transition: width 0.3s ease;
+}
+
+.AiContextSettingsPopoverV2__section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.AiContextSettingsPopoverV2__sectionHeading {
+	font-size: 11.5px;
+	font-weight: 600;
+	color: var(--text-bright);
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+}
+
+.AiContextSettingsPopoverV2__checklist {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.AiContextSettingsPopoverV2__checkItem {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--text);
+	cursor: pointer;
+	user-select: none;
+}
+
+.AiContextSettingsPopoverV2__checkItem input {
+	cursor: pointer;
+	accent-color: var(--accent);
+}
+
+.AiContextSettingsPopoverV2__pillGroup {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.AiContextSettingsPopoverV2__pill {
+	padding: 5px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	color: var(--muted);
+	font-size: 11.5px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.AiContextSettingsPopoverV2__pill.is-active {
+	background: var(--accent-soft);
+	border-color: var(--accent);
+	color: var(--accent);
+	font-weight: 600;
+}
+
+/* Model Selector Dropdown */
+.AiModelSelectorDropdownV2 {
+	bottom: calc(100% + 8px);
+	left: 28px;
+	right: 0;
+	max-height: min(420px, 55dvh);
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+@media (max-width: 480px) {
+	.AiModelSelectorDropdownV2 {
+		left: 0;
+		right: 0;
+	}
+}
+
+.AiModelSelectorDropdownV2__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel-2);
+	flex-shrink: 0;
+}
+
+.AiModelSelectorDropdownV2__titleGroup {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.AiModelSelectorDropdownV2__title {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text-bright);
+}
+
+.AiModelSelectorDropdownV2__count {
+	font-size: 10.5px;
+	font-weight: 600;
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: var(--bg);
+	border: 1px solid var(--border);
+	color: var(--muted);
+}
+
+.AiModelSelectorDropdownV2__closeBtn {
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	cursor: pointer;
+	padding: 2px;
+	display: flex;
+	border-radius: 4px;
+	transition: color 0.15s, background 0.15s;
+}
+
+.AiModelSelectorDropdownV2__closeBtn:hover {
+	color: var(--text-bright);
+	background: var(--bg);
+}
+
+.AiModelSelectorDropdownV2__searchWrap {
+	padding: 8px 8px 6px;
+	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.AiModelSelectorDropdownV2__searchInput {
+	width: 100%;
+	padding: 6px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	color: var(--text);
+	font-size: 12px;
+	outline: none;
+	transition: border-color 0.15s;
+}
+
+.AiModelSelectorDropdownV2__searchInput:focus {
+	border-color: var(--accent);
+}
+
+.AiModelSelectorDropdownV2__list {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.AiModelSelectorDropdownV2__empty {
+	padding: 18px 12px;
+	text-align: center;
+	font-size: 12px;
+	color: var(--muted);
+}
+
+.AiModelSelectorDropdownV2__item {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 7px 10px;
+	border-radius: 7px;
+	border: 1px solid transparent;
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.AiModelSelectorDropdownV2__item:hover {
+	background: var(--panel-2);
+}
+
+.AiModelSelectorDropdownV2__item.is-selected {
+	background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+	border-color: var(--accent);
+}
+
+.AiModelSelectorDropdownV2__itemRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.AiModelSelectorDropdownV2__nameGroup {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+
+.AiModelSelectorDropdownV2__name {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text-bright);
+}
+
+.AiModelSelectorDropdownV2__badge {
+	font-size: 10px;
+	font-weight: 600;
+	padding: 1px 5px;
+	border-radius: 4px;
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+
+.AiModelSelectorDropdownV2__rightMeta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.AiModelSelectorDropdownV2__contextPill {
+	font-size: 10px;
+	font-weight: 500;
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	color: var(--muted);
+	white-space: nowrap;
+}
+
+.AiModelSelectorDropdownV2__check {
+	color: var(--accent);
+}
+
+.AiModelSelectorDropdownV2__desc {
+	font-size: 11px;
+	color: var(--muted);
+	line-height: 1.35;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* History Dropdown */
+.AiChatHistoryDropdownV2 {
+	top: 50px;
+	left: 14px;
+	right: 14px;
+	width: auto;
+	max-height: 380px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.AiChatHistoryDropdownV2__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel-2);
+}
+
+.AiChatHistoryDropdownV2__title {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text-bright);
+}
+
+.AiChatHistoryDropdownV2__newBtn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	border-radius: 4px;
+	background: var(--accent);
+	color: #fff;
+	font-size: 11.5px;
+	font-weight: 600;
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.AiChatHistoryDropdownV2__newBtn:hover {
+	background: var(--accent-hover, #4752c4);
+}
+
+.AiChatHistoryDropdownV2__list {
+	padding: 6px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.AiChatHistoryDropdownV2__item {
+	display: flex;
+	align-items: center;
+	border-radius: 6px;
+	transition: background 0.15s;
+	position: relative;
+}
+
+.AiChatHistoryDropdownV2__item:hover,
+.AiChatHistoryDropdownV2__item.is-active {
+	background: var(--panel-2);
+}
+
+.AiChatHistoryDropdownV2__item.is-active {
+	border-left: 2px solid var(--accent);
+}
+
+.AiChatHistoryDropdownV2__itemBtn {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 10px;
+	background: transparent;
+	border: none;
+	text-align: left;
+	cursor: pointer;
+}
+
+.AiChatHistoryDropdownV2__itemTitle {
+	font-size: 12.5px;
+	font-weight: 500;
+	color: var(--text-bright);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.AiChatHistoryDropdownV2__itemMeta {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11px;
+	color: var(--muted);
+}
+
+.AiChatHistoryDropdownV2__deleteBtn {
+	width: 26px;
+	height: 26px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	border: none;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	margin-right: 6px;
+	transition: background 0.15s, color 0.15s;
+}
+
+.AiChatHistoryDropdownV2__deleteBtn:hover {
+	background: rgba(231, 76, 60, 0.15);
+	color: var(--danger, #e74c3c);
+}
+
+/* ==========================================================================
+   Collapsed Rail (Desktop <1400px or collapsed)
+   ========================================================================== */
+.AiCollapsedRailV2 {
+	width: 44px;
+	min-width: 44px;
+	max-width: 44px;
+	height: 100%;
+	flex-shrink: 0;
+	border-left: 1px solid var(--border);
+	background: var(--panel);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 12px 0;
+	gap: 16px;
+	cursor: pointer;
+	z-index: 10;
+	transition: background 0.15s;
+}
+
+.AiCollapsedRailV2:hover {
+	background: var(--panel-2);
+}
+
+.AiCollapsedRailV2__expandBtn {
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	color: var(--muted);
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.AiCollapsedRailV2__expandBtn:hover {
+	background: var(--accent);
+	color: #fff;
+	border-color: var(--accent);
+}
+
+.AiCollapsedRailV2__iconBadge {
+	position: relative;
+	color: var(--accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.AiCollapsedRailV2__badge {
+	position: absolute;
+	top: -6px;
+	right: -8px;
+	background: var(--danger, #e74c3c);
+	color: #fff;
+	font-size: 10px;
+	font-weight: 700;
+	padding: 1px 4px;
+	border-radius: 8px;
+}
+
+.AiCollapsedRailV2__label {
+	writing-mode: vertical-rl;
+	transform: rotate(180deg);
+	font-size: 11.5px;
+	font-weight: 600;
+	color: var(--muted);
+	letter-spacing: 1px;
+	text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Floating Action Button (FAB)
+   ========================================================================== */
+.AiFloatingTriggerV2 {
+	position: fixed;
+	right: var(--space-4);
+	bottom: 85px;
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	background: var(--accent);
+	color: #ffffff;
+	border: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+	z-index: 90;
+	transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.AiFloatingTriggerV2:hover {
+	background: var(--accent-hover, #4752c4);
+	transform: scale(1.08);
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* ==========================================================================
+   Mobile / Responsive Drawer Overlay
+   ========================================================================== */
+.AiAssistantModalOverlayV2 {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	justify-content: flex-end;
+}
+
+.AiAssistantModalOverlayV2__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(2px);
+	animation: modalFadeIn 0.2s ease;
+}
+
+.AiAssistantModalOverlayV2__drawer {
+	position: relative;
+	width: 420px;
+	max-width: 100%;
+	height: 100%;
+	background: var(--panel);
+	box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+	z-index: 10;
+	display: flex;
+	flex-direction: column;
+	animation: drawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drawerSlideIn {
+	from { transform: translateX(100%); }
+	to { transform: translateX(0); }
+}
+
+@keyframes modalFadeIn {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+/* ==========================================================================
+   Fallback Diff Preview Modal
+   ========================================================================== */
+.AiDiffFallbackModalV2 {
+	width: min(860px, 94%);
+}
+
+.AiDiffFallbackModalV2 .Modal__body {
+	padding: 0;
+}
+
+.AiDiffModalV2__body {
+	padding: 16px;
+	overflow-y: auto;
+	flex: 1;
+}
+
+.AiDiffModalV2__columns {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px;
+}
+
+@media (max-width: 680px) {
+	.AiDiffModalV2__columns {
+		grid-template-columns: 1fr;
+	}
+}
+
+.AiDiffModalV2__column {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.AiDiffModalV2__columnHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 11.5px;
+}
+
+.AiDiffModalV2__tag {
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--danger, #e74c3c);
+}
+
+.AiDiffModalV2__tag--after {
+	color: #2ecc71;
+}
+
+.AiDiffModalV2__target {
+	color: var(--muted);
+	font-size: 11px;
+}
+
+.AiDiffModalV2__codeBlock {
+	margin: 0;
+	padding: 12px;
+	border-radius: 6px;
+	background: var(--bg);
+	border: 1px solid var(--border);
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--text);
+	white-space: pre-wrap;
+	word-break: break-word;
+	max-height: 340px;
+	overflow-y: auto;
+	font-family: inherit;
+}
+
+.AiDiffModalV2__column--before .AiDiffModalV2__codeBlock {
+	border-color: rgba(231, 76, 60, 0.25);
+	background: rgba(231, 76, 60, 0.04);
+}
+
+.AiDiffModalV2__column--after .AiDiffModalV2__codeBlock {
+	border-color: rgba(46, 204, 113, 0.3);
+	background: rgba(46, 204, 113, 0.04);
+}
+
+.AiDiffModalV2__footer {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+	padding: 12px 18px;
+	border-top: 1px solid var(--border);
+	background: var(--panel-2);
+}
+
+.AiDiffModalV2__btn {
+	padding: 8px 16px;
+	border-radius: var(--radius-sm, 6px);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	border: 1px solid transparent;
+	transition: background 0.15s;
+}
+
+.AiDiffModalV2__btn--ghost {
+	background: transparent;
+	color: var(--muted);
+}
+
+.AiDiffModalV2__btn--ghost:hover {
+	color: var(--text-bright);
+}
+
+.AiDiffModalV2__btn--primary {
+	background: var(--accent);
+	color: #fff;
+}
+
+.AiDiffModalV2__btn--primary:hover {
+	background: var(--accent-hover, #4752c4);
+}
+
+/* ==========================================================================
+   Inline API Key & Error Banners
+   ========================================================================== */
+.AiAssistantPanelV2__apiKeyBanner {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 10px 14px;
+	background: rgba(243, 156, 18, 0.1);
+	border-bottom: 1px solid rgba(243, 156, 18, 0.28);
+	flex-shrink: 0;
+}
+
+.AiAssistantPanelV2__apiKeyText {
+	font-size: 11.5px;
+	font-weight: 600;
+	color: #f39c12;
+}
+
+.AiAssistantPanelV2__apiKeyRow {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.AiAssistantPanelV2__apiKeyInput {
+	flex: 1;
+	min-width: 0;
+	padding: 5px 8px;
+	border-radius: 5px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	color: var(--text-bright);
+	font-size: 12px;
+	outline: none;
+}
+
+.AiAssistantPanelV2__apiKeyInput:focus {
+	border-color: var(--accent);
+}
+
+.AiAssistantPanelV2__apiKeySubmit {
+	padding: 5px 10px;
+	border-radius: 5px;
+	border: none;
+	background: var(--accent);
+	color: #ffffff;
+	font-size: 11.5px;
+	font-weight: 600;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.AiAssistantPanelV2__apiKeySubmit:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.AiAssistantPanelV2__errorBanner {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 14px;
+	background: rgba(231, 76, 60, 0.14);
+	border-bottom: 1px solid rgba(231, 76, 60, 0.35);
+	color: #ff7675;
+	font-size: 12px;
+	line-height: 1.4;
+	flex-shrink: 0;
+}
+
+.AiAssistantPanelV2__errorClose {
+	background: transparent;
+	border: none;
+	color: inherit;
+	cursor: pointer;
+	padding: 2px;
+	display: flex;
+	flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Attachments, Stop Button, Action States & List States
+   ========================================================================== */
+.AiChatMessagesListV2__loading,
+.AiChatHistoryDropdownV2__empty {
+	padding: 24px 14px;
+	text-align: center;
+	font-size: 12.5px;
+	color: var(--muted);
+}
+
+.AiChatMessageItemV2__attachments {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	margin-bottom: 6px;
+}
+
+.AiChatMessageItemV2__attachmentChip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 7px;
+	border-radius: 5px;
+	background: color-mix(in srgb, var(--bg) 70%, transparent);
+	border: 1px solid var(--border);
+	font-size: 11px;
+	color: var(--text);
+}
+
+.AiChatComposerV2__attachments {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.AiChatComposerV2__attachmentChip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 7px;
+	border-radius: 6px;
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	font-size: 11.5px;
+	color: var(--text-bright);
+	max-width: 100%;
+}
+
+.AiChatComposerV2__attachmentKind {
+	font-size: 9.5px;
+	font-weight: 700;
+	padding: 1px 4px;
+	border-radius: 3px;
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+
+.AiChatComposerV2__attachmentName {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 170px;
+}
+
+.AiChatComposerV2__attachmentRemove {
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	cursor: pointer;
+	padding: 1px;
+	display: flex;
+}
+
+.AiChatComposerV2__attachmentRemove:hover {
+	color: var(--danger, #e74c3c);
+}
+
+.AiChatComposerV2__stopBtn {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	border: 1px solid rgba(231, 76, 60, 0.45);
+	background: rgba(231, 76, 60, 0.16);
+	color: #e74c3c;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: background 0.15s, transform 0.1s;
+}
+
+.AiChatComposerV2__stopBtn:hover {
+	background: rgba(231, 76, 60, 0.28);
+	transform: scale(1.05);
+}
+
+.AiActionCardV2.is-rejected {
+	opacity: 0.65;
+	border-style: dashed;
+}
+
+.AiActionCardV2__dismissBtn {
+	background: transparent;
+	border: none;
+	color: var(--muted);
+	cursor: pointer;
+	padding: 3px;
+	border-radius: 4px;
+	display: flex;
+	flex-shrink: 0;
+	transition: background 0.15s, color 0.15s;
+}
+
+.AiActionCardV2__dismissBtn:hover {
+	background: rgba(231, 76, 60, 0.14);
+	color: var(--danger, #e74c3c);
+}
+
+.AiActionCardV2__appliedRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+}
+
+.AiActionCardV2__btn--ghost {
+	padding: 4px 8px;
+	font-size: 11px;
+	background: transparent;
+	border: 1px solid var(--border);
+	color: var(--muted);
+}
+
+.AiActionCardV2__btn--ghost:hover {
+	color: var(--text-bright);
+	border-color: var(--text-bright);
+}
+
+.AiActionCardV2__btn:disabled {
+	opacity: 0.6;
+	cursor: wait;
+	transform: none;
+}
+
+.AiActionCardV2__rejectedStatus {
+	font-size: 11.5px;
+	color: var(--muted);
+	font-style: italic;
+}

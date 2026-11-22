@@ -1,9 +1,14 @@
 import { useEffect } from "react";
 
+import { bestiaryApi } from "../../entities/bestiary/index.js";
 import { campaignApi } from "../../entities/campaign/index.js";
 import { sessionApi } from "../../entities/session/index.js";
 import "../../assets/components/MentionPickerModalHost.css";
-import { getAmbiguousMentionNames, MentionPickerModalContent } from "../../features/editor/ui/index.js";
+import {
+	getAmbiguousMentionNames,
+	MentionPickerModalContent,
+	type BestiaryMentionOption,
+} from "../../features/editor/ui/index.js";
 import { lang } from "../../shared/lib/index.js";
 import { closeMentionPickerAction } from "../../shared/model/index.js";
 import type { AppDispatch } from "../../shared/model/index.js";
@@ -58,6 +63,17 @@ async function runMentionPickerModalRequest(
 ): Promise<void> {
 	const context = prepareMentionPickerModal(request, campaignSlug, dispatch);
 	if (!context) return;
+	if (Boolean((request as AppMentionPickerCallbacks | null)?.includeBestiary)) {
+		return runMentionPickerModalWorkflow(
+			{
+				...context,
+				callbacks: { ...context.callbacks, includeBestiary: true },
+				sessionFileName,
+			},
+			currentLanguage,
+			dispatch,
+		);
+	}
 	return runMentionPickerModalWorkflow({ ...context, sessionFileName }, currentLanguage, dispatch);
 }
 
@@ -77,6 +93,81 @@ function prepareMentionPickerModal(
 		return null;
 	}
 	return { campaignSlug, callbacks };
+}
+
+let cachedOfficialBestiaryPromise: Promise<BestiaryMentionOption[]> | null = null;
+
+function hasBestiaryCommandInActiveEditor(): boolean {
+	if (typeof document === "undefined") return false;
+	const active = document.activeElement as HTMLElement | null;
+	if (!active) return false;
+	let text = "";
+	if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+		text = active.value || "";
+	} else {
+		const editable = active.closest?.('[contenteditable="true"]');
+		text = editable?.textContent || active.textContent || "";
+	}
+	return /(^|\s)@bestiary\b/i.test(text);
+}
+
+function shouldIncludeBestiaryMentions(includeBestiary?: boolean): boolean {
+	if (includeBestiary) return true;
+	if (typeof document === "undefined") return false;
+	return Boolean(document.querySelector(".Bestiary")) || hasBestiaryCommandInActiveEditor();
+}
+
+function toBestiaryMentionOption(monster: {
+	name?: unknown;
+	source?: unknown;
+	cr?: unknown;
+}): BestiaryMentionOption | null {
+	const name = String(monster?.name || "").trim();
+	if (!name) return null;
+	const source = String(monster?.source || "").trim();
+	const rawCr = monster?.cr;
+	const cr =
+		typeof rawCr === "object" && rawCr !== null && "cr" in rawCr
+			? String((rawCr as { cr?: unknown }).cr ?? "").trim()
+			: String(rawCr ?? "").trim();
+	return { name, source, ...(cr ? { cr } : {}) };
+}
+
+function getOfficialBestiaryOptions(): Promise<BestiaryMentionOption[]> {
+	if (!cachedOfficialBestiaryPromise) {
+		cachedOfficialBestiaryPromise = bestiaryApi
+			.getBestiaryData("all")
+			.then((list) =>
+				(Array.isArray(list) ? list : [])
+					.map(toBestiaryMentionOption)
+					.filter((item): item is BestiaryMentionOption => Boolean(item)),
+			)
+			.catch(() => []);
+	}
+	return cachedOfficialBestiaryPromise;
+}
+
+async function loadMentionPickerBestiary(): Promise<BestiaryMentionOption[]> {
+	const [official, custom] = await Promise.all([
+		getOfficialBestiaryOptions(),
+		bestiaryApi
+			.getCustomBestiaryData()
+			.then((list) =>
+				(Array.isArray(list) ? list : [])
+					.map(toBestiaryMentionOption)
+					.filter((item): item is BestiaryMentionOption => Boolean(item)),
+			)
+			.catch(() => []),
+	]);
+	const seen = new Set<string>();
+	const combined: BestiaryMentionOption[] = [];
+	for (const item of [...custom, ...official]) {
+		const key = `${item.name.toLowerCase()}|${(item.source || "").toUpperCase()}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		combined.push(item);
+	}
+	return combined;
 }
 
 function getMentionPickerCallbacks(
@@ -106,20 +197,55 @@ async function runMentionPickerModalWorkflow(
 	dispatch: AppDispatch,
 ): Promise<void> {
 	try {
+		const includeBestiary = shouldIncludeBestiaryMentions(
+			context.callbacks.includeBestiary,
+		);
 		const entities = await loadMentionPickerEntities(
 			context.campaignSlug,
 			currentLanguage,
 			context.sessionFileName,
 		);
-		if (entities.length === 0) {
-			cancelMentionPicker(context.callbacks, dispatch);
-			return;
+		const bestiaryMonsters = includeBestiary
+			? await loadMentionPickerBestiary()
+			: [];
+		if (bestiaryMonsters.length === 0) {
+			if (entities.length === 0) {
+				cancelMentionPicker(context.callbacks, dispatch);
+				return;
+			}
 		}
 		const query = context.callbacks.query?.trim().toLocaleLowerCase();
 		const exact = query ? entities.filter((entity) => entity.name.trim().toLocaleLowerCase() === query) : [];
-		if (exact.length === 1 && !getAmbiguousMentionNames(entities).has(exact[0].name.trim().toLowerCase())) {
+		const exactBestiary = query
+			? bestiaryMonsters.filter(
+					(monster) => monster.name.trim().toLocaleLowerCase() === query,
+				)
+			: [];
+		if (
+			exact.length === 1 &&
+			exactBestiary.length === 0 &&
+			!getAmbiguousMentionNames(entities).has(exact[0].name.trim().toLowerCase())
+		) {
 			context.callbacks.select(exact[0].name, context.callbacks.query);
 			closeMentionPicker(dispatch);
+			return;
+		}
+		if (
+			bestiaryMonsters.length > 0 &&
+			entities.length === 0 &&
+			exactBestiary.length === 1
+		) {
+			context.callbacks.select(exactBestiary[0].name, context.callbacks.query);
+			closeMentionPicker(dispatch);
+			return;
+		}
+		if (bestiaryMonsters.length > 0) {
+			openMentionPickerModal(
+				entities,
+				context.callbacks,
+				dispatch,
+				bestiaryMonsters,
+			);
 			return;
 		}
 		openMentionPickerModal(entities, context.callbacks, dispatch);
@@ -155,6 +281,7 @@ function openMentionPickerModal(
 	entities: AppMentionEntityOption[],
 	callbacks: AppMentionPickerCallbacks,
 	dispatch: AppDispatch,
+	bestiaryMonsters: BestiaryMentionOption[] = [],
 ): void {
 	const { select } = callbacks;
 	openModalRequest({
@@ -168,6 +295,7 @@ function openMentionPickerModal(
 		children: (
 			<MentionPickerModalContent
 				entities={entities}
+				bestiaryMonsters={bestiaryMonsters}
 				initialQuery={callbacks.query}
 				onSelect={(name, label) => {
 					select(name, label);

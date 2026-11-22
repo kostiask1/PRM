@@ -1,7 +1,7 @@
 .Notification {
 	position: fixed;
 	top: var(--space-4);
-	right: var(--space-4);
+	right: calc(var(--space-4) + var(--ai-chat-sidebar-offset, 0px));
 	background: var(--accent);
 	color: var(--text-on-accent);
 	padding: var(--space-3) var(--space-6);

@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import "../../../assets/components/MentionPickerModalContent.css";
 
-import { lang } from "../../../shared/lib/index.js";
+import { lang, rankSearchResultsByName } from "../../../shared/lib/index.js";
 import { Button } from "../../../shared/ui/index.js";
 import {
 	filterMentionEntities,
@@ -11,15 +11,25 @@ import {
 } from "./editorPresentation.ts";
 import Input from "./Input.tsx";
 
+export interface BestiaryMentionOption {
+	name: string;
+	source?: string;
+	cr?: string;
+}
+
 export interface MentionPickerModalContentProps {
 	entities: EditorMentionEntity[];
+	bestiaryMonsters?: BestiaryMentionOption[];
 	onSelect: (name: string, label?: string) => void;
 	onCancel: () => void;
 	initialQuery?: string;
 }
 
+const MAX_VISIBLE_BESTIARY_MENTIONS = 80;
+
 export default function MentionPickerModalContent({
 	entities,
+	bestiaryMonsters = [],
 	onSelect,
 	onCancel,
 	initialQuery = "",
@@ -33,6 +43,23 @@ export default function MentionPickerModalContent({
 		() => groupMentionEntities(filterMentionEntities(entities, query)),
 		[entities, query],
 	);
+	const hasBestiary = bestiaryMonsters.length > 0;
+	const filteredBestiary = useMemo(() => {
+		if (!hasBestiary) return [];
+		const normalized = String(query || "").trim().toLocaleLowerCase();
+		const matching = normalized
+			? rankSearchResultsByName(
+					bestiaryMonsters.filter((monster) => {
+						const name = String(monster.name || "").toLocaleLowerCase();
+						const source = String(monster.source || "").toLocaleLowerCase();
+						return name.includes(normalized) || source.includes(normalized);
+					}),
+					normalized,
+					(monster) => monster.name,
+				)
+			: bestiaryMonsters;
+		return matching.slice(0, MAX_VISIBLE_BESTIARY_MENTIONS);
+	}, [bestiaryMonsters, hasBestiary, query]);
 
 	return (
 		<div className="MentionPickerModalContent">
@@ -58,7 +85,9 @@ export default function MentionPickerModalContent({
 				</label>
 			</div>
 
-			<div className="MentionPickerModalContent__columns">
+			<div
+				className={`MentionPickerModalContent__columns${hasBestiary ? " has-bestiary" : ""}`}
+			>
 				{groups.map((group) => (
 					<section key={group.key} className="MentionPickerModalContent__column">
 						<h4 className="MentionPickerModalContent__columnTitle">
@@ -91,6 +120,40 @@ export default function MentionPickerModalContent({
 						</div>
 					</section>
 				))}
+				{hasBestiary && (
+					<section className="MentionPickerModalContent__column">
+						<h4 className="MentionPickerModalContent__columnTitle">
+							{lang.t("Bestiary")}
+						</h4>
+						<div className="MentionPickerModalContent__list">
+							{filteredBestiary.length > 0 ? (
+								filteredBestiary.map((monster) => {
+									const meta = [
+										monster.source || "",
+										monster.cr ? `CR ${monster.cr}` : "",
+									]
+										.filter(Boolean)
+										.join(" · ");
+									return (
+										<button
+											key={`bestiary-${monster.source || "all"}-${monster.name}`}
+											type="button"
+											className="MentionPickerModalContent__item"
+											onClick={() => onSelect(String(monster.name || ""), label || undefined)}
+										>
+											<span className="MentionPickerModalContent__itemName">{monster.name}</span>
+											{meta && <span className="MentionPickerModalContent__scope">{meta}</span>}
+										</button>
+									);
+								})
+							) : (
+								<p className="muted MentionPickerModalContent__empty">
+									{lang.t("Nothing found.")}
+								</p>
+							)}
+						</div>
+					</section>
+				)}
 			</div>
 			{duplicateNames.size > 0 && (
 				<p className="MentionPickerModalContent__hint">{lang.t("Rename duplicate entities to create a link.")}</p>

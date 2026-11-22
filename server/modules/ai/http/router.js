@@ -10,8 +10,15 @@ const {
 } = require("../../../ai/EncounterLocalMonsterAiFlow");
 const { CustomMonsterAiFlow } = require("../../../ai/CustomMonsterAiFlow");
 const { CampaignAiFlow } = require("../../../ai/CampaignAiFlow");
-const { assertAiGeneratedContentContract } = require("../domain/aiPayloadSchemas");
-const { restoreAiResponseSnapshot } = require("../../../aiResponseHistoryService");
+const {
+	assertAiGeneratedContentContract,
+	validateAiGeneratedContent,
+} = require("../domain/aiPayloadSchemas");
+const {
+	buildCustomMonsterChangeResources,
+	restoreAiResponseSnapshot,
+} = require("../../../aiResponseHistoryService");
+const { applyAiOperations } = require("../../../aiPatchService");
 const {
 	buildAiChangeSummary,
 } = require("../../../ai/aiChangeSummary");
@@ -57,7 +64,20 @@ const {
 	createEnvApiKeyStore,
 } = require("../infrastructure/envApiKeyStore");
 const { geminiGateway } = require("../infrastructure/geminiGateway");
-const { buildImageParts } = require("../infrastructure/attachmentParts");
+const {
+	buildFileParts,
+	buildImageParts,
+} = require("../infrastructure/attachmentParts");
+const {
+	createFileAiChatRepository,
+} = require("../infrastructure/fileAiChatRepository");
+const {
+	createAiChatCommands,
+} = require("../application/aiChatCommands");
+const {
+	extractFirstJsonObject,
+	normalizeEscapedNewLines,
+} = require("../application/parseAiResponse");
 
 const ENV_PATH = path.join(__dirname, "..", "..", "..", "..", ".env");
 const envApiKeyStore = createEnvApiKeyStore({
@@ -71,6 +91,27 @@ const aiHistoryCommands = createAiHistoryCommands({
 	repository: aiHistoryRepository,
 	restoreSnapshot: restoreAiResponseSnapshot,
 	buildChangeSummary: buildAiChangeSummary,
+});
+const aiChatRepository = createFileAiChatRepository({ storage });
+const aiChatCommands = createAiChatCommands({
+	chatRepository: aiChatRepository,
+	storage,
+	aiService,
+	geminiGateway,
+	historyWriter: aiHistoryWriter,
+	applyAiOperations,
+	restoreAiResponseSnapshot,
+	buildCustomMonsterChangeResources,
+	filterSessionDataForAiContext,
+	fillCurrentTargetIds,
+	applyMentionsToGeneratedContent,
+	processGeneratedTextMentions,
+	validateAiGeneratedContent,
+	extractFirstJsonObject,
+	normalizeEscapedNewLines,
+	buildImageParts,
+	buildFileParts,
+	isApiKeyConfigured: () => Boolean(process.env.GEMINI_API_KEY),
 });
 const encounterLocalMonsterAiFlow = new EncounterLocalMonsterAiFlow({
 	historyWriter: aiHistoryWriter,
@@ -342,6 +383,166 @@ router.post("/responses/:id/undo", (req, res, next) =>
 			campaignSlug,
 			id: req.params.id,
 			resourceIds: req.body?.resourceIds,
+		}),
+	),
+);
+
+async function handleAiChatRequest(req, res, next, handler, successStatus = 200) {
+	try {
+		const campaignSlug = getAiHistoryCampaignSlug(req);
+		if (!campaignSlug) {
+			return res.status(400).json({ error: "campaign is required." });
+		}
+		const result = await handler(campaignSlug);
+		return res.status(successStatus).json(result);
+	} catch (error) {
+		if (error?.status) {
+			return res.status(error.status).json({
+				error: error.message,
+				...(error.code ? { code: error.code } : {}),
+				...(error.details ? { details: error.details } : {}),
+			});
+		}
+		next(error);
+	}
+}
+
+router.get("/chats", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.listChats({ campaignSlug }),
+	),
+);
+
+router.post("/chats", (req, res, next) =>
+	handleAiChatRequest(
+		req,
+		res,
+		next,
+		(campaignSlug) =>
+			aiChatCommands.createChat({
+				campaignSlug,
+				payload: req.body && typeof req.body === "object" ? req.body : {},
+			}),
+		201,
+	),
+);
+
+router.get("/chats/:chatId", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.getChat({
+			campaignSlug,
+			chatId: req.params.chatId,
+		}),
+	),
+);
+
+router.patch("/chats/:chatId", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.updateChat({
+			campaignSlug,
+			chatId: req.params.chatId,
+			payload: req.body && typeof req.body === "object" ? req.body : {},
+		}),
+	),
+);
+
+router.delete("/chats/:chatId", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.deleteChat({
+			campaignSlug,
+			chatId: req.params.chatId,
+		}),
+	),
+);
+
+router.post("/chats/:chatId/messages", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.sendMessage({
+			campaignSlug,
+			chatId: req.params.chatId,
+			payload: req.body && typeof req.body === "object" ? req.body : {},
+		}),
+	),
+);
+
+router.post("/chats/:chatId/messages/stream", async (req, res) => {
+	const campaignSlug = getAiHistoryCampaignSlug(req);
+	if (!campaignSlug) {
+		return res.status(400).json({ error: "campaign is required." });
+	}
+
+	res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+	res.setHeader("Cache-Control", "no-cache, no-transform");
+	res.setHeader("Connection", "keep-alive");
+	res.setHeader("X-Accel-Buffering", "no");
+	res.flushHeaders?.();
+
+	const abortController = new AbortController();
+	const handleClose = () => {
+		if (!res.writableEnded) {
+			abortController.abort();
+		}
+	};
+	res.on("close", handleClose);
+
+	const writeEvent = (eventName, data) => {
+		if (res.writableEnded || abortController.signal.aborted) return;
+		res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
+	};
+
+	try {
+		const result = await aiChatCommands.sendMessage({
+			campaignSlug,
+			chatId: req.params.chatId,
+			payload: req.body && typeof req.body === "object" ? req.body : {},
+			onStreamEvent: (ev) => writeEvent(ev.type, ev),
+			signal: abortController.signal,
+		});
+		writeEvent("done", result);
+		if (!res.writableEnded) {
+			res.end();
+		}
+	} catch (error) {
+		if (!abortController.signal.aborted && !res.writableEnded) {
+			writeEvent("error", {
+				error: error?.message || "AI request failed.",
+				...(error?.code ? { code: error.code } : {}),
+				status: error?.status || 500,
+			});
+			res.end();
+		}
+	} finally {
+		res.off("close", handleClose);
+	}
+});
+
+router.post("/chats/:chatId/actions/:actionId/apply", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.applyAction({
+			campaignSlug,
+			chatId: req.params.chatId,
+			actionId: req.params.actionId,
+			payload: req.body && typeof req.body === "object" ? req.body : {},
+		}),
+	),
+);
+
+router.post("/chats/:chatId/actions/:actionId/undo", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.undoAction({
+			campaignSlug,
+			chatId: req.params.chatId,
+			actionId: req.params.actionId,
+		}),
+	),
+);
+
+router.post("/chats/:chatId/actions/:actionId/reject", (req, res, next) =>
+	handleAiChatRequest(req, res, next, (campaignSlug) =>
+		aiChatCommands.rejectAction({
+			campaignSlug,
+			chatId: req.params.chatId,
+			actionId: req.params.actionId,
 		}),
 	),
 );

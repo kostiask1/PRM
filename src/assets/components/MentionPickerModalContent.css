@@ -33,6 +33,10 @@
 	padding-right: var(--space-1);
 }
 
+.MentionPickerModalContent__columns.has-bestiary {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .MentionPickerModalContent__column {
 	display: flex;
 	flex-direction: column;
@@ -115,7 +119,8 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.MentionPickerModalContent__columns {
+	.MentionPickerModalContent__columns,
+	.MentionPickerModalContent__columns.has-bestiary {
 		grid-template-columns: minmax(0, 1fr);
 		max-height: none;
 	}

@@ -1,5 +1,13 @@
+.Modal__overlay:has(.MentionPickerModalHost__modal) {
+	z-index: 1450;
+}
+
 .MentionPickerModalHost__modal {
 	width: min(96vw, 1040px);
+}
+
+.MentionPickerModalHost__modal:has(.MentionPickerModalContent__columns.has-bestiary) {
+	width: min(96vw, 1240px);
 }
 
 @media (max-width: 767px) {

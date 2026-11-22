@@ -57,7 +57,6 @@
 	.CampaignNotesSection__viewToggle {
 		max-width: 100%;
 		overflow-x: auto;
-		scrollbar-width: thin;
 	}
 
 	.CampaignNotesSection__list {

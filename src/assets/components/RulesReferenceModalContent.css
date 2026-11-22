@@ -17,7 +17,6 @@
 	overflow-x: auto;
 	border-radius: var(--radius-sm);
 	background: var(--panel-soft);
-	scrollbar-width: thin;
 }
 
 .RulesReferenceModalContent__search {

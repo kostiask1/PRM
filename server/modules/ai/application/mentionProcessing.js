@@ -86,7 +86,7 @@ function canonicalizeBracketedMentions(text, names) {
 function moveMentionSuffixIntoVisibleText(text, names) {
 	if (!text || !names.length) return text;
 	return String(text).replace(
-		/\[([^\[\]\n]+)\]([\p{L}\p{M}]+)/gu,
+		/\[([^[\n\]]+)\]([\p{L}\p{M}]+)/gu,
 		(full, rawName, suffix) => {
 			const canonical = resolveCanonicalName(rawName, names);
 			if (!canonical) return full;

@@ -15,12 +15,16 @@
 .AiAssistantPanel__toggle {
 	position: fixed;
 	bottom: 85px;
-	right: var(--space-4);
+	right: calc(var(--space-4) + var(--ai-chat-sidebar-offset, 0px));
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
 	z-index: 100;
+}
+
+.MainContent:has(.AiAssistantSidebarV2, .AiCollapsedRailV2, .AiFloatingTriggerV2) .MainContent__workspaceArea > .AiAssistant .AiAssistantPanel__toggle {
+	display: none;
 }
 
 .AiAssistantPanel__toggle button {

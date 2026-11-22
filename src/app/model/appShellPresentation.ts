@@ -29,6 +29,7 @@ export interface AppMentionPickerCallbacks {
 	select: (name: string, label?: string) => void;
 	cancel: () => void;
 	query?: string;
+	includeBestiary?: boolean;
 }
 
 const UI_SETTING_KEYS = [

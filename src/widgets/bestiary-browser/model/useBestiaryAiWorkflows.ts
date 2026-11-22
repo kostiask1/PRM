@@ -141,6 +141,23 @@ export function useBestiaryAiWorkflows({
 
 	const openMonsterAiAction = (monster: BestiaryMonster) => {
 		if (!monster?.name) return;
+		const hasAiChatV2 = Boolean(
+			document.querySelector(".AiAssistantSidebarV2, .AiCollapsedRailV2, .AiFloatingTriggerV2"),
+		);
+		if (hasAiChatV2) {
+			window.dispatchEvent(
+				new CustomEvent("prm:ai-chat-prefill", {
+					detail: {
+						text: `@bestiary [${monster.name}] `,
+						monsterName: monster.name,
+						monsterSource: monster.source || "",
+						open: true,
+						focus: true,
+					},
+				}),
+			);
+			return;
+		}
 		setAiActionMonster(monster);
 	};
 
