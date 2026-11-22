@@ -9,6 +9,12 @@
 	bottom: var(--space-5);
 }
 
+@media (min-width: 1401px) {
+	:root:has(.AiAssistantSidebarV2, .AiCollapsedRailV2) .Bestiary .AiAssistantPanel__toggle {
+		display: none;
+	}
+}
+
 .Bestiary__header_actions {
 	display: flex;
 	align-items: center;
