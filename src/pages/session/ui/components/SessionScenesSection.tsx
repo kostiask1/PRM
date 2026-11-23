@@ -13,10 +13,9 @@ interface SessionScenesSectionProps {
  onOpenScene: (scene: SessionScene) => void;
  selectedScene: SessionScene | undefined;
  renderScene: (scene: SessionScene) => ReactNode;
- reference?: ReactNode;
 }
 
-export default function SessionScenesSection({ scenes, selectedScene, onAddScene, onReorder, onOpenScene, renderScene, reference }: SessionScenesSectionProps) {
+export default function SessionScenesSection({ scenes, selectedScene, onAddScene, onReorder, onOpenScene, renderScene }: SessionScenesSectionProps) {
  const editorRef = useRef<HTMLDivElement>(null);
  return (
   <div className="SessionWorkspace" data-history-focus-id={makeHistoryTargetId("session", "scenes")}>
@@ -43,7 +42,6 @@ export default function SessionScenesSection({ scenes, selectedScene, onAddScene
      {selectedScene ? scenes.map((scene, index) => <div key={String(scene.id)} data-scene-index={index}>{renderScene(scene)}</div>) : <div className="SessionWorkspace__empty"><h3>{lang.t("Your next adventure starts here")}</h3><Button variant="primary" icon="plus" onClick={onAddScene}>{lang.t("Add scene")}</Button></div>}
     </div>
    </div>
-   <aside className="SessionWorkspace__reference">{reference}</aside>
   </div>
  );
 }

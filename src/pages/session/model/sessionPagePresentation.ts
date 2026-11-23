@@ -21,6 +21,7 @@ export const SESSION_SECTIONS = [
 	"scenes",
 	"notes",
 	"entities",
+	"locations",
 	"result",
 ] as const;
 

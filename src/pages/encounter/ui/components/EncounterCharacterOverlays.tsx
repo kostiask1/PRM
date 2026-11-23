@@ -50,7 +50,7 @@ function EncounterCharacterPickerOverlay(props: EncounterCharacterOverlaysProps)
 	if (!props.open) return null;
 	return (
 		<Modal
-			onConfirm={() => {}}
+			onConfirm={() => { }}
 			title={
 				props.creating ? lang.t("New character") : lang.t("Choose player")
 			}
@@ -82,7 +82,7 @@ function EncounterCharacterCreateForm({
 			<CharacterCard
 				character={draft}
 				onChange={(_id, updated) => onDraft(updated as EncounterCharacterDraft)}
-				onDelete={() => {}}
+				onDelete={() => { }}
 				onToggleCollapse={null}
 				campaignSlug={campaignSlug}
 				type="characters"
@@ -127,7 +127,7 @@ function EncounterCharacterList({
 					<button
 						type="button"
 						key={String(character.id || character.slug)}
-					className="EncounterCharacterOverlays__item"
+						className="EncounterCharacterOverlays__item"
 						onClick={() => onAdd(character)}
 					>
 						<span className="EncounterCharacterOverlays__name">
@@ -173,7 +173,7 @@ function EncounterCharacterModalOverlay({
 	if (!modalCharacter) return null;
 	return (
 		<Modal
-			onConfirm={() => {}}
+			onConfirm={() => { }}
 			title={getEncounterCharacterDisplayName(modalCharacter)}
 			onCancel={onCloseCharacter}
 			showFooter={false}

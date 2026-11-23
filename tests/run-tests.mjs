@@ -5788,7 +5788,6 @@ await run(
 				"onOpenScene: (scene: SessionScene) => void;",
 				"selectedScene: SessionScene | undefined;",
 				"renderScene: (scene: SessionScene) => ReactNode;",
-				"reference?: ReactNode;",
 				"export default function SessionScenesSection({",
 				'className="SessionWorkspace"',
 				'className="SessionWorkspace__outline"',
@@ -5797,10 +5796,10 @@ await run(
 				"renderMentionText(",
 				'className="SessionWorkspace__editor SessionWorkspace__editor_stream"',
 				"renderScene(scene)",
-				'className="SessionWorkspace__reference"',
 			],
 			"Session scene workspace receives selection and mutations from its owner",
 		);
+		assert.doesNotMatch(sectionSource, /SessionWorkspace__reference|reference\?: ReactNode/);
 		assert.doesNotMatch(
 			sectionSource,
 			/useState|useEffect|useLayoutEffect|useMemo|useCallback|useContext|useSessionView|useSessionPageRuntime|SessionController|\bview\b|SessionViewModel|SceneCard|SessionSceneItem|makeDomId|findIndex|updateData|handleScene|toggleSceneCollapse|removeScene|addScene|window\.|alert\(|confirm\(|prompt\(|document\.|navigate|app\/model|shared\/model/,
@@ -46033,7 +46032,7 @@ await run("session page policies preserve keyboard, sync, and presentation behav
 		}),
 		"redo",
 	);
-	assert.deepEqual(SESSION_SECTIONS, ["scenes", "notes", "entities", "result"]);
+	assert.deepEqual(SESSION_SECTIONS, ["scenes", "notes", "entities", "locations", "result"]);
 	assert.equal(
 		getNextSessionSectionFromArrowKey({
 			key: "ArrowRight",

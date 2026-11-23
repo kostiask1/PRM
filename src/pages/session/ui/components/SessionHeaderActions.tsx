@@ -64,7 +64,6 @@ export default function SessionHeaderActions({
 					{lang.t("Search")}
 				</Button>
 				<div className="SessionHeaderActions__history" role="group" aria-label={lang.t("Campaign history")}>
-				<span className="SessionHeaderActions__historyScope">{lang.t("Campaign history")}</span>
 				<UndoRedoButtons
 					canRedo={canRedo}
 					canUndo={canUndo}

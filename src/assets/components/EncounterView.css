@@ -80,8 +80,11 @@
 	gap: var(--space-2);
 }
 
-.EncounterView__historyControls { display: flex; align-items: center; gap: var(--space-1); }
-.EncounterView__historyScope { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+.EncounterView__historyControls {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+}
 
 .EncounterView__viewModeSwitch {
 	display: flex;
@@ -175,11 +178,32 @@
 	max-height: none;
 }
 
-.EncounterView__monsterCard { min-width: 0; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); }
-.EncounterView__gridItem .EncounterView__monsterCard { padding: 0; border: 0; background: transparent; }
-.EncounterView__monsterCard .MonsterStatBlock { padding: 0; border: 0; }
-.EncounterView__monsterConditions { padding-bottom: var(--space-3); }
-.EncounterView__monsterConditions .EncounterMonsterRow__conditions { margin-top: 0; }
+.EncounterView__monsterCard {
+	min-width: 0;
+	padding: var(--space-4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--panel);
+}
+
+.EncounterView__gridItem .EncounterView__monsterCard {
+	padding: 0;
+	border: 0;
+	background: transparent;
+}
+
+.EncounterView__monsterCard .MonsterStatBlock {
+	padding: 0;
+	border: 0;
+}
+
+.EncounterView__monsterConditions {
+	padding-bottom: var(--space-3);
+}
+
+.EncounterView__monsterConditions .EncounterMonsterRow__conditions {
+	margin-top: 0;
+}
 
 .EncounterView__gridItem .CharacterCard {
 	border: 0;
@@ -310,7 +334,6 @@
 		max-width: calc(100vw - var(--space-6));
 		flex-wrap: wrap;
 	}
-	.EncounterView__historyScope { display: none; }
 
 	.EncounterView__metrics {
 		display: none;
@@ -363,7 +386,7 @@
 	box-shadow: var(--shadow-sm);
 }
 
-.EncounterView__turnBar > span {
+.EncounterView__turnBar>span {
 	min-width: 0;
 	overflow-wrap: anywhere;
 	font-weight: 600;

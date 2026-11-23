@@ -1,6 +1,6 @@
 .SessionWorkspace {
     display: grid;
-    grid-template-columns: 224px minmax(0, 1fr) 240px;
+    grid-template-columns: 224px minmax(0, 1fr);
     gap: var(--space-4);
     align-items: start;
     min-width: 0;
@@ -101,12 +101,6 @@
     min-width: 0;
 }
 
-.SessionWorkspace__reference {
-    display: grid;
-    gap: var(--space-4);
-    min-width: 0;
-}
-
 .SessionWorkspace__empty {
     display: grid;
     justify-items: start;
@@ -120,10 +114,6 @@
 @media (max-width: 1400px) {
     .SessionWorkspace {
         grid-template-columns: 192px minmax(0, 1fr);
-    }
-
-    .SessionWorkspace__reference {
-        grid-column: 2;
     }
 }
 
@@ -143,11 +133,6 @@
 
     .SessionWorkspace__createButton {
         display: none;
-    }
-
-    .SessionWorkspace__reference {
-        grid-column: 1;
-        grid-template-columns: minmax(0, 1fr);
     }
 
     .SessionWorkspace__outline .DraggableList {

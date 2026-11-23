@@ -67,7 +67,6 @@ export default function CampaignHeaderActions({
 				</Button>
 			</Tooltip>
 			<div className="CampaignHeaderActions__history" role="group" aria-label={lang.t("Campaign history")}>
-			<span className="CampaignHeaderActions__historyScope">{lang.t("Campaign history")}</span>
 			<UndoRedoButtons
 				canRedo={canRedo}
 				canUndo={canUndo}

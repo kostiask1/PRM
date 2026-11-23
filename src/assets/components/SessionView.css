@@ -1,8 +1,6 @@
 .SessionView [hidden] { display: none !important; }
 .SessionView .SectionTabs { margin-bottom: var(--space-6); }
 .SessionView__todoList, .SessionView__entities { display: grid; gap: var(--space-5); }
-.SessionReferenceCard { display: grid; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); min-width: 0; overflow-wrap: anywhere; }
-.SessionReferenceCard h3 { font: 700 16px/24px var(--font-body); }
 .SessionView .SessionHeader__titleGroup { gap: var(--space-3); }
 .SessionView .SessionHeader__encounters { background: transparent; border: 0; padding: 0; }
 @media (max-width: 767px) { .SessionView > .Panel__header { gap: var(--space-3); } }

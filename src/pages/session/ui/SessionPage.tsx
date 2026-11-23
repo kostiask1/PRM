@@ -182,7 +182,7 @@ function SessionView() {
 	const [moveTarget, setMoveTarget] = useState<{ type: "npc" | "locations"; entity: SessionPageEntity } | null>(null);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const [activeSection, setActiveSection, revealSection] = useUrlSection(
-		["scenes", "notes", "entities", "result"] as const, "scenes",
+		["scenes", "notes", "entities", "locations", "result"] as const, "scenes",
 	);
 	const lastRevealedHash = useRef("");
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
@@ -226,7 +226,8 @@ function SessionView() {
 			lastRevealedHash.current = hash;
 			if (hash.includes("session-scene")) revealSection("scenes");
 			else if (hash.includes("session-note")) revealSection("notes");
-			else if (hash.includes("session-npc") || hash.includes("session-location")) revealSection("entities");
+			else if (hash.includes("session-npc")) revealSection("entities");
+			else if (hash.includes("session-location")) revealSection("locations");
 			else if (hash.includes("session-result")) revealSection("result");
 		}
 		const sessionNote = sessionNotes.find((note) =>
@@ -518,6 +519,7 @@ function SessionView() {
 						{ id: "scenes", label: lang.t("Preparation") },
 						{ id: "notes", label: lang.t("Notes") },
 						{ id: "entities", label: lang.t("Characters") },
+						{ id: "locations", label: lang.t("Locations/Factions") },
 						{ id: "result", label: lang.t("Summary") },
 					]} />
 					<div className="SessionView__todoList">
@@ -626,7 +628,8 @@ function SessionView() {
 								</div>
 							)}
 						/>
-
+						</div>
+						<div role="tabpanel" id={`${tabsId}-panel-locations`} aria-labelledby={`${tabsId}-tab-locations`} hidden={activeSection !== "locations"} className="SessionView__entities">
 						<SessionEntitySection
 							key={`${view.campaignSlug}:${sessionId}:locations`}
 							selectionRequest={createdEntity?.type === "locations" && createdEntity.campaign === view.campaignSlug && createdEntity.session === sessionId ? createdEntity : null}
@@ -700,17 +703,6 @@ function SessionView() {
 							onReorder={(nextScenes) => view.updateData("scenes", nextScenes)}
 							selectedScene={selectedScene}
 							onOpenScene={selectScene}
-							reference={
-								<section className="SessionReferenceCard"><h3>{lang.t("In this session")}</h3>
-									<p className="WorkspaceEyebrow">{lang.t("Locations/Factions")}</p>
-									{view.sessionLocations.length === 0 && <p className="muted">{lang.t("No session locations/factions yet.")}</p>}
-									{view.sessionLocations.map((location) => <p key={location.id ?? location.slug}>{String(location.name || location.title || lang.t("Untitled"))}</p>)}
-									<p className="WorkspaceEyebrow">{lang.t("NPC")}</p>
-									{view.sessionNpcs.length === 0 && <p className="muted">{lang.t("No session NPCs yet.")}</p>}
-									{view.sessionNpcs.map((npc) => <p key={npc.id ?? npc.slug}>{String(npc.name || [npc.firstName, npc.lastName].filter(Boolean).join(" ") || lang.t("Untitled"))}</p>)}
-									<button type="button" className="WorkspaceTextLink" onClick={() => setActiveSection("entities")}>{lang.t("View all")} →</button>
-								</section>
-							}
 							renderScene={(scene) => (
 							<SessionSceneItem
 								scene={scene}

@@ -328,69 +328,72 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 			/>
 			<div className="Panel__body">
 				<div className="CampaignView__navigation">
-				<SectionTabs<CampaignSection> idPrefix={tabsId} label={lang.t("Campaign sections")} value={activeSection} onChange={setActiveSection} items={[
-					{ id: "overview", label: lang.t("Overview") },
-					{ id: "sessions", label: lang.t("Sessions"), count: view.sessions.length },
-					{ id: "characters", label: lang.t("Characters"), count: view.characters.length },
-					{ id: "npc", label: lang.t("NPC"), count: view.npcs.length },
-					{ id: "locations", label: lang.t("Locations/Factions"), count: view.locations.length },
-					{ id: "notes", label: lang.t("Notes") },
-					{ id: "story", label: lang.t("Campaign story") },
-					{ id: "gallery", label: lang.t("Gallery") },
-				]} />
-				<div className="CampaignView__navigationActions">
-					{activeSection === "overview" && (
-						<Button size={Button.SIZES.SMALL} icon="notes-graph" onClick={() => { handleNotesViewModeChange("graph"); setActiveSection("notes"); }}>
-							{lang.t("Notes graph")}
-						</Button>
-					)}
-					{activeSection === "sessions" && (
-						<Button variant="create" size={Button.SIZES.SMALL} icon="plus" onClick={view.handleCreateSession}>
-							{lang.t("New session")}
-						</Button>
-					)}
-					{activeSection === "characters" && (
-						<CreateCharacterButton
-							onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "characters", id: entity.id }); }}
-							campaignSlug={campaign.slug}
-							entityType="characters"
-						/>
-					)}
-					{activeSection === "npc" && (
-						<CreateCharacterButton
-							onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "npc", id: entity.id }); }}
-							campaignSlug={campaign.slug}
-							entityType="npc"
-						/>
-					)}
-					{activeSection === "locations" && (
-						<CreateLocationButton
-							campaignSlug={campaign.slug}
-							onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "locations", id: entity.id }); }}
-						/>
-					)}
-					{activeSection === "notes" && (
-						<NoteViewMode
-							className="CampaignNotesSection__viewToggle"
-							value={notesViewMode}
-							onChange={handleNotesViewModeChange}
-							options={[
-								{
-									value: "list",
-									label: lang.t("List"),
-									title: lang.t("List view"),
-									icon: "list",
-								},
-								{
-									value: "graph",
-									label: lang.t("Graph"),
-									title: lang.t("Graph view"),
-									icon: "notes-graph",
-								},
-							]}
-						/>
-					)}
-				</div>
+					<SectionTabs<CampaignSection> idPrefix={tabsId} label={lang.t("Campaign sections")} value={activeSection} onChange={setActiveSection} items={[
+						{ id: "overview", label: lang.t("Overview") },
+						{ id: "sessions", label: lang.t("Sessions"), count: view.sessions.length },
+						{ id: "characters", label: lang.t("Characters"), count: view.characters.length },
+						{ id: "npc", label: lang.t("NPC"), count: view.npcs.length },
+						{ id: "locations", label: lang.t("Locations/Factions"), count: view.locations.length },
+						{ id: "notes", label: lang.t("Notes") },
+						{ id: "story", label: lang.t("Campaign story") },
+						{ id: "gallery", label: lang.t("Gallery") },
+					]} />
+					<div className="CampaignView__navigationActions">
+						{activeSection === "overview" && (
+							<Button size={Button.SIZES.MEDIUM} icon="notes-graph" onClick={() => { handleNotesViewModeChange("graph"); setActiveSection("notes"); }}>
+								{lang.t("Notes graph")}
+							</Button>
+						)}
+						{activeSection === "sessions" && (
+							<Button variant="create" size={Button.SIZES.MEDIUM} icon="plus" onClick={view.handleCreateSession}>
+								{lang.t("New session")}
+							</Button>
+						)}
+						{activeSection === "characters" && (
+							<CreateCharacterButton
+								onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "characters", id: entity.id }); }}
+								campaignSlug={campaign.slug}
+								entityType="characters"
+								buttonSize={Button.SIZES.MEDIUM}
+							/>
+						)}
+						{activeSection === "npc" && (
+							<CreateCharacterButton
+								onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "npc", id: entity.id }); }}
+								campaignSlug={campaign.slug}
+								entityType="npc"
+								buttonSize={Button.SIZES.MEDIUM}
+							/>
+						)}
+						{activeSection === "locations" && (
+							<CreateLocationButton
+								campaignSlug={campaign.slug}
+								onCreated={(entity) => { if (entity.id != null) setRequestedEntity({ type: "locations", id: entity.id }); }}
+								buttonSize={Button.SIZES.MEDIUM}
+							/>
+						)}
+						{activeSection === "notes" && (
+							<NoteViewMode
+								className="CampaignNotesSection__viewToggle"
+								value={notesViewMode}
+								onChange={handleNotesViewModeChange}
+								options={[
+									{
+										value: "list",
+										label: lang.t("List"),
+										title: lang.t("List view"),
+										icon: "list",
+									},
+									{
+										value: "graph",
+										label: lang.t("Graph"),
+										title: lang.t("Graph view"),
+										icon: "notes-graph",
+									},
+								]}
+							/>
+						)}
+					</div>
 				</div>
 				<div role="tabpanel" id={`${tabsId}-panel-overview`} aria-labelledby={`${tabsId}-tab-overview`} hidden={activeSection !== "overview"}>
 					<CampaignOverview sessions={allSessions} characters={view.characters} notes={view.notes}
@@ -400,16 +403,16 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 				</div>
 				<div className="CampaignView__layout">
 					<div role="tabpanel" id={`${tabsId}-panel-sessions`} aria-labelledby={`${tabsId}-tab-sessions`} hidden={activeSection !== "sessions"}>
-					<CampaignSessionsSection
-						canReorderSessions={canReorderSessions}
-						filteredSessions={filteredSessions}
-						onCreateSession={view.handleCreateSession}
-						onReorder={view.setSessions}
-						onReorderDrop={view.handleSessionReorderDrop}
-						onSessionSearchChange={setSessionSearch}
-						renderSessionCard={renderSessionCard}
-						sessionSearch={sessionSearch}
-					/>
+						<CampaignSessionsSection
+							canReorderSessions={canReorderSessions}
+							filteredSessions={filteredSessions}
+							onCreateSession={view.handleCreateSession}
+							onReorder={view.setSessions}
+							onReorderDrop={view.handleSessionReorderDrop}
+							onSessionSearchChange={setSessionSearch}
+							renderSessionCard={renderSessionCard}
+							sessionSearch={sessionSearch}
+						/>
 					</div>
 
 					<div className="CampaignView__contentPanel">
@@ -417,197 +420,197 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 							{activeSection === "gallery" && <EmbeddedImageGallery campaignSlug={campaign.slug} />}
 						</div>
 						<div role="tabpanel" id={`${tabsId}-panel-story`} aria-labelledby={`${tabsId}-tab-story`} hidden={activeSection !== "story"}>
-						<CampaignDescriptionSection
-							renderEditor={renderCampaignDescriptionEditor}
-						/>
+							<CampaignDescriptionSection
+								renderEditor={renderCampaignDescriptionEditor}
+							/>
 						</div>
 
 						<div role="tabpanel" id={`${tabsId}-panel-notes`} aria-labelledby={`${tabsId}-tab-notes`} hidden={activeSection !== "notes"}>
-						<CampaignNotesSection
-							campaign={campaign}
-							view={view}
-							notes={notesForRender}
-							viewMode={notesViewMode}
-							onViewModeChange={handleNotesViewModeChange}
-							onToggleIgnored={toggleCampaignNoteAiIgnored}
-						/>
+							<CampaignNotesSection
+								campaign={campaign}
+								view={view}
+								notes={notesForRender}
+								viewMode={notesViewMode}
+								onViewModeChange={handleNotesViewModeChange}
+								onToggleIgnored={toggleCampaignNoteAiIgnored}
+							/>
 						</div>
 
 						<div role="tabpanel" id={`${tabsId}-panel-characters`} aria-labelledby={`${tabsId}-tab-characters`} hidden={activeSection !== "characters"}>
-						<CampaignEntitySection
-							historyFocusId={makeHistoryTargetId(
-								"campaign",
-								"character-section",
-							)}
-							title={lang.t("Characters")}
-							items={view.characters}
-							selectionRequest={requestedEntity?.type === "characters" ? requestedEntity : null}
-							listVariant="person"
-							dropType="characters"
-							onReorder={view.handleCharactersReorder}
-							onReorderDrop={characterSectionControls.onReorderDrop}
-							dragData={(character) => ({
-								kind: "campaign-character",
-								sourceType: "characters",
-								id: character.id,
-							})}
-							renderItem={(character) => (
-								<div
-									id={makeDomId("campaign", "character", character.id)}
-									data-history-focus-id={makeHistoryTargetId(
-										"campaign",
-										"character",
-										character.id,
-									)}
-								>
-									<CharacterCard
-										character={character}
-										onChange={(id, updated) => {
-											if (id !== undefined) {
-												view.handleCharacterChange(id, updated);
+							<CampaignEntitySection
+								historyFocusId={makeHistoryTargetId(
+									"campaign",
+									"character-section",
+								)}
+								title={lang.t("Characters")}
+								items={view.characters}
+								selectionRequest={requestedEntity?.type === "characters" ? requestedEntity : null}
+								listVariant="person"
+								dropType="characters"
+								onReorder={view.handleCharactersReorder}
+								onReorderDrop={characterSectionControls.onReorderDrop}
+								dragData={(character) => ({
+									kind: "campaign-character",
+									sourceType: "characters",
+									id: character.id,
+								})}
+								renderItem={(character) => (
+									<div
+										id={makeDomId("campaign", "character", character.id)}
+										data-history-focus-id={makeHistoryTargetId(
+											"campaign",
+											"character",
+											character.id,
+										)}
+									>
+										<CharacterCard
+											character={character}
+											onChange={(id, updated) => {
+												if (id !== undefined) {
+													view.handleCharacterChange(id, updated);
+												}
+											}}
+											onNameBlur={(id, updated, oldName, newName) =>
+												id === undefined
+													? false
+													: view.handleCharacterNameBlur(id, updated, oldName, newName)
 											}
-										}}
-										onNameBlur={(id, updated, oldName, newName) =>
-											id === undefined
-												? false
-												: view.handleCharacterNameBlur(id, updated, oldName, newName)
-										}
-										onDelete={(id) => {
-											if (id !== undefined) void view.handleDeleteCharacter(id);
-										}}
-										onReorderDrop={view.finishTrackedReorder}
-										campaignSlug={campaign.slug}
-										enableHistory={false}
-										type="characters"
-									/>
-								</div>
-							)}
-						/>
+											onDelete={(id) => {
+												if (id !== undefined) void view.handleDeleteCharacter(id);
+											}}
+											onReorderDrop={view.finishTrackedReorder}
+											campaignSlug={campaign.slug}
+											enableHistory={false}
+											type="characters"
+										/>
+									</div>
+								)}
+							/>
 
 						</div>
 						<div role="tabpanel" id={`${tabsId}-panel-npc`} aria-labelledby={`${tabsId}-tab-npc`} hidden={activeSection !== "npc"}>
-						<CampaignEntitySection
-							historyFocusId={makeHistoryTargetId(
-								"campaign",
-								"npc-section",
-							)}
-							title={lang.t("NPC")}
-							items={view.npcs}
-							selectionRequest={requestedEntity?.type === "npc" ? requestedEntity : null}
-							listVariant="person"
-							dropType="npc"
-							onReorder={view.handleNpcsReorder}
-							onReorderDrop={npcSectionControls.onReorderDrop}
-							dragData={(npc) => ({
-								kind: "campaign-character",
-								sourceType: "npc",
-								id: npc.id,
-							})}
-							isItemControlActive={(npc) => Boolean(npc._aiIgnored)}
-							renderItemControl={(npc) => (
-								<AiContextIgnoreButton
-									ignored={Boolean(npc._aiIgnored)}
-									onToggle={(ignored) =>
-										toggleCampaignEntityAiIgnored("npc", npc.id, ignored)
-									}
-								/>
-							)}
-							renderItem={(npc) => (
-								<div
-									id={makeDomId("campaign", "npc", npc.id)}
-									data-history-focus-id={makeHistoryTargetId(
-										"campaign",
-										"npc",
-										npc.id,
-									)}
-								>
-									<CharacterCard
-										character={npc}
-										headerActions={<Button variant="ghost" icon="export" onClick={() => setMoveTarget({ type: "npc", entity: npc })}>{lang.t("Move")}</Button>}
-										onChange={(id, updated) => {
-											if (id !== undefined) {
-												view.handleNpcChange(id, updated);
-											}
-										}}
-										onNameBlur={(id, updated, oldName, newName) =>
-											id === undefined
-												? false
-												: view.handleNpcNameBlur(id, updated, oldName, newName)
+							<CampaignEntitySection
+								historyFocusId={makeHistoryTargetId(
+									"campaign",
+									"npc-section",
+								)}
+								title={lang.t("NPC")}
+								items={view.npcs}
+								selectionRequest={requestedEntity?.type === "npc" ? requestedEntity : null}
+								listVariant="person"
+								dropType="npc"
+								onReorder={view.handleNpcsReorder}
+								onReorderDrop={npcSectionControls.onReorderDrop}
+								dragData={(npc) => ({
+									kind: "campaign-character",
+									sourceType: "npc",
+									id: npc.id,
+								})}
+								isItemControlActive={(npc) => Boolean(npc._aiIgnored)}
+								renderItemControl={(npc) => (
+									<AiContextIgnoreButton
+										ignored={Boolean(npc._aiIgnored)}
+										onToggle={(ignored) =>
+											toggleCampaignEntityAiIgnored("npc", npc.id, ignored)
 										}
-										onDelete={(id) => {
-											if (id !== undefined) void view.handleNpcDelete(id);
-										}}
-										onReorderDrop={view.finishTrackedReorder}
-										campaignSlug={campaign.slug}
-										enableHistory={false}
-										type="npc"
 									/>
-								</div>
-							)}
-						/>
+								)}
+								renderItem={(npc) => (
+									<div
+										id={makeDomId("campaign", "npc", npc.id)}
+										data-history-focus-id={makeHistoryTargetId(
+											"campaign",
+											"npc",
+											npc.id,
+										)}
+									>
+										<CharacterCard
+											character={npc}
+											headerActions={<Button variant="ghost" icon="export" onClick={() => setMoveTarget({ type: "npc", entity: npc })}>{lang.t("Move")}</Button>}
+											onChange={(id, updated) => {
+												if (id !== undefined) {
+													view.handleNpcChange(id, updated);
+												}
+											}}
+											onNameBlur={(id, updated, oldName, newName) =>
+												id === undefined
+													? false
+													: view.handleNpcNameBlur(id, updated, oldName, newName)
+											}
+											onDelete={(id) => {
+												if (id !== undefined) void view.handleNpcDelete(id);
+											}}
+											onReorderDrop={view.finishTrackedReorder}
+											campaignSlug={campaign.slug}
+											enableHistory={false}
+											type="npc"
+										/>
+									</div>
+								)}
+							/>
 
 						</div>
 						<div role="tabpanel" id={`${tabsId}-panel-locations`} aria-labelledby={`${tabsId}-tab-locations`} hidden={activeSection !== "locations"}>
-						<CampaignEntitySection
-							historyFocusId={makeHistoryTargetId(
-								"campaign",
-								"location-section",
-							)}
-							title={lang.t("Locations/Factions")}
-							items={view.locations}
-							selectionRequest={requestedEntity?.type === "locations" ? requestedEntity : null}
-							listVariant="location"
-							onReorder={view.handleLocationsReorder}
-							onReorderDrop={locationSectionControls.onReorderDrop}
-							isItemControlActive={(location) =>
-								Boolean(location._aiIgnored)
-							}
-							renderItemControl={(location) => (
-								<AiContextIgnoreButton
-									ignored={Boolean(location._aiIgnored)}
-									onToggle={(ignored) =>
-										toggleCampaignEntityAiIgnored(
-											"locations",
-											location.id,
-											ignored,
-										)
-									}
-								/>
-							)}
-							renderItem={(location) => (
-								<div
-									id={makeDomId("campaign", "location", location.id)}
-									data-history-focus-id={makeHistoryTargetId(
-										"campaign",
-										"location",
-										location.id,
-									)}
-								>
-									<LocationCard
-										location={location}
-										headerActions={<Button variant="ghost" icon="export" onClick={() => setMoveTarget({ type: "locations", entity: location })}>{lang.t("Move")}</Button>}
-										onChange={(id, updated) => {
-											if (id !== undefined) {
-												view.handleLocationChange(id, updated);
-											}
-										}}
-										onNameBlur={(id, updated, oldName, newName) =>
-											id === undefined
-												? false
-												: view.handleLocationNameBlur(id, updated, oldName, newName)
+							<CampaignEntitySection
+								historyFocusId={makeHistoryTargetId(
+									"campaign",
+									"location-section",
+								)}
+								title={lang.t("Locations/Factions")}
+								items={view.locations}
+								selectionRequest={requestedEntity?.type === "locations" ? requestedEntity : null}
+								listVariant="location"
+								onReorder={view.handleLocationsReorder}
+								onReorderDrop={locationSectionControls.onReorderDrop}
+								isItemControlActive={(location) =>
+									Boolean(location._aiIgnored)
+								}
+								renderItemControl={(location) => (
+									<AiContextIgnoreButton
+										ignored={Boolean(location._aiIgnored)}
+										onToggle={(ignored) =>
+											toggleCampaignEntityAiIgnored(
+												"locations",
+												location.id,
+												ignored,
+											)
 										}
-										onDelete={(id) => {
-											if (id !== undefined) void view.handleLocationDelete(id);
-										}}
-										onReorderDrop={view.finishTrackedReorder}
-										campaignSlug={campaign.slug}
-										enableHistory={false}
 									/>
-								</div>
-							)}
-						/>
+								)}
+								renderItem={(location) => (
+									<div
+										id={makeDomId("campaign", "location", location.id)}
+										data-history-focus-id={makeHistoryTargetId(
+											"campaign",
+											"location",
+											location.id,
+										)}
+									>
+										<LocationCard
+											location={location}
+											headerActions={<Button variant="ghost" icon="export" onClick={() => setMoveTarget({ type: "locations", entity: location })}>{lang.t("Move")}</Button>}
+											onChange={(id, updated) => {
+												if (id !== undefined) {
+													view.handleLocationChange(id, updated);
+												}
+											}}
+											onNameBlur={(id, updated, oldName, newName) =>
+												id === undefined
+													? false
+													: view.handleLocationNameBlur(id, updated, oldName, newName)
+											}
+											onDelete={(id) => {
+												if (id !== undefined) void view.handleLocationDelete(id);
+											}}
+											onReorderDrop={view.finishTrackedReorder}
+											campaignSlug={campaign.slug}
+											enableHistory={false}
+										/>
+									</div>
+								)}
+							/>
+						</div>
 					</div>
-				</div>
 				</div>
 			</div>
 			{isGlobalSearchOpen && (

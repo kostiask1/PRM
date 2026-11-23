@@ -192,7 +192,6 @@ function EncounterHistoryControls({
 }) {
 	return (
 		<div className="EncounterView__historyControls" role="group" aria-label={lang.t("Campaign history")}>
-			<span className="EncounterView__historyScope">{lang.t("Campaign history")}</span>
 			<Button
 				variant="ghost"
 				size={Button.SIZES.SMALL}
