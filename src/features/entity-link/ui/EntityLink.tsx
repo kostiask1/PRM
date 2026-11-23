@@ -36,7 +36,10 @@ export default function EntityLink({
 	const currentEntityIdentity = useContext(EntityLinkContext);
 	const scopedEntityLinks = useContext(EntityLinkResolverContext);
 
-	const resolvedCampaignSlug = useMemo(() => parseUrl().campaign, []);
+	const resolvedCampaignSlug = useMemo(
+		() => parseUrl().campaign || (scopedEntityLinks ? "bestiary" : null),
+		[scopedEntityLinks],
+	);
 
 	const handleCloseModal = useCallback(() => setModalState(null), []);
 

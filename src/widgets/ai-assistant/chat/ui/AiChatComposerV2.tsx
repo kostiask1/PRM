@@ -652,6 +652,7 @@ export default function AiChatComposerV2({
 				<EditableField
 					type="textarea"
 					className="AiChatComposerV2__editor"
+					campaignSlug="bestiary"
 					aria-label={
 						isImageMode
 							? lang.t("Image description for AI assistant")

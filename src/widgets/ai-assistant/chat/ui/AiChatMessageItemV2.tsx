@@ -225,6 +225,7 @@ export default function AiChatMessageItemV2({
 							<EditableField
 								type="textarea"
 								className="AiChatMessageItemV2__editEditor"
+								campaignSlug="bestiary"
 								aria-label={lang.t("Edit message")}
 								value={draftText}
 								onChange={(event) => setDraftText(event.target.value)}

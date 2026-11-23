@@ -1,5 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useContext, useMemo, useState, type FormEvent } from "react";
+import { bestiaryApi } from "../../../../entities/bestiary/index.js";
+import { resolveEntityByName } from "../../../../entities/campaign/index.js";
 import type { AiResponseModalComponent } from "../../../../features/ai/ui/index.js";
+import {
+	EntityLinkResolverContext,
+	type EntityLinkResolver,
+} from "../../../../features/entity-link/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import {
 	formatCompactContextFeedback,
@@ -21,6 +27,7 @@ interface AiAssistantPanelV2Props {
 	state: ReturnType<typeof useAiChatState>;
 	onClose: () => void;
 	className?: string;
+	onOpenBestiaryCreature?: (name: string) => void;
 	ResponseModal?: AiResponseModalComponent;
 }
 
@@ -28,12 +35,15 @@ export default function AiAssistantPanelV2({
 	state,
 	onClose,
 	className = "",
+	onOpenBestiaryCreature,
 	ResponseModal,
 }: AiAssistantPanelV2Props) {
 	const [apiKeyDraft, setApiKeyDraft] = useState("");
+	const parentEntityLinks = useContext(EntityLinkResolverContext);
 
 	const {
 		campaignSlug,
+		isBestiaryScope,
 		sessions,
 		activeSession,
 		activeSessionId,
@@ -144,6 +154,48 @@ export default function AiAssistantPanelV2({
 
 	const isImageModelSelectionActive = isImageMode && imageModeAction === "generate";
 
+	const chatEntityLinkResolver = useMemo<EntityLinkResolver>(
+		() => ({
+			...(parentEntityLinks || {}),
+			async resolveEntityByName(name: string) {
+				const parentMatch = await parentEntityLinks?.resolveEntityByName?.(name);
+				if (parentMatch) return parentMatch;
+				if (!isBestiaryScope && campaignSlug && campaignSlug !== "bestiary") {
+					const campaignMatch = await resolveEntityByName(campaignSlug, name);
+					if (campaignMatch) return campaignMatch;
+				}
+				const [rawMonsterName, rawSource] = String(name || "").split("|");
+				const cleanName = (rawMonsterName || "").trim();
+				const requestedSource = (rawSource || "").trim().toUpperCase();
+				if (!cleanName) return null;
+				const results = (await bestiaryApi.searchBestiary(cleanName)) || [];
+				const normalizedTarget = cleanName.toLowerCase();
+				const creature =
+					results.find(
+						(item) =>
+							String(item.name || "").trim().toLowerCase() === normalizedTarget &&
+							(!requestedSource ||
+								String(item.source || "").trim().toUpperCase() === requestedSource),
+					) ||
+					results.find(
+						(item) =>
+							String(item.name || "").trim().toLowerCase() === normalizedTarget,
+					);
+				if (creature?.name) {
+					const referenceName = [
+						String(creature.name).trim(),
+						String(creature.source || "").trim(),
+					]
+						.filter(Boolean)
+						.join("|");
+					onOpenBestiaryCreature?.(referenceName);
+				}
+				return null;
+			},
+		}),
+		[campaignSlug, isBestiaryScope, onOpenBestiaryCreature, parentEntityLinks],
+	);
+
 	const handleApiKeySubmit = async (e: FormEvent) => {
 		e.preventDefault();
 		const ok = await saveApiKey(apiKeyDraft);
@@ -151,6 +203,7 @@ export default function AiAssistantPanelV2({
 	};
 
 	return (
+		<EntityLinkResolverContext.Provider value={chatEntityLinkResolver}>
 		<div className={`AiAssistantPanelV2 ${className}`}>
 			<AiAssistantHeaderV2
 				sessionTitle={getLocalizedChatTitle(activeSession)}
@@ -343,5 +396,6 @@ export default function AiAssistantPanelV2({
 				/>
 			</div>
 		</div>
+		</EntityLinkResolverContext.Provider>
 	);
 }

@@ -8,6 +8,7 @@ interface AiAssistantModalV2Props {
 	isOpen: boolean;
 	onClose: () => void;
 	state: ReturnType<typeof useAiChatState>;
+	onOpenBestiaryCreature?: (name: string) => void;
 	ResponseModal?: AiResponseModalComponent;
 }
 
@@ -15,6 +16,7 @@ export default function AiAssistantModalV2({
 	isOpen,
 	onClose,
 	state,
+	onOpenBestiaryCreature,
 	ResponseModal,
 }: AiAssistantModalV2Props) {
 	if (!isOpen) return null;
@@ -29,7 +31,12 @@ export default function AiAssistantModalV2({
 			className="AiAssistantModalV2__card"
 			overlayClassName="AiAssistantModalOverlayV2"
 		>
-			<AiAssistantPanelV2 state={state} onClose={onClose} ResponseModal={ResponseModal} />
+			<AiAssistantPanelV2
+				state={state}
+				onClose={onClose}
+				onOpenBestiaryCreature={onOpenBestiaryCreature}
+				ResponseModal={ResponseModal}
+			/>
 		</Modal>
 	);
 }

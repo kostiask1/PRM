@@ -11,6 +11,7 @@ interface AiAssistantV2Props {
 	campaignTitle?: string;
 	sessionTitle?: string;
 	sceneTitle?: string;
+	onOpenBestiaryCreature?: (name: string) => void;
 	ResponseModal?: AiResponseModalComponent;
 }
 
@@ -18,6 +19,7 @@ export default function AiAssistantV2({
 	campaignTitle,
 	sessionTitle,
 	sceneTitle,
+	onOpenBestiaryCreature,
 	ResponseModal,
 }: AiAssistantV2Props) {
 	const layout = useAiChatLayout();
@@ -47,6 +49,7 @@ export default function AiAssistantV2({
 				<AiAssistantPanelV2
 					state={chatState}
 					onClose={collapseDesktop}
+					onOpenBestiaryCreature={onOpenBestiaryCreature}
 					ResponseModal={ResponseModal}
 				/>
 			</aside>
@@ -61,6 +64,7 @@ export default function AiAssistantV2({
 				isOpen={isMobileOpen}
 				onClose={closeMobile}
 				state={chatState}
+				onOpenBestiaryCreature={onOpenBestiaryCreature}
 				ResponseModal={ResponseModal}
 			/>
 		</>

@@ -24,7 +24,8 @@ async function resolveEntityLinkModalTarget(
 	scopedEntityLinks?: EntityLinkResolver | null,
 ): Promise<EntityLinkModalState | null | undefined> {
 	const scopedTarget = await scopedEntityLinks?.resolveEntityByName?.(name);
-	return scopedTarget || resolveEntityByName(campaignSlug, name);
+	if (scopedTarget || campaignSlug === "bestiary") return scopedTarget;
+	return resolveEntityByName(campaignSlug, name);
 }
 
 export type EntityModalTitleKind = "character" | "location" | "npc";

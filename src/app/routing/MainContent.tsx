@@ -13,7 +13,8 @@ import { MonsterStatBlock } from "../../widgets/monster-stat-block/index.js";
 import { SpellsBrowser } from "../../widgets/spells-browser/index.js";
 import { createRulesReferenceModalContentComponent } from "../../widgets/rules-reference-modal/index.js";
 import { Outlet, Route, Routes, useLocation } from "react-router";
-import { useAppSelector } from "../model/index.js";
+import { useAppDispatch, useAppSelector } from "../model/index.js";
+import { requestRulesReferenceNavigationAction } from "../../shared/model/index.js";
 import AiAssistantRuntimeHost from "../ui/AiAssistantRuntimeHost.tsx";
 import BestiaryBrowserRuntimeHost from "../ui/BestiaryBrowserRuntimeHost.tsx";
 import CampaignPageRuntimeHost from "../ui/CampaignPageRuntimeHost.tsx";
@@ -48,6 +49,7 @@ function EmptyState({
 	className?: string;
 	showAssistant?: boolean;
 }) {
+	const dispatch = useAppDispatch();
 	const isRulesReferenceOpen = useAppSelector(
 		(state) => state.rulesReference.isOpen,
 	);
@@ -66,12 +68,22 @@ function EmptyState({
 	return (
 		<main className={classNames("MainContent", className)}>
 			<div className="MainContent__workspaceArea">{content}</div>
-			<AiAssistantV2 ResponseModal={MainContentAiResponseModal} />
+			<AiAssistantV2
+				onOpenBestiaryCreature={(name) =>
+					dispatch(
+						requestRulesReferenceNavigationAction("bestiary", name, {
+							forceTab: true,
+						}),
+					)
+				}
+				ResponseModal={MainContentAiResponseModal}
+			/>
 		</main>
 	);
 }
 
 function MainContentLayout({ className = "" }: { className?: string }) {
+	const dispatch = useAppDispatch();
 	const activeCampaign = useAppSelector(
 		(state) => state.active.campaign as CampaignRecord | null,
 	);
@@ -93,6 +105,13 @@ function MainContentLayout({ className = "" }: { className?: string }) {
 			<AiAssistantV2
 				campaignTitle={activeCampaign?.name}
 				sessionTitle={activeSession?.name}
+				onOpenBestiaryCreature={(name) =>
+					dispatch(
+						requestRulesReferenceNavigationAction("bestiary", name, {
+							forceTab: true,
+						}),
+					)
+				}
 				ResponseModal={MainContentAiResponseModal}
 			/>
 		</main>

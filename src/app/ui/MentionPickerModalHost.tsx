@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import { bestiaryApi } from "../../entities/bestiary/index.js";
+import { bestiaryApi, type BestiaryMonster } from "../../entities/bestiary/index.js";
 import { campaignApi } from "../../entities/campaign/index.js";
 import { sessionApi } from "../../entities/session/index.js";
 import "../../assets/components/MentionPickerModalHost.css";
@@ -10,8 +10,9 @@ import {
 	type BestiaryMentionOption,
 } from "../../features/editor/ui/index.js";
 import { lang } from "../../shared/lib/index.js";
+import { Modal } from "../../shared/ui/index.js";
 import { closeMentionPickerAction } from "../../shared/model/index.js";
-import type { AppDispatch } from "../../shared/model/index.js";
+import type { AppDispatch, ModalConfig } from "../../shared/model/index.js";
 import {
 	buildAppMentionOptions,
 	hasValidMentionPickerCallbacks,
@@ -19,11 +20,19 @@ import {
 	type AppMentionPickerCallbacks,
 } from "../model/appShellPresentation.ts";
 import {
-	closeActiveModal,
-	openModalRequest,
 	useAppDispatch,
 	useAppSelector,
 } from "../model/index.js";
+
+let setMentionPickerModalConfig: ((config: ModalConfig | null) => void) | null = null;
+
+function openModalRequest(config: ModalConfig): void {
+	setMentionPickerModalConfig?.(config);
+}
+
+function closeActiveModal(): void {
+	setMentionPickerModalConfig?.(null);
+}
 
 export default function MentionPickerModalHost() {
 	const dispatch = useAppDispatch();
@@ -34,6 +43,8 @@ export default function MentionPickerModalHost() {
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
 	);
+	const [modalConfig, setModalConfig] = useState<ModalConfig | null>(null);
+	setMentionPickerModalConfig = setModalConfig;
 
 	useEffect(() => {
 		void runMentionPickerModalRequest(
@@ -44,6 +55,20 @@ export default function MentionPickerModalHost() {
 			dispatch,
 		);
 	}, [activeCampaignSlug, activeSessionFileName, currentLanguage, dispatch, mentionPickerRequest]);
+
+	if (modalConfig) {
+		const cancelAction = modalConfig.onCancelAction;
+		return (
+			<Modal
+				{...modalConfig}
+				onConfirm={() => closeActiveModal()}
+				onCancel={() => {
+					if (typeof cancelAction === "function") cancelAction();
+					closeActiveModal();
+				}}
+			/>
+		);
+	}
 
 	return null;
 }
@@ -124,11 +149,9 @@ function shouldIncludeBestiaryMentions(includeBestiary?: boolean): boolean {
 	return Boolean(document.querySelector(".Bestiary")) || hasBestiaryCommandInActiveEditor();
 }
 
-function toBestiaryMentionOption(monster: {
-	name?: unknown;
-	source?: unknown;
-	cr?: unknown;
-}): BestiaryMentionOption | null {
+function toBestiaryMentionOption(
+	monster: BestiaryMonster,
+): BestiaryMentionOption | null {
 	const name = String(monster?.name || "").trim();
 	if (!name) return null;
 	const source = String(monster?.source || "").trim();
@@ -137,7 +160,7 @@ function toBestiaryMentionOption(monster: {
 		typeof rawCr === "object" && rawCr !== null && "cr" in rawCr
 			? String((rawCr as { cr?: unknown }).cr ?? "").trim()
 			: String(rawCr ?? "").trim();
-	return { name, source, ...(cr ? { cr } : {}) };
+	return { ...monster, name, source, cr: cr || undefined };
 }
 
 function getOfficialBestiaryOptions(): Promise<BestiaryMentionOption[]> {
