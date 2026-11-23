@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { lang } from "../../../../../shared/lib/index.js";
 import type { RankedAiCommandItem } from "../../model/aiCommandAutocomplete.ts";
 import { useDismissablePopover } from "./useDismissablePopover.ts";
 
@@ -40,18 +41,18 @@ export default function AiCommandAutocompleteV2({
 	const activeEntry = items[safeIndex];
 	const activeShortcutHint =
 		activeEntry?.item.command === "@bestiary"
-			? "Ctrl+K — істоти Бестіарію"
-			: "Ctrl+K — сутності кампанії";
+			? lang.t("Ctrl+K — Bestiary creatures")
+			: lang.t("Ctrl+K — Campaign entities");
 
 	return (
 		<div
 			className="AiCommandAutocompleteV2"
 			ref={ref}
 			role="listbox"
-			aria-label="Швидкі команди асистента"
+			aria-label={lang.t("Assistant quick commands")}
 		>
 			<div className="AiCommandAutocompleteV2__header">
-				<span className="AiCommandAutocompleteV2__title">Команди</span>
+				<span className="AiCommandAutocompleteV2__title">{lang.t("Commands")}</span>
 				<span className="AiCommandAutocompleteV2__kbdHint">↑↓ · Tab/Enter · Esc</span>
 			</div>
 
@@ -75,12 +76,12 @@ export default function AiCommandAutocompleteV2({
 								<span className="AiCommandAutocompleteV2__name">{entry.item.name}</span>
 								{entry.isContextual && !entry.isAlreadyUsed && (
 									<span className="AiCommandAutocompleteV2__tag AiCommandAutocompleteV2__tag--context">
-										Контекст
+										{lang.t("Context")}
 									</span>
 								)}
 								{entry.isAlreadyUsed && (
 									<span className="AiCommandAutocompleteV2__tag AiCommandAutocompleteV2__tag--used">
-										Додано
+										{lang.t("Added")}
 									</span>
 								)}
 							</div>
@@ -93,7 +94,7 @@ export default function AiCommandAutocompleteV2({
 			{activeEntry && (
 				<div className="AiCommandAutocompleteV2__footer">
 					<span className="AiCommandAutocompleteV2__example" title={activeEntry.item.example}>
-						Приклад: {activeEntry.item.example}
+						{lang.t("Example: {example}", { example: activeEntry.item.example })}
 					</span>
 					<span className="AiCommandAutocompleteV2__shortcutHint">{activeShortcutHint}</span>
 				</div>

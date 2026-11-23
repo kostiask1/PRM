@@ -1,3 +1,8 @@
+import { lang } from "../../../../shared/lib/index.js";
+import {
+	formatActionCardStatValue,
+	formatActionCardTitle,
+} from "../model/aiChatLocalization.ts";
 import { renderChatMentionText } from "./renderChatMentionText.tsx";
 import type { AiActionCard } from "../model/aiChatTypes.ts";
 
@@ -56,11 +61,11 @@ export default function AiActionCardV2({
 				</div>
 
 				<div className="AiActionCardV2__titleGroup">
-					<span className="AiActionCardV2__title">{card.title}</span>
+					<span className="AiActionCardV2__title">{formatActionCardTitle(card.title)}</span>
 					{card.subtitle && (
 						<span className="AiActionCardV2__subtitle">
 							{card.subtitle}
-							{isUndone ? " · Скасовано" : ""}
+							{isUndone ? ` · ${lang.t("Undone")}` : ""}
 						</span>
 					)}
 				</div>
@@ -71,8 +76,8 @@ export default function AiActionCardV2({
 						className="AiActionCardV2__dismissBtn"
 						disabled={isBusy}
 						onClick={() => onReject(card.id)}
-						title="Відхилити пропозицію"
-						aria-label="Відхилити пропозицію"
+						title={lang.t("Dismiss suggestion")}
+						aria-label={lang.t("Dismiss suggestion")}
 					>
 						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
 							<line x1="18" y1="6" x2="6" y2="18" />
@@ -89,7 +94,7 @@ export default function AiActionCardV2({
 							key={idx}
 							className={`AiActionCardV2__statPill AiActionCardV2__statPill--${stat.type || "neutral"}`}
 						>
-							{stat.value}
+							{formatActionCardStatValue(stat)}
 						</span>
 					))}
 				</div>
@@ -108,7 +113,7 @@ export default function AiActionCardV2({
 							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
 								<polyline points="20 6 9 17 4 12" />
 							</svg>
-							<span>{isAtomic ? "Застосовано" : "Зміни збережено"}</span>
+							<span>{isAtomic ? lang.t("Applied") : lang.t("Changes saved")}</span>
 						</div>
 						<div className="AiActionCardV2__appliedBtns">
 							{hasDiffPreview && (
@@ -117,9 +122,9 @@ export default function AiActionCardV2({
 									className="AiActionCardV2__btn AiActionCardV2__btn--ghost"
 									disabled={isBusy}
 									onClick={() => onOpenDiff(card)}
-									title="Переглянути деталі / картку"
+									title={lang.t("View details / card")}
 								>
-									Деталі
+									{lang.t("Details")}
 								</button>
 							)}
 							{card.aiResponseId && onUndo && (
@@ -128,16 +133,16 @@ export default function AiActionCardV2({
 									className="AiActionCardV2__btn AiActionCardV2__btn--ghost"
 									disabled={isBusy}
 									onClick={() => onUndo(card.id)}
-									title="Скасувати ці зміни"
+									title={lang.t("Undo these changes")}
 								>
-									{isBusy ? "Скасування..." : "Скасувати"}
+									{isBusy ? lang.t("Undoing...") : lang.t("Undo")}
 								</button>
 							)}
 						</div>
 					</div>
 				) : isRejected ? (
 					<div className="AiActionCardV2__rejectedStatus">
-						<span>Пропозицію відхилено</span>
+						<span>{lang.t("Suggestion dismissed")}</span>
 					</div>
 				) : (
 					<>
@@ -149,10 +154,10 @@ export default function AiActionCardV2({
 						>
 							<span>
 								{isBusy
-									? "Виконується..."
+									? lang.t("Working...")
 									: isAtomic
-										? "Виконати дію"
-										: "Застосувати"}
+										? lang.t("Run action")
+										: lang.t("Apply")}
 							</span>
 						</button>
 						{hasDiffPreview && (
@@ -162,7 +167,7 @@ export default function AiActionCardV2({
 								disabled={isBusy}
 								onClick={() => onOpenDiff(card)}
 							>
-								<span>Переглянути Diff</span>
+								<span>{lang.t("View Diff")}</span>
 							</button>
 						)}
 					</>

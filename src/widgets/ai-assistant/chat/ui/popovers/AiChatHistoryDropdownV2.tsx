@@ -1,4 +1,10 @@
 import { useRef } from "react";
+import { lang } from "../../../../../shared/lib/index.js";
+import {
+	formatChatRequestCount,
+	getChatDateLocale,
+	getLocalizedChatTitle,
+} from "../../model/aiChatLocalization.ts";
 import type { AiChatSessionSummary } from "../../model/aiChatTypes.ts";
 import { useDismissablePopover } from "./useDismissablePopover.ts";
 
@@ -16,15 +22,20 @@ interface AiChatHistoryDropdownV2Props {
 function formatSessionDate(timestamp: number): string {
 	const date = new Date(timestamp);
 	const now = new Date();
+	const locale = getChatDateLocale();
 	const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 
 	if (diffDays === 0) {
-		return `Сьогодні, ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+		return lang.t("Today, {time}", {
+			time: date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }),
+		});
 	}
 	if (diffDays === 1) {
-		return `Вчора, ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+		return lang.t("Yesterday, {time}", {
+			time: date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }),
+		});
 	}
-	return date.toLocaleDateString([], { day: "numeric", month: "short" });
+	return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 export default function AiChatHistoryDropdownV2({
@@ -51,7 +62,7 @@ export default function AiChatHistoryDropdownV2({
 	return (
 		<div className="AiChatHistoryDropdownV2" ref={ref}>
 			<div className="AiChatHistoryDropdownV2__header">
-				<span className="AiChatHistoryDropdownV2__title">Попередні чати</span>
+				<span className="AiChatHistoryDropdownV2__title">{lang.t("Previous chats")}</span>
 				<button
 					type="button"
 					className="AiChatHistoryDropdownV2__newBtn"
@@ -64,21 +75,22 @@ export default function AiChatHistoryDropdownV2({
 						<line x1="12" y1="5" x2="12" y2="19" />
 						<line x1="5" y1="12" x2="19" y2="12" />
 					</svg>
-					<span>Новий чат</span>
+					<span>{lang.t("New chat")}</span>
 				</button>
 			</div>
 
 			<div className="AiChatHistoryDropdownV2__list">
 				{isLoading && sessions.length === 0 ? (
-					<div className="AiChatHistoryDropdownV2__empty">Завантаження...</div>
+					<div className="AiChatHistoryDropdownV2__empty">{lang.t("Loading...")}</div>
 				) : sessions.length === 0 ? (
 					<div className="AiChatHistoryDropdownV2__empty">
-						Ще немає збережених діалогів для цієї кампанії.
+						{lang.t("No saved conversations for this campaign yet.")}
 					</div>
 				) : (
 					sessions.map((session) => {
 						const isActive = session.id === activeSessionId;
 						const count = session.userMessageCount ?? 0;
+						const displayTitle = getLocalizedChatTitle(session);
 						return (
 							<div
 								key={session.id}
@@ -92,16 +104,16 @@ export default function AiChatHistoryDropdownV2({
 										onClose();
 									}}
 								>
-									<div className="AiChatHistoryDropdownV2__itemTitle" title={session.title}>
-										<span>{session.title}</span>
+									<div className="AiChatHistoryDropdownV2__itemTitle" title={displayTitle}>
+										<span>{displayTitle}</span>
 										{session.isLegacyArchive && (
-											<span className="AiChatHistoryDropdownV2__archiveBadge">Архів</span>
+											<span className="AiChatHistoryDropdownV2__archiveBadge">{lang.t("Archive")}</span>
 										)}
 									</div>
 									<div className="AiChatHistoryDropdownV2__itemMeta">
 										<span>{formatSessionDate(session.updatedAt || session.createdAt)}</span>
 										<span>·</span>
-										<span>{count} {count === 1 ? "запит" : count >= 2 && count <= 4 ? "запити" : "запитів"}</span>
+										<span>{formatChatRequestCount(count)}</span>
 									</div>
 								</button>
 
@@ -112,8 +124,8 @@ export default function AiChatHistoryDropdownV2({
 										e.stopPropagation();
 										onDeleteSession(session.id);
 									}}
-									title="Видалити діалог"
-									aria-label={`Видалити діалог ${session.title}`}
+									title={lang.t("Delete conversation")}
+									aria-label={lang.t("Delete conversation {title}", { title: displayTitle })}
 								>
 									<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 										<line x1="18" y1="6" x2="6" y2="18" />

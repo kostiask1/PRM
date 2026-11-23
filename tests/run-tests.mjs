@@ -75369,6 +75369,7 @@ await run(
 				chatId: "new",
 				payload: {
 					content: "@encounter Створи сутичку",
+					language: "uk",
 					autoApply: false,
 					workspaceContext: {
 						viewType: "session",
@@ -75623,6 +75624,7 @@ await run(
 				chatId: "new",
 				payload: {
 					content: "Створи сутичку",
+					language: "uk",
 					workspaceContext: { viewType: "campaign", campaignSlug: slug },
 				},
 			});
@@ -76154,6 +76156,7 @@ await run(
 					chatId: "new",
 					payload: {
 						content: "@session Створи нову сесію Вежа тіней",
+						language: "uk",
 						autoApply: false,
 						workspaceContext: {
 							viewType: "session",
@@ -76233,6 +76236,419 @@ await run(
 			storage.writeCustomBestiaryMonsters = originalWriteCustom;
 			storage.getBestiaryIndex = originalGetBestiaryIndex;
 		}
+	},
+);
+
+await run(
+	"AI Chat V2 frontend files contain no hardcoded Cyrillic UI strings and all keys exist in uk.json",
+	async () => {
+		const walkTs = async (dir) => {
+			const out = [];
+			const entries = await fs.readdir(dir, { withFileTypes: true });
+			for (const entry of entries) {
+				const full = path.join(dir, entry.name);
+				if (entry.isDirectory()) {
+					out.push(...(await walkTs(full)));
+				} else if (/\.(ts|tsx|js)$/.test(entry.name)) {
+					out.push(full);
+				}
+			}
+			return out;
+		};
+
+		const chatFiles = await walkTs("src/widgets/ai-assistant/chat");
+		const checkedFiles = [
+			...chatFiles,
+			"src/features/ai/api/aiApi.ts",
+			"src/widgets/ai-response-modal/ui/AiResponseModalView.tsx",
+		];
+
+		const cyrillicAllowlist = new Set([
+			path.normalize("src/widgets/ai-assistant/chat/model/aiChatLocalization.ts"),
+			path.normalize("src/widgets/ai-assistant/chat/model/aiCommandAutocomplete.ts"),
+		]);
+
+		const uk = JSON.parse(await fs.readFile("src/langs/uk.json", "utf8"));
+		const extractedKeys = new Set();
+
+		for (const filePath of checkedFiles) {
+			const content = await fs.readFile(filePath, "utf8");
+			if (!cyrillicAllowlist.has(path.normalize(filePath))) {
+				assert.equal(
+					/[\u0400-\u04FF]/.test(content),
+					false,
+					`Unexpected Cyrillic characters in ${filePath}`,
+				);
+			}
+
+			const callRegex =
+				/lang\.t\(\s*(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|`((?:\\.|[^`\\])*)`)/gs;
+			let match;
+			while ((match = callRegex.exec(content)) !== null) {
+				if (match[1] !== undefined) {
+					extractedKeys.add(JSON.parse(`"${match[1]}"`));
+				} else if (match[2] !== undefined) {
+					extractedKeys.add(match[2].replace(/\\'/g, "'"));
+				} else if (match[3] !== undefined) {
+					extractedKeys.add(match[3]);
+				}
+			}
+		}
+
+		const { AI_COMMANDS } = await import(
+			"../src/widgets/ai-assistant/chat/model/aiCommands.ts"
+		);
+		for (const cmd of AI_COMMANDS) {
+			extractedKeys.add(cmd.name);
+			extractedKeys.add(cmd.description);
+			extractedKeys.add(cmd.example);
+		}
+
+		const { AI_MODELS } = await import(
+			"../src/widgets/ai-assistant/chat/model/aiModels.ts"
+		);
+		for (const model of AI_MODELS) {
+			extractedKeys.add(model.description);
+			if (model.badge) extractedKeys.add(model.badge);
+			if (model.contextWindow) extractedKeys.add(model.contextWindow);
+		}
+
+		for (const key of extractedKeys) {
+			assert.equal(
+				typeof uk[key] === "string" && uk[key].length > 0,
+				true,
+				`Missing Ukrainian translation in src/langs/uk.json for key: ${key}`,
+			);
+		}
+	},
+);
+
+await run(
+	"aiChatLocalization formats chat titles, counts, action stats (structured + legacy), and model windows",
+	async () => {
+		const {
+			formatActionCardStatValue,
+			formatActionCardTitle,
+			formatChatRequestCount,
+			formatCompactContextFeedback,
+			formatCompactContextWindow,
+			formatModelContextWindow,
+			getLocalizedChatTitle,
+		} = await import(
+			"../src/widgets/ai-assistant/chat/model/aiChatLocalization.ts"
+		);
+
+		assert.equal(
+			getLocalizedChatTitle({
+				isLegacyArchive: true,
+				isAutoTitled: true,
+				title: "Архів старого асистента",
+			}),
+			"Legacy assistant archive",
+		);
+		assert.equal(
+			getLocalizedChatTitle({
+				isAutoTitled: false,
+				title: "Новий діалог",
+			}),
+			"New chat",
+		);
+		assert.equal(
+			getLocalizedChatTitle({
+				isAutoTitled: true,
+				title: "Castle Siege",
+			}),
+			"Castle Siege",
+		);
+
+		assert.equal(formatChatRequestCount(1), "1 request");
+		assert.equal(formatChatRequestCount(3), "3 requests");
+		assert.equal(formatActionCardTitle("Дія асистента"), "Assistant action");
+		assert.equal(formatActionCardTitle("Add NPC"), "Add NPC");
+
+		assert.equal(
+			formatActionCardStatValue({
+				label: "Session",
+				value: "+1 сесія",
+				kind: "session",
+				op: "added",
+				count: 1,
+			}),
+			"+1 session",
+		);
+		assert.equal(
+			formatActionCardStatValue({ label: "Сесія", value: "+1 сесія" }),
+			"+1 session",
+		);
+		assert.equal(
+			formatActionCardStatValue({ label: "Сцени", value: "+1 сцена" }),
+			"+1 scene",
+		);
+		assert.equal(
+			formatActionCardStatValue({ label: "Бої", value: "+1 бій" }),
+			"+1 encounter",
+		);
+		assert.equal(
+			formatActionCardStatValue({ label: "Опис", value: "+25 слів" }),
+			"+25 words",
+		);
+
+		assert.equal(formatModelContextWindow(1000000), "1M tokens");
+		assert.equal(formatModelContextWindow(128000), "128K tokens");
+		assert.equal(formatCompactContextWindow("1M токенів"), "1M");
+		assert.equal(formatCompactContextWindow("2M tokens"), "2M");
+		assert.equal(
+			formatCompactContextFeedback({ kind: "already_compacted" }),
+			"Conversation context is already compacted",
+		);
+		assert.equal(
+			formatCompactContextFeedback({
+				kind: "compacted",
+				compactedCount: 4,
+				previousHistoryTokens: 500,
+				nextHistoryTokens: 120,
+			}),
+			"Compacted 4 msg. (~500 → ~120 tok.)",
+		);
+	},
+);
+
+await run(
+	"Backend chat preview, commands, and action executor emit localized English metadata when language is 'en'",
+	async () => {
+		const storageStub = {
+			readCampaign: async () => ({ name: "Test Campaign", description: "", notes: [] }),
+			listEntities: async (_slug, type) =>
+				type === "characters"
+					? [{ id: "c1", firstName: "Kaelen", class: "Paladin", level: 5 }]
+					: [],
+			readSession: async (_slug, fileName) => ({
+				id: fileName,
+				name: fileName === "s1.json" ? "Session One" : "Session Two",
+				data: {
+					scenes: [
+						{ id: "sc1", name: "Ambush", notes: [{ id: "n1" }, { id: "n2" }] },
+					],
+					encounters: [],
+				},
+			}),
+			readCustomBestiary: async () => ({ monster: [] }),
+			listSessions: async () => [
+				{ fileName: "s1.json", name: "Session One" },
+				{ fileName: "s2.json", name: "Session Two" },
+			],
+		};
+
+		const enPreview = await buildChatContextPreview(
+			{ storage: storageStub, filterSessionDataForAiContext: (d) => d },
+			{
+				campaignSlug: "test",
+				workspaceContext: { viewType: "session", sessionFileName: "s1.json" },
+				contextSettings: { includeCurrentScene: true, includeCampaignCharacters: true },
+				chat: null,
+				responseLanguage: "en",
+			},
+		);
+		assert.equal(enPreview.catalog.characters[0]?.meta, "Paladin · Lv. 5");
+		assert.equal(enPreview.catalog.scenes[0]?.meta, "2 notes");
+		assert.equal(enPreview.catalog.sessions[0]?.meta, "1 scene");
+
+		const enBestiaryPreview = await buildChatContextPreview(
+			{ storage: storageStub, filterSessionDataForAiContext: (d) => d },
+			{
+				campaignSlug: "bestiary",
+				workspaceContext: { viewType: "bestiary" },
+				contextSettings: {},
+				chat: null,
+				responseLanguage: "en",
+			},
+		);
+		assert.ok(enBestiaryPreview.campaignBaseTokens > 0);
+
+		await withTestSlug("ai-chat-en-localization", async (slug) => {
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: storage.createId(),
+				slug,
+				name: "English Campaign",
+			});
+
+			const chatRepo = createFileAiChatRepository({ storage });
+			const createdChat = await createAiChatCommands({
+				chatRepository: chatRepo,
+				storage,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: { generateText: async () => "{}" },
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent:
+					mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions:
+					mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => true,
+			}).createChat({
+				campaignSlug: slug,
+				payload: { language: "en" },
+			});
+			assert.equal(createdChat.title, "New chat");
+
+			const geminiPayload = {
+				reply: "Created a new session.",
+				actions: [
+					{
+						kind: "diff",
+						title: "Create Tavern Session",
+						operations: [
+							{
+								op: "create",
+								entity: "session",
+								clientId: "sess-en",
+								data: {
+									name: "Tavern Brawl",
+									description: "Troubles at the Golden Tankard.",
+									encounters: [
+										{
+											clientId: "enc-en",
+											name: "Thugs",
+											monsters: [{ monsterName: "Bandit", count: 2 }],
+										},
+									],
+								},
+							},
+						],
+					},
+				],
+			};
+
+			const commands = createAiChatCommands({
+				chatRepository: chatRepo,
+				storage,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: {
+					generateText: async () => JSON.stringify(geminiPayload),
+				},
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent:
+					mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions:
+					mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => true,
+			});
+
+			const sent = await commands.sendMessage({
+				campaignSlug: slug,
+				chatId: createdChat.id,
+				payload: {
+					content: "@session Tavern Brawl",
+					language: "en",
+					autoApply: false,
+					workspaceContext: { viewType: "campaign", campaignSlug: slug },
+				},
+			});
+
+			const card = sent.assistantMessage.actionCards[0];
+			assert.ok(card.stats.some((s) => s.value === "+1 session" && s.kind === "session"));
+			assert.ok(card.stats.some((s) => s.value === "+1 scene" && s.kind === "scene"));
+			assert.ok(card.stats.some((s) => s.value === "+1 encounter" && s.kind === "encounter"));
+
+			// Adding a scene without any session produces an English warning banner
+			const warningCommands = createAiChatCommands({
+				chatRepository: chatRepo,
+				storage,
+				aiService: {
+					listAvailableModels: async () => ({
+						models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+						defaultModel: "gemini-2.5-flash",
+					}),
+				},
+				geminiGateway: {
+					generateText: async () =>
+						JSON.stringify({
+							reply: "Trying to add scene.",
+							actions: [
+								{
+									kind: "diff",
+									title: "Add Scene",
+									operations: [
+										{
+											op: "create",
+											entity: "scene",
+											scope: "session",
+											data: { texts: { summary: "Dark Alley" } },
+										},
+									],
+								},
+							],
+						}),
+				},
+				historyWriter: new AiHistoryWriter(),
+				applyAiOperations: aiPatchService.applyAiOperations,
+				restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+				buildCustomMonsterChangeResources:
+					aiResponseHistoryService.buildCustomMonsterChangeResources,
+				filterSessionDataForAiContext,
+				fillCurrentTargetIds,
+				applyMentionsToGeneratedContent:
+					mentionProcessing.applyMentionsToGeneratedContent,
+				processGeneratedTextMentions:
+					mentionProcessing.processGeneratedTextMentions,
+				validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+				extractFirstJsonObject,
+				normalizeEscapedNewLines,
+				buildImageParts,
+				buildFileParts,
+				isApiKeyConfigured: () => true,
+			});
+
+			const noSessionReply = await warningCommands.sendMessage({
+				campaignSlug: slug,
+				chatId: "new",
+				payload: {
+					content: "@scene Dark Alley",
+					language: "en",
+					autoApply: false,
+					workspaceContext: { viewType: "campaign", campaignSlug: slug },
+				},
+			});
+			assert.ok(
+				noSessionReply.assistantMessage.content.includes("Changes could not be prepared:"),
+			);
+			assert.ok(
+				noSessionReply.assistantMessage.content.includes(
+					"This campaign has no sessions yet",
+				),
+			);
+		});
 	},
 );
 

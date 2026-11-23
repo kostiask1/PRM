@@ -13,11 +13,38 @@ export type AiActionCardType = "atomic" | "diff";
 
 export type AiActionCardStatus = "pending" | "applied" | "rejected" | "undone";
 
+export type AiActionCardStatKind =
+	| "character"
+	| "npc"
+	| "location"
+	| "entity"
+	| "monster"
+	| "words"
+	| "note"
+	| "session"
+	| "scene"
+	| "session_npc"
+	| "session_location"
+	| "encounter";
+
 export interface AiActionCardStat {
 	label: string;
 	value: string;
 	type?: "added" | "changed" | "info" | "neutral";
+	kind?: AiActionCardStatKind;
+	op?: "added" | "changed" | "removed";
+	count?: number;
+	delta?: number;
 }
+
+export type CompactContextFeedback =
+	| {
+			kind: "compacted";
+			compactedCount: number;
+			previousHistoryTokens: number;
+			nextHistoryTokens: number;
+	  }
+	| { kind: "already_compacted" };
 
 export interface AiActionCard {
 	id: string;

@@ -13,6 +13,8 @@ import type {
 	AiResponseModalComponent,
 } from "../../../../features/ai/ui/index.js";
 import { Modal } from "../../../../shared/ui/index.js";
+import { lang } from "../../../../shared/lib/index.js";
+import { formatActionCardTitle } from "../model/aiChatLocalization.ts";
 import type { AiActionCard } from "../model/aiChatTypes.ts";
 
 interface AiDiffPreviewModalV2Props {
@@ -147,7 +149,7 @@ export default function AiDiffPreviewModalV2({
 
 		return (
 			<ResponseModal
-				generatedPrompt={card.description || card.title}
+				generatedPrompt={card.description || formatActionCardTitle(card.title)}
 				generatedPromptRef={generatedPromptRef}
 				isGeneratedPromptCopied={false}
 				isRestoringResponse={isBusy}
@@ -165,18 +167,18 @@ export default function AiDiffPreviewModalV2({
 				selectedResponseHasChanges={true}
 				getDiffResourceState={(resource) => getLocalizedDiffResourceState(resource)}
 				getHistoryChangeSummary={(entry) =>
-					getHistoryChangeSummary(entry) || card.title
+					getHistoryChangeSummary(entry) || formatActionCardTitle(card.title)
 				}
 			/>
 		);
 	}
 
-	const beforeText = card.diffSnippet?.before || "Початковий текст відсутній або пустий.";
-	const afterText = card.diffSnippet?.after || card.description || "Новий зміст змін.";
+	const beforeText = card.diffSnippet?.before || lang.t("Original text is missing or empty.");
+	const afterText = card.diffSnippet?.after || card.description || lang.t("Proposed changes content.");
 
 	return (
 		<Modal
-			title={card.title || "Порівняння змін (Diff)"}
+			title={card.title ? formatActionCardTitle(card.title) : lang.t("Compare changes (Diff)")}
 			className="AiDiffFallbackModalV2"
 			onConfirm={() => {}}
 			onCancel={onClose}
@@ -187,7 +189,7 @@ export default function AiDiffPreviewModalV2({
 				<div className="AiDiffModalV2__columns">
 					<div className="AiDiffModalV2__column AiDiffModalV2__column--before">
 						<div className="AiDiffModalV2__columnHeader">
-							<span className="AiDiffModalV2__tag">Поточний стан</span>
+							<span className="AiDiffModalV2__tag">{lang.t("Current state")}</span>
 							{card.targetEntity && (
 								<span className="AiDiffModalV2__target">{card.targetEntity}</span>
 							)}
@@ -197,7 +199,7 @@ export default function AiDiffPreviewModalV2({
 
 					<div className="AiDiffModalV2__column AiDiffModalV2__column--after">
 						<div className="AiDiffModalV2__columnHeader">
-							<span className="AiDiffModalV2__tag AiDiffModalV2__tag--after">Пропозиція ШІ</span>
+							<span className="AiDiffModalV2__tag AiDiffModalV2__tag--after">{lang.t("AI proposal")}</span>
 							{card.targetEntity && (
 								<span className="AiDiffModalV2__target">{card.targetEntity}</span>
 							)}
@@ -214,7 +216,7 @@ export default function AiDiffPreviewModalV2({
 					onClick={onClose}
 					disabled={isBusy}
 				>
-					Закрити
+					{lang.t("Close")}
 				</button>
 				{card.status === "applied" ? (
 					onUndo && card.aiResponseId ? (
@@ -224,7 +226,7 @@ export default function AiDiffPreviewModalV2({
 							onClick={() => onUndo(card.id)}
 							disabled={isBusy}
 						>
-							Скасувати ці зміни
+							{lang.t("Undo these changes")}
 						</button>
 					) : null
 				) : (
@@ -234,7 +236,7 @@ export default function AiDiffPreviewModalV2({
 						onClick={() => onApply(card.id)}
 						disabled={isBusy}
 					>
-						Застосувати ці зміни
+						{lang.t("Apply these changes")}
 					</button>
 				)}
 			</div>

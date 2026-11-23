@@ -13,6 +13,8 @@ import {
 } from "react";
 import Markdown from "react-markdown";
 import { EditableField } from "../../../../features/editor/ui/index.js";
+import { lang } from "../../../../shared/lib/index.js";
+import { getChatDateLocale } from "../model/aiChatLocalization.ts";
 import { renderChatMentionText } from "./renderChatMentionText.tsx";
 import type { AiActionCard, ChatMessage } from "../model/aiChatTypes.ts";
 import AiActionCardV2 from "./AiActionCardV2.tsx";
@@ -82,7 +84,10 @@ const MARKDOWN_COMPONENTS = Object.fromEntries(
 
 function formatMessageTime(timestamp: number): string {
 	const date = new Date(timestamp);
-	return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+	return date.toLocaleTimeString(getChatDateLocale(), {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
 }
 
 export default function AiChatMessageItemV2({
@@ -220,7 +225,7 @@ export default function AiChatMessageItemV2({
 							<EditableField
 								type="textarea"
 								className="AiChatMessageItemV2__editEditor"
-								aria-label="Редагувати повідомлення"
+								aria-label={lang.t("Edit message")}
 								value={draftText}
 								onChange={(event) => setDraftText(event.target.value)}
 								onKeyDown={handleEditKeyDown}
@@ -234,7 +239,7 @@ export default function AiChatMessageItemV2({
 									onClick={cancelEdit}
 									disabled={isSending}
 								>
-									Скасувати
+									{lang.t("Cancel")}
 								</button>
 								<button
 									type="button"
@@ -242,7 +247,7 @@ export default function AiChatMessageItemV2({
 									onClick={submitEdit}
 									disabled={isSending || !draftText.trim()}
 								>
-									Надіслати
+									{lang.t("Send")}
 								</button>
 							</div>
 						</div>
@@ -258,8 +263,8 @@ export default function AiChatMessageItemV2({
 											type="button"
 											className={`AiChatMessageItemV2__actionBtn ${isCopied ? "is-copied" : ""}`}
 											onClick={handleCopy}
-											title={isCopied ? "Скопійовано" : "Копіювати запит"}
-											aria-label="Копіювати запит"
+											title={isCopied ? lang.t("Copied") : lang.t("Copy prompt")}
+											aria-label={lang.t("Copy prompt")}
 										>
 											{isCopied ? (
 												<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
@@ -278,8 +283,8 @@ export default function AiChatMessageItemV2({
 											type="button"
 											className="AiChatMessageItemV2__actionBtn AiChatMessageItemV2__editTrigger"
 											onClick={startEdit}
-											title="Редагувати останній запит"
-											aria-label="Редагувати запит"
+											title={lang.t("Edit last prompt")}
+											aria-label={lang.t("Edit prompt")}
 										>
 											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 												<path d="M12 20h9" />
@@ -315,19 +320,19 @@ export default function AiChatMessageItemV2({
 							<path d="M12 2.5 14.4 9.6 21.5 12 14.4 14.4 12 21.5 9.6 14.4 2.5 12 9.6 9.6 12 2.5Z" />
 						</svg>
 					</span>
-					<span className="AiChatMessageItemV2__sender">Асистент</span>
+					<span className="AiChatMessageItemV2__sender">{lang.t("Assistant")}</span>
 					<span className="AiChatMessageItemV2__time">{formatMessageTime(message.timestamp)}</span>
 				</div>
 
 				{message.imageUrl && (
 					<div className="AiChatMessageItemV2__generatedImage">
 						<a href={message.imageUrl} target="_blank" rel="noreferrer">
-							<img src={message.imageUrl} alt={message.content || "Згенероване зображення"} />
+							<img src={message.imageUrl} alt={message.content || lang.t("Generated image")} />
 						</a>
 						<div className="AiChatMessageItemV2__generatedImageFooter">
-							<span>Збережено в галереї · «Вкладення»</span>
+							<span>{lang.t('Saved in gallery · "Attachments"')}</span>
 							<a href={message.imageUrl} download>
-								Завантажити
+								{lang.t("Download")}
 							</a>
 						</div>
 					</div>
@@ -341,14 +346,14 @@ export default function AiChatMessageItemV2({
 
 				{message.status === "streaming" && (
 					<div className="AiChatMessageItemV2__streamStatusRow">
-						<div className="AiChatMessageItemV2__typing" aria-label="Асистент друкує відповідь">
+						<div className="AiChatMessageItemV2__typing" aria-label={lang.t("Assistant is typing")}>
 							<span className="AiChatMessageItemV2__dot" />
 							<span className="AiChatMessageItemV2__dot" />
 							<span className="AiChatMessageItemV2__dot" />
 						</div>
 						{message.streamPhase === "preparing_actions" && (
 							<span className="AiChatMessageItemV2__streamStatus">
-								Готую пропозиції змін...
+								{lang.t("Preparing change proposals...")}
 							</span>
 						)}
 					</div>
@@ -377,8 +382,8 @@ export default function AiChatMessageItemV2({
 								type="button"
 								className={`AiChatMessageItemV2__actionBtn ${isCopied ? "is-copied" : ""}`}
 								onClick={handleCopy}
-								title={isCopied ? "Скопійовано" : "Копіювати відповідь"}
-								aria-label="Копіювати відповідь"
+								title={isCopied ? lang.t("Copied") : lang.t("Copy response")}
+								aria-label={lang.t("Copy response")}
 							>
 								{isCopied ? (
 									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
@@ -390,7 +395,7 @@ export default function AiChatMessageItemV2({
 										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
 									</svg>
 								)}
-								<span>{isCopied ? "Скопійовано" : "Копіювати"}</span>
+								<span>{isCopied ? lang.t("Copied") : lang.t("Copy text")}</span>
 							</button>
 						)}
 						{canRegenerate && (
@@ -398,14 +403,14 @@ export default function AiChatMessageItemV2({
 								type="button"
 								className="AiChatMessageItemV2__actionBtn AiChatMessageItemV2__regenerateBtn"
 								onClick={onRegenerateAssistant}
-								title="Повторити генерацію відповіді"
-								aria-label="Повторити відповідь"
+								title={lang.t("Regenerate response")}
+								aria-label={lang.t("Regenerate response")}
 							>
 								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 									<polyline points="23 4 23 10 17 10" />
 									<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
 								</svg>
-								<span>Повторити</span>
+								<span>{lang.t("Retry")}</span>
 							</button>
 						)}
 						{canGenerateFromPrompt && (
@@ -413,14 +418,14 @@ export default function AiChatMessageItemV2({
 								type="button"
 								className="AiChatMessageItemV2__actionBtn AiChatMessageItemV2__generateImgBtn"
 								onClick={() => onGenerateImageFromPrompt?.(message.content)}
-								title="Згенерувати зображення за цим промптом"
+								title={lang.t("Generate image from this prompt")}
 							>
 								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 									<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
 									<circle cx="8.5" cy="8.5" r="1.5" />
 									<polyline points="21 15 16 10 5 21" />
 								</svg>
-								<span>Згенерувати зображення</span>
+								<span>{lang.t("Generate image")}</span>
 							</button>
 						)}
 					</div>

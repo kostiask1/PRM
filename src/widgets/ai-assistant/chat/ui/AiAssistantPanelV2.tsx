@@ -1,5 +1,10 @@
 import { useState, type FormEvent } from "react";
 import type { AiResponseModalComponent } from "../../../../features/ai/ui/index.js";
+import { lang } from "../../../../shared/lib/index.js";
+import {
+	formatCompactContextFeedback,
+	getLocalizedChatTitle,
+} from "../model/aiChatLocalization.ts";
 import type { useAiChatState } from "../model/useAiChatState.ts";
 import AiAssistantHeaderV2 from "./AiAssistantHeaderV2.tsx";
 import AiContextAnchorBarV2 from "./AiContextAnchorBarV2.tsx";
@@ -105,7 +110,7 @@ export default function AiAssistantPanelV2({
 	return (
 		<div className={`AiAssistantPanelV2 ${className}`}>
 			<AiAssistantHeaderV2
-				sessionTitle={activeSession.title}
+				sessionTitle={getLocalizedChatTitle(activeSession)}
 				isHistoryOpen={isHistoryOpen}
 				onToggleHistory={() => setIsHistoryOpen((prev) => !prev)}
 				onCreateNewChat={createNewChat}
@@ -150,13 +155,13 @@ export default function AiAssistantPanelV2({
 				)}
 				unsummarizedCount={unsummarizedMessageCount}
 				hasCompactedSummary={hasCompactedSummary}
-				compactFeedback={compactContextFeedback}
+				compactFeedback={formatCompactContextFeedback(compactContextFeedback)}
 			/>
 
 			{isApiKeyMissing && (
 				<form className="AiAssistantPanelV2__apiKeyBanner" onSubmit={(e) => void handleApiKeySubmit(e)}>
 					<div className="AiAssistantPanelV2__apiKeyText">
-						Потрібен Gemini API ключ для роботи чату.
+						{lang.t("A Gemini API key is required to use the chat.")}
 					</div>
 					<div className="AiAssistantPanelV2__apiKeyRow">
 						<input
@@ -172,7 +177,7 @@ export default function AiAssistantPanelV2({
 							className="AiAssistantPanelV2__apiKeySubmit"
 							disabled={isSavingApiKey || !apiKeyDraft.trim()}
 						>
-							{isSavingApiKey ? "..." : "Зберегти"}
+							{isSavingApiKey ? "..." : lang.t("Save")}
 						</button>
 					</div>
 				</form>
@@ -185,7 +190,7 @@ export default function AiAssistantPanelV2({
 						type="button"
 						className="AiAssistantPanelV2__errorClose"
 						onClick={() => setErrorMessage(null)}
-						aria-label="Закрити повідомлення про помилку"
+						aria-label={lang.t("Dismiss error message")}
 					>
 						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
 							<line x1="18" y1="6" x2="6" y2="18" />

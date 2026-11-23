@@ -18,9 +18,10 @@ import {
 	type AiHistoryResource,
 	type AiModelDescriptor,
 } from "../../../../features/ai/index.js";
-import { makeDomId } from "../../../../shared/lib/index.js";
+import { lang, makeDomId } from "../../../../shared/lib/index.js";
 import { useAiAssistantRuntime } from "../../ui/AiAssistantRuntime.tsx";
 import { useAiAssistantUpdatedData } from "../../model/useAiAssistantUpdatedData.ts";
+import { formatModelContextWindow, localizeAiModelOption } from "./aiChatLocalization.ts";
 import type {
 	AiActionCard,
 	AiChatAnchorData,
@@ -33,6 +34,7 @@ import type {
 	AiModelOption,
 	AiWorkspaceContext,
 	ChatMessage,
+	CompactContextFeedback,
 } from "./aiChatTypes.ts";
 import { calculateLiveContextTokens } from "./aiContextSelection.ts";
 import { AI_MODELS, DEFAULT_AI_MODEL } from "./aiModels.ts";
@@ -115,31 +117,22 @@ interface EncounterShape {
 	name?: string;
 }
 
-function formatContextWindow(limit?: number): string | undefined {
-	if (!limit || !Number.isFinite(limit) || limit <= 0) return undefined;
-	if (limit >= 1000000) {
-		const m = limit / 1000000;
-		return `${Number.isInteger(m) ? m : m.toFixed(1)}M токенів`;
-	}
-	if (limit >= 1000) {
-		return `${Math.round(limit / 1000)}K токенів`;
-	}
-	return `${limit} токенів`;
-}
-
 function mapApiModelsToOptions(models: AiModelDescriptor[]): AiModelOption[] {
 	if (!Array.isArray(models) || models.length === 0) {
-		return [...AI_MODELS];
+		return AI_MODELS.map(localizeAiModelOption);
 	}
 	return models.map((descriptor) => {
 		const preset = AI_MODELS.find((m) => m.id === descriptor.name);
+		const presetDesc = preset?.description ? lang.t(preset.description) : "";
 		return {
 			id: descriptor.name,
 			name: descriptor.displayName || preset?.name || descriptor.name,
-			description: descriptor.description || preset?.description || "Модель Gemini",
-			badge: preset?.badge,
-			contextWindow: formatContextWindow(descriptor.inputTokenLimit) || preset?.contextWindow,
-			inputTokenLimit: descriptor.inputTokenLimit,
+			description: descriptor.description || presetDesc || lang.t("Gemini model"),
+			badge: preset?.badge ? lang.t(preset.badge) : undefined,
+			contextWindow:
+				formatModelContextWindow(descriptor.inputTokenLimit) ||
+				(preset?.contextWindow ? lang.t(preset.contextWindow) : undefined),
+			inputTokenLimit: descriptor.inputTokenLimit ?? preset?.inputTokenLimit,
 		};
 	});
 }
@@ -149,8 +142,8 @@ function mapImageModelsToOptions(models?: AiModelDescriptor[]): AiModelOption[] 
 	return models.map((descriptor) => ({
 		id: descriptor.name,
 		name: descriptor.displayName || descriptor.name,
-		description: descriptor.description || "Модель генерації зображень",
-		contextWindow: formatContextWindow(descriptor.inputTokenLimit),
+		description: descriptor.description || lang.t("Image generation model"),
+		contextWindow: formatModelContextWindow(descriptor.inputTokenLimit),
 		inputTokenLimit: descriptor.inputTokenLimit,
 	}));
 }
@@ -323,14 +316,25 @@ export function useAiChatState({
 
 	// Composer & model states
 	const [inputValue, setInputValue] = useState("");
-	const [availableModels, setAvailableModels] = useState<AiModelOption[]>([...AI_MODELS]);
+	const [rawApiModels, setRawApiModels] = useState<AiModelDescriptor[]>([]);
 	const [selectedModel, setSelectedModelState] = useState<string>(DEFAULT_AI_MODEL);
-	const [availableImageModels, setAvailableImageModels] = useState<AiModelOption[]>([]);
+	const [rawApiImageModels, setRawApiImageModels] = useState<AiModelDescriptor[]>([]);
 	const [selectedImageModel, setSelectedImageModel] = useState<string>("");
 	const [autoApply, setAutoApplyState] = useState<boolean>(false);
 	const [contextSettings, setContextSettingsState] =
 		useState<AiContextSettings>(INITIAL_CONTEXT_SETTINGS);
 	const [attachments, setAttachments] = useState<AiChatAttachment[]>([]);
+
+	const currentLanguage = runtime.currentLanguage || lang.getLanguage() || "en";
+
+	const availableModels = useMemo(
+		() => mapApiModelsToOptions(rawApiModels),
+		[rawApiModels, currentLanguage],
+	);
+	const availableImageModels = useMemo(
+		() => mapImageModelsToOptions(rawApiImageModels),
+		[rawApiImageModels, currentLanguage],
+	);
 
 	// Request & API key states
 	const [isSending, setIsSending] = useState(false);
@@ -356,7 +360,8 @@ export function useAiChatState({
 	const [contextPreview, setContextPreview] = useState<AiChatContextPreview | null>(null);
 	const [isLoadingContextPreview, setIsLoadingContextPreview] = useState(false);
 	const [isCompactingContext, setIsCompactingContext] = useState(false);
-	const [compactContextFeedback, setCompactContextFeedback] = useState<string | null>(null);
+	const [compactContextFeedback, setCompactContextFeedback] =
+		useState<CompactContextFeedback | null>(null);
 	const contextPreviewReqIdRef = useRef(0);
 
 	// Load available models on mount
@@ -364,13 +369,12 @@ export function useAiChatState({
 		try {
 			const result = await aiApi.listAiModels();
 			const models = Array.isArray(result?.models) ? result.models : [];
-			const mapped = mapApiModelsToOptions(models);
-			setAvailableModels(mapped);
-			const mappedImageModels = mapImageModelsToOptions(result?.imageModels);
-			setAvailableImageModels(mappedImageModels);
-			if (mappedImageModels.length > 0) {
+			setRawApiModels(models);
+			const imageModels = Array.isArray(result?.imageModels) ? result.imageModels : [];
+			setRawApiImageModels(imageModels);
+			if (imageModels.length > 0) {
 				setSelectedImageModel((prev) =>
-					mappedImageModels.some((m) => m.id === prev) ? prev : mappedImageModels[0].id,
+					imageModels.some((m) => m.name === prev) ? prev : imageModels[0].name,
 				);
 			}
 			const keyMissing = result?.source === "fallback" && models.length === 0;
@@ -441,7 +445,7 @@ export function useAiChatState({
 			})
 			.catch((error) => {
 				if (cancelled) return;
-				setErrorMessage(getErrorMessage(error, "Не вдалося завантажити історію AI-чатів."));
+				setErrorMessage(getErrorMessage(error, lang.t("Failed to load AI chat history.")));
 			})
 			.finally(() => {
 				if (!cancelled) setIsLoadingChats(false);
@@ -457,11 +461,12 @@ export function useAiChatState({
 		if (isBestiaryScope) {
 			return {
 				type: "bestiary",
-				title: "Бестіарій",
+				title: lang.t("Bestiary"),
 				pinned: false,
 			};
 		}
-		const effectiveCampaignName = activeCampaign?.name || campaignTitle || campaignSlug || "Кампанія";
+		const effectiveCampaignName =
+			activeCampaign?.name || campaignTitle || campaignSlug || lang.t("Campaign");
 		const effectiveSessionName = runtimeSession?.name || sessionTitle || "";
 		const effectiveEncounterName = activeEncounter?.name || "";
 		const effectiveSceneName = detectedScene?.name || detectedScene?.title || sceneTitle || "";
@@ -500,6 +505,7 @@ export function useAiChatState({
 		workspaceViewType,
 		activeSessionFileName,
 		activeEncounterId,
+		currentLanguage,
 	]);
 
 	// Compute active displayed session object (always returns valid shape even when unsaved draft)
@@ -509,7 +515,7 @@ export function useAiChatState({
 		return {
 			id: "draft-new",
 			campaignSlug,
-			title: "Новий діалог",
+			title: lang.t("New chat"),
 			createdAt: now,
 			updatedAt: now,
 			model: selectedModel,
@@ -528,6 +534,7 @@ export function useAiChatState({
 		contextSettings,
 		draftAnchor,
 		liveWorkspaceAnchor,
+		currentLanguage,
 	]);
 
 	// Effective anchor & sync indicator
@@ -548,6 +555,7 @@ export function useAiChatState({
 			const preview = await aiApi.previewAiChatContext(campaignSlug, {
 				...(activeSessionRecord?.id ? { chatId: activeSessionRecord.id } : {}),
 				model: selectedModel,
+				language: currentLanguage,
 				anchor: effectiveAnchor || liveWorkspaceAnchor,
 				workspaceContext,
 				contextSettings,
@@ -569,6 +577,7 @@ export function useAiChatState({
 		draftAnchor,
 		liveWorkspaceAnchor,
 		selectedModel,
+		currentLanguage,
 		workspaceContext,
 		contextSettings,
 	]);
@@ -586,6 +595,7 @@ export function useAiChatState({
 		activeMessageCount,
 		activeSummarizedCount,
 		selectedModel,
+		currentLanguage,
 		contextSettings.responseTone,
 		contextSettings.rulesEdition,
 		isContextSettingsOpen,
@@ -602,6 +612,7 @@ export function useAiChatState({
 		try {
 			const res = await aiApi.compactAiChatContext(campaignSlug, activeSessionRecord.id, {
 				model: selectedModel,
+				language: currentLanguage,
 			});
 			if (res?.chat) {
 				const converted = toFrontendSession(res.chat);
@@ -610,14 +621,17 @@ export function useAiChatState({
 			}
 			await refreshContextPreview();
 			if (res?.compacted) {
-				setCompactContextFeedback(
-					`Стиснуто ${res.compactedCount} повід. (~${res.previousHistoryTokens} → ~${res.nextHistoryTokens} ток.)`,
-				);
+				setCompactContextFeedback({
+					kind: "compacted",
+					compactedCount: res.compactedCount,
+					previousHistoryTokens: res.previousHistoryTokens,
+					nextHistoryTokens: res.nextHistoryTokens,
+				});
 			} else {
-				setCompactContextFeedback("Контекст діалогу вже стиснуто");
+				setCompactContextFeedback({ kind: "already_compacted" });
 			}
 		} catch (error) {
-			setErrorMessage(getErrorMessage(error, "Не вдалося стиснути контекст діалогу."));
+			setErrorMessage(getErrorMessage(error, lang.t("Failed to compact conversation context.")));
 		} finally {
 			setIsCompactingContext(false);
 		}
@@ -627,6 +641,7 @@ export function useAiChatState({
 		isSending,
 		isCompactingContext,
 		selectedModel,
+		currentLanguage,
 		refreshContextPreview,
 	]);
 
@@ -652,7 +667,9 @@ export function useAiChatState({
 			return {
 				type: (storedAnchor.type as AiContextAnchor["type"]) || "campaign",
 				title: storedAnchor.title,
-				subtitle: sameTarget ? "Синхронізовано з редактором" : "Закріплено до іншого контексту",
+				subtitle: sameTarget
+					? lang.t("Synced with editor")
+					: lang.t("Pinned to another context"),
 				synced: sameTarget,
 				pinned: true,
 				tokenEstimate,
@@ -666,7 +683,7 @@ export function useAiChatState({
 		return {
 			type: (liveWorkspaceAnchor.type as AiContextAnchor["type"]) || "campaign",
 			title: liveWorkspaceAnchor.title,
-			subtitle: "Синхронізовано з редактором",
+			subtitle: lang.t("Synced with editor"),
 			synced: true,
 			pinned: false,
 			tokenEstimate,
@@ -683,6 +700,7 @@ export function useAiChatState({
 		liveWorkspaceAnchor,
 		contextPreview,
 		liveTokenBreakdown.totalTokens,
+		currentLanguage,
 	]);
 
 	// Persist partial patch when backend chat exists
@@ -700,7 +718,7 @@ export function useAiChatState({
 				setActiveSessionRecord(session);
 				setSessions((prev) => upsertSummaryList(prev, toSummaryFromSession(session)));
 			} catch (error) {
-				setErrorMessage(getErrorMessage(error, "Не вдалося зберегти налаштування чату."));
+				setErrorMessage(getErrorMessage(error, lang.t("Failed to save chat settings.")));
 			}
 		},
 		[campaignSlug, activeSessionRecord?.id],
@@ -730,7 +748,7 @@ export function useAiChatState({
 			setErrorMessage(null);
 			try {
 				const fetched = await aiApi.getAiChat(campaignSlug, chatId);
-				if (!fetched) throw new Error("Не вдалося завантажити дані чату.");
+				if (!fetched) throw new Error(lang.t("Failed to load chat data."));
 				const session = toFrontendSession(fetched);
 				setActiveSessionRecord(session);
 				if (session.model) setSelectedModelState(session.model);
@@ -738,7 +756,7 @@ export function useAiChatState({
 				if (session.contextSettings) setContextSettingsState(session.contextSettings);
 				setIsHistoryOpen(false);
 			} catch (error) {
-				setErrorMessage(getErrorMessage(error, "Не вдалося відкрити чат."));
+				setErrorMessage(getErrorMessage(error, lang.t("Failed to open chat.")));
 			} finally {
 				setIsLoadingChats(false);
 			}
@@ -754,6 +772,7 @@ export function useAiChatState({
 				const mappedSummaries = (Array.isArray(nextSummaries) ? nextSummaries : []) as AiChatSessionSummary[];
 				setSessions(mappedSummaries);
 				if (activeSessionRecord?.id === chatId) {
+					setCompactContextFeedback(null);
 					if (mappedSummaries.length > 0) {
 						const nextChat = await aiApi.getAiChat(campaignSlug, mappedSummaries[0].id);
 						if (!nextChat) {
@@ -770,7 +789,7 @@ export function useAiChatState({
 					}
 				}
 			} catch (error) {
-				setErrorMessage(getErrorMessage(error, "Не вдалося видалити чат."));
+				setErrorMessage(getErrorMessage(error, lang.t("Failed to delete chat.")));
 			}
 		},
 		[campaignSlug, activeSessionRecord?.id],
@@ -965,7 +984,7 @@ export function useAiChatState({
 				...(prev || {
 					id: "draft-new",
 					campaignSlug,
-					title: "Новий діалог",
+					title: lang.t("New chat"),
 					createdAt: now,
 					updatedAt: now,
 					model: selectedModel,
@@ -992,8 +1011,9 @@ export function useAiChatState({
 						autoApply,
 						contextSettings,
 						anchor: draftAnchor || liveWorkspaceAnchor,
+						language: currentLanguage,
 					});
-					if (!created?.id) throw new Error("Не вдалося створити новий чат.");
+					if (!created?.id) throw new Error(lang.t("Failed to create a new chat."));
 					targetChatId = created.id;
 				}
 
@@ -1012,7 +1032,7 @@ export function useAiChatState({
 							? activeSessionRecord?.anchor || draftAnchor
 							: liveWorkspaceAnchor,
 						workspaceContext,
-						language: runtime.currentLanguage || "uk",
+						language: currentLanguage,
 						attachedImages,
 						attachedFiles,
 					},
@@ -1050,7 +1070,7 @@ export function useAiChatState({
 						},
 					},
 				);
-				if (!result?.chat) throw new Error("Некоректна відповідь сервера.");
+				if (!result?.chat) throw new Error(lang.t("Invalid server response."));
 
 				const persistedSession = toFrontendSession(result.chat);
 				setActiveSessionRecord(persistedSession);
@@ -1075,7 +1095,7 @@ export function useAiChatState({
 						setIsApiKeyMissing(true);
 					}
 					setErrorMessage(
-						getErrorMessage(error, "Не вдалося отримати відповідь від AI-асистента."),
+						getErrorMessage(error, lang.t("Failed to get a response from the AI assistant.")),
 					);
 				}
 			} finally {
@@ -1098,7 +1118,7 @@ export function useAiChatState({
 			liveWorkspaceAnchor,
 			contextAnchor.pinned,
 			workspaceContext,
-			runtime.currentLanguage,
+			currentLanguage,
 			syncMutationResultToWorkspace,
 		],
 	);
@@ -1120,9 +1140,10 @@ export function useAiChatState({
 				.some((m) => m.actionCards?.some((c) => c.status === "applied"));
 			if (hasAppliedCards) {
 				const confirmed = await runtime.requestConfirmation({
-					title: "Замінити повідомлення?",
-					message:
-						"У попередній відповіді є вже застосовані зміни в кампанії. Вони залишаться у кампанії, але попередня відповідь у чаті буде замінена новою. Продовжити?",
+					title: lang.t("Replace message?"),
+					message: lang.t(
+						"The previous response already has applied changes in this campaign. They will remain in the campaign, but the previous chat reply will be replaced with a new one. Continue?",
+					),
 				});
 				if (!confirmed) return;
 			}
@@ -1179,7 +1200,7 @@ export function useAiChatState({
 							? activeSessionRecord.anchor || draftAnchor
 							: liveWorkspaceAnchor,
 						workspaceContext,
-						language: runtime.currentLanguage || "uk",
+						language: currentLanguage,
 						truncateFromMessageId: userMessageId,
 						attachedImages: [],
 						attachedFiles: [],
@@ -1218,7 +1239,7 @@ export function useAiChatState({
 						},
 					},
 				);
-				if (!result?.chat) throw new Error("Некоректна відповідь сервера.");
+				if (!result?.chat) throw new Error(lang.t("Invalid server response."));
 
 				const persistedSession = toFrontendSession(result.chat);
 				setActiveSessionRecord(persistedSession);
@@ -1241,7 +1262,7 @@ export function useAiChatState({
 						setIsApiKeyMissing(true);
 					}
 					setErrorMessage(
-						getErrorMessage(error, "Не вдалося отримати відповідь від AI-асистента."),
+						getErrorMessage(error, lang.t("Failed to get a response from the AI assistant.")),
 					);
 				}
 			} finally {
@@ -1263,6 +1284,7 @@ export function useAiChatState({
 			draftAnchor,
 			liveWorkspaceAnchor,
 			workspaceContext,
+			currentLanguage,
 			syncMutationResultToWorkspace,
 		],
 	);
@@ -1315,7 +1337,7 @@ export function useAiChatState({
 			const loadingAssistantMsg: ChatMessage = {
 				id: `temp-assistant-img-${now + 1}`,
 				role: "assistant",
-				content: "Генерую зображення...",
+				content: lang.t("Generating image..."),
 				timestamp: now + 1,
 				status: "streaming",
 				streamPhase: "thinking",
@@ -1326,7 +1348,7 @@ export function useAiChatState({
 				...(prev || {
 					id: "draft-new",
 					campaignSlug,
-					title: "Новий діалог",
+					title: lang.t("New chat"),
 					createdAt: now,
 					updatedAt: now,
 					model: selectedModel,
@@ -1350,8 +1372,9 @@ export function useAiChatState({
 						autoApply,
 						contextSettings,
 						anchor: draftAnchor || liveWorkspaceAnchor,
+						language: currentLanguage,
 					});
-					if (!created?.id) throw new Error("Не вдалося створити новий чат.");
+					if (!created?.id) throw new Error(lang.t("Failed to create a new chat."));
 					targetChatId = created.id;
 				}
 
@@ -1365,9 +1388,10 @@ export function useAiChatState({
 					anchor: contextAnchor.pinned
 						? activeSessionRecord?.anchor || draftAnchor
 						: liveWorkspaceAnchor,
+					language: currentLanguage,
 					attachedImages: pendingImages,
 				});
-				if (!result?.chat) throw new Error("Некоректна відповідь генератора зображень.");
+				if (!result?.chat) throw new Error(lang.t("Invalid image generator response."));
 
 				const persistedSession = toFrontendSession(result.chat);
 				setActiveSessionRecord(persistedSession);
@@ -1387,7 +1411,7 @@ export function useAiChatState({
 					setIsApiKeyMissing(true);
 				}
 				setErrorMessage(
-					getErrorMessage(error, "Не вдалося згенерувати зображення."),
+					getErrorMessage(error, lang.t("Failed to generate image.")),
 				);
 			} finally {
 				setIsSending(false);
@@ -1406,6 +1430,7 @@ export function useAiChatState({
 			draftAnchor,
 			liveWorkspaceAnchor,
 			contextAnchor.pinned,
+			currentLanguage,
 			runtime,
 		],
 	);
@@ -1457,13 +1482,13 @@ export function useAiChatState({
 				(chatId) =>
 					aiApi.applyAiChatAction(campaignSlug, chatId, cardId, {
 						workspaceContext,
-						language: runtime.currentLanguage || "uk",
+						language: currentLanguage,
 						...(options?.useDraftSnapshot ? { useDraftSnapshot: true } : {}),
 					}),
-				"Не вдалося застосувати дію.",
+				lang.t("Failed to apply action."),
 			);
 		},
-		[runActionMutation, campaignSlug, workspaceContext, runtime.currentLanguage],
+		[runActionMutation, campaignSlug, workspaceContext, currentLanguage],
 	);
 
 	const saveCardDraftResources = useCallback(
@@ -1509,7 +1534,7 @@ export function useAiChatState({
 			void runActionMutation(
 				cardId,
 				(chatId) => aiApi.undoAiChatAction(campaignSlug, chatId, cardId),
-				"Не вдалося скасувати застосовану дію.",
+				lang.t("Failed to undo applied action."),
 			);
 		},
 		[runActionMutation, campaignSlug],
@@ -1520,7 +1545,7 @@ export function useAiChatState({
 			void runActionMutation(
 				cardId,
 				(chatId) => aiApi.rejectAiChatAction(campaignSlug, chatId, cardId),
-				"Не вдалося відхилити пропозицію.",
+				lang.t("Failed to dismiss suggestion."),
 			);
 		},
 		[runActionMutation, campaignSlug],
@@ -1537,7 +1562,7 @@ export function useAiChatState({
 				const imageMime = getSupportedAiImageMimeType(file);
 				const fileMime = imageMime ? "" : getSupportedAiFileMimeType(file);
 				if (!imageMime && !fileMime) {
-					setErrorMessage(`Непідтримуваний формат файлу: ${file.name}`);
+					setErrorMessage(lang.t("Unsupported file format: {name}", { name: file.name }));
 					continue;
 				}
 				const isImage = Boolean(imageMime);
@@ -1545,12 +1570,18 @@ export function useAiChatState({
 					isImage ? a.kind === "image" : a.kind === "file",
 				).length;
 				if (sameKindCount >= MAX_AI_ATTACHMENTS) {
-					setErrorMessage(`Максимум ${MAX_AI_ATTACHMENTS} вкладення одного типу.`);
+					setErrorMessage(
+						lang.t("Maximum {count} attachments of the same type.", {
+							count: MAX_AI_ATTACHMENTS,
+						}),
+					);
 					break;
 				}
 				const maxBytes = isImage ? MAX_AI_IMAGE_BYTES : MAX_AI_FILE_BYTES;
 				if (file.size > maxBytes) {
-					setErrorMessage(`Файл "${file.name}" перевищує ліміт 10 МБ.`);
+					setErrorMessage(
+						lang.t('File "{name}" exceeds the 10 MB limit.', { name: file.name }),
+					);
 					continue;
 				}
 				try {
@@ -1575,7 +1606,9 @@ export function useAiChatState({
 						nextList = [...nextList, descriptor];
 					}
 				} catch (error) {
-					setErrorMessage(getErrorMessage(error, `Помилка читання файлу ${file.name}`));
+					setErrorMessage(
+						getErrorMessage(error, lang.t("Error reading file {name}", { name: file.name })),
+					);
 				}
 			}
 			setAttachments(nextList);
@@ -1590,7 +1623,7 @@ export function useAiChatState({
 	const saveApiKey = useCallback(async (apiKey: string) => {
 		const trimmed = String(apiKey || "").trim();
 		if (!trimmed) {
-			setErrorMessage("Введіть Gemini API ключ.");
+			setErrorMessage(lang.t("Enter a Gemini API key."));
 			return false;
 		}
 		setIsSavingApiKey(true);
@@ -1598,13 +1631,15 @@ export function useAiChatState({
 		try {
 			const res = await saveGeminiApiKeyAndRefreshModels({ apiKey: trimmed });
 			if (res.status === "saved" && res.modelSelection) {
-				const mapped = mapApiModelsToOptions(res.modelSelection.models);
-				if (mapped.length > 0) setAvailableModels(mapped);
-				const mappedImage = mapImageModelsToOptions(res.modelSelection.imageModels);
-				if (mappedImage.length > 0) {
-					setAvailableImageModels(mappedImage);
+				const models = Array.isArray(res.modelSelection.models) ? res.modelSelection.models : [];
+				if (models.length > 0) setRawApiModels(models);
+				const imageModels = Array.isArray(res.modelSelection.imageModels)
+					? res.modelSelection.imageModels
+					: [];
+				if (imageModels.length > 0) {
+					setRawApiImageModels(imageModels);
 					setSelectedImageModel((prev) =>
-						mappedImage.some((m) => m.id === prev) ? prev : mappedImage[0].id,
+						imageModels.some((m) => m.name === prev) ? prev : imageModels[0].name,
 					);
 				}
 				if (res.modelSelection.selectedModel) {
@@ -1617,7 +1652,7 @@ export function useAiChatState({
 			setIsApiKeyMissing(false);
 			return true;
 		} catch (error) {
-			setErrorMessage(getErrorMessage(error, "Не вдалося зберегти API ключ."));
+			setErrorMessage(getErrorMessage(error, lang.t("Failed to save API key.")));
 			return false;
 		} finally {
 			setIsSavingApiKey(false);

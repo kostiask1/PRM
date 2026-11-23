@@ -1,3 +1,4 @@
+import { lang } from "../../../../shared/lib/index.js";
 import type { AiContextAnchor } from "../model/aiChatTypes.ts";
 
 interface AiContextAnchorBarV2Props {
@@ -24,10 +25,10 @@ export default function AiContextAnchorBarV2({
 					onClick={onTogglePin}
 					title={
 						contextAnchor.pinned
-							? "Контекст закріплено. Натисніть, щоб автоматично слідувати за редактором"
-							: "Закріпити поточний контекст для цього чату"
+							? lang.t("Context is pinned. Click to automatically follow the editor")
+							: lang.t("Pin current context to this chat")
 					}
-					aria-label={contextAnchor.pinned ? "Відкріпити контекст" : "Закріпити контекст"}
+					aria-label={contextAnchor.pinned ? lang.t("Unpin context") : lang.t("Pin context")}
 				>
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
 						<line x1="12" y1="17" x2="12" y2="22" />
@@ -42,19 +43,22 @@ export default function AiContextAnchorBarV2({
 				{contextAnchor.synced ? (
 					<span
 						className="AiContextAnchorBarV2__syncBadge"
-						title={contextAnchor.subtitle || "Контекст автоматично оновлюється разом з редактором"}
+						title={
+							contextAnchor.subtitle ||
+							lang.t("Context updates automatically with the editor")
+						}
 					>
 						<span className="AiContextAnchorBarV2__syncDot" />
-						<span>{contextAnchor.pinned ? "Закріплено" : "Синхронно"}</span>
+						<span>{contextAnchor.pinned ? lang.t("Pinned") : lang.t("Synced")}</span>
 					</span>
 				) : (
 					<button
 						type="button"
 						className="AiContextAnchorBarV2__resyncBtn"
 						onClick={onResyncAnchor}
-						title="Чат закріплено до іншої сторінки. Натисніть, щоб прив'язати до поточного екрана"
+						title={lang.t("Chat is pinned to another page. Click to attach it to the current screen")}
 					>
-						<span>Оновити якір</span>
+						<span>{lang.t("Sync anchor")}</span>
 					</button>
 				)}
 			</div>
@@ -64,8 +68,8 @@ export default function AiContextAnchorBarV2({
 					type="button"
 					className={`AiContextAnchorBarV2__settingsBtn ${isSettingsOpen ? "is-active" : ""}`}
 					onClick={onToggleSettings}
-					title="Налаштування контексту та пам'яті моделі"
-					aria-label="Налаштування контексту"
+					title={lang.t("Context and model memory settings")}
+					aria-label={lang.t("Context settings")}
 					aria-expanded={isSettingsOpen}
 				>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

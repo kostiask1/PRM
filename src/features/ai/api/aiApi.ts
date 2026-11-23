@@ -1,4 +1,5 @@
 import { request } from "../../../shared/api/index.ts";
+import { lang } from "../../../shared/lib/index.js";
 
 export type AiHistoryId = string | number;
 
@@ -192,6 +193,22 @@ export interface AiChatActionCardStat {
 	label: string;
 	value: string;
 	type?: "added" | "changed" | "info" | "neutral";
+	kind?:
+		| "character"
+		| "npc"
+		| "location"
+		| "entity"
+		| "monster"
+		| "words"
+		| "note"
+		| "session"
+		| "scene"
+		| "session_npc"
+		| "session_location"
+		| "encounter";
+	op?: "added" | "changed" | "removed";
+	count?: number;
+	delta?: number;
 }
 
 export interface AiChatActionCardRecord {
@@ -293,6 +310,7 @@ export interface GenerateAiChatImagePayload {
 	autoApply?: boolean;
 	contextSettings?: Partial<AiChatContextSettings>;
 	anchor?: AiChatAnchor | null;
+	language?: string;
 	attachedImages?: AiChatAttachmentRecord[];
 }
 
@@ -477,7 +495,7 @@ export const aiApi = {
 				finalResult = parsed as unknown as SendAiChatMessageResult;
 			} else if (eventType === "error") {
 				const err = new Error(
-					String(parsed.error || "Не вдалося отримати відповідь від AI-асистента."),
+					String(parsed.error || lang.t("Failed to get a response from the AI assistant.")),
 				) as Error & { status?: number; code?: string };
 				if (typeof parsed.status === "number") err.status = parsed.status;
 				if (typeof parsed.code === "string") err.code = parsed.code;
@@ -504,7 +522,7 @@ export const aiApi = {
 		}
 
 		if (!finalResult) {
-			throw new Error("Потік відповіді завершився без фінального результату.");
+			throw new Error(lang.t("Response stream ended without a final result."));
 		}
 		return finalResult;
 	},

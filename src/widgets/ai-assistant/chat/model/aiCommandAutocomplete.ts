@@ -61,24 +61,37 @@ function getContextualConfig(
 	};
 }
 
-function getQueryMatchScore(item: AiCommandItem, normalizedQuery: string): number {
+function getQueryMatchScore(
+	item: AiCommandItem,
+	normalizedQuery: string,
+	translate: (phrase: string) => string,
+): number {
 	const cmdKey = item.command.slice(1).toLowerCase();
 	const name = item.name.toLowerCase();
+	const localizedName = translate(item.name).toLowerCase();
 	const desc = item.description.toLowerCase();
+	const localizedDesc = translate(item.description).toLowerCase();
 	const keywords = COMMAND_KEYWORDS[item.command] || [];
 
 	if (cmdKey.startsWith(normalizedQuery)) return 4;
-	if (name.startsWith(normalizedQuery) || keywords.some((kw) => kw.startsWith(normalizedQuery))) {
+	if (
+		name.startsWith(normalizedQuery) ||
+		localizedName.startsWith(normalizedQuery) ||
+		keywords.some((kw) => kw.startsWith(normalizedQuery))
+	) {
 		return 3;
 	}
 	if (
 		cmdKey.includes(normalizedQuery) ||
 		name.includes(normalizedQuery) ||
+		localizedName.includes(normalizedQuery) ||
 		keywords.some((kw) => kw.includes(normalizedQuery))
 	) {
 		return 2;
 	}
-	if (desc.includes(normalizedQuery)) return 1;
+	if (desc.includes(normalizedQuery) || localizedDesc.includes(normalizedQuery)) {
+		return 1;
+	}
 	return 0;
 }
 
@@ -134,11 +147,13 @@ export function getSuggestedAiCommands({
 	anchorType,
 	isBestiaryOpen = false,
 	usedCommands,
+	translate = (phrase: string) => phrase,
 }: {
 	query: string;
 	anchorType?: AiContextAnchor["type"];
 	isBestiaryOpen?: boolean;
 	usedCommands?: ReadonlySet<string>;
+	translate?: (phrase: string) => string;
 }): RankedAiCommandItem[] {
 	const normalizedQuery = String(query || "").trim().toLowerCase();
 	const { priority, badges } = getContextualConfig(anchorType, isBestiaryOpen);
@@ -149,9 +164,14 @@ export function getSuggestedAiCommands({
 	};
 
 	const candidates = AI_COMMANDS.map((item, defaultIndex) => {
-		const score = normalizedQuery ? getQueryMatchScore(item, normalizedQuery) : 1;
+		const score = normalizedQuery ? getQueryMatchScore(item, normalizedQuery, translate) : 1;
 		return {
-			item,
+			item: {
+				...item,
+				name: translate(item.name),
+				description: translate(item.description),
+				example: translate(item.example),
+			},
 			score,
 			defaultIndex,
 			priorityRank: getPriorityRank(item.command),

@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from "react";
+import { lang } from "../../../../../shared/lib/index.js";
 import { NoteViewMode } from "../../../../../shared/ui/index.js";
+import { getChatDateLocale } from "../../model/aiChatLocalization.ts";
 import type {
 	AiChatContextPreview,
 	AiContextAnchor,
@@ -66,6 +68,7 @@ export default function AiContextSettingsPopoverV2({
 	const [sectionFilters, setSectionFilters] = useState<Partial<Record<ContextSectionKey, string>>>(
 		{},
 	);
+	const currentLanguage = lang.getLanguage();
 
 	useDismissablePopover({
 		isOpen,
@@ -79,46 +82,49 @@ export default function AiContextSettingsPopoverV2({
 		return [
 			{
 				key: "currentSession",
-				label: contextPreview?.hasActiveSession && contextPreview.activeSessionName
-					? `Поточна сесія: ${contextPreview.activeSessionName}`
-					: "Поточна сесія та сцени",
+				label:
+					contextPreview?.hasActiveSession && contextPreview.activeSessionName
+						? lang.t("Current session: {name}", {
+								name: contextPreview.activeSessionName,
+							})
+						: lang.t("Current session and scenes"),
 				emptyLabel: contextPreview?.hasActiveSession
-					? "Сцен немає"
-					: "Немає активної сесії",
+					? lang.t("No scenes")
+					: lang.t("No active session"),
 				items: catalog?.scenes || [],
 			},
 			{
 				key: "characters",
-				label: "Персонажі гравців",
-				emptyLabel: "Порожньо",
+				label: lang.t("Player characters"),
+				emptyLabel: lang.t("Empty"),
 				items: catalog?.characters || [],
 			},
 			{
 				key: "npcs",
-				label: "NPC кампанії",
-				emptyLabel: "Порожньо",
+				label: lang.t("Campaign NPCs"),
+				emptyLabel: lang.t("Empty"),
 				items: catalog?.npcs || [],
 			},
 			{
 				key: "locations",
-				label: "Локації та фракції",
-				emptyLabel: "Порожньо",
+				label: lang.t("Locations and factions"),
+				emptyLabel: lang.t("Empty"),
 				items: catalog?.locations || [],
 			},
 			{
 				key: "recentSessions",
-				label: "Попередні сесії",
-				emptyLabel: "Немає інших сесій",
+				label: lang.t("Previous sessions"),
+				emptyLabel: lang.t("No other sessions"),
 				items: catalog?.sessions || [],
 			},
 			{
 				key: "bestiary",
-				label: "Кастомний Бестіарій",
-				emptyLabel: "Порожньо",
+				label: lang.t("Custom Bestiary"),
+				emptyLabel: lang.t("Empty"),
 				items: catalog?.bestiary || [],
 			},
 		];
-	}, [contextPreview]);
+	}, [contextPreview, currentLanguage]);
 
 	if (!isOpen) return null;
 
@@ -167,10 +173,10 @@ export default function AiContextSettingsPopoverV2({
 	const compactStatusText = compactFeedback
 		? compactFeedback
 		: hasCompactedSummary && unsummarizedCount === 0
-			? "Діалог стиснуто ✓"
+			? lang.t("Conversation compacted ✓")
 			: unsummarizedCount > 0
-				? `${unsummarizedCount} нестисн. повід.`
-				: "Немає історії для стиснення";
+				? lang.t("{count} uncompacted msg.", { count: unsummarizedCount })
+				: lang.t("No history to compact");
 
 	return (
 		<div className="AiContextSettingsPopoverV2" ref={ref}>
@@ -187,13 +193,13 @@ export default function AiContextSettingsPopoverV2({
 						<line x1="9" y1="8" x2="15" y2="8" />
 						<line x1="17" y1="16" x2="23" y2="16" />
 					</svg>
-					<span>Налаштування контексту</span>
+					<span>{lang.t("Context settings")}</span>
 				</div>
 				<button
 					type="button"
 					className="AiContextSettingsPopoverV2__closeBtn"
 					onClick={onClose}
-					aria-label="Закрити налаштування"
+					aria-label={lang.t("Close settings")}
 				>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 						<line x1="18" y1="6" x2="6" y2="18" />
@@ -206,11 +212,14 @@ export default function AiContextSettingsPopoverV2({
 				{/* Token Usage Bar */}
 				<div className="AiContextSettingsPopoverV2__tokenSection">
 					<div className="AiContextSettingsPopoverV2__tokenLabelRow">
-						<span>Використання пам'яті моделі</span>
+						<span>{lang.t("Model memory usage")}</span>
 						<strong>
 							{isLoadingPreview && !contextPreview
 								? "..."
-								: `~${totalTokens.toLocaleString()} / ${maxTokensLabel} токенів`}
+								: lang.t("~{total} / {max} tokens", {
+										total: totalTokens.toLocaleString(getChatDateLocale(currentLanguage)),
+										max: maxTokensLabel,
+									})}
 						</strong>
 					</div>
 					<div className="AiContextSettingsPopoverV2__progressBarBg">
@@ -221,11 +230,11 @@ export default function AiContextSettingsPopoverV2({
 					</div>
 					{contextPreview && (
 						<div className="AiContextSettingsPopoverV2__tokenBreakdown">
-							<span>Системний {formatTokenBadge(tokenBreakdown.systemTokens)}</span>
+							<span>{lang.t("System {tokens}", { tokens: formatTokenBadge(tokenBreakdown.systemTokens) })}</span>
 							<span>·</span>
-							<span>Контекст {formatTokenBadge(tokenBreakdown.contextTokens)}</span>
+							<span>{lang.t("Context {tokens}", { tokens: formatTokenBadge(tokenBreakdown.contextTokens) })}</span>
 							<span>·</span>
-							<span>Діалог {formatTokenBadge(tokenBreakdown.historyTokens)}</span>
+							<span>{lang.t("Chat {tokens}", { tokens: formatTokenBadge(tokenBreakdown.historyTokens) })}</span>
 						</div>
 					)}
 					<div className="AiContextSettingsPopoverV2__compactRow">
@@ -236,8 +245,8 @@ export default function AiContextSettingsPopoverV2({
 							disabled={!canCompact || isCompacting}
 							title={
 								canCompact
-									? "Згорнути попередні повідомлення діалогу в стислий підсумок для економії токенів"
-									: "Немає нестиснених повідомлень у діалозі"
+									? lang.t("Summarize earlier chat messages into a compact summary to save tokens")
+									: lang.t("No uncompacted messages in this chat")
 							}
 						>
 							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -246,7 +255,7 @@ export default function AiContextSettingsPopoverV2({
 								<line x1="14" y1="10" x2="21" y2="3" />
 								<line x1="3" y1="21" x2="10" y2="14" />
 							</svg>
-							<span>{isCompacting ? "Стискаю..." : "Стиснути контекст"}</span>
+							<span>{isCompacting ? lang.t("Compacting...") : lang.t("Compact context")}</span>
 						</button>
 						<span className="AiContextSettingsPopoverV2__compactStatus">
 							{compactStatusText}
@@ -256,7 +265,7 @@ export default function AiContextSettingsPopoverV2({
 
 				{/* Expandable Context Sources */}
 				<div className="AiContextSettingsPopoverV2__section">
-					<span className="AiContextSettingsPopoverV2__sectionHeading">Джерела контексту для ШІ</span>
+					<span className="AiContextSettingsPopoverV2__sectionHeading">{lang.t("AI context sources")}</span>
 					<div className="AiContextSettingsPopoverV2__checklist">
 						{sections.map((section) => {
 							const selectionState = getSectionSelectionState(
@@ -293,11 +302,19 @@ export default function AiContextSettingsPopoverV2({
 									settings.selectedSessionFileNames == null &&
 									section.items.length > recentLimit
 								) {
-									countLabel = `Останні ${recentLimit} з ${section.items.length}`;
+									countLabel = lang.t("Last {limit} of {total}", {
+										limit: recentLimit,
+										total: section.items.length,
+									});
 								} else if (selectionState.state === "all") {
-									countLabel = `Усі · ${selectionState.totalCount}`;
+									countLabel = lang.t("All · {count}", {
+										count: selectionState.totalCount,
+									});
 								} else {
-									countLabel = `${selectionState.selectedCount} з ${selectionState.totalCount}`;
+									countLabel = lang.t("{selected} of {total}", {
+										selected: selectionState.selectedCount,
+										total: selectionState.totalCount,
+									});
 								}
 							}
 
@@ -331,7 +348,7 @@ export default function AiContextSettingsPopoverV2({
 										{contextPreview && (
 											<span
 												className="AiContextSourceV2__tokens"
-												title="Оцінка токенів цієї секції"
+												title={lang.t("Estimated tokens for this section")}
 											>
 												{formatTokenBadge(sectionTokens)}
 											</span>
@@ -345,10 +362,14 @@ export default function AiContextSettingsPopoverV2({
 												aria-expanded={isExpanded}
 												aria-label={
 													isExpanded
-														? `Згорнути ${section.label}`
-														: `Розгорнути ${section.label}`
+														? lang.t("Collapse {section}", { section: section.label })
+														: lang.t("Expand {section}", { section: section.label })
 												}
-												title={isExpanded ? "Згорнути список" : "Обрати конкретні елементи"}
+												title={
+													isExpanded
+														? lang.t("Collapse list")
+														: lang.t("Select specific items")
+												}
 											>
 												<svg
 													width="13"
@@ -378,8 +399,10 @@ export default function AiContextSettingsPopoverV2({
 																[section.key]: e.target.value,
 															}))
 														}
-														placeholder="Пошук..."
-														aria-label={`Фільтрувати ${section.label}`}
+														placeholder={lang.t("Search...")}
+														aria-label={lang.t("Filter {section}", {
+															section: section.label,
+														})}
 													/>
 												)}
 												<div className="AiContextSourceV2__bulkBtns">
@@ -397,7 +420,7 @@ export default function AiContextSettingsPopoverV2({
 															)
 														}
 													>
-														Усі
+														{lang.t("All")}
 													</button>
 													<button
 														type="button"
@@ -406,7 +429,7 @@ export default function AiContextSettingsPopoverV2({
 															onUpdateSettings(clearContextItems(section.key, settings))
 														}
 													>
-														Зняти
+														{lang.t("Clear")}
 													</button>
 												</div>
 											</div>
@@ -414,7 +437,7 @@ export default function AiContextSettingsPopoverV2({
 											<div className="AiContextSourceV2__itemList">
 												{filteredItems.length === 0 ? (
 													<div className="AiContextSourceV2__emptyFilter">
-														Нічого не знайдено
+														{lang.t("No results")}
 													</div>
 												) : (
 													filteredItems.map((item) => (
@@ -462,7 +485,7 @@ export default function AiContextSettingsPopoverV2({
 
 				{/* Mutation Permissions */}
 				<div className="AiContextSettingsPopoverV2__section">
-					<span className="AiContextSettingsPopoverV2__sectionHeading">Дозволи на зміни</span>
+					<span className="AiContextSettingsPopoverV2__sectionHeading">{lang.t("Change permissions")}</span>
 					<div className="AiContextSettingsPopoverV2__pillGroup">
 						<button
 							type="button"
@@ -471,7 +494,7 @@ export default function AiContextSettingsPopoverV2({
 							}`}
 							onClick={() => setMutationPermission("diff_only")}
 						>
-							Тільки пропозиції (Diff)
+							{lang.t("Proposals only (Diff)")}
 						</button>
 						<button
 							type="button"
@@ -480,7 +503,7 @@ export default function AiContextSettingsPopoverV2({
 							}`}
 							onClick={() => setMutationPermission("direct_mutation")}
 						>
-							Пряме редагування
+							{lang.t("Direct editing")}
 						</button>
 					</div>
 				</div>
@@ -488,22 +511,22 @@ export default function AiContextSettingsPopoverV2({
 				{/* Response Tone & Rules Edition */}
 				<div className="AiContextSettingsPopoverV2__section">
 					<div className="AiContextSettingsPopoverV2__sectionHeader">
-						<span className="AiContextSettingsPopoverV2__sectionHeading">Стиль та тон відповіді</span>
+						<span className="AiContextSettingsPopoverV2__sectionHeading">{lang.t("Response style and tone")}</span>
 						<NoteViewMode<"5.5e" | "5e">
 							value={rulesEdition}
 							onChange={setRulesEdition}
-							ariaLabel="Редакція правил D&D"
+							ariaLabel={lang.t("D&D rules edition")}
 							className="AiContextSettingsPopoverV2__editionToggle"
 							options={[
 								{
 									value: "5.5e",
 									label: "5.5e (2024)",
-									title: "Пріоритет правил D&D 5.5e (2024)",
+									title: lang.t("Prioritize D&D 5.5e (2024) rules"),
 								},
 								{
 									value: "5e",
 									label: "5e",
-									title: "Класичні правила D&D 5e (2014)",
+									title: lang.t("Classic D&D 5e (2014) rules"),
 								},
 							]}
 						/>
@@ -516,7 +539,7 @@ export default function AiContextSettingsPopoverV2({
 							}`}
 							onClick={() => setResponseTone("concise")}
 						>
-							Лаконічний
+							{lang.t("Concise")}
 						</button>
 						<button
 							type="button"
@@ -525,7 +548,7 @@ export default function AiContextSettingsPopoverV2({
 							}`}
 							onClick={() => setResponseTone("narrative")}
 						>
-							Художній
+							{lang.t("Narrative")}
 						</button>
 						<button
 							type="button"
@@ -534,7 +557,7 @@ export default function AiContextSettingsPopoverV2({
 							}`}
 							onClick={() => setResponseTone("rules_strict")}
 						>
-							{rulesEdition === "5e" ? "Сухі правила 5e" : "Сухі правила 5.5e"}
+							{rulesEdition === "5e" ? lang.t("Strict 5e rules") : lang.t("Strict 5.5e rules")}
 						</button>
 					</div>
 				</div>

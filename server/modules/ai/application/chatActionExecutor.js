@@ -25,6 +25,10 @@ function hasOwn(value, key) {
 	);
 }
 
+function isUkrainianLanguage(language) {
+	return String(language ?? "uk").trim().toLowerCase().startsWith("uk");
+}
+
 function isSessionCreateOperation(op) {
 	if (!isObject(op)) return false;
 	const opName = asText(op.op).toLowerCase();
@@ -212,7 +216,7 @@ function collectNestedList(rootSource, nestedData, key) {
 	return items;
 }
 
-function unpackSessionCreateOperation(op) {
+function unpackSessionCreateOperation(op, isUk = true) {
 	op.entity = "session";
 	delete op.scope;
 	if (!isObject(op.data) && isObject(op.value)) {
@@ -243,7 +247,7 @@ function unpackSessionCreateOperation(op) {
 		unpacked.push({
 			op: "appendNote",
 			entity: "session",
-			note: { title: "Опис сесії", text: descText },
+			note: { title: isUk ? "Опис сесії" : "Session description", text: descText },
 		});
 	}
 	for (const noteItem of collectNestedList(rootSource, nestedData, "notes")) {
@@ -312,7 +316,11 @@ function unpackSessionCreateOperation(op) {
 	return unpacked;
 }
 
-function normalizeActionOperationsForExecution(operations, { sessionData = null, sceneId = null } = {}) {
+function normalizeActionOperationsForExecution(
+	operations,
+	{ sessionData = null, sceneId = null, language = "uk" } = {},
+) {
+	const isUk = isUkrainianLanguage(language);
 	const rawCloned = (Array.isArray(operations) ? operations : []).map((op) =>
 		isObject(op) ? JSON.parse(JSON.stringify(op)) : op,
 	);
@@ -340,7 +348,7 @@ function normalizeActionOperationsForExecution(operations, { sessionData = null,
 			}
 		}
 		if (isSessionCreateOperation(op)) {
-			hoistedSessionOps.push(op, ...unpackSessionCreateOperation(op));
+			hoistedSessionOps.push(op, ...unpackSessionCreateOperation(op, isUk));
 		} else {
 			remainingOps.push(op);
 		}
@@ -508,7 +516,7 @@ function normalizeActionOperationsForExecution(operations, { sessionData = null,
 					texts: {
 						summary:
 							asText(encData.description || encData.summary || encData.name) ||
-							"Бойова сутичка",
+							(isUk ? "Бойова сутичка" : "Combat encounter"),
 						goal: asText(encData.goal),
 						stakes: asText(encData.stakes),
 						location: asText(encData.location),
@@ -530,10 +538,10 @@ function isDestructiveOperationList(operations) {
 	return operations.some((op) => DESTRUCTIVE_OPS.has(asText(op?.op).toLowerCase()));
 }
 
-function truncatePreviewText(text) {
+function truncatePreviewText(text, isUk = true) {
 	const value = String(text || "");
 	if (value.length <= MAX_PREVIEW_CHARS) return value;
-	return `${value.slice(0, MAX_PREVIEW_CHARS)}\n... (скорочено)`;
+	return `${value.slice(0, MAX_PREVIEW_CHARS)}\n... (${isUk ? "скорочено" : "truncated"})`;
 }
 
 function serializePreviewObject(value) {
@@ -612,7 +620,20 @@ function formatSingleResourceDiff(resource) {
 	return projectObjectChangedFields(resource.before, resource.after);
 }
 
-function countCollectionChanges(prevArr = [], nextArr = [], singularLabel, pluralLabel, stats) {
+const COLLECTION_STAT_LABELS = {
+	note: { ukSingular: "нотатка", ukPlural: "нотатки", enSingular: "note", enPlural: "notes" },
+	scene: { ukSingular: "сцена", ukPlural: "сцени", enSingular: "scene", enPlural: "scenes" },
+	session_npc: { ukSingular: "NPC (сесія)", ukPlural: "NPC (сесія)", enSingular: "NPC (session)", enPlural: "NPC (session)" },
+	session_location: {
+		ukSingular: "локація (сесія)",
+		ukPlural: "локації (сесія)",
+		enSingular: "location (session)",
+		enPlural: "locations (session)",
+	},
+	encounter: { ukSingular: "бій", ukPlural: "бої", enSingular: "encounter", enPlural: "encounters" },
+};
+
+function countCollectionChanges(prevArr = [], nextArr = [], kind, isUk, stats) {
 	const prev = Array.isArray(prevArr) ? prevArr : [];
 	const next = Array.isArray(nextArr) ? nextArr : [];
 	if (JSON.stringify(prev) === JSON.stringify(next)) return;
@@ -637,39 +658,102 @@ function countCollectionChanges(prevArr = [], nextArr = [], singularLabel, plura
 		if (!nextIds.has(key)) removed += 1;
 	}
 
-	if (added > 0) stats.push({ label: pluralLabel, value: `+${added} ${added === 1 ? singularLabel : pluralLabel}`, type: "added" });
-	if (modified > 0) stats.push({ label: pluralLabel, value: `~${modified} ${modified === 1 ? singularLabel : pluralLabel}`, type: "changed" });
-	if (removed > 0) stats.push({ label: pluralLabel, value: `-${removed} ${removed === 1 ? singularLabel : pluralLabel}`, type: "info" });
-}
+	const labels = COLLECTION_STAT_LABELS[kind] || COLLECTION_STAT_LABELS.note;
+	const singularLabel = isUk ? labels.ukSingular : labels.enSingular;
+	const pluralLabel = isUk ? labels.ukPlural : labels.enPlural;
 
-function collectEntityStat(resource, stats) {
-	const typeLabels = {
-		characters: "Персонаж",
-		npc: "NPC",
-		locations: "Локація",
-	};
-	const label = typeLabels[resource.type] || "Сутність";
-	if (resource.before === null || resource.before === undefined) {
-		stats.push({ label, value: `+1 ${label}`, type: "added" });
-	} else if (resource.after === null || resource.after === undefined) {
-		stats.push({ label, value: `-1 ${label}`, type: "info" });
-	} else {
-		stats.push({ label, value: `~1 ${label}`, type: "changed" });
+	if (added > 0) {
+		stats.push({
+			label: pluralLabel,
+			value: `+${added} ${added === 1 ? singularLabel : pluralLabel}`,
+			type: "added",
+			kind,
+			op: "added",
+			count: added,
+		});
+	}
+	if (modified > 0) {
+		stats.push({
+			label: pluralLabel,
+			value: `~${modified} ${modified === 1 ? singularLabel : pluralLabel}`,
+			type: "changed",
+			kind,
+			op: "changed",
+			count: modified,
+		});
+	}
+	if (removed > 0) {
+		stats.push({
+			label: pluralLabel,
+			value: `-${removed} ${removed === 1 ? singularLabel : pluralLabel}`,
+			type: "info",
+			kind,
+			op: "removed",
+			count: removed,
+		});
 	}
 }
 
-function collectResourceStats(resource, stats) {
+function collectEntityStat(resource, isUk, stats) {
+	const entityConfig = {
+		characters: { kind: "character", uk: "Персонаж", en: "Character" },
+		npc: { kind: "npc", uk: "NPC", en: "NPC" },
+		locations: { kind: "location", uk: "Локація", en: "Location" },
+	};
+	const entry = entityConfig[resource.type] || {
+		kind: "entity",
+		uk: "Сутність",
+		en: "Entity",
+	};
+	const label = isUk ? entry.uk : entry.en;
+	const valueLabel =
+		isUk || entry.kind === "npc" ? label : label.toLowerCase();
+	if (resource.before === null || resource.before === undefined) {
+		stats.push({
+			label,
+			value: `+1 ${valueLabel}`,
+			type: "added",
+			kind: entry.kind,
+			op: "added",
+			count: 1,
+		});
+	} else if (resource.after === null || resource.after === undefined) {
+		stats.push({
+			label,
+			value: `-1 ${valueLabel}`,
+			type: "info",
+			kind: entry.kind,
+			op: "removed",
+			count: 1,
+		});
+	} else {
+		stats.push({
+			label,
+			value: `~1 ${valueLabel}`,
+			type: "changed",
+			kind: entry.kind,
+			op: "changed",
+			count: 1,
+		});
+	}
+}
+
+function collectResourceStats(resource, isUk, stats) {
 	if (resource.kind === "entity") {
-		collectEntityStat(resource, stats);
+		collectEntityStat(resource, isUk, stats);
 		return;
 	}
 	if (resource.kind === "custom-monster" || resource.kind === "custom-bestiary") {
 		const isNew = resource.before === null || resource.before === undefined;
 		const isDeleted = resource.after === null || resource.after === undefined;
+		const monsterWord = isUk ? "монстр" : "monster";
 		stats.push({
-			label: "Монстр",
-			value: isNew ? "+1 монстр" : isDeleted ? "-1 монстр" : "~1 монстр",
+			label: isUk ? "Монстр" : "Monster",
+			value: isNew ? `+1 ${monsterWord}` : isDeleted ? `-1 ${monsterWord}` : `~1 ${monsterWord}`,
 			type: isNew ? "added" : isDeleted ? "info" : "changed",
+			kind: "monster",
+			op: isNew ? "added" : isDeleted ? "removed" : "changed",
+			count: 1,
 		});
 		return;
 	}
@@ -677,14 +761,22 @@ function collectResourceStats(resource, stats) {
 		const prevDesc = String(resource.before?.description || "").trim();
 		const nextDesc = String(resource.after?.description || "").trim();
 		if (prevDesc !== nextDesc) {
-			const wordsDelta = nextDesc.split(/\s+/).filter(Boolean).length - prevDesc.split(/\s+/).filter(Boolean).length;
+			const wordsDelta =
+				nextDesc.split(/\s+/).filter(Boolean).length -
+				prevDesc.split(/\s+/).filter(Boolean).length;
+			const wordsUnit = isUk ? "слів" : "words";
 			stats.push({
-				label: "Опис",
-				value: wordsDelta >= 0 ? `+${wordsDelta} слів` : `${wordsDelta} слів`,
+				label: isUk ? "Опис" : "Description",
+				value:
+					wordsDelta >= 0
+						? `+${wordsDelta} ${wordsUnit}`
+						: `${wordsDelta} ${wordsUnit}`,
 				type: "changed",
+				kind: "words",
+				delta: wordsDelta,
 			});
 		}
-		countCollectionChanges(resource.before?.notes, resource.after?.notes, "нотатка", "нотатки", stats);
+		countCollectionChanges(resource.before?.notes, resource.after?.notes, "note", isUk, stats);
 		return;
 	}
 	if (resource.kind === "session") {
@@ -692,32 +784,49 @@ function collectResourceStats(resource, stats) {
 			resource.before === null || resource.before === undefined;
 		const isDeletedSession =
 			resource.after === null || resource.after === undefined;
+		const sessionLabel = isUk ? "Сесія" : "Session";
+		const sessionWord = isUk ? "сесія" : "session";
 		if (isNewSession) {
-			stats.push({ label: "Сесія", value: "+1 сесія", type: "added" });
+			stats.push({
+				label: sessionLabel,
+				value: `+1 ${sessionWord}`,
+				type: "added",
+				kind: "session",
+				op: "added",
+				count: 1,
+			});
 		} else if (isDeletedSession) {
-			stats.push({ label: "Сесія", value: "-1 сесія", type: "info" });
+			stats.push({
+				label: sessionLabel,
+				value: `-1 ${sessionWord}`,
+				type: "info",
+				kind: "session",
+				op: "removed",
+				count: 1,
+			});
 		}
 		const bData = resource.before?.data || {};
 		const aData = resource.after?.data || {};
-		countCollectionChanges(bData.scenes, aData.scenes, "сцена", "сцени", stats);
-		countCollectionChanges(bData.notes, aData.notes, "нотатка", "нотатки", stats);
-		countCollectionChanges(bData.npcs, aData.npcs, "NPC (сесія)", "NPC (сесія)", stats);
-		countCollectionChanges(bData.locations, aData.locations, "локація (сесія)", "локації (сесія)", stats);
-		countCollectionChanges(bData.encounters, aData.encounters, "бій", "бої", stats);
+		countCollectionChanges(bData.scenes, aData.scenes, "scene", isUk, stats);
+		countCollectionChanges(bData.notes, aData.notes, "note", isUk, stats);
+		countCollectionChanges(bData.npcs, aData.npcs, "session_npc", isUk, stats);
+		countCollectionChanges(bData.locations, aData.locations, "session_location", isUk, stats);
+		countCollectionChanges(bData.encounters, aData.encounters, "encounter", isUk, stats);
 	}
 }
 
 /**
  * Formats diff resources into concise readable before/after previews and badge stats.
  */
-function formatDiffResourcesForPreview(resources = []) {
+function formatDiffResourcesForPreview(resources = [], language = "uk") {
+	const isUk = isUkrainianLanguage(language);
 	const safeResources = Array.isArray(resources) ? resources : [];
 	const stats = [];
 	const beforeSections = [];
 	const afterSections = [];
 
 	for (const resource of safeResources) {
-		collectResourceStats(resource, stats);
+		collectResourceStats(resource, isUk, stats);
 		const projected = formatSingleResourceDiff(resource);
 		const header = resource.label || resource.name || resource.id || resource.kind;
 		beforeSections.push(`[${header}]\n${serializePreviewObject(projected.before)}`);
@@ -727,8 +836,8 @@ function formatDiffResourcesForPreview(resources = []) {
 	return {
 		stats: stats.slice(0, 6),
 		diffSnippet: {
-			before: truncatePreviewText(beforeSections.join("\n\n")),
-			after: truncatePreviewText(afterSections.join("\n\n")),
+			before: truncatePreviewText(beforeSections.join("\n\n"), isUk),
+			after: truncatePreviewText(afterSections.join("\n\n"), isUk),
 		},
 	};
 }
@@ -889,7 +998,9 @@ async function prepareChatActionCards(
 			}
 			if (!effectiveSessionFileName) {
 				warnings.push(
-					"У кампанії ще немає жодної сесії — спочатку створіть сесію, щоб додати сцену або сутичку.",
+					isUkrainianLanguage(language)
+						? "У кампанії ще немає жодної сесії — спочатку створіть сесію, щоб додати сцену або сутичку."
+						: "This campaign has no sessions yet — create a session first to add a scene or encounter.",
 				);
 				continue;
 			}
@@ -910,6 +1021,7 @@ async function prepareChatActionCards(
 		const normalizedOperations = normalizeActionOperationsForExecution(raw.operations, {
 			sessionData: targetSessionData,
 			sceneId: effectiveSceneId,
+			language,
 		});
 
 		const generatedPayload = buildGeneratedOperationPayload({
@@ -930,13 +1042,18 @@ async function prepareChatActionCards(
 					.slice(0, 2)
 					.map((err) => `${err.path || "op"}: ${err.message}`)
 					.join("; ");
-				warnings.push(`Операції відхилено валідацією (${reason}).`);
+				warnings.push(
+					isUkrainianLanguage(language)
+						? `Операції відхилено валідацією (${reason}).`
+						: `Operations rejected by validation (${reason}).`,
+				);
 			}
 			continue;
 		}
 
+		const isUk = isUkrainianLanguage(language);
 		const cardId = `act-${createId()}`;
-		const title = asText(raw.title) || "Дія асистента";
+		const title = asText(raw.title) || (isUk ? "Дія асистента" : "Assistant action");
 		const beforeApplyBundle =
 			campaignSlug === "bestiary"
 				? { meta: { slug: "bestiary", name: "Bestiary" }, sessions: [], entities: {}, aiResponses: [] }
@@ -1014,14 +1131,18 @@ async function prepareChatActionCards(
 			if (Array.isArray(applied.warnings) && applied.warnings.length > 0) {
 				warnings.push(...applied.warnings);
 			} else {
-				warnings.push(`Дія «${title}» не внесла змін у кампанію.`);
+				warnings.push(
+					isUk
+						? `Дія «${title}» не внесла змін у кампанію.`
+						: `Action "${title}" made no changes to the campaign.`,
+				);
 			}
 			continue;
 		}
 
 		const cardSessionFileName =
 			createsNewSession && !shouldAutoApply ? "" : resolvedSessionFileName;
-		const preview = formatDiffResourcesForPreview(resources);
+		const preview = formatDiffResourcesForPreview(resources, language);
 		const card = {
 			id: cardId,
 			type: raw.kind === "atomic" ? "atomic" : "diff",
@@ -1143,6 +1264,7 @@ async function applyChatActionCard(
 	const normalizedOperations = normalizeActionOperationsForExecution(actionCard.operations, {
 		sessionData: targetSessionData,
 		sceneId: effectiveSceneId,
+		language,
 	});
 	const payload = {
 		version: 2,
@@ -1191,12 +1313,15 @@ async function applyChatActionCard(
 				applied.customBestiaryChange.after,
 			)
 		: [];
+	const fallbackActionTitle = isUkrainianLanguage(language)
+		? "Дія асистента"
+		: "Assistant action";
 	const historyContext = buildActionHistoryContext({
 		payload,
 		responsePath,
 		modelName,
 		language,
-		title: actionCard.title || "Дія асистента",
+		title: actionCard.title || fallbackActionTitle,
 		sceneId: effectiveSceneId,
 		simplifiedNotes,
 		historyWriter,
@@ -1208,13 +1333,13 @@ async function applyChatActionCard(
 		type: "chat-action",
 		modelName,
 		language,
-		userInstructions: actionCard.title || "Дія асистента",
+		userInstructions: actionCard.title || fallbackActionTitle,
 		requestSnapshot: historyContext.requestSnapshot,
 		retryPayload: payload,
 		extraChangeResources,
 	});
 	const resources = aiResponse?.changes?.resources || [];
-	const preview = formatDiffResourcesForPreview(resources);
+	const preview = formatDiffResourcesForPreview(resources, language);
 	const nextCard = {
 		...actionCard,
 		status: "applied",

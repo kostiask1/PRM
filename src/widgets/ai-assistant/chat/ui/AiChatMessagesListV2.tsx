@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { lang } from "../../../../shared/lib/index.js";
 import type { AiActionCard, ChatMessage } from "../model/aiChatTypes.ts";
 import AiChatMessageItemV2 from "./AiChatMessageItemV2.tsx";
 
@@ -61,13 +62,17 @@ export default function AiChatMessagesListV2({
 		<div className="AiChatMessagesListV2" ref={listRef}>
 			{messages.length > 0 && (
 				<div className="AiChatMessagesListV2__divider">
-					<span>{isLegacyArchive ? "Архів старого асистента" : "Початок діалогу"}</span>
+					<span>
+						{isLegacyArchive
+							? lang.t("Legacy assistant archive")
+							: lang.t("Start of conversation")}
+					</span>
 				</div>
 			)}
 
 			{isLoadingChats && messages.length === 0 ? (
 				<div className="AiChatMessagesListV2__loading">
-					<span>Завантаження історії чату...</span>
+					<span>{lang.t("Loading chat history...")}</span>
 				</div>
 			) : messages.length === 0 ? (
 				<div className="AiChatMessagesListV2__empty">
@@ -76,31 +81,43 @@ export default function AiChatMessagesListV2({
 							<path d="M12 2.5 14.4 9.6 21.5 12 14.4 14.4 12 21.5 9.6 14.4 2.5 12 9.6 9.6 12 2.5Z" />
 						</svg>
 					</div>
-					<h3>Чим я можу допомогти майстру?</h3>
-					<p>Задайте питання щодо поточного контексту, використовуйте @команди або Ctrl+K для вставки сутностей.</p>
+					<h3>{lang.t("How can I help the Game Master?")}</h3>
+					<p>{lang.t("Ask about the current context, use @commands, or press Ctrl+K to insert entities.")}</p>
 
 					{onSelectSuggestion && (
 						<div className="AiChatMessagesListV2__suggestions">
 							<button
 								type="button"
 								className="AiChatMessagesListV2__suggestionBtn"
-								onClick={() => onSelectSuggestion("@scene додай сенсорні деталі та одну приховану зачіпку")}
+								onClick={() =>
+									onSelectSuggestion(
+										lang.t("@scene add sensory details and one hidden clue"),
+									)
+								}
 							>
-								@scene деталі та зачіпка для сцени
+								{lang.t("@scene details and clue for the scene")}
 							</button>
 							<button
 								type="button"
 								className="AiChatMessagesListV2__suggestionBtn"
-								onClick={() => onSelectSuggestion("@npc створи харизматичного інформатора для поточної локації")}
+								onClick={() =>
+									onSelectSuggestion(
+										lang.t("@npc create a charismatic informant for the current location"),
+									)
+								}
 							>
-								@npc створити нового NPC
+								{lang.t("@npc create a new NPC")}
 							</button>
 							<button
 								type="button"
 								className="AiChatMessagesListV2__suggestionBtn"
-								onClick={() => onSelectSuggestion("@encounter збалансуй бойову сцену середньої складності для партії")}
+								onClick={() =>
+									onSelectSuggestion(
+										lang.t("@encounter balance a medium difficulty combat encounter for the party"),
+									)
+								}
 							>
-								@encounter збалансований бій для партії
+								{lang.t("@encounter balanced combat for the party")}
 							</button>
 						</div>
 					)}

@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { lang } from "../../../../../shared/lib/index.js";
+import {
+	formatCompactContextWindow,
+	localizeAiModelOption,
+} from "../../model/aiChatLocalization.ts";
 import { AI_MODELS } from "../../model/aiModels.ts";
 import type { AiModelOption } from "../../model/aiChatTypes.ts";
 import { useDismissablePopover } from "./useDismissablePopover.ts";
@@ -11,10 +16,6 @@ interface AiModelSelectorDropdownV2Props {
 	onSelectModel: (modelId: string) => void;
 }
 
-function formatCompactContextWindow(contextWindow: string): string {
-	return contextWindow.replace(/\s*токен(?:ів|и|у)?$/i, "").trim();
-}
-
 function shouldShowModelDescription(model: AiModelOption): boolean {
 	const desc = model.description?.trim() || "";
 	if (!desc) return false;
@@ -24,13 +25,14 @@ function shouldShowModelDescription(model: AiModelOption): boolean {
 export default function AiModelSelectorDropdownV2({
 	isOpen,
 	onClose,
-	models = AI_MODELS,
+	models = [],
 	selectedModel,
 	onSelectModel,
 }: AiModelSelectorDropdownV2Props) {
 	const ref = useRef<HTMLDivElement>(null);
 	const selectedItemRef = useRef<HTMLButtonElement>(null);
 	const [searchQuery, setSearchQuery] = useState("");
+	const currentLanguage = lang.getLanguage();
 
 	useDismissablePopover({
 		isOpen,
@@ -47,7 +49,11 @@ export default function AiModelSelectorDropdownV2({
 		selectedItemRef.current?.scrollIntoView({ block: "nearest" });
 	}, [isOpen]);
 
-	const modelList = models.length > 0 ? models : AI_MODELS;
+	const fallbackModels = useMemo(
+		() => AI_MODELS.map(localizeAiModelOption),
+		[currentLanguage],
+	);
+	const modelList = models.length > 0 ? models : fallbackModels;
 	const showSearch = modelList.length > 6;
 
 	const filteredModels = useMemo(() => {
@@ -63,17 +69,22 @@ export default function AiModelSelectorDropdownV2({
 	if (!isOpen) return null;
 
 	return (
-		<div className="AiModelSelectorDropdownV2" ref={ref} role="dialog" aria-label="Вибір моделі Gemini">
+		<div
+			className="AiModelSelectorDropdownV2"
+			ref={ref}
+			role="dialog"
+			aria-label={lang.t("Select Gemini model")}
+		>
 			<div className="AiModelSelectorDropdownV2__header">
 				<div className="AiModelSelectorDropdownV2__titleGroup">
-					<span className="AiModelSelectorDropdownV2__title">Модель Gemini</span>
+					<span className="AiModelSelectorDropdownV2__title">{lang.t("Gemini model")}</span>
 					<span className="AiModelSelectorDropdownV2__count">{modelList.length}</span>
 				</div>
 				<button
 					type="button"
 					className="AiModelSelectorDropdownV2__closeBtn"
 					onClick={onClose}
-					aria-label="Закрити вибір моделі"
+					aria-label={lang.t("Close model selector")}
 				>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
 						<line x1="18" y1="6" x2="6" y2="18" />
@@ -89,15 +100,15 @@ export default function AiModelSelectorDropdownV2({
 						className="AiModelSelectorDropdownV2__searchInput"
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
-						placeholder="Пошук моделі..."
-						aria-label="Пошук моделі"
+						placeholder={lang.t("Search models...")}
+						aria-label={lang.t("Search models")}
 					/>
 				</div>
 			)}
 
 			<div className="AiModelSelectorDropdownV2__list">
 				{filteredModels.length === 0 ? (
-					<div className="AiModelSelectorDropdownV2__empty">Моделей не знайдено</div>
+					<div className="AiModelSelectorDropdownV2__empty">{lang.t("No models found")}</div>
 				) : (
 					filteredModels.map((model: AiModelOption) => {
 						const isSelected = model.id === selectedModel;
@@ -121,7 +132,9 @@ export default function AiModelSelectorDropdownV2({
 										{model.contextWindow && (
 											<span
 												className="AiModelSelectorDropdownV2__contextPill"
-												title={`Вікно контексту: ${model.contextWindow}`}
+												title={lang.t("Context window: {window}", {
+													window: model.contextWindow,
+												})}
 											>
 												{formatCompactContextWindow(model.contextWindow)}
 											</span>

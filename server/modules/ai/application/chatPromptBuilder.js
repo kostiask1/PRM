@@ -22,6 +22,10 @@ const COMMAND_INSTRUCTIONS = Object.freeze({
 	image: "@image: Craft ONE vivid, ready-to-use English image-generation prompt (suitable for Imagen / Gemini Image / Midjourney) based on the referenced [Entity], scene, creature, or user request. Include subject details, pose/composition, environment, lighting, mood, and any IMAGE BASE STYLE PROMPT if provided. Present the prompt cleanly inside a fenced text block or concise paragraph in reply, and return \"actions\": [].",
 });
 
+function isUkrainianLanguage(language) {
+	return String(language ?? "uk").trim().toLowerCase().startsWith("uk");
+}
+
 function estimateTokensFromText(text) {
 	const len = String(text || "").length;
 	return len > 0 ? Math.ceil(len / CHARS_PER_TOKEN) : 0;
@@ -157,7 +161,14 @@ function findBestiaryIndexMonster(bestiaryIndex, rawName) {
  */
 async function buildChatWorkspaceContext(
 	{ storage, filterSessionDataForAiContext },
-	{ campaignSlug, workspaceContext = {}, contextSettings = {}, mentionedNames = [], commands = [] },
+	{
+		campaignSlug,
+		workspaceContext = {},
+		contextSettings = {},
+		mentionedNames = [],
+		commands = [],
+		responseLanguage = "uk",
+	},
 ) {
 	const isBestiaryScope = campaignSlug === "bestiary";
 	const campaign = isBestiaryScope ? null : await storage.readCampaign(campaignSlug);
@@ -211,11 +222,16 @@ async function buildChatWorkspaceContext(
 				}))
 			: [];
 
+	const isUk = isUkrainianLanguage(responseLanguage);
 	const contextPayload = {
 		workspace: {
 			viewType,
 			campaignSlug,
-			campaignName: isBestiaryScope ? "Бестіарій" : campaign?.name || campaignSlug,
+			campaignName: isBestiaryScope
+				? isUk
+					? "Бестіарій"
+					: "Bestiary"
+				: campaign?.name || campaignSlug,
 			...(sessionFileName ? { sessionFileName, sessionName: session?.name || sessionFileName } : {}),
 			...(availableSessions.length > 0 ? { availableSessions } : {}),
 			...(currentEncounter ? { encounterId, encounterName: currentEncounter.name || "" } : encounterId ? { encounterId } : {}),
@@ -751,6 +767,7 @@ async function buildChatContextPreview(
 		.slice()
 		.reverse()
 		.slice(0, 20);
+	const isUk = isUkrainianLanguage(responseLanguage);
 	const loadedOtherSessions = await Promise.all(
 		otherMeta.map(async (meta) => {
 			const loaded = await storage.readSession(campaignSlug, meta.fileName).catch(() => null);
@@ -763,10 +780,16 @@ async function buildChatContextPreview(
 				notes: clean.notes,
 				sceneTitles,
 			};
+			const sceneCountMeta =
+				sceneTitles.length > 0
+					? isUk
+						? `${sceneTitles.length} сцен`
+						: `${sceneTitles.length} ${sceneTitles.length === 1 ? "scene" : "scenes"}`
+					: "";
 			return {
 				id: String(meta.fileName),
 				name: String(loaded.name || meta.name || meta.fileName),
-				meta: sceneTitles.length > 0 ? `${sceneTitles.length} сцен` : "",
+				meta: sceneCountMeta,
 				tokenEstimate: estimateTokensFromText(JSON.stringify(summaryObj)),
 			};
 		}),
@@ -774,7 +797,7 @@ async function buildChatContextPreview(
 
 	const catalog = {
 		characters: visibleCharacters.map((c) => {
-			const levelText = c?.level ? `Рів. ${c.level}` : "";
+			const levelText = c?.level ? (isUk ? `Рів. ${c.level}` : `Lv. ${c.level}`) : "";
 			return {
 				id: getEntitySelectionKey(c),
 				name: resolveEntityDisplayName(c) || getEntitySelectionKey(c),
@@ -794,12 +817,21 @@ async function buildChatContextPreview(
 			meta: String(l?.type || l?.region || "").trim(),
 			tokenEstimate: estimateTokensFromText(JSON.stringify(l)),
 		})),
-		scenes: scenes.map((sc) => ({
-			id: getSceneSelectionKey(sc),
-			name: String(sc?.name || sc?.title || getSceneSelectionKey(sc)),
-			meta: Array.isArray(sc?.notes) && sc.notes.length > 0 ? `${sc.notes.length} нот.` : "",
-			tokenEstimate: estimateTokensFromText(JSON.stringify(sc)),
-		})),
+		scenes: scenes.map((sc) => {
+			const noteCount = Array.isArray(sc?.notes) ? sc.notes.length : 0;
+			const noteMeta =
+				noteCount > 0
+					? isUk
+						? `${noteCount} нот.`
+						: `${noteCount} ${noteCount === 1 ? "note" : "notes"}`
+					: "";
+			return {
+				id: getSceneSelectionKey(sc),
+				name: String(sc?.name || sc?.title || getSceneSelectionKey(sc)),
+				meta: noteMeta,
+				tokenEstimate: estimateTokensFromText(JSON.stringify(sc)),
+			};
+		}),
 		sessions: loadedOtherSessions.filter(Boolean),
 		bestiary: customMonsters.map((m) => {
 			const crText =
@@ -817,7 +849,11 @@ async function buildChatContextPreview(
 		workspace: {
 			viewType,
 			campaignSlug,
-			campaignName: isBestiaryScope ? "Бестіарій" : campaign?.name || campaignSlug,
+			campaignName: isBestiaryScope
+				? isUk
+					? "Бестіарій"
+					: "Bestiary"
+				: campaign?.name || campaignSlug,
 			...(sessionFileName ? { sessionFileName, sessionName: session?.name || sessionFileName } : {}),
 			...(currentEncounter ? { encounterId, encounterName: currentEncounter.name || "" } : encounterId ? { encounterId } : {}),
 			...(currentScene ? { sceneId, sceneTitle: currentScene.name || currentScene.title || "" } : sceneId ? { sceneId } : {}),

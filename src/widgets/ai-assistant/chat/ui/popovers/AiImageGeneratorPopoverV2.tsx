@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { lang } from "../../../../../shared/lib/index.js";
 import type { AiModelOption } from "../../model/aiChatTypes.ts";
 import { useDismissablePopover } from "./useDismissablePopover.ts";
 
@@ -44,12 +45,12 @@ export default function AiImageGeneratorPopoverV2({
 	return (
 		<div className="AiAssistantPopoverV2 AiImageGeneratorPopoverV2" ref={ref}>
 			<div className="AiImageGeneratorPopoverV2__header">
-				<span className="AiImageGeneratorPopoverV2__title">Зображення та промпти</span>
+				<span className="AiImageGeneratorPopoverV2__title">{lang.t("Images & prompts")}</span>
 				<button
 					type="button"
 					className="AiImageGeneratorPopoverV2__closeBtn"
 					onClick={onClose}
-					aria-label="Закрити вікно зображень"
+					aria-label={lang.t("Close image window")}
 				>
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
 						<line x1="18" y1="6" x2="6" y2="18" />
@@ -60,11 +61,11 @@ export default function AiImageGeneratorPopoverV2({
 
 			<div className="AiImageGeneratorPopoverV2__body">
 				<label className="AiImageGeneratorPopoverV2__field">
-					<span>Опис або промпт зображення</span>
+					<span>{lang.t("Image description or prompt")}</span>
 					<textarea
 						rows={4}
 						className="AiImageGeneratorPopoverV2__textarea"
-						placeholder="Опишіть портрет NPC, сцену чи істоту (можна використати [Назва])..."
+						placeholder={lang.t("Describe an NPC portrait, scene, or creature (you can use [Name])...")}
 						value={prompt}
 						onChange={(e) => onPromptChange(e.target.value)}
 						disabled={isSending}
@@ -72,7 +73,7 @@ export default function AiImageGeneratorPopoverV2({
 				</label>
 
 				<label className="AiImageGeneratorPopoverV2__field">
-					<span>Модель генерації зображення</span>
+					<span>{lang.t("Image generation model")}</span>
 					{imageModels.length > 0 ? (
 						<select
 							className="AiImageGeneratorPopoverV2__select"
@@ -88,7 +89,7 @@ export default function AiImageGeneratorPopoverV2({
 						</select>
 					) : (
 						<div className="AiImageGeneratorPopoverV2__noModels">
-							Доступні image-моделі не знайдені. Ви можете скласти промпт через @image.
+							{lang.t("No available image models were found. You can still compose a prompt with @image.")}
 						</div>
 					)}
 				</label>
@@ -100,9 +101,9 @@ export default function AiImageGeneratorPopoverV2({
 					className="AiImageGeneratorPopoverV2__btn AiImageGeneratorPopoverV2__btn--ghost"
 					onClick={onComposePrompt}
 					disabled={isSending}
-					title="Скласти або покращити детальний промпт у чаті"
+					title={lang.t("Compose or refine a detailed prompt in chat")}
 				>
-					Скласти промпт (@image)
+					{lang.t("Compose prompt (@image)")}
 				</button>
 				<button
 					type="button"
@@ -110,7 +111,7 @@ export default function AiImageGeneratorPopoverV2({
 					onClick={onGenerateImage}
 					disabled={!canGenerate}
 				>
-					Згенерувати
+					{lang.t("Generate")}
 				</button>
 			</div>
 		</div>

@@ -10,12 +10,13 @@ import {
 } from "react";
 import { AI_FILE_ACCEPT, AI_IMAGE_ACCEPT } from "../../../../features/ai/index.js";
 import { EditableField } from "../../../../features/editor/ui/index.js";
-import { formatEntityMention } from "../../../../shared/lib/index.js";
+import { formatEntityMention, lang } from "../../../../shared/lib/index.js";
 import type {
 	AiChatAttachment,
 	AiContextAnchor,
 	AiModelOption,
 } from "../model/aiChatTypes.ts";
+import { localizeAiModelOption } from "../model/aiChatLocalization.ts";
 import {
 	applyCommandAutocomplete,
 	extractUsedCommands,
@@ -225,7 +226,7 @@ export default function AiChatComposerV2({
 	onSend,
 	onCancelSend,
 	isSending = false,
-	models = AI_MODELS,
+	models = [],
 	selectedModel,
 	autoApply,
 	onToggleAutoApply,
@@ -275,6 +276,7 @@ export default function AiChatComposerV2({
 	const triggerKey = activeTrigger ? `${activeTrigger.start}:${activeTrigger.rawToken}` : null;
 	const isBestiaryOpen = activeTrigger ? Boolean(document.querySelector(".Bestiary")) : false;
 
+	const currentLanguage = lang.getLanguage();
 	const usedCommands = useMemo(
 		() => (activeTrigger ? extractUsedCommands(value, activeTrigger) : new Set<string>()),
 		[activeTrigger, value],
@@ -288,9 +290,10 @@ export default function AiChatComposerV2({
 						anchorType: contextAnchorType,
 						isBestiaryOpen,
 						usedCommands,
+						translate: lang.t,
 					})
 				: [],
-		[activeTrigger, contextAnchorType, isBestiaryOpen, usedCommands],
+		[activeTrigger, contextAnchorType, isBestiaryOpen, usedCommands, currentLanguage],
 	);
 
 	const isAutocompleteOpen = Boolean(
@@ -404,10 +407,14 @@ export default function AiChatComposerV2({
 		e.target.value = "";
 	};
 
-	const modelList = models.length > 0 ? models : AI_MODELS;
+	const fallbackModels = useMemo(
+		() => AI_MODELS.map(localizeAiModelOption),
+		[currentLanguage],
+	);
+	const modelList = models.length > 0 ? models : fallbackModels;
 	const currentModelInfo =
 		modelList.find((m) => m.id === selectedModel) ||
-		AI_MODELS.find((m) => m.id === selectedModel) ||
+		fallbackModels.find((m) => m.id === selectedModel) ||
 		modelList[0];
 	const canSend =
 		(Boolean(value.trim()) || attachments.length > 0) && !disabled && !isSending;
@@ -428,7 +435,7 @@ export default function AiChatComposerV2({
 								type="button"
 								className="AiChatComposerV2__attachmentRemove"
 								onClick={() => onRemoveAttachment?.(att.id)}
-								aria-label={`Видалити вкладення ${att.name}`}
+								aria-label={lang.t("Remove attachment {name}", { name: att.name })}
 								disabled={isSending}
 							>
 								<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -458,8 +465,8 @@ export default function AiChatComposerV2({
 				<EditableField
 					type="textarea"
 					className="AiChatComposerV2__editor"
-					aria-label="Повідомлення для AI-асистента"
-					placeholder="Запитайте що завгодно, введіть @команду або Ctrl+K для сутності..."
+					aria-label={lang.t("Message for AI assistant")}
+					placeholder={lang.t("Ask anything, type @command, or press Ctrl+K for an entity...")}
 					value={value}
 					onChange={(event) => handleEditorChange(event.target.value)}
 					onFocus={() => {
@@ -492,8 +499,8 @@ export default function AiChatComposerV2({
 						className="AiChatComposerV2__iconBtn"
 						onClick={() => fileInputRef.current?.click()}
 						disabled={disabled || isSending}
-						title="Прикріпити зображення або документ"
-						aria-label="Прикріпити файл"
+						title={lang.t("Attach image or document")}
+						aria-label={lang.t("Attach file")}
 					>
 						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 							<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -506,8 +513,8 @@ export default function AiChatComposerV2({
 							className={`AiChatComposerV2__iconBtn AiChatComposerV2__imageBtn ${isImageGeneratorOpen ? "is-active" : ""}`}
 							onClick={onToggleImageGenerator}
 							disabled={disabled || isSending}
-							title="Промпт або генерація зображення (@image)"
-							aria-label="Генерація зображення"
+							title={lang.t("Image prompt or generation (@image)")}
+							aria-label={lang.t("Image generation")}
 							aria-expanded={isImageGeneratorOpen}
 						>
 							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -522,8 +529,8 @@ export default function AiChatComposerV2({
 						type="button"
 						className={`AiChatComposerV2__iconBtn AiChatComposerV2__infoBtn ${isCommandsInfoOpen ? "is-active" : ""}`}
 						onClick={onToggleCommandsInfo}
-						title="Довідка по швидких командах (@scene, @npc, @encounter...)"
-						aria-label="Довідка по командах"
+						title={lang.t("Quick commands guide (@scene, @npc, @encounter...)")}
+						aria-label={lang.t("Commands guide")}
 						aria-expanded={isCommandsInfoOpen}
 					>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -537,7 +544,7 @@ export default function AiChatComposerV2({
 						type="button"
 						className={`AiChatComposerV2__modelPill ${isModelPickerOpen ? "is-active" : ""}`}
 						onClick={onToggleModelPicker}
-						title="Змінити модель штучного інтелекту"
+						title={lang.t("Change AI model")}
 						aria-expanded={isModelPickerOpen}
 						disabled={isSending}
 					>
@@ -552,7 +559,7 @@ export default function AiChatComposerV2({
 
 					<label
 						className="AiChatComposerV2__autoApply"
-						title="Автоматично застосовувати безпечні пропозиції ШІ (крім видалення) без додаткового підтвердження"
+						title={lang.t("Automatically apply safe AI suggestions (except deletions) without extra confirmation")}
 					>
 						<input
 							type="checkbox"
@@ -560,7 +567,7 @@ export default function AiChatComposerV2({
 							onChange={(e) => onToggleAutoApply(e.target.checked)}
 							disabled={isSending}
 						/>
-						<span>Авто-дії</span>
+						<span>{lang.t("Auto-apply")}</span>
 					</label>
 				</div>
 
@@ -570,8 +577,8 @@ export default function AiChatComposerV2({
 							type="button"
 							className="AiChatComposerV2__stopBtn"
 							onClick={onCancelSend}
-							title="Зупинити генерацію"
-							aria-label="Зупинити генерацію"
+							title={lang.t("Stop generation")}
+							aria-label={lang.t("Stop generation")}
 						>
 							<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
 								<rect x="4" y="4" width="16" height="16" rx="2" />
@@ -583,8 +590,8 @@ export default function AiChatComposerV2({
 							className={`AiChatComposerV2__sendBtn ${canSend ? "is-ready" : ""}`}
 							onClick={onSend}
 							disabled={!canSend}
-							title="Надіслати повідомлення (Enter)"
-							aria-label="Надіслати повідомлення"
+							title={lang.t("Send message (Enter)")}
+							aria-label={lang.t("Send message")}
 						>
 							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
 								<line x1="12" y1="19" x2="12" y2="5" />

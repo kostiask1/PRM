@@ -33,6 +33,10 @@ function asText(value) {
 	return String(value ?? "").trim();
 }
 
+function isUkrainianLanguage(language) {
+	return String(language ?? "uk").trim().toLowerCase().startsWith("uk");
+}
+
 function resolveRequestedModelName(availableModels, requestedModel) {
 	const models = Array.isArray(availableModels?.models) ? availableModels.models : [];
 	const cleaned = asText(requestedModel).replace(/^models\//, "");
@@ -160,9 +164,9 @@ function extractStreamingReplyPreview(rawText) {
 	return { text: out, replyComplete };
 }
 
-function deriveFallbackTitle(text) {
+function deriveFallbackTitle(text, language = "uk") {
 	const clean = String(text || "").replace(/\s+/g, " ").trim();
-	if (!clean) return "Новий діалог";
+	if (!clean) return isUkrainianLanguage(language) ? "Новий діалог" : "New chat";
 	return clean.length > 42 ? `${clean.slice(0, 42).trimEnd()}...` : clean;
 }
 
@@ -277,7 +281,15 @@ function createAiChatCommands({
 	}
 
 	async function createChat({ campaignSlug, payload = {} }) {
-		return chatRepository.create(campaignSlug, payload);
+		if (asText(payload.title)) {
+			return chatRepository.create(campaignSlug, payload);
+		}
+		const settings = await storage.readSettings?.().catch(() => ({}));
+		const responseLanguage = asText(payload.language || settings?.language || "uk");
+		return chatRepository.create(campaignSlug, {
+			...payload,
+			title: isUkrainianLanguage(responseLanguage) ? "Новий діалог" : "New chat",
+		});
 	}
 
 	async function updateChat({ campaignSlug, chatId, payload = {} }) {
@@ -504,6 +516,7 @@ function createAiChatCommands({
 				contextSettings: effectiveSettings,
 				mentionedNames,
 				commands,
+				responseLanguage,
 			},
 		);
 
@@ -645,11 +658,14 @@ function createAiChatCommands({
 					.filter(Boolean),
 			),
 		);
+		const warningHeading = isUkrainianLanguage(responseLanguage)
+			? "Зміни не були підготовлені:"
+			: "Changes could not be prepared:";
 		const processedReply =
 			parsed.actions.length > 0 &&
 			actionResult.actionCards.length === 0 &&
 			uniqueWarnings.length > 0
-				? `${processedBaseReply}${processedBaseReply ? "\n\n" : ""}> ⚠️ **Зміни не були підготовлені:** ${uniqueWarnings.join(" ")}`
+				? `${processedBaseReply}${processedBaseReply ? "\n\n" : ""}> ⚠️ **${warningHeading}** ${uniqueWarnings.join(" ")}`
 				: processedBaseReply;
 
 		const now = Date.now();
@@ -671,7 +687,8 @@ function createAiChatCommands({
 		};
 
 		const nextTitle = needsTitle
-			? asText(parsed.chatTitle).slice(0, 80) || deriveFallbackTitle(cleanedText || normalizedUserText)
+			? asText(parsed.chatTitle).slice(0, 80) ||
+				deriveFallbackTitle(cleanedText || normalizedUserText, responseLanguage)
 			: effectiveChat.title;
 		const totalTokenEstimate =
 			tokenEstimate + estimateTokensFromText(systemInstruction) + estimateTokensFromText(processedReply);
@@ -732,6 +749,9 @@ function createAiChatCommands({
 			throw createHttpError("Select an available image model.", 400);
 		}
 
+		const settings = await storage.readSettings?.().catch(() => ({}));
+		const responseLanguage = asText(payload.language || settings?.language || "uk");
+
 		let chat = chatId && chatId !== "new"
 			? await chatRepository.get(campaignSlug, chatId)
 			: null;
@@ -740,6 +760,7 @@ function createAiChatCommands({
 		}
 		if (!chat) {
 			chat = await chatRepository.create(campaignSlug, {
+				title: isUkrainianLanguage(responseLanguage) ? "Новий діалог" : "New chat",
 				model: payload.chatModel || availableModels?.defaultModel || "",
 				autoApply: payload.autoApply,
 				contextSettings: payload.contextSettings,
@@ -794,7 +815,7 @@ function createAiChatCommands({
 			(!chat.isAutoTitled || chat.messages.length === 0) &&
 			chat.messages.filter((msg) => msg.role === "user").length === 0;
 		const nextTitle = needsTitle
-			? deriveFallbackTitle(promptText)
+			? deriveFallbackTitle(promptText, responseLanguage)
 			: chat.title;
 
 		const updatedChat = await chatRepository.update(campaignSlug, chat.id, {

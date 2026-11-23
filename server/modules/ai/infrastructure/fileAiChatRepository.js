@@ -167,6 +167,10 @@ function normalizeActionCard(card, createId) {
 					label: String(stat.label || "").trim(),
 					value: String(stat.value || "").trim(),
 					type: String(stat.type || "neutral").trim() || "neutral",
+					...(stat.kind ? { kind: String(stat.kind).trim() } : {}),
+					...(stat.op ? { op: String(stat.op).trim() } : {}),
+					...(Number.isFinite(Number(stat.count)) ? { count: Number(stat.count) } : {}),
+					...(Number.isFinite(Number(stat.delta)) ? { delta: Number(stat.delta) } : {}),
 				}))
 				.filter((stat) => stat.value)
 		: [];

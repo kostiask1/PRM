@@ -57,6 +57,15 @@ function createLegacyAiHistoryChatMigration({ storage, chatRepository }) {
 			return { migrated: false, importedCount: 0 };
 		}
 
+		const settings =
+			typeof storage.readSettings === "function"
+				? await storage.readSettings().catch(() => ({}))
+				: {};
+		const isUk = String(settings?.language ?? "uk")
+			.trim()
+			.toLowerCase()
+			.startsWith("uk");
+
 		const now = Date.now();
 		const messages = [];
 		let lastModelName = "";
@@ -76,7 +85,7 @@ function createLegacyAiHistoryChatMigration({ storage, chatRepository }) {
 			messages.push({
 				id: `legacy-u-${entryId}`,
 				role: "user",
-				content: userText || `[Запит: ${typeLabel}]`,
+				content: userText || (isUk ? `[Запит: ${typeLabel}]` : `[Request: ${typeLabel}]`),
 				timestamp: createdMs,
 				status: "done",
 			});
@@ -84,7 +93,17 @@ function createLegacyAiHistoryChatMigration({ storage, chatRepository }) {
 			messages.push({
 				id: `legacy-a-${entryId}`,
 				role: "assistant",
-				content: assistantText || (errorText ? `Помилка: ${errorText}` : imageUrl ? "Згенероване зображення" : ""),
+				content:
+					assistantText ||
+					(errorText
+						? isUk
+							? `Помилка: ${errorText}`
+							: `Error: ${errorText}`
+						: imageUrl
+							? isUk
+								? "Згенероване зображення"
+								: "Generated image"
+							: ""),
 				...(imageUrl ? { imageUrl } : {}),
 				timestamp: createdMs + 1,
 				status: entry.status === "failed" ? "error" : "done",
@@ -96,7 +115,7 @@ function createLegacyAiHistoryChatMigration({ storage, chatRepository }) {
 		const lastTimestamp = messages[messages.length - 1]?.timestamp || now;
 		const archiveChat = {
 			id: LEGACY_ARCHIVE_CHAT_ID,
-			title: LEGACY_ARCHIVE_CHAT_TITLE,
+			title: isUk ? LEGACY_ARCHIVE_CHAT_TITLE : "Legacy assistant archive",
 			isAutoTitled: true,
 			isLegacyArchive: true,
 			createdAt: firstTimestamp,

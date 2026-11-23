@@ -1,3 +1,5 @@
+import { lang } from "../../../../shared/lib/index.js";
+
 interface AiCollapsedRailV2Props {
 	onExpand: () => void;
 	unreadCount?: number;
@@ -11,7 +13,7 @@ export default function AiCollapsedRailV2({
 		<aside
 			className="AiCollapsedRailV2"
 			onClick={onExpand}
-			title="Розгорнути AI-чат (Ctrl+J)"
+			title={lang.t("Expand AI chat (Ctrl+J)")}
 			role="button"
 			tabIndex={0}
 			onKeyDown={(e) => {
@@ -28,8 +30,8 @@ export default function AiCollapsedRailV2({
 					e.stopPropagation();
 					onExpand();
 				}}
-				title="Розгорнути AI-чат (Ctrl+J)"
-				aria-label="Розгорнути AI-чат"
+				title={lang.t("Expand AI chat (Ctrl+J)")}
+				aria-label={lang.t("Expand AI chat")}
 			>
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
 					<polyline points="15 18 9 12 15 6" />
@@ -45,7 +47,7 @@ export default function AiCollapsedRailV2({
 				) : null}
 			</div>
 
-			<span className="AiCollapsedRailV2__label">AI-чат</span>
+			<span className="AiCollapsedRailV2__label">{lang.t("AI chat")}</span>
 		</aside>
 	);
 }

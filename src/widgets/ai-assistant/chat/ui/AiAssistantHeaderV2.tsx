@@ -1,3 +1,5 @@
+import { lang } from "../../../../shared/lib/index.js";
+
 interface AiAssistantHeaderV2Props {
 	sessionTitle: string;
 	isHistoryOpen: boolean;
@@ -22,15 +24,15 @@ export default function AiAssistantHeaderV2({
 							<path d="M12 2.5 14.4 9.6 21.5 12 14.4 14.4 12 21.5 9.6 14.4 2.5 12 9.6 9.6 12 2.5Z" />
 						</svg>
 					</span>
-					<span className="AiAssistantHeaderV2__brandTitle">AI-асистент</span>
+					<span className="AiAssistantHeaderV2__brandTitle">{lang.t("AI assistant")}</span>
 				</div>
 
 				<button
 					type="button"
 					className={`AiAssistantHeaderV2__sessionTitleBtn ${isHistoryOpen ? "is-active" : ""}`}
 					onClick={onToggleHistory}
-					title="Переглянути історію діалогів"
-					aria-label="Історія діалогів"
+					title={lang.t("View chat history")}
+					aria-label={lang.t("Chat history")}
 					aria-expanded={isHistoryOpen}
 				>
 					<span className="AiAssistantHeaderV2__sessionTitleText">{sessionTitle}</span>
@@ -53,8 +55,8 @@ export default function AiAssistantHeaderV2({
 					type="button"
 					className="AiAssistantHeaderV2__actionBtn"
 					onClick={onCreateNewChat}
-					title="Створити новий чат"
-					aria-label="Створити новий чат"
+					title={lang.t("Create new chat")}
+					aria-label={lang.t("Create new chat")}
 				>
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
 						<line x1="12" y1="5" x2="12" y2="19" />
@@ -66,8 +68,8 @@ export default function AiAssistantHeaderV2({
 					type="button"
 					className="AiAssistantHeaderV2__actionBtn AiAssistantHeaderV2__collapseBtn"
 					onClick={onCollapse}
-					title="Згорнути панель (Ctrl+J)"
-					aria-label="Згорнути панель"
+					title={lang.t("Collapse panel (Ctrl+J)")}
+					aria-label={lang.t("Collapse panel")}
 				>
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 						<line x1="18" y1="6" x2="6" y2="18" />

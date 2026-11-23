@@ -1,3 +1,4 @@
+import { lang } from "../../../../shared/lib/index.js";
 import { Modal } from "../../../../shared/ui/index.js";
 import type { AiResponseModalComponent } from "../../../../features/ai/ui/index.js";
 import type { useAiChatState } from "../model/useAiChatState.ts";
@@ -20,7 +21,7 @@ export default function AiAssistantModalV2({
 
 	return (
 		<Modal
-			title="AI-асистент"
+			title={lang.t("AI assistant")}
 			onConfirm={() => {}}
 			onCancel={onClose}
 			showFooter={false}
