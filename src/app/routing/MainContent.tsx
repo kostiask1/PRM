@@ -48,6 +48,9 @@ function EmptyState({
 	className?: string;
 	showAssistant?: boolean;
 }) {
+	const isRulesReferenceOpen = useAppSelector(
+		(state) => state.rulesReference.isOpen,
+	);
 	const content = (
 		<section className="MainContent__emptyState Panel">
 			<h2>{lang.t("Choose a campaign or create a new one")}</h2>
@@ -56,7 +59,7 @@ function EmptyState({
 		</section>
 	);
 
-	if (!showAssistant) {
+	if (!showAssistant || !isRulesReferenceOpen) {
 		return content;
 	}
 
