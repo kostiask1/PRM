@@ -2,6 +2,13 @@ import type { AiCommandItem } from "./aiChatTypes.ts";
 
 export const AI_COMMANDS: readonly AiCommandItem[] = [
 	{
+		command: "@session",
+		name: "Сесія",
+		description: "Створити нову сесію зі сценами, NPC, локаціями та боями",
+		example: "@session придумай нову сесію про порятунок каравану в ущелині з 2 боями та NPC",
+		category: "scene",
+	},
+	{
 		command: "@scene",
 		name: "Сцена",
 		description: "Змінити опис, додати деталі, знахідки або перевірки",

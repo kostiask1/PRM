@@ -42,7 +42,14 @@ const COVERED_SESSION_DATA_KEYS = new Set([
 	"result_text",
 	...SESSION_ARRAY_PATHS,
 ]);
-const COVERED_SESSION_TOP_LEVEL_KEYS = new Set(["data", "name"]);
+const COVERED_SESSION_TOP_LEVEL_KEYS = new Set([
+	"data",
+	"name",
+	"id",
+	"order",
+	"createdAt",
+	"fileName",
+]);
 
 function createGranularDiff(
 	resource: DiffWorkResource,

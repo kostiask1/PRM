@@ -166,15 +166,31 @@ function deriveFallbackTitle(text) {
 	return clean.length > 42 ? `${clean.slice(0, 42).trimEnd()}...` : clean;
 }
 
+function collectEntityNameFromRecord(data, names) {
+	if (!data || typeof data !== "object") return;
+	const combined = `${data.firstName || ""} ${data.lastName || ""}`.trim();
+	const name = asText(data.name || combined || data.title);
+	if (name) names.push(name);
+}
+
 function collectActionCreatedEntityNames(rawActions) {
 	const names = [];
 	for (const action of Array.isArray(rawActions) ? rawActions : []) {
 		for (const op of Array.isArray(action?.operations) ? action.operations : []) {
 			const data = op?.data || op?.patch;
 			if (!data || typeof data !== "object") continue;
-			const combined = `${data.firstName || ""} ${data.lastName || ""}`.trim();
-			const name = asText(data.name || combined || data.title);
-			if (name) names.push(name);
+			collectEntityNameFromRecord(data, names);
+			const nestedRoot =
+				data.data && typeof data.data === "object" && !Array.isArray(data.data)
+					? data.data
+					: data;
+			for (const listKey of ["characters", "npcs", "locations"]) {
+				const list = nestedRoot[listKey];
+				if (!Array.isArray(list)) continue;
+				for (const item of list) {
+					collectEntityNameFromRecord(item, names);
+				}
+			}
 		}
 	}
 	return names;

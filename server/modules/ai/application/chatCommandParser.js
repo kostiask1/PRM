@@ -1,4 +1,5 @@
 const SUPPORTED_CHAT_COMMANDS = Object.freeze([
+	"session",
 	"scene",
 	"npc",
 	"encounter",

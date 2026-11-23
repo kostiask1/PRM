@@ -859,14 +859,58 @@ export function useAiChatState({
 						(r) => r?.kind === "custom-monster" || r?.kind === "custom-bestiary",
 					),
 				);
+			const hasSessionChange =
+				Boolean(
+					result.actionCard?.diffResources?.some((r) => r?.kind === "session"),
+				) ||
+				Boolean(
+					result.aiResponse?.changes?.resources?.some(
+						(r) => r?.kind === "session",
+					),
+				);
+			const updatedSessionFileName =
+				typeof (result.updated as { fileName?: unknown } | null)?.fileName ===
+				"string"
+					? String((result.updated as { fileName?: string }).fileName || "").trim()
+					: "";
+			const isDifferentSessionMutation = Boolean(
+				updatedSessionFileName &&
+					activeSessionFileName &&
+					updatedSessionFileName !== activeSessionFileName,
+			);
 
-			if (result.updated) {
+			if (isDifferentSessionMutation) {
+				runtime.requestCampaignReload();
+				if (
+					Array.isArray(result.changedEntityTypes) &&
+					result.changedEntityTypes.length > 0
+				) {
+					runtime.refreshEntities();
+				}
+				runtime.publishSyncEvent({
+					resource: "ai",
+					campaignSlug: campaignSlug || undefined,
+					sessionFileName: updatedSessionFileName,
+				});
+			} else if (result.updated) {
 				applyUpdatedAiData(result.updated, {
 					entityTypes: result.changedEntityTypes,
 					historyEntry: result.aiResponse || null,
 				});
-			} else if (Array.isArray(result.changedEntityTypes) && result.changedEntityTypes.length > 0) {
-				runtime.refreshEntities();
+			} else if (
+				hasSessionChange ||
+				(Array.isArray(result.changedEntityTypes) &&
+					result.changedEntityTypes.length > 0)
+			) {
+				if (hasSessionChange) {
+					runtime.requestCampaignReload();
+				}
+				if (
+					Array.isArray(result.changedEntityTypes) &&
+					result.changedEntityTypes.length > 0
+				) {
+					runtime.refreshEntities();
+				}
 				runtime.publishSyncEvent({
 					resource: "ai",
 					campaignSlug: campaignSlug || undefined,

@@ -17,16 +17,41 @@ function asText(value) {
 	return String(value ?? "").trim();
 }
 
+function hasOwn(value, key) {
+	return Boolean(
+		value &&
+		typeof value === "object" &&
+		Object.prototype.hasOwnProperty.call(value, key),
+	);
+}
+
+function isSessionCreateOperation(op) {
+	if (!isObject(op)) return false;
+	const opName = asText(op.op).toLowerCase();
+	const entity = asText(op.entity).toLowerCase();
+	return opName === "create" && (entity === "session" || entity === "sessions");
+}
+
+function hasCreateSessionOperation(operations = []) {
+	return (Array.isArray(operations) ? operations : []).some(
+		isSessionCreateOperation,
+	);
+}
+
 function collectReferencedClientIds(operations = []) {
 	const refs = [];
 	for (const op of Array.isArray(operations) ? operations : []) {
 		if (!isObject(op)) continue;
 		const targetClientId = asText(op.targetClientId);
 		const ownerClientId = asText(op.ownerClientId);
+		const sessionClientId = asText(op.sessionClientId);
+		const dataSessionClientId = asText(op.data?.sessionClientId);
 		const dataEncounterClientId = asText(op.data?.encounterClientId);
 		const patchEncounterClientId = asText(op.patch?.encounterClientId);
 		if (targetClientId) refs.push(targetClientId);
 		if (ownerClientId) refs.push(ownerClientId);
+		if (sessionClientId) refs.push(sessionClientId);
+		if (dataSessionClientId) refs.push(dataSessionClientId);
 		if (dataEncounterClientId) refs.push(dataEncounterClientId);
 		if (patchEncounterClientId) refs.push(patchEncounterClientId);
 	}
@@ -34,7 +59,7 @@ function collectReferencedClientIds(operations = []) {
 }
 
 /**
- * Merges action cards whose operations share clientId / targetClientId / encounterClientId links.
+ * Merges action cards whose operations share clientId / targetClientId / encounterClientId / session links.
  */
 function mergeDependentRawActions(rawActions = []) {
 	const valid = (Array.isArray(rawActions) ? rawActions : []).filter(
@@ -79,6 +104,21 @@ function mergeDependentRawActions(rawActions = []) {
 		}
 	});
 
+	const createSessionIdx = valid.findIndex((raw) =>
+		hasCreateSessionOperation(raw.operations),
+	);
+	if (createSessionIdx >= 0) {
+		valid.forEach((raw, idx) => {
+			if (
+				idx !== createSessionIdx &&
+				!hasCreateSessionOperation(raw.operations) &&
+				operationsRequireSession(raw.operations)
+			) {
+				union(createSessionIdx, idx);
+			}
+		});
+	}
+
 	const groups = new Map();
 	valid.forEach((raw, idx) => {
 		const root = find(idx);
@@ -91,7 +131,9 @@ function mergeDependentRawActions(rawActions = []) {
 		if (group.length === 1) {
 			merged.push(group[0]);
 		} else {
-			const primary = group[0];
+			const primary =
+				group.find((item) => hasCreateSessionOperation(item.operations)) ||
+				group[0];
 			merged.push({
 				...primary,
 				kind: group.some((item) => asText(item.kind) === "diff") ? "diff" : primary.kind,
@@ -150,10 +192,160 @@ function expandEncounterMonsters(monsters) {
 	return expanded;
 }
 
+function stripClientIdCopy(item) {
+	if (!isObject(item)) return item;
+	const copy = { ...item };
+	delete copy.clientId;
+	return copy;
+}
+
+function collectNestedList(rootSource, nestedData, key) {
+	const items = [];
+	if (Array.isArray(nestedData?.[key])) {
+		items.push(...nestedData[key]);
+		delete nestedData[key];
+	}
+	if (Array.isArray(rootSource?.[key])) {
+		items.push(...rootSource[key]);
+		delete rootSource[key];
+	}
+	return items;
+}
+
+function unpackSessionCreateOperation(op) {
+	op.entity = "session";
+	delete op.scope;
+	if (!isObject(op.data) && isObject(op.value)) {
+		op.data = { ...op.value };
+	}
+	if (!isObject(op.data)) {
+		op.data = {};
+	}
+	const rootSource = op.data;
+	const nestedData = isObject(rootSource.data) ? rootSource.data : null;
+	if (nestedData && hasOwn(nestedData, "result_text") && !hasOwn(rootSource, "result_text")) {
+		rootSource.result_text = nestedData.result_text;
+	}
+	const unpacked = [];
+	const descText = asText(
+		rootSource.description ||
+			rootSource.summary ||
+			nestedData?.description ||
+			nestedData?.summary,
+	);
+	delete rootSource.description;
+	delete rootSource.summary;
+	if (nestedData) {
+		delete nestedData.description;
+		delete nestedData.summary;
+	}
+	if (descText) {
+		unpacked.push({
+			op: "appendNote",
+			entity: "session",
+			note: { title: "Опис сесії", text: descText },
+		});
+	}
+	for (const noteItem of collectNestedList(rootSource, nestedData, "notes")) {
+		if (typeof noteItem === "string" || isObject(noteItem)) {
+			unpacked.push({ op: "appendNote", entity: "session", note: noteItem });
+		}
+	}
+	for (const charItem of collectNestedList(rootSource, nestedData, "characters")) {
+		if (!isObject(charItem)) continue;
+		const cid = asText(charItem.clientId);
+		unpacked.push({
+			op: "create",
+			entity: "character",
+			scope: "campaign",
+			...(cid ? { clientId: cid } : {}),
+			data: stripClientIdCopy(charItem),
+		});
+	}
+	for (const npcItem of collectNestedList(rootSource, nestedData, "npcs")) {
+		if (!isObject(npcItem)) continue;
+		const cid = asText(npcItem.clientId);
+		unpacked.push({
+			op: "create",
+			entity: "npc",
+			scope: "session",
+			...(cid ? { clientId: cid } : {}),
+			data: stripClientIdCopy(npcItem),
+		});
+	}
+	for (const locItem of collectNestedList(rootSource, nestedData, "locations")) {
+		if (!isObject(locItem)) continue;
+		const cid = asText(locItem.clientId);
+		unpacked.push({
+			op: "create",
+			entity: "location",
+			scope: "session",
+			...(cid ? { clientId: cid } : {}),
+			data: stripClientIdCopy(locItem),
+		});
+	}
+	for (const encItem of collectNestedList(rootSource, nestedData, "encounters")) {
+		if (!isObject(encItem)) continue;
+		const cid = asText(encItem.clientId);
+		unpacked.push({
+			op: "create",
+			entity: "encounter",
+			scope: "session",
+			...(cid ? { clientId: cid } : {}),
+			data: stripClientIdCopy(encItem),
+		});
+	}
+	for (const sceneItem of collectNestedList(rootSource, nestedData, "scenes")) {
+		if (!isObject(sceneItem)) continue;
+		const cid = asText(sceneItem.clientId);
+		unpacked.push({
+			op: "create",
+			entity: "scene",
+			scope: "session",
+			...(cid ? { clientId: cid } : {}),
+			data: stripClientIdCopy(sceneItem),
+		});
+	}
+	if (nestedData) {
+		delete rootSource.data;
+	}
+	return unpacked;
+}
+
 function normalizeActionOperationsForExecution(operations, { sessionData = null, sceneId = null } = {}) {
-	const cloned = (Array.isArray(operations) ? operations : []).map((op) =>
+	const rawCloned = (Array.isArray(operations) ? operations : []).map((op) =>
 		isObject(op) ? JSON.parse(JSON.stringify(op)) : op,
 	);
+	const hoistedSessionOps = [];
+	const remainingOps = [];
+	for (const op of rawCloned) {
+		if (!isObject(op)) {
+			remainingOps.push(op);
+			continue;
+		}
+		const opName = asText(op.op).toLowerCase();
+		if (asText(op.entity).toLowerCase() === "sessions") {
+			op.entity = "session";
+		}
+		const entity = asText(op.entity).toLowerCase();
+		if (entity === "session" && opName === "update") {
+			const hasIdentity = Boolean(
+				asText(op.id) ||
+					asText(op.slug) ||
+					asText(op.name) ||
+					asText(op.targetClientId),
+			);
+			if (!hasIdentity && (sessionData?.id || sessionData?.name)) {
+				op.id = sessionData.id || sessionData.name;
+			}
+		}
+		if (isSessionCreateOperation(op)) {
+			hoistedSessionOps.push(op, ...unpackSessionCreateOperation(op));
+		} else {
+			remainingOps.push(op);
+		}
+	}
+	const cloned = [...hoistedSessionOps, ...remainingOps];
 	const usedClientIds = new Set(
 		cloned.map((op) => asText(op?.clientId)).filter(Boolean),
 	);
@@ -496,6 +688,15 @@ function collectResourceStats(resource, stats) {
 		return;
 	}
 	if (resource.kind === "session") {
+		const isNewSession =
+			resource.before === null || resource.before === undefined;
+		const isDeletedSession =
+			resource.after === null || resource.after === undefined;
+		if (isNewSession) {
+			stats.push({ label: "Сесія", value: "+1 сесія", type: "added" });
+		} else if (isDeletedSession) {
+			stats.push({ label: "Сесія", value: "-1 сесія", type: "info" });
+		}
 		const bData = resource.before?.data || {};
 		const aData = resource.after?.data || {};
 		countCollectionChanges(bData.scenes, aData.scenes, "сцена", "сцени", stats);
@@ -665,8 +866,13 @@ async function prepareChatActionCards(
 			continue;
 		}
 
-		let effectiveSessionFileName = asText(sessionFileName);
+		const createsNewSession = hasCreateSessionOperation(raw.operations);
+		let effectiveSessionFileName = createsNewSession ? "" : asText(sessionFileName);
+		const effectiveEncounterId = createsNewSession ? null : encounterId;
+		const effectiveSceneId = createsNewSession ? null : sceneId;
+
 		if (
+			!createsNewSession &&
 			!effectiveSessionFileName &&
 			campaignSlug !== "bestiary" &&
 			operationsRequireSession(raw.operations)
@@ -689,12 +895,13 @@ async function prepareChatActionCards(
 			}
 		}
 
-		const cardResponsePath = buildActionHistoryPath(
+		const preApplyResponsePath = buildActionHistoryPath(
 			campaignSlug,
 			effectiveSessionFileName,
-			encounterId,
+			effectiveEncounterId,
 		);
 		const targetSessionData =
+			!createsNewSession &&
 			effectiveSessionFileName &&
 			campaignSlug !== "bestiary" &&
 			typeof storage.readSession === "function"
@@ -702,13 +909,13 @@ async function prepareChatActionCards(
 				: null;
 		const normalizedOperations = normalizeActionOperationsForExecution(raw.operations, {
 			sessionData: targetSessionData,
-			sceneId,
+			sceneId: effectiveSceneId,
 		});
 
 		const generatedPayload = buildGeneratedOperationPayload({
 			operations: normalizedOperations,
-			responsePath: cardResponsePath,
-			sceneId,
+			responsePath: preApplyResponsePath,
+			sceneId: effectiveSceneId,
 			mentionCandidateNames,
 			fillCurrentTargetIds,
 			applyMentionsToGeneratedContent,
@@ -738,16 +945,24 @@ async function prepareChatActionCards(
 			payload: generatedPayload,
 			campaignSlug,
 			sessionFile: effectiveSessionFileName || null,
-			encounterId: encounterId ?? null,
+			encounterId: effectiveEncounterId ?? null,
 			entityScope:
 				campaignSlug === "bestiary"
 					? "custom-bestiary"
-					: effectiveSessionFileName
+					: createsNewSession || effectiveSessionFileName
 						? "mixed"
 						: "campaign",
 			simplifiedNotes: Boolean(simplifiedNotes),
 			permissions: FULL_PERMISSIONS,
 		});
+		const resolvedSessionFileName = asText(
+			applied.createdSessionFile || effectiveSessionFileName,
+		);
+		const cardResponsePath = buildActionHistoryPath(
+			campaignSlug,
+			resolvedSessionFileName,
+			effectiveEncounterId,
+		);
 		const extraChangeResources = applied.customBestiaryChange?.hasChanges
 			? buildCustomMonsterChangeResources(
 					applied.customBestiaryChange.before,
@@ -763,7 +978,7 @@ async function prepareChatActionCards(
 			modelName,
 			language,
 			title,
-			sceneId,
+			sceneId: effectiveSceneId,
 			simplifiedNotes,
 			historyWriter,
 		});
@@ -804,6 +1019,8 @@ async function prepareChatActionCards(
 			continue;
 		}
 
+		const cardSessionFileName =
+			createsNewSession && !shouldAutoApply ? "" : resolvedSessionFileName;
 		const preview = formatDiffResourcesForPreview(resources);
 		const card = {
 			id: cardId,
@@ -813,7 +1030,7 @@ async function prepareChatActionCards(
 			...(raw.description ? { description: asText(raw.description) } : {}),
 			...(raw.targetEntity ? { targetEntity: asText(raw.targetEntity) } : {}),
 			...(raw.targetType ? { targetType: asText(raw.targetType) } : {}),
-			...(effectiveSessionFileName ? { targetSessionFileName: effectiveSessionFileName } : {}),
+			...(cardSessionFileName ? { targetSessionFileName: cardSessionFileName } : {}),
 			...(preview.stats.length > 0 ? { stats: preview.stats } : {}),
 			status: shouldAutoApply ? "applied" : "pending",
 			diffSnippet: preview.diffSnippet,
@@ -886,6 +1103,9 @@ async function applyChatActionCard(
 				...actionCard,
 				status: "applied",
 				appliedAt: Date.now(),
+				...(entry?.path?.session
+					? { targetSessionFileName: String(entry.path.session) }
+					: {}),
 				...(entry?.id ? { aiResponseId: String(entry.id) } : {}),
 				...(preview.stats.length > 0 ? { stats: preview.stats } : {}),
 				...(resources.length > 0
@@ -907,8 +1127,14 @@ async function applyChatActionCard(
 		throw error;
 	}
 
-	const effectiveSessionFileName = asText(actionCard?.targetSessionFileName || sessionFileName);
+	const createsNewSession = hasCreateSessionOperation(actionCard.operations);
+	const effectiveSessionFileName = createsNewSession
+		? ""
+		: asText(actionCard?.targetSessionFileName || sessionFileName);
+	const effectiveEncounterId = createsNewSession ? null : encounterId;
+	const effectiveSceneId = createsNewSession ? null : sceneId;
 	const targetSessionData =
+		!createsNewSession &&
 		effectiveSessionFileName &&
 		campaignSlug !== "bestiary" &&
 		typeof storage.readSession === "function"
@@ -916,7 +1142,7 @@ async function applyChatActionCard(
 			: null;
 	const normalizedOperations = normalizeActionOperationsForExecution(actionCard.operations, {
 		sessionData: targetSessionData,
-		sceneId,
+		sceneId: effectiveSceneId,
 	});
 	const payload = {
 		version: 2,
@@ -933,7 +1159,6 @@ async function applyChatActionCard(
 		throw error;
 	}
 
-	const responsePath = buildActionHistoryPath(campaignSlug, effectiveSessionFileName, encounterId);
 	const beforeApplyBundle =
 		campaignSlug === "bestiary"
 			? { meta: { slug: "bestiary", name: "Bestiary" }, sessions: [], entities: {}, aiResponses: [] }
@@ -942,16 +1167,24 @@ async function applyChatActionCard(
 		payload,
 		campaignSlug,
 		sessionFile: effectiveSessionFileName || null,
-		encounterId: encounterId ?? null,
+		encounterId: effectiveEncounterId ?? null,
 		entityScope:
 			campaignSlug === "bestiary"
 				? "custom-bestiary"
-				: effectiveSessionFileName
+				: createsNewSession || effectiveSessionFileName
 					? "mixed"
 					: "campaign",
 		simplifiedNotes: Boolean(simplifiedNotes),
 		permissions: FULL_PERMISSIONS,
 	});
+	const finalSessionFileName = asText(
+		applied.createdSessionFile || effectiveSessionFileName,
+	);
+	const responsePath = buildActionHistoryPath(
+		campaignSlug,
+		finalSessionFileName,
+		effectiveEncounterId,
+	);
 	const extraChangeResources = applied.customBestiaryChange?.hasChanges
 		? buildCustomMonsterChangeResources(
 				applied.customBestiaryChange.before,
@@ -964,7 +1197,7 @@ async function applyChatActionCard(
 		modelName,
 		language,
 		title: actionCard.title || "Дія асистента",
-		sceneId,
+		sceneId: effectiveSceneId,
 		simplifiedNotes,
 		historyWriter,
 	});
@@ -986,6 +1219,7 @@ async function applyChatActionCard(
 		...actionCard,
 		status: "applied",
 		appliedAt: Date.now(),
+		...(finalSessionFileName ? { targetSessionFileName: finalSessionFileName } : {}),
 		...(aiResponse?.id ? { aiResponseId: String(aiResponse.id) } : {}),
 		...(preview.stats.length > 0 ? { stats: preview.stats } : {}),
 		...(resources.length > 0

@@ -17,6 +17,7 @@ export interface RankedAiCommandItem {
 const COMMAND_SET = new Set(AI_COMMANDS.map((item) => item.command.toLowerCase()));
 
 const COMMAND_KEYWORDS: Record<string, readonly string[]> = {
+	"@session": ["сесія", "пригода", "ваншот", "session", "adventure", "oneshot"],
 	"@scene": ["сцена", "опис", "деталі", "перевірка", "dc", "scene", "clue"],
 	"@npc": ["нпс", "ніп", "персонаж", "герой", "npc", "character"],
 	"@encounter": ["бій", "бойова", "сутичка", "енкаунтер", "баланс", "encounter", "combat", "fight"],
@@ -55,8 +56,8 @@ function getContextualConfig(
 		};
 	}
 	return {
-		priority: ["@npc", "@location", "@scene", "@bestiary", "@encounter", "@notes", "@rules", "@dice"],
-		badges: new Set<string>(),
+		priority: ["@session", "@npc", "@location", "@scene", "@bestiary", "@encounter", "@notes", "@rules", "@dice"],
+		badges: new Set(["@session"]),
 	};
 }
 

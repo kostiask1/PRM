@@ -75725,6 +75725,517 @@ await run(
 	},
 );
 
+await run(
+	"SUPPORTED_CHAT_COMMANDS, buildChatSystemInstruction, and aiCommandAutocomplete support @session",
+	async () => {
+		const {
+			getSuggestedAiCommands,
+		} = await import("../src/widgets/ai-assistant/chat/model/aiCommandAutocomplete.ts");
+		assert.ok(SUPPORTED_CHAT_COMMANDS.includes("session"));
+		assert.equal(getSuggestedAiCommands({ query: "сес" })[0]?.item.command, "@session");
+		assert.equal(getSuggestedAiCommands({ query: "пригод" })[0]?.item.command, "@session");
+		const campaignRanked = getSuggestedAiCommands({ query: "", anchorType: "campaign" });
+		assert.equal(campaignRanked[0]?.item.command, "@session");
+
+		const instruction = buildChatSystemInstruction({
+			responseLanguage: "uk",
+			commands: ["session"],
+			workspaceViewType: "campaign",
+		});
+		assert.ok(instruction.includes('"entity": "session"'));
+		assert.ok(instruction.includes("session|npc|location|character|scene|encounter|monster"));
+		assert.ok(instruction.includes("@session:"));
+	},
+);
+
+await run(
+	"AI diff expands newly created sessions without internal metadata noise",
+	() => {
+		const expanded = buildDiffResources(
+			{
+				id: "history-new-session",
+				changes: {
+					resources: [
+						{
+							id: "session:nova-sesiia.json",
+							kind: "session",
+							label: "camp/sessions/nova-sesiia.json",
+							before: null,
+							after: {
+								id: "sess-uuid-1",
+								name: "Нова сесія",
+								order: 2,
+								createdAt: "2026-11-23T09:00:00.000Z",
+								fileName: "nova-sesiia.json",
+								data: {
+									notes: [{ id: "n1", title: "Огляд", text: "Вступ" }],
+									npcs: [{ id: "npc-1", firstName: "Лорд", lastName: "Вейн" }],
+									locations: [{ id: "loc-1", name: "Забута вежа" }],
+									scenes: [{ id: "sc-1", texts: { summary: "Вхід у вежу" } }],
+									encounters: [{ id: "enc-1", name: "Вартові порога" }],
+								},
+							},
+						},
+					],
+				},
+			},
+			{ note: "Нотатка", encounter: "Бій" },
+		);
+
+		assert.deepEqual(
+			expanded.map((item) => item.id),
+			[
+				"session:nova-sesiia.json:name",
+				"session:nova-sesiia.json:notes/Огляд",
+				"session:nova-sesiia.json:npcs/Лорд Вейн",
+				"session:nova-sesiia.json:locations/Забута вежа",
+				"session:nova-sesiia.json:scenes/Вхід у вежу",
+				"session:nova-sesiia.json:encounters/Вартові порога",
+			],
+		);
+	},
+);
+
+await run(
+	"aiPatchService creates a new session (empty & populated campaigns) with characters, entities, custom monsters, encounters, and scenes",
+	async () => {
+		const originalReadCustom = storage.readCustomBestiaryMonsters;
+		const originalWriteCustom = storage.writeCustomBestiaryMonsters;
+		const originalGetBestiaryIndex = storage.getBestiaryIndex;
+		let customMonsters = [];
+		storage.readCustomBestiaryMonsters = async () =>
+			customMonsters.map((m) => JSON.parse(JSON.stringify(m)));
+		storage.writeCustomBestiaryMonsters = async (next) => {
+			customMonsters = (Array.isArray(next) ? next : []).map((m) => ({
+				...m,
+				id: m.id || storage.createId(),
+				source: "CUSTOM",
+			}));
+			return customMonsters.map((m) => JSON.parse(JSON.stringify(m)));
+		};
+		storage.getBestiaryIndex = async () => {
+			const baseIndex = await originalGetBestiaryIndex();
+			for (const monster of customMonsters) {
+				baseIndex.set(
+					`${String(monster.name).trim().toLowerCase()}|CUSTOM`,
+					monster,
+				);
+			}
+			return baseIndex;
+		};
+
+		try {
+			await withTestSlug("ai-patch-create-session-empty", async (slug) => {
+				await storage.writeJson(storage.campaignMetaPath(slug), {
+					id: storage.createId(),
+					slug,
+					name: "Empty Session Create",
+				});
+
+				const emptyRes = await aiPatchService.applyAiOperations({
+					payload: {
+						operations: [
+							{
+								op: "create",
+								entity: "session",
+								clientId: "sess-1",
+								data: { name: "Перша пригода" },
+							},
+						],
+					},
+					campaignSlug: slug,
+					sessionFile: null,
+					entityScope: "mixed",
+					permissions: {
+						allowCharacters: true,
+						allowNpcs: true,
+						allowLocations: true,
+						allowEncounters: true,
+						allowCustomMonsters: true,
+					},
+				});
+
+				assert.ok(emptyRes.createdSessionFile);
+				const created = await storage.readSession(slug, emptyRes.createdSessionFile);
+				assert.equal(created.name, "Перша пригода");
+				assert.equal(created.order, 0);
+				assert.deepEqual(created.data.scenes, []);
+			});
+
+			await withTestSlug("ai-patch-create-session-full", async (slug) => {
+				await storage.writeJson(storage.campaignMetaPath(slug), {
+					id: storage.createId(),
+					slug,
+					name: "Populated Session Create",
+				});
+				await storage.writeJson(storage.sessionPath(slug, "old.json"), {
+					id: "old-sess",
+					name: "Стара сесія",
+					order: 3,
+					data: { scenes: [], npcs: [], locations: [], notes: [], encounters: [] },
+				});
+
+				const res = await aiPatchService.applyAiOperations({
+					payload: {
+						operations: [
+							{
+								op: "create",
+								entity: "session",
+								clientId: "sess-new",
+								data: { name: "Ніч у склепі" },
+							},
+							{
+								op: "appendNote",
+								entity: "session",
+								note: { title: "Загальний план", text: "Герої розслідують склеп." },
+							},
+							{
+								op: "create",
+								entity: "character",
+								scope: "session",
+								data: { firstName: "Торін", class: "Fighter", level: 4 },
+							},
+							{
+								op: "create",
+								entity: "npc",
+								scope: "session",
+								data: { firstName: "Отець", lastName: "Марко", role: "Cleric" },
+							},
+							{
+								op: "create",
+								entity: "npc",
+								data: { firstName: "Вартовий", lastName: "Брами", role: "Guard" },
+							},
+							{
+								op: "create",
+								entity: "location",
+								scope: "session",
+								data: { name: "Старий склеп", description: "Холодний камінь." },
+							},
+							{
+								op: "create",
+								entity: "location",
+								scope: "campaign",
+								data: { name: "Столична гільдія", description: "Штаб." },
+							},
+							{
+								op: "create",
+								entity: "monster",
+								data: {
+									name: "Кістяний Капітан",
+									source: "CUSTOM",
+									size: ["M"],
+									type: "undead",
+									ac: [{ ac: 16 }],
+									hp: { average: 42, formula: "6d8+15" },
+									cr: "2",
+								},
+							},
+							{
+								op: "create",
+								entity: "encounter",
+								scope: "session",
+								clientId: "enc-crypt",
+								data: {
+									name: "Бій у залі",
+									monsters: [
+										{ monsterName: "Skeleton" },
+										{ monsterName: "Кістяний Капітан" },
+									],
+								},
+							},
+							{
+								op: "create",
+								entity: "scene",
+								scope: "session",
+								clientId: "sc-crypt",
+								data: {
+									texts: {
+										summary: "Сутичка біля саркофагу.",
+										goal: "Зупинити ритуал",
+										stakes: "Скелети прорвуться у місто",
+										location: "Старий склеп",
+									},
+									encounterClientId: "enc-crypt",
+								},
+							},
+							{
+								op: "appendNote",
+								entity: "scene",
+								scope: "session",
+								targetClientId: "sc-crypt",
+								note: { title: "Підказка", text: "Алтарь слабкий до світла." },
+							},
+						],
+					},
+					campaignSlug: slug,
+					sessionFile: null,
+					entityScope: "mixed",
+					permissions: {
+						allowCharacters: true,
+						allowNpcs: true,
+						allowLocations: true,
+						allowEncounters: true,
+						allowCustomMonsters: true,
+					},
+				});
+
+				assert.ok(res.createdSessionFile);
+				assert.notEqual(res.createdSessionFile, "old.json");
+				const newSession = await storage.readSession(slug, res.createdSessionFile);
+				assert.equal(newSession.name, "Ніч у склепі");
+				assert.equal(newSession.order, 4);
+				assert.equal(newSession.data.notes.length, 1);
+				assert.equal(newSession.data.npcs.length, 2);
+				assert.equal(newSession.data.locations.length, 1);
+				assert.equal(newSession.data.encounters.length, 1);
+				assert.equal(newSession.data.scenes.length, 1);
+				assert.equal(
+					newSession.data.scenes[0].encounterId,
+					newSession.data.encounters[0].id,
+				);
+				assert.equal(newSession.data.scenes[0].notes.length, 1);
+				assert.equal(newSession.data.encounters[0].monsters.length, 2);
+				assert.equal(newSession.data.encounters[0].monsters[0].name, "Skeleton");
+				assert.equal(
+					newSession.data.encounters[0].monsters[1].name,
+					"Кістяний Капітан",
+				);
+
+				const chars = await storage.listEntities(slug, "characters");
+				assert.equal(chars.length, 1);
+				assert.equal(chars[0].firstName, "Торін");
+
+				const campLocs = await storage.listEntities(slug, "locations");
+				assert.equal(campLocs.length, 1);
+				assert.equal(campLocs[0].name, "Столична гільдія");
+
+				const untouchedOld = await storage.readSession(slug, "old.json");
+				assert.equal(untouchedOld.data.scenes.length, 0);
+			});
+		} finally {
+			storage.readCustomBestiaryMonsters = originalReadCustom;
+			storage.writeCustomBestiaryMonsters = originalWriteCustom;
+			storage.getBestiaryIndex = originalGetBestiaryIndex;
+		}
+	},
+);
+
+await run(
+	"AI Chat V2 creates a new session (draft preview, inline unpack/hoist, merge split cards, apply, undo, re-apply)",
+	async () => {
+		const originalReadCustom = storage.readCustomBestiaryMonsters;
+		const originalWriteCustom = storage.writeCustomBestiaryMonsters;
+		const originalGetBestiaryIndex = storage.getBestiaryIndex;
+		let customMonsters = [];
+		storage.readCustomBestiaryMonsters = async () =>
+			customMonsters.map((m) => JSON.parse(JSON.stringify(m)));
+		storage.writeCustomBestiaryMonsters = async (next) => {
+			customMonsters = (Array.isArray(next) ? next : []).map((m) => ({
+				...m,
+				id: m.id || storage.createId(),
+				source: "CUSTOM",
+			}));
+			return customMonsters.map((m) => JSON.parse(JSON.stringify(m)));
+		};
+		storage.getBestiaryIndex = async () => {
+			const baseIndex = await originalGetBestiaryIndex();
+			for (const monster of customMonsters) {
+				baseIndex.set(
+					`${String(monster.name).trim().toLowerCase()}|CUSTOM`,
+					monster,
+				);
+			}
+			return baseIndex;
+		};
+
+		try {
+			await withTestSlug("ai-chat-create-session-lifecycle", async (slug) => {
+				await storage.writeJson(storage.campaignMetaPath(slug), {
+					id: storage.createId(),
+					slug,
+					name: "Session Lifecycle",
+				});
+				await storage.writeJson(storage.sessionPath(slug, "existing.json"), {
+					id: "existing-id",
+					name: "Існуюча сесія",
+					order: 0,
+					data: { scenes: [], npcs: [], locations: [], notes: [], encounters: [] },
+				});
+
+				const geminiResponse = {
+					chatTitle: "Вежа тіней",
+					reply: "Створив нову сесію з NPC [Елрік], локацією [Вежа тіней] та боєм.",
+					actions: [
+						{
+							kind: "diff",
+							title: "Додати сцену та бій",
+							operations: [
+								{
+									op: "create",
+									entity: "encounter",
+									scope: "session",
+									clientId: "enc-tower",
+									data: {
+										name: "Вартові вежі",
+										monsters: [{ monsterName: "Skeleton", count: 2 }],
+									},
+								},
+								{
+									op: "create",
+									entity: "scene",
+									scope: "session",
+									data: {
+										summary: "Бій біля входу в [Вежа тіней].",
+										encounterClientId: "enc-tower",
+									},
+								},
+							],
+						},
+						{
+							kind: "diff",
+							title: "Нова сесія: Вежа тіней",
+							targetType: "session",
+							operations: [
+								{
+									op: "create",
+									entity: "session",
+									clientId: "sess-tower",
+									data: {
+										name: "Вежа тіней",
+										description: "Таємнича вежа на пагорбі.",
+										characters: [
+											{ firstName: "Ліра", class: "Wizard", level: 3 },
+										],
+										npcs: [{ firstName: "Елрік", role: "Провідник" }],
+										locations: [{ name: "Вежа тіней", description: "Стара вежа." }],
+									},
+								},
+							],
+						},
+					],
+				};
+
+				const chatRepo = createFileAiChatRepository({ storage });
+				const commands = createAiChatCommands({
+					chatRepository: chatRepo,
+					storage,
+					aiService: {
+						listAvailableModels: async () => ({
+							models: [{ name: "gemini-2.5-flash", inputTokenLimit: 1000000 }],
+							defaultModel: "gemini-2.5-flash",
+						}),
+					},
+					geminiGateway: {
+						generateText: async () => JSON.stringify(geminiResponse),
+					},
+					historyWriter: new AiHistoryWriter(),
+					applyAiOperations: aiPatchService.applyAiOperations,
+					restoreAiResponseSnapshot: aiResponseHistoryService.restoreAiResponseSnapshot,
+					buildCustomMonsterChangeResources:
+						aiResponseHistoryService.buildCustomMonsterChangeResources,
+					filterSessionDataForAiContext,
+					fillCurrentTargetIds,
+					applyMentionsToGeneratedContent:
+						mentionProcessing.applyMentionsToGeneratedContent,
+					processGeneratedTextMentions:
+						mentionProcessing.processGeneratedTextMentions,
+					validateAiGeneratedContent: aiPayloadSchemas.validateAiGeneratedContent,
+					extractFirstJsonObject,
+					normalizeEscapedNewLines,
+					buildImageParts,
+					buildFileParts,
+					isApiKeyConfigured: () => true,
+				});
+
+				// Send from existing session context -> still creates a separate new session card in draft mode
+				const sent = await commands.sendMessage({
+					campaignSlug: slug,
+					chatId: "new",
+					payload: {
+						content: "@session Створи нову сесію Вежа тіней",
+						autoApply: false,
+						workspaceContext: {
+							viewType: "session",
+							campaignSlug: slug,
+							sessionFileName: "existing.json",
+						},
+					},
+				});
+
+				assert.equal(sent.assistantMessage.actionCards.length, 1);
+				const card = sent.assistantMessage.actionCards[0];
+				assert.equal(card.status, "pending");
+				assert.ok(card.stats.some((s) => s.value === "+1 сесія"));
+				assert.equal(
+					card.diffResources.some((r) => r.kind === "session" && r.before === null),
+					true,
+				);
+				// Draft cleanup: still only existing.json on disk and 0 characters
+				assert.equal((await storage.listSessions(slug)).length, 1);
+				assert.equal((await storage.listEntities(slug, "characters")).length, 0);
+
+				// Apply -> creates new session + character while keeping existing.json untouched
+				const applied = await commands.applyAction({
+					campaignSlug: slug,
+					chatId: sent.chat.id,
+					actionId: card.id,
+					payload: {},
+				});
+				assert.equal(applied.actionCard.status, "applied");
+				assert.ok(applied.actionCard.targetSessionFileName);
+				assert.notEqual(applied.actionCard.targetSessionFileName, "existing.json");
+
+				const sessionsAfterApply = await storage.listSessions(slug);
+				assert.equal(sessionsAfterApply.length, 2);
+				const createdSession = await storage.readSession(
+					slug,
+					applied.actionCard.targetSessionFileName,
+				);
+				assert.equal(createdSession.name, "Вежа тіней");
+				assert.equal(createdSession.data.notes.length, 1);
+				assert.equal(createdSession.data.npcs.length, 1);
+				assert.equal(createdSession.data.locations.length, 1);
+				assert.equal(createdSession.data.scenes.length, 1);
+				assert.equal(createdSession.data.encounters.length, 1);
+				assert.equal(createdSession.data.encounters[0].monsters.length, 2);
+
+				const charsAfterApply = await storage.listEntities(slug, "characters");
+				assert.equal(charsAfterApply.length, 1);
+				assert.equal(charsAfterApply[0].firstName, "Ліра");
+
+				const existingAfterApply = await storage.readSession(slug, "existing.json");
+				assert.equal(existingAfterApply.data.scenes.length, 0);
+
+				// Undo -> removes created session & character cleanly
+				const undone = await commands.undoAction({
+					campaignSlug: slug,
+					chatId: sent.chat.id,
+					actionId: card.id,
+				});
+				assert.equal(undone.actionCard.status, "undone");
+				assert.equal((await storage.listSessions(slug)).length, 1);
+				assert.equal((await storage.listEntities(slug, "characters")).length, 0);
+
+				// Re-apply -> recreates cleanly
+				const reapplied = await commands.applyAction({
+					campaignSlug: slug,
+					chatId: sent.chat.id,
+					actionId: card.id,
+					payload: {},
+				});
+				assert.equal(reapplied.actionCard.status, "applied");
+				assert.equal((await storage.listSessions(slug)).length, 2);
+				assert.equal((await storage.listEntities(slug, "characters")).length, 1);
+			});
+		} finally {
+			storage.readCustomBestiaryMonsters = originalReadCustom;
+			storage.writeCustomBestiaryMonsters = originalWriteCustom;
+			storage.getBestiaryIndex = originalGetBestiaryIndex;
+		}
+	},
+);
+
 const failed = results.filter((r) => !r.ok);
 console.log(
 	`\nTotal: ${results.length}, Passed: ${results.length - failed.length}, Failed: ${failed.length}`,

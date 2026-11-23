@@ -2494,6 +2494,88 @@ function applyCampaignOperation(state, operation) {
 	return null;
 }
 
+function buildCreatedSessionNotes(rawNotes, options) {
+	if (!Array.isArray(rawNotes)) return [];
+	const notes = [];
+	for (const rawNote of rawNotes) {
+		const note = normalizeNote(rawNote, options);
+		if (note) notes.push(note);
+	}
+	return notes;
+}
+
+async function applySessionCreate(state, operation, options) {
+	if (!state.campaignSlug || state.campaignSlug === "bestiary") {
+		state.warnings.push("Skipped session create; no campaign target.");
+		return null;
+	}
+	const existingSessions = await storage
+		.listSessions(state.campaignSlug)
+		.catch(() => []);
+	const maxOrder = existingSessions.reduce(
+		(max, item) => Math.max(max, Number(item?.order) || 0),
+		-1,
+	);
+	const data = operationData(operation);
+	const name =
+		storage.sanitizeName(data.name || data.title) ||
+		new Date().toISOString().slice(0, 10);
+	const session = storage.makeDefaultSessionData(name);
+	session.order = maxOrder + 1;
+	session.data = {
+		notes: buildCreatedSessionNotes(data.notes, options),
+		scenes: [],
+		npcs: [],
+		locations: [],
+		encounters: [],
+		...(hasOwn(data, "result_text")
+			? { result_text: String(data.result_text ?? "") }
+			: {}),
+	};
+	const fileName = await storage.ensureUniqueSessionFile(
+		state.campaignSlug,
+		session.name,
+	);
+	state.sessionFile = fileName;
+	state.sessionData = session;
+	state.createdSessionFile = fileName;
+	state.defaultEntityScope = "session";
+	if (operation.clientId) {
+		state.clientIdMap.set(asText(operation.clientId), {
+			entity: "session",
+			scope: "session",
+			id: session.id,
+			fileName,
+		});
+	}
+	return { type: "session", fileName, saved: session };
+}
+
+function applySessionUpdate(state, operation) {
+	if (!state.sessionData) {
+		state.warnings.push(`Skipped session ${operation.op}; no session target.`);
+		return null;
+	}
+	const patch = operationPatch(operation);
+	let changed = false;
+	if (hasOwn(patch, "name")) {
+		const nextName = storage.sanitizeName(patch.name);
+		if (nextName && nextName !== state.sessionData.name) {
+			state.sessionData.name = nextName;
+			changed = true;
+		}
+	}
+	if (hasOwn(patch, "result_text")) {
+		state.sessionData.data = state.sessionData.data || {};
+		const nextResultText = String(patch.result_text ?? "");
+		if (nextResultText !== state.sessionData.data.result_text) {
+			state.sessionData.data.result_text = nextResultText;
+			changed = true;
+		}
+	}
+	return changed ? { type: "session", saved: state.sessionData } : null;
+}
+
 function hasMonstersWithoutIds(monsters) {
 	return monsters.some((monster) => !asText(monster?.id));
 }
@@ -2669,6 +2751,8 @@ function createAiOperationState({
 }) {
 	return {
 		campaignSlug,
+		sessionFile: asText(sessionFile) || null,
+		createdSessionFile: null,
 		sessionData,
 		campaignMeta,
 		clientIdMap: new Map(),
@@ -2726,6 +2810,17 @@ function dispatchCampaignOperation(state, operation) {
 	return operationOutcome(applyCampaignOperation(state, operation), true, false);
 }
 
+async function dispatchSessionOperation(state, operation, options) {
+	const op = asText(operation.op).toLowerCase();
+	const result =
+		op === "create"
+			? await applySessionCreate(state, operation, options)
+			: op === "update"
+				? applySessionUpdate(state, operation)
+				: null;
+	return operationOutcome(result, false, true);
+}
+
 function dispatchSceneOperation(state, operation, options) {
 	return operationOutcome(
 		applySceneOperation(state, operation, options),
@@ -2757,6 +2852,8 @@ async function dispatchEntityOperation(state, operation, options) {
 
 const ENTITY_OPERATION_DISPATCHERS = new Map([
 	["campaign", dispatchCampaignOperation],
+	["session", dispatchSessionOperation],
+	["sessions", dispatchSessionOperation],
 	["scene", dispatchSceneOperation],
 	["scenes", dispatchSceneOperation],
 	["encounter", dispatchEncounterOperation],
@@ -2816,12 +2913,13 @@ async function persistChangedCampaignMeta(state, changes) {
 }
 
 async function persistChangedSession(state, changes, sessionFile) {
-	if (changes.sessionDataChanged && state.sessionData) {
+	const effectiveFile = asText(state.sessionFile || sessionFile);
+	if (changes.sessionDataChanged && state.sessionData && effectiveFile) {
 		await storage.writeJson(
-			storage.sessionPath(state.campaignSlug, sessionFile),
+			storage.sessionPath(state.campaignSlug, effectiveFile),
 			state.sessionData,
 		);
-		return { ...state.sessionData, fileName: sessionFile };
+		return { ...state.sessionData, fileName: effectiveFile };
 	}
 	return null;
 }
@@ -2937,6 +3035,7 @@ async function applyAiOperations({
 		warnings: state.warnings,
 		customBestiaryChange,
 		changedMonsters: customBestiaryChange?.changedMonsters || [],
+		createdSessionFile: state.createdSessionFile || null,
 	};
 }
 
