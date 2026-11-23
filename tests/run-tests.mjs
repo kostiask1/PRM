@@ -53006,6 +53006,13 @@ await run("AI response modal policies preserve nested draft and preview identity
 			"monster:name:вартовий:custom:2",
 		],
 	);
+	assert.deepEqual(
+		getAiResponseEncounterParticipantEntries([
+			{ id: "shared-id", instanceId: "inst-1", name: "Охоронець 1" },
+			{ id: "shared-id", instanceId: "inst-2", name: "Охоронець 2" },
+		]).map((entry) => entry.key),
+		["monster:id:inst-1:1", "monster:id:inst-2:1"],
+	);
 
 	const parent = {
 		id: "session-1",
@@ -63951,6 +63958,331 @@ await run(
 		assert.notEqual(created.id, "new-encounter");
 		assert.equal(result.updated.data.scenes[0].encounterId, created.id);
 		assert.deepEqual(result.warnings, []);
+	},
+);
+
+await run(
+	"AI patch service encounter-creature falls back to monster id while preferring exact instanceId and ignoring characters",
+	async () => {
+		const boss = {
+			id: "boss-base-id",
+			instanceId: "inst-boss-1",
+			name: "Головний інквізитор",
+			source: "CUSTOM",
+			hp: { average: 52, formula: "8d8 + 16" },
+			hit_points: 52,
+			currentHp: 52,
+		};
+		const copyOne = {
+			id: "guard-shared-id",
+			instanceId: "inst-guard-1",
+			name: "Вартовий 1",
+			source: "MM",
+			hp: { average: 11, formula: "2d8 + 2" },
+			hit_points: 11,
+			currentHp: 11,
+		};
+		const copyTwo = {
+			id: "guard-shared-id",
+			instanceId: "inst-guard-2",
+			name: "Вартовий 2",
+			source: "MM",
+			hp: { average: 11, formula: "2d8 + 2" },
+			hit_points: 11,
+			currentHp: 11,
+		};
+		const hero = {
+			id: "hero-id",
+			instanceId: "hero-id",
+			participantType: "character",
+			name: "Герой",
+			str: 16,
+		};
+		const session = {
+			id: "session-fallback",
+			name: "Сесія",
+			data: {
+				scenes: [],
+				encounters: [
+					{
+						id: "enc-fallback",
+						name: "Суд",
+						monsters: [boss, copyOne, copyTwo, hero],
+					},
+				],
+				notes: [],
+				npcs: [],
+				locations: [],
+			},
+		};
+		const originalReadSession = storage.readSession;
+		const originalWriteJson = storage.writeJson;
+		storage.readSession = async () => session;
+		storage.writeJson = async () => {};
+		try {
+			const res = await aiPatchService.applyAiOperations({
+				payload: {
+					operations: [
+						{
+							op: "update",
+							entity: "encounter-creature",
+							id: "boss-base-id",
+							patch: {
+								hp: { average: 90, formula: "12d8 + 36" },
+								resist: ["fire"],
+							},
+						},
+						{
+							op: "update",
+							entity: "encounter-creature",
+							id: "inst-guard-2",
+							patch: { name: "Посилений вартовий 2" },
+						},
+						{
+							op: "update",
+							entity: "encounter-creature",
+							id: "hero-id",
+							patch: { name: "Не можна міняти" },
+						},
+					],
+				},
+				campaignSlug: "bestiary",
+				sessionFile: "session.json",
+				encounterId: "enc-fallback",
+				permissions: { allowEncounterCreatureEditing: true },
+			});
+			assert.equal(res.updated.fileName, "session.json");
+			const monsters = res.updated.data.encounters[0].monsters;
+			assert.equal(monsters[0].instanceId, "inst-boss-1");
+			assert.equal(monsters[0].id, "boss-base-id");
+			assert.equal(monsters[0].hp.average, 90);
+			assert.equal(monsters[0].currentHp, 52);
+			assert.deepEqual(monsters[0].resist, ["fire"]);
+			assert.equal(monsters[1].name, "Вартовий 1");
+			assert.equal(monsters[2].name, "Посилений вартовий 2");
+			assert.equal(monsters[3].name, "Герой");
+		} finally {
+			storage.readSession = originalReadSession;
+			storage.writeJson = originalWriteJson;
+		}
+	},
+);
+
+await run(
+	"AI patch service encounter update preserves existing instanceId, id, currentHp, and local overrides",
+	async () => {
+		const inquisitor = {
+			id: "inq-base",
+			instanceId: "inst-inq-1",
+			name: "Головний інквізитор",
+			originalBestiaryName: "Inquisitor",
+			source: "CUSTOM",
+			currentHp: 38,
+			hit_points: 60,
+			_localOverride: true,
+			trait: [{ name: "Залізне ядро", entries: ["Особлива риса"] }],
+		};
+		const guardOne = {
+			id: "guard-1-uuid",
+			instanceId: "inst-guard-1",
+			name: "Охоронець інквізиції 1",
+			originalBestiaryName: "Guard",
+			source: "MM",
+			currentHp: 7,
+			hit_points: 11,
+			_localOverride: true,
+			action: [{ name: "Спис", entries: ["Колюча атака"] }],
+		};
+		const guardTwo = {
+			id: "guard-2-uuid",
+			instanceId: "inst-guard-2",
+			name: "Охоронець інквізиції 2",
+			originalBestiaryName: "Guard",
+			source: "MM",
+			currentHp: 11,
+			hit_points: 11,
+		};
+		const session = {
+			id: "session-reconcile",
+			name: "Сесія",
+			data: {
+				scenes: [],
+				encounters: [
+					{
+						id: "enc-reconcile",
+						name: "Суд інквізиції",
+						monsters: [inquisitor, guardOne, guardTwo],
+					},
+				],
+				notes: [],
+				npcs: [],
+				locations: [],
+			},
+		};
+		const bestiaryIndex = new Map([
+			[
+				"guard|MM",
+				{
+					id: "guard-bestiary",
+					name: "Guard",
+					source: "MM",
+					hp: { average: 11 },
+					ac: [{ ac: 16 }],
+				},
+			],
+		]);
+		const originalReadSession = storage.readSession;
+		const originalGetBestiaryIndex = storage.getBestiaryIndex;
+		const originalWriteJson = storage.writeJson;
+		storage.readSession = async () => session;
+		storage.getBestiaryIndex = async () => bestiaryIndex;
+		storage.writeJson = async () => {};
+		try {
+			const res = await aiPatchService.applyAiOperations({
+				payload: {
+					operations: [
+						{
+							op: "update",
+							entity: "encounter",
+							id: "enc-reconcile",
+							patch: {
+								monsters: [
+									{
+										instanceId: "inst-inq-1",
+										monsterName: "Inquisitor",
+										name: "Головний інквізитор",
+									},
+									{
+										monsterName: "Guard",
+										name: "Охоронець інквізиції 1",
+									},
+									{
+										monsterName: "Guard",
+										name: "Охоронець інквізиції 3",
+									},
+								],
+							},
+						},
+					],
+				},
+				campaignSlug: "bestiary",
+				sessionFile: "session.json",
+				encounterId: "enc-reconcile",
+				permissions: { allowEncounters: true },
+			});
+			const monsters = res.updated.data.encounters[0].monsters;
+			assert.equal(monsters.length, 3);
+			assert.equal(monsters[0].instanceId, "inst-inq-1");
+			assert.equal(monsters[0].id, "inq-base");
+			assert.equal(monsters[0].currentHp, 38);
+			assert.equal(monsters[0]._localOverride, true);
+			assert.deepEqual(monsters[0].trait, inquisitor.trait);
+
+			assert.equal(monsters[1].instanceId, "inst-guard-1");
+			assert.equal(monsters[1].id, "guard-1-uuid");
+			assert.equal(monsters[1].currentHp, 7);
+			assert.equal(monsters[1]._localOverride, true);
+			assert.deepEqual(monsters[1].action, guardOne.action);
+
+			assert.equal(monsters[2].instanceId, "inst-guard-2");
+			assert.equal(monsters[2].id, "guard-2-uuid");
+			assert.equal(monsters[2].name, "Охоронець інквізиції 3");
+		} finally {
+			storage.readSession = originalReadSession;
+			storage.getBestiaryIndex = originalGetBestiaryIndex;
+			storage.writeJson = originalWriteJson;
+		}
+	},
+);
+
+await run(
+	"AI patch service encounter update applies stat-block fields on matched creatures when encounter-creature editing is enabled",
+	async () => {
+		const guard = {
+			id: "guard-base-id",
+			instanceId: "inst-guard-translate",
+			name: "Guard",
+			originalBestiaryName: "Guard",
+			source: "MM",
+			size: ["M"],
+			type: "humanoid",
+			alignment: ["A"],
+			ac: [{ ac: 16 }],
+			hp: { average: 11, formula: "2d8 + 2" },
+			hit_points: 11,
+			currentHp: 8,
+			action: [{ name: "Spear", entries: ["Melee Attack."] }],
+		};
+		const session = {
+			id: "session-stat-merge",
+			name: "Сесія",
+			data: {
+				scenes: [],
+				encounters: [
+					{
+						id: "enc-stat-merge",
+						name: "Переклад бою",
+						monsters: [guard],
+					},
+				],
+				notes: [],
+				npcs: [],
+				locations: [],
+			},
+		};
+		const originalReadSession = storage.readSession;
+		const originalGetBestiaryIndex = storage.getBestiaryIndex;
+		const originalWriteJson = storage.writeJson;
+		storage.readSession = async () => session;
+		storage.getBestiaryIndex = async () => new Map();
+		storage.writeJson = async () => {};
+		try {
+			const res = await aiPatchService.applyAiOperations({
+				payload: {
+					operations: [
+						{
+							op: "update",
+							entity: "encounter",
+							id: "enc-stat-merge",
+							patch: {
+								monsters: [
+									{
+										instanceId: "inst-guard-translate",
+										id: "guard-base-id",
+										name: "Вартовий",
+										action: [{ name: "Спис", entries: ["Ближня атака."] }],
+										trait: [{ name: "Пильність", entries: ["Пильнує шлях."] }],
+									},
+								],
+							},
+						},
+					],
+				},
+				campaignSlug: "bestiary",
+				sessionFile: "session.json",
+				encounterId: "enc-stat-merge",
+				permissions: {
+					allowEncounters: true,
+					allowEncounterCreatureEditing: true,
+				},
+			});
+			const updatedGuard = res.updated.data.encounters[0].monsters[0];
+			assert.equal(updatedGuard.instanceId, "inst-guard-translate");
+			assert.equal(updatedGuard.id, "guard-base-id");
+			assert.equal(updatedGuard.currentHp, 8);
+			assert.equal(updatedGuard._localOverride, true);
+			assert.equal(updatedGuard.name, "Вартовий");
+			assert.deepEqual(updatedGuard.action, [
+				{ name: "Спис", entries: ["Ближня атака."] },
+			]);
+			assert.deepEqual(updatedGuard.trait, [
+				{ name: "Пильність", entries: ["Пильнує шлях."] },
+			]);
+		} finally {
+			storage.readSession = originalReadSession;
+			storage.getBestiaryIndex = originalGetBestiaryIndex;
+			storage.writeJson = originalWriteJson;
+		}
 	},
 );
 
@@ -75755,6 +76087,20 @@ await run(
 		assert.ok(instruction.includes("encounterClientId"));
 		assert.ok(instruction.includes('"texts"'));
 		assert.ok(instruction.includes('"summary"'));
+	},
+);
+
+await run(
+	"buildChatSystemInstruction explicitly documents encounter-creature editing with exact instanceId",
+	async () => {
+		const instruction = buildChatSystemInstruction({
+			responseLanguage: "uk",
+			workspaceViewType: "encounter",
+		});
+		assert.ok(instruction.includes('"entity": "encounter-creature"'));
+		assert.ok(instruction.includes('"instanceId"'));
+		assert.ok(instruction.includes("EXACT_INSTANCE_ID"));
+		assert.ok(instruction.includes("ENCOUNTER VIEW REMINDER"));
 	},
 );
 

@@ -231,7 +231,11 @@ export function getEncounterParticipantName(
 
 function getEncounterParticipantBaseKey(participant: SnapshotRecord): string {
 	const type = String(participant.participantType || "monster").trim().toLowerCase();
-	const id = String(participant.id || participant.instanceId || "").trim();
+	const instanceId =
+		participant.instanceId !== undefined && participant.instanceId !== null
+			? String(participant.instanceId).trim()
+			: "";
+	const id = instanceId || String(participant.id ?? "").trim();
 	if (id) return `${type}:id:${id}`;
 	const source = String(participant.source || "").trim().toLowerCase();
 	return `${type}:name:${getEncounterParticipantName(participant).toLowerCase()}:${source}`;

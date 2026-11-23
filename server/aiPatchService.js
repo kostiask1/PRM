@@ -2180,27 +2180,151 @@ function applyEncounterCreate(context) {
 	return { type: "encounter", saved };
 }
 
-function getEncounterUpdateData(existing, patch) {
-	return {
-		name: hasOwn(patch, "name") ? patch.name : existing.name,
-		monsters: Array.isArray(patch.monsters)
-			? patch.monsters
-			: existing.monsters || [],
-	};
+function isMonsterEntryObject(value) {
+	return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function getMonsterMatchingPredicates() {
+	return [
+		(entry, existing) => {
+			const reqInstanceId = asText(entry.instanceId);
+			return Boolean(
+				reqInstanceId && asText(existing.instanceId) === reqInstanceId,
+			);
+		},
+		(entry, existing) => {
+			const reqId = asText(entry.id);
+			return Boolean(reqId && asText(existing.id) === reqId);
+		},
+		(entry, existing) => {
+			if (existing.participantType === "character") return false;
+			const lookupName = getMonsterLookupName(entry).toLowerCase();
+			if (!lookupName) return false;
+			const existingBaseName = asText(
+				existing.originalBestiaryName || existing.name,
+			).toLowerCase();
+			const existingDisplayName = asText(existing.name).toLowerCase();
+			const reqDisplayName = asText(entry.name).toLowerCase();
+			if (asText(entry.monsterName)) {
+				if (existingBaseName !== lookupName) return false;
+				return !reqDisplayName || existingDisplayName === reqDisplayName;
+			}
+			return existingDisplayName === lookupName || existingBaseName === lookupName;
+		},
+		(entry, existing) => {
+			if (existing.participantType === "character") return false;
+			const lookupName = getMonsterLookupName(entry).toLowerCase();
+			if (!lookupName) return false;
+			const existingBaseName = asText(existing.originalBestiaryName).toLowerCase();
+			return Boolean(existingBaseName && existingBaseName === lookupName);
+		},
+	];
+}
+
+const ENCOUNTER_COMPOSITION_META_KEYS = new Set([
+	"id",
+	"instanceId",
+	"monsterName",
+	"name",
+	"source",
+	"originalBestiaryName",
+	"participantType",
+	"_localOverride",
+	"currentHp",
+	"hit_points",
+	"armor_class",
+	"imageUrl",
+	"count",
+	"quantity",
+]);
+
+function extractEncounterMonsterStatPatch(entry) {
+	if (!isMonsterEntryObject(entry)) return null;
+	const patch = {};
+	let hasStatFields = false;
+	for (const key of Object.keys(entry)) {
+		if (ENCOUNTER_COMPOSITION_META_KEYS.has(key)) continue;
+		patch[key] = entry[key];
+		hasStatFields = true;
+	}
+	if (!hasStatFields) return null;
+	const nextName = asText(entry.name);
+	if (nextName) patch.name = nextName;
+	return patch;
+}
+
+function reconcileEncounterMonsters(
+	requestedMonsters,
+	existingMonsters,
+	bestiaryIndex,
+	{ allowEncounterCreatureEditing = false } = {},
+) {
+	const existingList = Array.isArray(existingMonsters) ? existingMonsters : [];
+	const usedExistingIndices = new Set();
+	const matchedByRequestIndex = new Array(requestedMonsters.length).fill(null);
+
+	for (const predicate of getMonsterMatchingPredicates()) {
+		for (let reqIndex = 0; reqIndex < requestedMonsters.length; reqIndex += 1) {
+			if (matchedByRequestIndex[reqIndex]) continue;
+			const entry = requestedMonsters[reqIndex];
+			if (!isMonsterEntryObject(entry)) continue;
+			for (let exIndex = 0; exIndex < existingList.length; exIndex += 1) {
+				if (usedExistingIndices.has(exIndex)) continue;
+				const candidate = existingList[exIndex];
+				if (!isMonsterEntryObject(candidate)) continue;
+				if (predicate(entry, candidate)) {
+					usedExistingIndices.add(exIndex);
+					matchedByRequestIndex[reqIndex] = candidate;
+					break;
+				}
+			}
+		}
+	}
+
+	return requestedMonsters
+		.map((entry, reqIndex) => {
+			const matched = matchedByRequestIndex[reqIndex];
+			if (matched) {
+				const nextName = asText(entry?.name);
+				if (
+					allowEncounterCreatureEditing &&
+					matched.participantType !== "character"
+				) {
+					const statPatch = extractEncounterMonsterStatPatch(entry);
+					if (statPatch) {
+						const edited = buildEditedEncounterCreature(matched, statPatch);
+						if (edited) return edited;
+					}
+				}
+				return {
+					...matched,
+					...(nextName ? { name: nextName } : {}),
+				};
+			}
+			return buildMonsterInstance(entry, bestiaryIndex);
+		})
+		.filter(Boolean);
 }
 
 function applyEncounterUpdate(context) {
 	if (!context.existing) return null;
-	const normalized = normalizeEncounterFromAi(
-		getEncounterUpdateData(
-			context.existing,
-			operationPatch(context.operation),
-		),
-		context.bestiaryIndex,
-		context.existing.name || "Encounter",
-	);
-	context.existing.name = normalized.name;
-	context.existing.monsters = normalized.monsters;
+	const patch = operationPatch(context.operation);
+	const fallbackName = context.existing.name || "Encounter";
+	const nextName = hasOwn(patch, "name")
+		? asText(patch.name) || fallbackName
+		: fallbackName;
+	context.existing.name = nextName;
+	if (Array.isArray(patch.monsters)) {
+		context.existing.monsters = reconcileEncounterMonsters(
+			patch.monsters,
+			context.existing.monsters,
+			context.bestiaryIndex,
+			{
+				allowEncounterCreatureEditing:
+					context.state.permissions.allowEncounterCreatureEditing !== false,
+			},
+		);
+	}
 	return { type: "encounter", saved: context.existing };
 }
 
@@ -2266,6 +2390,13 @@ function isEncounterCreatureTarget(monster, targetId) {
 	);
 }
 
+function isEncounterCreatureIdFallbackTarget(monster, targetId) {
+	return (
+		monster?.participantType !== "character" &&
+		asText(monster?.id) === targetId
+	);
+}
+
 function getEncounterCreaturePatch(operation) {
 	const patch = { ...operationPatch(operation) };
 	for (const key of ENCOUNTER_CREATURE_PROTECTED_FIELDS) delete patch[key];
@@ -2325,9 +2456,15 @@ function buildEditedEncounterCreature(monster, patch) {
 }
 
 function replaceEncounterCreatureTargets(monsters, targetId, patch) {
+	const hasInstanceMatch = monsters.some((monster) =>
+		isEncounterCreatureTarget(monster, targetId),
+	);
+	const isMatch = hasInstanceMatch
+		? isEncounterCreatureTarget
+		: isEncounterCreatureIdFallbackTarget;
 	let saved = null;
 	const nextMonsters = monsters.map((monster) => {
-		if (!isEncounterCreatureTarget(monster, targetId)) return monster;
+		if (!isMatch(monster, targetId)) return monster;
 		const nextMonster = buildEditedEncounterCreature(monster, patch);
 		if (!nextMonster) return monster;
 		saved ||= nextMonster;
