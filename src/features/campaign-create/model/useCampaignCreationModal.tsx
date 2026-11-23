@@ -4,7 +4,9 @@ import CreateCampaignModalContent from "../ui/CreateCampaignModalContent.tsx";
 import {
 	executeCampaignArchiveImport,
 	executeCampaignCreation,
+	executeDemoCampaignCreation,
 	type CampaignCreationCommands,
+	type DemoCampaignCreationCommands,
 	type CampaignCreationError,
 	type CampaignCreationResult,
 } from "./campaignCreation.ts";
@@ -23,6 +25,7 @@ export interface CampaignCreationModalRuntime {
 		name: string,
 	) => Promise<CampaignCreationResult | null | undefined>;
 	importCampaign: (file: File) => Promise<unknown>;
+	createDemoCampaign?: () => Promise<CampaignCreationResult | null | undefined>;
 	requestCampaignsReload: () => void;
 	navigateToCampaign: (slug: string) => void;
 	reportError: (error: CampaignCreationError) => void;
@@ -40,6 +43,7 @@ export function useCampaignCreationModal({
 	closeModal,
 	createCampaign,
 	importCampaign,
+	createDemoCampaign,
 	requestCampaignsReload,
 	navigateToCampaign,
 	reportError,
@@ -60,6 +64,13 @@ export function useCampaignCreationModal({
 					lang.t("Failed to create campaign"),
 				),
 			}),
+			getDemoError: (error) => ({
+				title: lang.t("Error"),
+				message: getCampaignCreationErrorMessage(
+					error,
+					lang.t("Failed to create demo campaign"),
+				),
+			}),
 			getImportError: (error) => ({
 				title: lang.t("Import error"),
 				message: getCampaignCreationErrorMessage(
@@ -67,7 +78,9 @@ export function useCampaignCreationModal({
 					lang.t("Failed to import campaign"),
 				),
 			}),
-		} satisfies CampaignCreationCommands;
+		} satisfies CampaignCreationCommands & {
+			getDemoError: DemoCampaignCreationCommands["getDemoError"];
+		};
 		openModal({
 			title: lang.t("New campaign"),
 			type: "confirm",
@@ -81,6 +94,19 @@ export function useCampaignCreationModal({
 					onImportCampaign={(file) =>
 						executeCampaignArchiveImport(file, commands)
 					}
+					onCreateDemoCampaign={
+						createDemoCampaign
+							? () =>
+									executeDemoCampaignCreation({
+										createDemoCampaign,
+										requestCampaignsReload,
+										closeModal: handleClose,
+										navigateToCampaign,
+										reportError,
+										getDemoError: commands.getDemoError,
+									})
+							: undefined
+					}
 				/>
 			),
 		});
@@ -88,6 +114,7 @@ export function useCampaignCreationModal({
 		closeModal,
 		createCampaign,
 		importCampaign,
+		createDemoCampaign,
 		navigateToCampaign,
 		openModal,
 		reportError,

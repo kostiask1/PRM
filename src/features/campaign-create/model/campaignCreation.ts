@@ -38,6 +38,34 @@ export async function executeCampaignCreation(
 	}
 }
 
+export interface DemoCampaignCreationCommands
+	extends Pick<
+		CampaignCreationCommands,
+		| "requestCampaignsReload"
+		| "closeModal"
+		| "navigateToCampaign"
+		| "reportError"
+	> {
+	createDemoCampaign: () => Promise<CampaignCreationResult | null | undefined>;
+	getDemoError: (error: unknown) => CampaignCreationError;
+}
+
+export async function executeDemoCampaignCreation(
+	commands: DemoCampaignCreationCommands,
+): Promise<void> {
+	try {
+		const demoCampaign = await commands.createDemoCampaign();
+		if (!demoCampaign) {
+			throw new Error("Demo campaign creation returned no result");
+		}
+		commands.requestCampaignsReload();
+		commands.closeModal();
+		commands.navigateToCampaign(demoCampaign.slug);
+	} catch (error) {
+		commands.reportError(commands.getDemoError(error));
+	}
+}
+
 export async function executeCampaignArchiveImport(
 	file: File,
 	commands: CampaignCreationCommands,

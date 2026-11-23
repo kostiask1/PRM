@@ -7,3 +7,8 @@ export {
 	type CampaignCreationModalConfig,
 	type CampaignCreationModalRuntime,
 } from "./model/useCampaignCreationModal.tsx";
+export {
+	buildDemoCampaignBundle,
+	type DemoCampaignBundle,
+	type DemoCampaignBundleOptions,
+} from "./model/demoCampaign.ts";

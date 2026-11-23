@@ -35,7 +35,10 @@ import {
 	EntityModal,
 	openEntityLinkModal,
 } from "./features/entity-link/index.js";
-import { useCampaignCreationModal } from "./features/campaign-create/index.js";
+import {
+	buildDemoCampaignBundle,
+	useCampaignCreationModal,
+} from "./features/campaign-create/index.js";
 import {
 	RulesReferenceModalHost,
 	RulesReferenceModalRuntimeProvider,
@@ -149,6 +152,12 @@ export default function App() {
 		closeModal,
 		createCampaign: campaignApi.createCampaign,
 		importCampaign: (file) => backupApi.importArchive(file, "campaign"),
+		createDemoCampaign: async () => {
+			const bundle = buildDemoCampaignBundle({ language: lang.getLanguage() });
+			await backupApi.importAll(bundle, "append");
+			const campaigns = await campaignApi.listCampaigns();
+			return campaigns?.find((campaign) => campaign.id === bundle.meta.id);
+		},
 		requestCampaignsReload: () => dispatch(requestCampaignsReloadAction()),
 		navigateToCampaign: (slug) => navigateTo(slug),
 		reportError: (error) => dispatch(alert(error)),

@@ -6,16 +6,29 @@ import { Button, TextInput } from "../../../shared/ui/index.js";
 export interface CreateCampaignModalContentProps {
 	onCreateCampaign: (name: string) => void | Promise<void>;
 	onImportCampaign: (file: File) => void | Promise<void>;
+	onCreateDemoCampaign?: () => void | Promise<void>;
 	onClose: () => void;
 }
 
 export default function CreateCampaignModalContent({
 	onCreateCampaign,
 	onImportCampaign,
+	onCreateDemoCampaign,
 	onClose,
 }: CreateCampaignModalContentProps) {
 	const [name, setName] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [isCreatingDemo, setCreatingDemo] = useState(false);
+
+	const handleCreateDemo = async () => {
+		if (!onCreateDemoCampaign || isCreatingDemo) return;
+		setCreatingDemo(true);
+		try {
+			await onCreateDemoCampaign();
+		} finally {
+			setCreatingDemo(false);
+		}
+	};
 
 	const handleImport = (event: ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
@@ -37,6 +50,21 @@ export default function CreateCampaignModalContent({
 				}
 				placeholder={lang.t("Enter a campaign name...")}
 			/>
+
+			{onCreateDemoCampaign && (
+				<div className="CreateCampaignModalContent__demo">
+					<p className="muted">
+						{lang.t("New here? Explore a ready-made demo campaign.")}
+					</p>
+					<Button
+						variant="footer"
+						onClick={() => void handleCreateDemo()}
+						disabled={isCreatingDemo}
+					>
+						{lang.t("Create demo campaign")}
+					</Button>
+				</div>
+			)}
 
 			<div className="CreateCampaignModalContent__actions">
 				<div className="CreateCampaignModalContent__import">

@@ -26434,6 +26434,88 @@ await run("app shell policies normalize settings, mentions, and campaign complet
 	assert.equal(getAppErrorMessage(new Error("Помилка"), "Невідомо"), "Помилка");
 });
 
+await run("demo campaign bundle is localized, linked, and valid for import", async () => {
+	const { buildDemoCampaignBundle } = await import(
+		"../src/features/campaign-create/model/demoCampaign.ts"
+	);
+	const { executeDemoCampaignCreation } = await import(
+		"../src/features/campaign-create/model/campaignCreation.ts"
+	);
+	const { validateCampaignBundleCollection } = await import(
+		"../server/modules/backups/http/archiveRequestSchemas.js"
+	);
+
+	for (const language of ["en", "uk", "fr"]) {
+		let counter = 0;
+		const bundle = buildDemoCampaignBundle({
+			language,
+			createId: () => `id-${++counter}`,
+			now: () => new Date("2026-01-01T00:00:00.000Z"),
+		});
+		assert.deepEqual(validateCampaignBundleCollection(bundle), []);
+		assert.equal(
+			bundle.meta.name,
+			language === "uk"
+				? "Засідка на Бурштиновому шляху"
+				: "Ambush on the Amber Road",
+		);
+
+		const ids = [];
+		const collectIds = (value) => {
+			if (Array.isArray(value)) return value.forEach(collectIds);
+			if (!value || typeof value !== "object") return;
+			if (typeof value.id === "string" && value.id.startsWith("id-")) {
+				ids.push(value.id);
+			}
+			Object.values(value).forEach(collectIds);
+		};
+		collectIds(bundle);
+		assert.equal(new Set(ids).size, ids.length);
+
+		const names = new Set(
+			[
+				...bundle.entities.characters,
+				...bundle.entities.npc,
+			].map((p) => `${p.firstName} ${p.lastName}`.trim().toLowerCase()),
+		);
+		bundle.entities.locations.forEach((l) => names.add(l.name.toLowerCase()));
+		const text = JSON.stringify(bundle);
+		for (const [, mention] of text.matchAll(/\[([^\[\]"]+)\]/g)) {
+			assert.ok(names.has(mention.toLowerCase()), `${language}: unresolved mention [${mention}]`);
+		}
+
+		const session = bundle.sessions[0];
+		assert.ok(!/[\\/:*?"<>|]/.test(session.fileName));
+		const { scenes, encounters } = session.content.data;
+		const linked = scenes.filter((scene) => scene.encounterId !== null);
+		assert.equal(linked.length, 1);
+		assert.equal(linked[0].encounterId, encounters[0].id);
+		const heroSlugs = new Set(bundle.entities.characters.map((c) => c.slug));
+		const heroIds = new Set(bundle.entities.characters.map((c) => c.id));
+		const instanceIds = encounters[0].monsters.map((m) => m.instanceId);
+		assert.equal(new Set(instanceIds).size, instanceIds.length);
+		for (const monster of encounters[0].monsters.filter((m) => m.participantType === "character")) {
+			assert.ok(heroIds.has(monster.originalCharacterId));
+			assert.ok(heroSlugs.has(monster.originalCharacterSlug));
+		}
+	}
+
+	const calls = [];
+	const commands = {
+		createDemoCampaign: async () => ({ slug: "demo" }),
+		requestCampaignsReload: () => calls.push("reload"),
+		closeModal: () => calls.push("close"),
+		navigateToCampaign: (slug) => calls.push(`navigate:${slug}`),
+		reportError: (error) => calls.push(`error:${error.message}`),
+		getDemoError: () => ({ title: "Error", message: "failed" }),
+	};
+	await executeDemoCampaignCreation(commands);
+	assert.deepEqual(calls, ["reload", "close", "navigate:demo"]);
+	calls.length = 0;
+	await executeDemoCampaignCreation({ ...commands, createDemoCampaign: async () => undefined });
+	assert.deepEqual(calls, ["error:failed"]);
+});
+
 await run(
 	"campaign creation feature owns create/import orchestration through injected commands",
 	async () => {
@@ -26539,7 +26621,7 @@ await run(
 			]);
 		assert.match(
 			appSource,
-			/import \{ useCampaignCreationModal \} from "\.\/features\/campaign-create\/index\.js";/,
+			/import \{\s*buildDemoCampaignBundle,\s*useCampaignCreationModal,?\s*\} from "\.\/features\/campaign-create\/index\.js";/,
 		);
 		assertSourceTokensInOrder(
 			appSource,
