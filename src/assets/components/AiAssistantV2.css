@@ -1060,10 +1060,11 @@
 .AiChatComposerV2__sendBtn {
 	width: 32px;
 	height: 32px;
-	border-radius: 50%;
+	border-radius: 100px;
 	border: none;
-	background: var(--panel-2);
-	color: var(--muted);
+	background: var(--accent);
+	color: #ffffff;
+	opacity: 0.55;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1075,6 +1076,7 @@
 	background: var(--accent);
 	color: #ffffff;
 	cursor: pointer;
+	opacity: 1;
 }
 
 .AiChatComposerV2__sendBtn.is-ready:hover {
