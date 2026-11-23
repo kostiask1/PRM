@@ -112,6 +112,22 @@ function getChangedKeys(
 	return [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
 		(key) => {
 			if (ignoredKeys.has(key)) return false;
+			if (
+				key === "armor_class" &&
+				!isFieldEmpty(before.ac) &&
+				!isFieldEmpty(after.ac) &&
+				snapshotsEqual(before.ac, after.ac)
+			) {
+				return false;
+			}
+			if (
+				key === "hit_points" &&
+				!isFieldEmpty(before.hp) &&
+				!isFieldEmpty(after.hp) &&
+				snapshotsEqual(before.hp, after.hp)
+			) {
+				return false;
+			}
 			const bVal = before[key];
 			const aVal = after[key];
 			if (isFieldEmpty(bVal) && isFieldEmpty(aVal)) return false;

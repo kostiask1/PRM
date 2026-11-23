@@ -9,6 +9,13 @@ const FIELD_LABELS: Record<string, string> = {
 	ac: "AC",
 	currentHp: "Current HP",
 	imageUrl: "Image",
+	trait: "Traits",
+	bonus: "Bonus Actions",
+	action: "Actions",
+	reaction: "Reactions",
+	legendary: "Legendary Actions",
+	lairActions: "Lair Actions",
+	regionalEffects: "Regional Effects",
 };
 
 export function getAiResponseFieldLabel(field: string): string {

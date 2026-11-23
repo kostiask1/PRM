@@ -6,6 +6,7 @@ import type {
 	AiResponseHistoryEntry,
 } from "../../../features/ai/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
+import "../../../assets/components/AiAssistantPanel.css";
 import { classNames, lang } from "../../../shared/lib/index.js";
 import { Button, Modal } from "../../../shared/ui/index.js";
 import { snapshotToText, type PreviewResource } from "../model/aiResponseModal.ts";

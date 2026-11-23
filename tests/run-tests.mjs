@@ -72824,6 +72824,60 @@ await run("AI note comparison preserves a zero-valued note ID", async () => {
 	assert.deepEqual(buildNoteHighlightMap(before, after), { "0": ["text"] });
 });
 
+await run("AI creature diff modal imports styles, keeps wide row cards, and avoids redundant AC/HP highlights", async () => {
+	const [viewSource, cssSource, { buildCardHighlightFields, getPreviewFieldKeys }] = await Promise.all([
+		fs.readFile("src/widgets/ai-response-modal/ui/AiResponseModalView.tsx", "utf8"),
+		fs.readFile("src/assets/components/AiAssistantPanel.css", "utf8"),
+		import("../src/widgets/ai-response-modal/model/aiResponseModal.ts"),
+	]);
+
+	assert.match(viewSource, /import\s+["']\.\.\/\.\.\/\.\.\/assets\/components\/AiAssistantPanel\.css["'];/);
+	assert.match(cssSource, /\.AiAssistantPanel__preview_card_columns\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/);
+	assert.doesNotMatch(cssSource, /@media\s*\(max-width:\s*1700px\)\s*\{\s*\.AiAssistantPanel__encounter_monsters\s+\.AiAssistantPanel__preview_card_columns/);
+	assert.match(cssSource, /\.AiAssistantPanel__preview_card_surface\.is_before[\s\S]*?\.MonsterStatBlock\s+\.is_ai_changed_field/);
+	assert.match(cssSource, /\.AiAssistantPanel__preview_card_surface\.is_after[\s\S]*?\.MonsterStatBlock\s+\.is_ai_changed_field/);
+
+	const monsterBefore = {
+		name: "Зот",
+		ac: [{ ac: 18, from: ["{@item spiked armor|XPHB}"] }],
+		armor_class: 18,
+		hp: { average: 90, formula: "12d8+36" },
+		hit_points: 90,
+	};
+	const monsterAfterSameStats = {
+		name: "Зот",
+		ac: [{ ac: 18, from: ["{@item spiked armor|XPHB}"] }],
+		hp: { average: 90, formula: "12d8+36" },
+		legendary: [{ name: "Атака", entries: ["Зот б'є мечем."] }],
+	};
+	assert.deepEqual(getPreviewFieldKeys(monsterBefore, monsterAfterSameStats), ["legendary"]);
+	assert.deepEqual(buildCardHighlightFields({ before: monsterBefore, after: monsterAfterSameStats }).fields, ["legendary"]);
+
+	const legacyOnlyBefore = { name: "Вовк", armor_class: 13, hit_points: 11 };
+	const legacyOnlyAfter = { name: "Вовк", armor_class: 15, hit_points: 18 };
+	assert.deepEqual(getPreviewFieldKeys(legacyOnlyBefore, legacyOnlyAfter), ["armor_class", "hit_points"]);
+	assert.deepEqual(buildCardHighlightFields({ before: legacyOnlyBefore, after: legacyOnlyAfter }).fields, ["armor_class", "hit_points"]);
+
+	const canonicalChangedBefore = {
+		name: "Вовк",
+		ac: [{ ac: 13 }],
+		armor_class: 13,
+		hp: { average: 11 },
+		hit_points: 11,
+	};
+	const canonicalChangedAfter = {
+		name: "Вовк",
+		ac: [{ ac: 15 }],
+		armor_class: 15,
+		hp: { average: 18 },
+		hit_points: 18,
+	};
+	assert.deepEqual(
+		getPreviewFieldKeys(canonicalChangedBefore, canonicalChangedAfter),
+		["ac", "armor_class", "hp", "hit_points"],
+	);
+});
+
 await run("history labels identify cross-campaign entity transfers", async () => {
 	const { formatHistoryOperationLabel } = await import("../src/entities/history/model/historyLabels.ts");
 	const params = { path: "/api/campaigns/one/entities/locations/transfer" };

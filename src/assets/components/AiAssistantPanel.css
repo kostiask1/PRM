@@ -5,11 +5,11 @@
 }
 
 .AiAssistantPanel__response_overlay_wide .Modal__card {
-	width: min(1600px, 96vw);
+	width: min(1600px, 100%);
 }
 
 .AiAssistantPanel__response_overlay_wide .Modal__card:has(.MonsterStatBlock) {
-	width: min(2200px, 96vw);
+	width: min(2200px, 100%);
 }
 
 .AiAssistantPanel__header {
@@ -427,6 +427,8 @@
 }
 
 .AiAssistantPanel__preview_diff {
+	container-type: inline-size;
+	width: 100%;
 	background: var(--panel);
 }
 
@@ -683,6 +685,19 @@
 	min-width: 0;
 }
 
+.AiAssistantPanel__preview_card_columns .AiAssistantPanel__preview_card_surface {
+	container-type: inline-size;
+	width: 100%;
+}
+
+.AiAssistantPanel__preview_card_surface.is_before {
+	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 72%);
+}
+
+.AiAssistantPanel__preview_card_surface.is_after {
+	border-color: color-mix(in srgb, var(--diff-added-text), transparent 72%);
+}
+
 .AiAssistantPanel__preview_card_surface.is_added,
 .AiAssistantPanel__preview_note_surface.is_added,
 .AiAssistantPanel__preview_resource_cards.is_added .AiAssistantPanel__preview_card_surface,
@@ -707,6 +722,36 @@
 	box-shadow: none;
 }
 
+.AiAssistantPanel__preview_card_columns .AiAssistantPanel__preview_card_surface .MonsterStatBlock {
+	--monster-token-size: clamp(56px, 6vw, 84px);
+	padding: var(--space-3);
+}
+
+.AiAssistantPanel__preview_card_columns .AiAssistantPanel__preview_card_surface .MonsterStatBlock__header {
+	gap: var(--space-2) var(--space-3);
+	margin-bottom: var(--space-3);
+}
+
+.AiAssistantPanel__preview_card_columns .AiAssistantPanel__preview_card_surface .MonsterStatBlock__nameRow {
+	gap: var(--space-2);
+	margin-bottom: var(--space-2);
+}
+
+.AiAssistantPanel__preview_card_columns .AiAssistantPanel__preview_card_surface .MonsterStatBlock__name {
+	font-size: clamp(1.3rem, 1.8vw, 1.8rem);
+}
+
+.AiAssistantPanel__preview_card_columns .AiAssistantPanel__preview_card_surface .MonsterStatBlock__abilities {
+	gap: var(--space-1-5);
+	margin-top: var(--space-3);
+}
+
+@container (max-width: 440px) {
+	.AiAssistantPanel__preview_card_columns .AiAssistantPanel__preview_card_surface .MonsterStatBlock__abilities {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
 .AiAssistantPanel__preview_card_surface.is_editable .CharacterCard,
 .AiAssistantPanel__preview_card_surface.is_editable .LocationCard,
 .AiAssistantPanel__preview_note_surface.is_editable .NoteCard {
@@ -720,39 +765,75 @@
 }
 
 .AiAssistantPanel__preview_card_surface .MonsterStatBlock .is_ai_changed_field {
-	border-color: color-mix(in srgb, var(--accent), transparent 35%);
+	border: 1px solid color-mix(in srgb, var(--accent), transparent 35%);
 	background: color-mix(in srgb, var(--accent), transparent 88%);
-	box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent), transparent 55%);
+	box-shadow:
+		inset 3px 0 0 var(--accent),
+		0 0 0 1px color-mix(in srgb, var(--accent), transparent 55%);
 	border-radius: var(--radius-xs);
-	padding: 0.08rem 0.18rem;
+	padding: var(--space-1) var(--space-2);
+}
+
+.AiAssistantPanel__preview_card_surface .MonsterStatBlock .MonsterStatBlock__section.is_ai_changed_field {
+	margin-top: var(--space-3);
+	padding: var(--space-2-5) var(--space-3);
+	border-radius: var(--radius-sm);
+}
+
+.AiAssistantPanel__preview_card_surface .MonsterStatBlock .MonsterStatBlock__ability_box.is_ai_changed_field {
+	padding: var(--space-2) var(--space-1);
+	border-radius: var(--radius-lg);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent), transparent 40%);
 }
 
 .AiAssistantPanel__preview_card_surface.is_before .EditableField.is_ai_changed_field,
-.AiAssistantPanel__preview_note_surface.is_before .EditableField.is_ai_changed_field {
-	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 45%);
-	background: color-mix(in srgb, var(--diff-removed-text), transparent 90%);
+.AiAssistantPanel__preview_card_surface.is_removed .EditableField.is_ai_changed_field,
+.AiAssistantPanel__preview_resource_cards.is_removed .AiAssistantPanel__preview_card_surface .EditableField.is_ai_changed_field,
+.AiAssistantPanel__preview_note_surface.is_before .EditableField.is_ai_changed_field,
+.AiAssistantPanel__preview_note_surface.is_removed .EditableField.is_ai_changed_field {
+	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 40%);
+	background: color-mix(in srgb, var(--diff-removed-text), transparent 85%);
 }
 
-.AiAssistantPanel__preview_card_surface.is_before .MonsterStatBlock .is_ai_changed_field {
-	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 45%);
-	background: color-mix(in srgb, var(--diff-removed-text), transparent 90%);
-	box-shadow: 0 0 0 1px color-mix(in srgb, var(--diff-removed-text), transparent 62%);
+.AiAssistantPanel__preview_card_surface.is_before .MonsterStatBlock .is_ai_changed_field,
+.AiAssistantPanel__preview_card_surface.is_removed .MonsterStatBlock .is_ai_changed_field,
+.AiAssistantPanel__preview_resource_cards.is_removed .AiAssistantPanel__preview_card_surface .MonsterStatBlock .is_ai_changed_field {
+	border-color: color-mix(in srgb, var(--diff-removed-text), transparent 40%);
+	background: color-mix(in srgb, var(--diff-removed-text), transparent 85%);
+	box-shadow:
+		inset 3px 0 0 var(--diff-removed-text),
+		0 0 0 1px color-mix(in srgb, var(--diff-removed-text), transparent 55%);
+}
+
+.AiAssistantPanel__preview_card_surface.is_before .MonsterStatBlock .MonsterStatBlock__ability_box.is_ai_changed_field,
+.AiAssistantPanel__preview_card_surface.is_removed .MonsterStatBlock .MonsterStatBlock__ability_box.is_ai_changed_field,
+.AiAssistantPanel__preview_resource_cards.is_removed .AiAssistantPanel__preview_card_surface .MonsterStatBlock .MonsterStatBlock__ability_box.is_ai_changed_field {
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--diff-removed-text), transparent 35%);
 }
 
 .AiAssistantPanel__preview_card_surface.is_after .EditableField.is_ai_changed_field,
-.AiAssistantPanel__preview_note_surface.is_after .EditableField.is_ai_changed_field {
-	border-color: color-mix(in srgb, var(--diff-added-text), transparent 45%);
-	background: color-mix(in srgb, var(--diff-added-text), transparent 90%);
+.AiAssistantPanel__preview_card_surface.is_added .EditableField.is_ai_changed_field,
+.AiAssistantPanel__preview_resource_cards.is_added .AiAssistantPanel__preview_card_surface .EditableField.is_ai_changed_field,
+.AiAssistantPanel__preview_note_surface.is_after .EditableField.is_ai_changed_field,
+.AiAssistantPanel__preview_note_surface.is_added .EditableField.is_ai_changed_field {
+	border-color: color-mix(in srgb, var(--diff-added-text), transparent 40%);
+	background: color-mix(in srgb, var(--diff-added-text), transparent 85%);
 }
 
-.AiAssistantPanel__preview_card_surface.is_after .MonsterStatBlock .is_ai_changed_field {
-	border-color: color-mix(in srgb, var(--diff-added-text), transparent 45%);
-	background: color-mix(in srgb, var(--diff-added-text), transparent 90%);
-	box-shadow: 0 0 0 1px color-mix(in srgb, var(--diff-added-text), transparent 62%);
+.AiAssistantPanel__preview_card_surface.is_after .MonsterStatBlock .is_ai_changed_field,
+.AiAssistantPanel__preview_card_surface.is_added .MonsterStatBlock .is_ai_changed_field,
+.AiAssistantPanel__preview_resource_cards.is_added .AiAssistantPanel__preview_card_surface .MonsterStatBlock .is_ai_changed_field {
+	border-color: color-mix(in srgb, var(--diff-added-text), transparent 40%);
+	background: color-mix(in srgb, var(--diff-added-text), transparent 85%);
+	box-shadow:
+		inset 3px 0 0 var(--diff-added-text),
+		0 0 0 1px color-mix(in srgb, var(--diff-added-text), transparent 55%);
 }
 
-.MonsterStatBlock .is_ai_changed_field {
-	padding: var(--space-2) !important;
+.AiAssistantPanel__preview_card_surface.is_after .MonsterStatBlock .MonsterStatBlock__ability_box.is_ai_changed_field,
+.AiAssistantPanel__preview_card_surface.is_added .MonsterStatBlock .MonsterStatBlock__ability_box.is_ai_changed_field,
+.AiAssistantPanel__preview_resource_cards.is_added .AiAssistantPanel__preview_card_surface .MonsterStatBlock .MonsterStatBlock__ability_box.is_ai_changed_field {
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--diff-added-text), transparent 35%);
 }
 
 .AiAssistantPanel__preview_card_surface .EditableField.is_ai_changed_field textarea,
@@ -999,32 +1080,6 @@
 	color: var(--text-bright);
 }
 
-@media (max-width: 860px) {
-	.AiAssistantPanel__prompt_row {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.AiAssistantPanel__token_estimate {
-		align-items: flex-start;
-		flex-direction: column;
-	}
-
-	.AiAssistantPanel__token_estimate span:last-child {
-		white-space: normal;
-	}
-
-	.AiAssistantPanel__preview_columns {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.AiAssistantPanel__preview_card_columns {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.AiAssistantPanel__draft_columns {
-		grid-template-columns: minmax(0, 1fr);
-	}
-}
 
 .AiAssistantPanel__prompt_result> :first-child,
 .AiAssistantPanel__prompt_result>div> :first-child {
@@ -1435,10 +1490,11 @@
 	-webkit-box-orient: vertical;
 }
 
-@media (max-width: 1700px) {
-	.AiAssistantPanel__encounter_monsters .AiAssistantPanel__preview_card_columns {
-		display: flex;
-		flex-direction: column;
+@container (max-width: 760px) {
+	.AiAssistantPanel__preview_columns,
+	.AiAssistantPanel__preview_card_columns,
+	.AiAssistantPanel__draft_columns {
+		grid-template-columns: minmax(0, 1fr);
 	}
 }
 
@@ -1469,11 +1525,6 @@
 		max-width: 100vw;
 		height: 100dvh;
 		max-height: 100dvh;
-	}
-
-	.AiAssistantPanel__toggle {
-		right: var(--space-3);
-		bottom: calc(var(--space-3) + var(--size-10) + var(--space-2));
 	}
 
 	.AiAssistantPanel__header,
