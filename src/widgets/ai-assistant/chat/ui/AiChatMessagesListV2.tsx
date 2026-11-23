@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { lang } from "../../../../shared/lib/index.js";
-import type { AiActionCard, ChatMessage } from "../model/aiChatTypes.ts";
+import { getContextualChatSuggestions } from "../model/aiChatSuggestions.ts";
+import type { AiActionCard, AiWorkspaceContext, ChatMessage } from "../model/aiChatTypes.ts";
 import AiChatMessageItemV2 from "./AiChatMessageItemV2.tsx";
 
 interface AiChatMessagesListV2Props {
@@ -9,6 +10,8 @@ interface AiChatMessagesListV2Props {
 	isSending?: boolean;
 	isLegacyArchive?: boolean;
 	canGenerateImages?: boolean;
+	workspaceContext?: AiWorkspaceContext;
+	isBestiaryScope?: boolean;
 	busyActionIds?: Set<string>;
 	onApplyActionCard: (cardId: string) => void;
 	onUndoActionCard?: (cardId: string) => void;
@@ -26,6 +29,8 @@ export default function AiChatMessagesListV2({
 	isSending = false,
 	isLegacyArchive = false,
 	canGenerateImages = false,
+	workspaceContext,
+	isBestiaryScope = false,
 	busyActionIds,
 	onApplyActionCard,
 	onUndoActionCard,
@@ -38,6 +43,39 @@ export default function AiChatMessagesListV2({
 }: AiChatMessagesListV2Props) {
 	const bottomRef = useRef<HTMLDivElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
+	const [isBestiaryModalOpen, setIsBestiaryModalOpen] = useState(() =>
+		typeof document !== "undefined" ? Boolean(document.querySelector(".Bestiary")) : false,
+	);
+
+	useEffect(() => {
+		if (typeof document === "undefined" || messages.length > 0) return;
+		const syncBestiaryOpen = () => {
+			setIsBestiaryModalOpen(Boolean(document.querySelector(".Bestiary")));
+		};
+		syncBestiaryOpen();
+		const observer = new MutationObserver(syncBestiaryOpen);
+		observer.observe(document.body, { childList: true, subtree: true });
+		return () => observer.disconnect();
+	}, [messages.length]);
+
+	const currentLanguage = lang.getLanguage();
+	const contextualSuggestions = useMemo(
+		() =>
+			getContextualChatSuggestions({
+				viewType: workspaceContext?.viewType || (isBestiaryScope ? "bestiary" : "campaign"),
+				activeSection: workspaceContext?.activeSection || "",
+				isBestiaryScope,
+				isBestiaryOpen: isBestiaryModalOpen,
+				translate: lang.t,
+			}),
+		[
+			workspaceContext?.viewType,
+			workspaceContext?.activeSection,
+			isBestiaryScope,
+			isBestiaryModalOpen,
+			currentLanguage,
+		],
+	);
 
 	let lastUserMessageId: string | null = null;
 	let lastAssistantMessageId: string | null = null;
@@ -84,41 +122,18 @@ export default function AiChatMessagesListV2({
 					<h3>{lang.t("How can I help the Game Master?")}</h3>
 					<p>{lang.t("Ask about the current context, use @commands, or press Ctrl+K to insert entities.")}</p>
 
-					{onSelectSuggestion && (
+					{onSelectSuggestion && contextualSuggestions.length > 0 && (
 						<div className="AiChatMessagesListV2__suggestions">
-							<button
-								type="button"
-								className="AiChatMessagesListV2__suggestionBtn"
-								onClick={() =>
-									onSelectSuggestion(
-										lang.t("@scene add sensory details and one hidden clue"),
-									)
-								}
-							>
-								{lang.t("@scene details and clue for the scene")}
-							</button>
-							<button
-								type="button"
-								className="AiChatMessagesListV2__suggestionBtn"
-								onClick={() =>
-									onSelectSuggestion(
-										lang.t("@npc create a charismatic informant for the current location"),
-									)
-								}
-							>
-								{lang.t("@npc create a new NPC")}
-							</button>
-							<button
-								type="button"
-								className="AiChatMessagesListV2__suggestionBtn"
-								onClick={() =>
-									onSelectSuggestion(
-										lang.t("@encounter balance a medium difficulty combat encounter for the party"),
-									)
-								}
-							>
-								{lang.t("@encounter balanced combat for the party")}
-							</button>
+							{contextualSuggestions.map((suggestion) => (
+								<button
+									key={suggestion.id}
+									type="button"
+									className="AiChatMessagesListV2__suggestionBtn"
+									onClick={() => onSelectSuggestion(suggestion.prompt)}
+								>
+									{suggestion.label}
+								</button>
+							))}
 						</div>
 					)}
 				</div>

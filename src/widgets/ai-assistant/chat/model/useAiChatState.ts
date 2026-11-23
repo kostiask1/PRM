@@ -1828,7 +1828,24 @@ export function useAiChatState({
 			return `${prev}${space}${command} `;
 		});
 		setIsCommandsInfoOpen(false);
-	}, []);
+		focusComposerEditor();
+	}, [focusComposerEditor]);
+
+	const prefillComposer = useCallback(
+		(text: string) => {
+			const nextText = String(text || "");
+			if (!nextText) return;
+			setInputValue(nextText);
+			setErrorMessage(null);
+			setIsCommandsInfoOpen(false);
+			setIsModelPickerOpen(false);
+			setIsAttachMenuOpen(false);
+			window.setTimeout(() => {
+				focusComposerEditor();
+			}, 30);
+		},
+		[focusComposerEditor],
+	);
 
 	useEffect(() => {
 		const handleAiChatPrefill = (event: Event) => {
@@ -1862,6 +1879,7 @@ export function useAiChatState({
 	return {
 		campaignSlug,
 		isBestiaryScope,
+		workspaceContext,
 		sessions,
 		activeSession,
 		activeSessionId: activeSession.id,
@@ -1935,6 +1953,7 @@ export function useAiChatState({
 		togglePinAnchor,
 		resyncAnchorToCurrentWorkspace,
 		insertCommand,
+		prefillComposer,
 		refreshContextPreview,
 		compactChatContext,
 	};

@@ -285,18 +285,28 @@ export default function AiChatComposerV2({
 
 	const focusEditor = useCallback(() => {
 		window.requestAnimationFrame(() => {
-			getEditableElement()?.focus();
+			const editable = getEditableElement();
+			if (!editable) return;
+			editable.focus();
+			const selection = window.getSelection();
+			if (selection) {
+				const range = document.createRange();
+				range.selectNodeContents(editable);
+				range.collapse(false);
+				selection.removeAllRanges();
+				selection.addRange(range);
+			}
 		});
 	}, [getEditableElement]);
 
 	useEffect(() => {
 		onRegisterFocus?.(() => {
-			getEditableElement()?.focus();
+			focusEditor();
 		});
 		return () => {
 			onRegisterFocus?.(null);
 		};
-	}, [onRegisterFocus, getEditableElement]);
+	}, [onRegisterFocus, focusEditor]);
 
 	const syncCaretFromDom = useCallback(() => {
 		const editable = getEditableElement();

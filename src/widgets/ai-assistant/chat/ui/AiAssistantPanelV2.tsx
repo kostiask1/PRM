@@ -44,6 +44,7 @@ export default function AiAssistantPanelV2({
 	const {
 		campaignSlug,
 		isBestiaryScope,
+		workspaceContext,
 		sessions,
 		activeSession,
 		activeSessionId,
@@ -97,7 +98,6 @@ export default function AiAssistantPanelV2({
 		createNewChat,
 		selectSession,
 		deleteSession,
-		sendMessage,
 		submitComposer,
 		editAndResendMessage,
 		regenerateLastResponse,
@@ -116,6 +116,7 @@ export default function AiAssistantPanelV2({
 		togglePinAnchor,
 		resyncAnchorToCurrentWorkspace,
 		insertCommand,
+		prefillComposer,
 		compactChatContext,
 	} = state;
 
@@ -302,12 +303,14 @@ export default function AiAssistantPanelV2({
 				isSending={isSending}
 				isLegacyArchive={Boolean(activeSession.isLegacyArchive)}
 				canGenerateImages={availableImageModels.length > 0}
+				workspaceContext={workspaceContext}
+				isBestiaryScope={isBestiaryScope}
 				busyActionIds={busyActionIds}
 				onApplyActionCard={applyActionCard}
 				onUndoActionCard={undoActionCard}
 				onRejectActionCard={rejectActionCard}
 				onOpenDiff={(card) => setDiffModalCard(card)}
-				onSelectSuggestion={(text) => void sendMessage(text)}
+				onSelectSuggestion={(text) => prefillComposer(text)}
 				onEditUserMessage={(messageId, nextText) => void editAndResendMessage(messageId, nextText)}
 				onRegenerateAssistant={() => void regenerateLastResponse()}
 				onGenerateImageFromPrompt={(prompt) => openImageMode(prompt)}
