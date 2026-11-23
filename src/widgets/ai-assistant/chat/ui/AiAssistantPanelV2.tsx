@@ -9,12 +9,12 @@ import type { useAiChatState } from "../model/useAiChatState.ts";
 import AiAssistantHeaderV2 from "./AiAssistantHeaderV2.tsx";
 import AiContextAnchorBarV2 from "./AiContextAnchorBarV2.tsx";
 import AiChatMessagesListV2 from "./AiChatMessagesListV2.tsx";
+import { ImageGallery } from "../../../../features/images/index.js";
 import AiChatComposerV2 from "./AiChatComposerV2.tsx";
 import AiChatHistoryDropdownV2 from "./popovers/AiChatHistoryDropdownV2.tsx";
 import AiContextSettingsPopoverV2 from "./popovers/AiContextSettingsPopoverV2.tsx";
 import AiCommandsInfoTooltipV2 from "./popovers/AiCommandsInfoTooltipV2.tsx";
 import AiModelSelectorDropdownV2 from "./popovers/AiModelSelectorDropdownV2.tsx";
-import AiImageGeneratorPopoverV2 from "./popovers/AiImageGeneratorPopoverV2.tsx";
 import AiDiffPreviewModalV2 from "./AiDiffPreviewModalV2.tsx";
 
 interface AiAssistantPanelV2Props {
@@ -63,8 +63,10 @@ export default function AiAssistantPanelV2({
 		isContextSettingsOpen,
 		isCommandsInfoOpen,
 		isModelPickerOpen,
-		isImageGeneratorOpen,
-		imageGeneratorPromptDraft,
+		isAttachMenuOpen,
+		isGalleryPickerOpen,
+		isImageMode,
+		imageModeAction,
 		diffModalCard,
 		setInputValue,
 		setAutoApply,
@@ -76,23 +78,29 @@ export default function AiAssistantPanelV2({
 		setIsContextSettingsOpen,
 		setIsCommandsInfoOpen,
 		setIsModelPickerOpen,
-		setIsImageGeneratorOpen,
-		setImageGeneratorPromptDraft,
+		setIsAttachMenuOpen,
+		setIsGalleryPickerOpen,
+		setImageModeAction,
 		setDiffModalCard,
+		registerComposerFocus,
+		focusComposerEditor,
 		createNewChat,
 		selectSession,
 		deleteSession,
 		sendMessage,
+		submitComposer,
 		editAndResendMessage,
 		regenerateLastResponse,
-		openImageGenerator,
-		generateChatImage,
+		openImageMode,
+		exitImageMode,
+		toggleImageMode,
 		cancelSending,
 		applyActionCard,
 		saveCardDraftResources,
 		undoActionCard,
 		rejectActionCard,
 		addAttachments,
+		addGalleryAttachment,
 		removeAttachment,
 		saveApiKey,
 		togglePinAnchor,
@@ -100,6 +108,41 @@ export default function AiAssistantPanelV2({
 		insertCommand,
 		compactChatContext,
 	} = state;
+
+	const handleToggleAttachMenu = () => {
+		setIsAttachMenuOpen((prev) => {
+			const next = !prev;
+			if (next) {
+				setIsCommandsInfoOpen(false);
+				setIsModelPickerOpen(false);
+			}
+			return next;
+		});
+	};
+
+	const handleToggleCommandsInfo = () => {
+		setIsCommandsInfoOpen((prev) => {
+			const next = !prev;
+			if (next) {
+				setIsAttachMenuOpen(false);
+				setIsModelPickerOpen(false);
+			}
+			return next;
+		});
+	};
+
+	const handleToggleModelPicker = () => {
+		setIsModelPickerOpen((prev) => {
+			const next = !prev;
+			if (next) {
+				setIsAttachMenuOpen(false);
+				setIsCommandsInfoOpen(false);
+			}
+			return next;
+		});
+	};
+
+	const isImageModelSelectionActive = isImageMode && imageModeAction === "generate";
 
 	const handleApiKeySubmit = async (e: FormEvent) => {
 		e.preventDefault();
@@ -214,7 +257,7 @@ export default function AiAssistantPanelV2({
 				onSelectSuggestion={(text) => void sendMessage(text)}
 				onEditUserMessage={(messageId, nextText) => void editAndResendMessage(messageId, nextText)}
 				onRegenerateAssistant={() => void regenerateLastResponse()}
-				onGenerateImageFromPrompt={(prompt) => openImageGenerator(prompt)}
+				onGenerateImageFromPrompt={(prompt) => openImageMode(prompt)}
 			/>
 
 			<AiDiffPreviewModalV2
@@ -228,30 +271,49 @@ export default function AiAssistantPanelV2({
 				onSaveDraftResources={saveCardDraftResources}
 			/>
 
+			<ImageGallery
+				isOpen={isGalleryPickerOpen}
+				onClose={() => {
+					setIsGalleryPickerOpen(false);
+					focusComposerEditor();
+				}}
+				onSelect={(image) => addGalleryAttachment(image)}
+			/>
+
 			<div className="AiAssistantPanelV2__composerDock">
 				<AiChatComposerV2
 					value={inputValue}
 					onChange={setInputValue}
-					onSend={() => void sendMessage()}
+					onSend={() => void submitComposer()}
 					onCancelSend={cancelSending}
 					isSending={isSending}
 					models={availableModels}
 					selectedModel={selectedModel}
+					imageModels={availableImageModels}
+					selectedImageModel={selectedImageModel}
 					autoApply={autoApply}
 					onToggleAutoApply={setAutoApply}
 					contextAnchorType={contextAnchor.type}
 					isModelPickerOpen={isModelPickerOpen}
-					onToggleModelPicker={() => setIsModelPickerOpen((prev) => !prev)}
+					onToggleModelPicker={handleToggleModelPicker}
 					isCommandsInfoOpen={isCommandsInfoOpen}
-					onToggleCommandsInfo={() => setIsCommandsInfoOpen((prev) => !prev)}
-					isImageGeneratorOpen={isImageGeneratorOpen}
-					onToggleImageGenerator={() => {
-						if (isImageGeneratorOpen) {
-							setIsImageGeneratorOpen(false);
-						} else {
-							openImageGenerator();
-						}
+					onToggleCommandsInfo={handleToggleCommandsInfo}
+					isImageMode={isImageMode}
+					imageModeAction={imageModeAction}
+					onToggleImageMode={toggleImageMode}
+					onExitImageMode={exitImageMode}
+					onChangeImageModeAction={(action) => {
+						setImageModeAction(action);
+						setIsModelPickerOpen(false);
 					}}
+					isAttachMenuOpen={isAttachMenuOpen}
+					onToggleAttachMenu={handleToggleAttachMenu}
+					onCloseAttachMenu={() => setIsAttachMenuOpen(false)}
+					onOpenGalleryPicker={() => {
+						setIsAttachMenuOpen(false);
+						setIsGalleryPickerOpen(true);
+					}}
+					onRegisterFocus={registerComposerFocus}
 					attachments={attachments}
 					onAddAttachments={(files) => void addAttachments(files)}
 					onRemoveAttachment={removeAttachment}
@@ -266,33 +328,16 @@ export default function AiAssistantPanelV2({
 						<AiModelSelectorDropdownV2
 							isOpen={isModelPickerOpen}
 							onClose={() => setIsModelPickerOpen(false)}
-							models={availableModels}
-							selectedModel={selectedModel}
-							onSelectModel={setSelectedModel}
-						/>
-					}
-					imageGeneratorPopover={
-						<AiImageGeneratorPopoverV2
-							isOpen={isImageGeneratorOpen}
-							prompt={imageGeneratorPromptDraft}
-							imageModels={availableImageModels}
-							selectedImageModel={selectedImageModel}
-							isSending={isSending}
-							onPromptChange={setImageGeneratorPromptDraft}
-							onSelectImageModel={setSelectedImageModel}
-							onClose={() => setIsImageGeneratorOpen(false)}
-							onComposePrompt={() => {
-								const trimmed = imageGeneratorPromptDraft.trim();
-								setIsImageGeneratorOpen(false);
-								if (trimmed) {
-									void sendMessage(`@image ${trimmed}`);
-								} else {
-									insertCommand("@image");
-								}
-							}}
-							onGenerateImage={() =>
-								void generateChatImage(imageGeneratorPromptDraft, selectedImageModel)
+							models={isImageModelSelectionActive ? availableImageModels : availableModels}
+							selectedModel={isImageModelSelectionActive ? selectedImageModel : selectedModel}
+							onSelectModel={
+								isImageModelSelectionActive ? setSelectedImageModel : setSelectedModel
 							}
+							title={isImageModelSelectionActive ? lang.t("Image model") : undefined}
+							ariaLabel={
+								isImageModelSelectionActive ? lang.t("Select image model") : undefined
+							}
+							useFallbackModels={!isImageModelSelectionActive}
 						/>
 					}
 				/>

@@ -14,6 +14,10 @@ interface AiModelSelectorDropdownV2Props {
 	models?: readonly AiModelOption[];
 	selectedModel: string;
 	onSelectModel: (modelId: string) => void;
+	title?: string;
+	ariaLabel?: string;
+	triggerSelector?: string;
+	useFallbackModels?: boolean;
 }
 
 function shouldShowModelDescription(model: AiModelOption): boolean {
@@ -28,6 +32,10 @@ export default function AiModelSelectorDropdownV2({
 	models = [],
 	selectedModel,
 	onSelectModel,
+	title,
+	ariaLabel,
+	triggerSelector = ".AiChatComposerV2__modelPill",
+	useFallbackModels = true,
 }: AiModelSelectorDropdownV2Props) {
 	const ref = useRef<HTMLDivElement>(null);
 	const selectedItemRef = useRef<HTMLButtonElement>(null);
@@ -37,7 +45,7 @@ export default function AiModelSelectorDropdownV2({
 	useDismissablePopover({
 		isOpen,
 		popoverRef: ref,
-		triggerSelector: ".AiChatComposerV2__modelPill",
+		triggerSelector,
 		onClose,
 	});
 
@@ -50,8 +58,8 @@ export default function AiModelSelectorDropdownV2({
 	}, [isOpen]);
 
 	const fallbackModels = useMemo(
-		() => AI_MODELS.map(localizeAiModelOption),
-		[currentLanguage],
+		() => (useFallbackModels ? AI_MODELS.map(localizeAiModelOption) : []),
+		[useFallbackModels, currentLanguage],
 	);
 	const modelList = models.length > 0 ? models : fallbackModels;
 	const showSearch = modelList.length > 6;
@@ -73,11 +81,11 @@ export default function AiModelSelectorDropdownV2({
 			className="AiModelSelectorDropdownV2"
 			ref={ref}
 			role="dialog"
-			aria-label={lang.t("Select Gemini model")}
+			aria-label={ariaLabel || title || lang.t("Select Gemini model")}
 		>
 			<div className="AiModelSelectorDropdownV2__header">
 				<div className="AiModelSelectorDropdownV2__titleGroup">
-					<span className="AiModelSelectorDropdownV2__title">{lang.t("Gemini model")}</span>
+					<span className="AiModelSelectorDropdownV2__title">{title || lang.t("Gemini model")}</span>
 					<span className="AiModelSelectorDropdownV2__count">{modelList.length}</span>
 				</div>
 				<button

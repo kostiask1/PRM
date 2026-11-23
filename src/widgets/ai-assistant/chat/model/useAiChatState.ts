@@ -352,9 +352,12 @@ export function useAiChatState({
 	const [isContextSettingsOpen, setIsContextSettingsOpen] = useState(false);
 	const [isCommandsInfoOpen, setIsCommandsInfoOpen] = useState(false);
 	const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
-	const [isImageGeneratorOpen, setIsImageGeneratorOpen] = useState(false);
-	const [imageGeneratorPromptDraft, setImageGeneratorPromptDraft] = useState("");
+	const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+	const [isGalleryPickerOpen, setIsGalleryPickerOpen] = useState(false);
+	const [isImageMode, setIsImageMode] = useState(false);
+	const [imageModeAction, setImageModeAction] = useState<"generate" | "prompt">("generate");
 	const [diffModalCard, setDiffModalCard] = useState<AiActionCard | null>(null);
+	const composerFocusRef = useRef<(() => void) | null>(null);
 
 	// Live context catalog & token estimation
 	const [contextPreview, setContextPreview] = useState<AiChatContextPreview | null>(null);
@@ -403,6 +406,10 @@ export function useAiChatState({
 		setAttachments([]);
 		setDraftAnchor(null);
 		setDiffModalCard(null);
+		setIsAttachMenuOpen(false);
+		setIsGalleryPickerOpen(false);
+		setIsImageMode(false);
+		setImageModeAction("generate");
 
 		if (!campaignSlug) {
 			setSessions([]);
@@ -949,7 +956,14 @@ export function useAiChatState({
 	}, []);
 
 	const sendMessage = useCallback(
-		async (contentToSend?: string) => {
+		async (
+			contentToSend?: string,
+			options?: {
+				clearDraft?: boolean;
+				restoreDraft?: string | null;
+				restoreImageMode?: boolean;
+			},
+		) => {
 			if (!campaignSlug || isSending) return;
 			const text = (contentToSend ?? inputValue).trim();
 			const pendingAttachments = [...attachments];
@@ -957,8 +971,17 @@ export function useAiChatState({
 
 			setErrorMessage(null);
 			setIsSending(true);
-			const previousDraft = contentToSend === undefined ? inputValue : null;
-			if (contentToSend === undefined) setInputValue("");
+			setIsAttachMenuOpen(false);
+			setIsModelPickerOpen(false);
+			setIsCommandsInfoOpen(false);
+			const shouldClearDraft = options?.clearDraft ?? contentToSend === undefined;
+			const previousDraft =
+				options?.restoreDraft !== undefined
+					? options.restoreDraft
+					: contentToSend === undefined
+						? inputValue
+						: null;
+			if (shouldClearDraft) setInputValue("");
 			setAttachments([]);
 
 			const now = Date.now();
@@ -1089,6 +1112,7 @@ export function useAiChatState({
 			} catch (error) {
 				setActiveSessionRecord(prevRecordSnapshot);
 				if (previousDraft !== null) setInputValue(previousDraft);
+				if (options?.restoreImageMode) setIsImageMode(true);
 				setAttachments(pendingAttachments);
 				if (!isAbortError(error)) {
 					if (isMissingApiKeyError(error)) {
@@ -1300,18 +1324,66 @@ export function useAiChatState({
 		}
 	}, [activeSessionRecord, isSending, editAndResendMessage]);
 
-	const openImageGenerator = useCallback(
+	const registerComposerFocus = useCallback((fn: (() => void) | null) => {
+		composerFocusRef.current = fn;
+	}, []);
+
+	const focusComposerEditor = useCallback(() => {
+		if (typeof window === "undefined") return;
+		window.requestAnimationFrame(() => {
+			if (composerFocusRef.current) {
+				composerFocusRef.current();
+				return;
+			}
+			document
+				.querySelector<HTMLElement>(
+					'.AiChatComposerV2__inputWrap .MarkdownView[contenteditable="true"], .AiChatComposerV2__editor',
+				)
+				?.focus();
+		});
+	}, []);
+
+	const openImageMode = useCallback(
 		(prefillPrompt?: string) => {
-			const fallbackPrompt = prefillPrompt !== undefined ? prefillPrompt : inputValue;
-			setImageGeneratorPromptDraft(
-				String(fallbackPrompt || "").replace(/(^|\s)@image\b\s*/i, "$1").trim(),
-			);
+			if (prefillPrompt !== undefined) {
+				setInputValue(
+					String(prefillPrompt || "").replace(/(^|\s)@image\b\s*/i, "$1").trim(),
+				);
+			} else {
+				const stripped = inputValue.replace(/(^|\s)@image\b\s*/i, "$1").trim();
+				if (stripped !== inputValue.trim()) {
+					setInputValue(stripped);
+				}
+			}
 			setIsCommandsInfoOpen(false);
 			setIsModelPickerOpen(false);
-			setIsImageGeneratorOpen(true);
+			setIsAttachMenuOpen(false);
+			setImageModeAction("generate");
+			setIsImageMode(true);
+			focusComposerEditor();
 		},
-		[inputValue],
+		[inputValue, focusComposerEditor],
 	);
+
+	const exitImageMode = useCallback(() => {
+		setIsImageMode(false);
+		setIsModelPickerOpen(false);
+		setIsAttachMenuOpen(false);
+		focusComposerEditor();
+	}, [focusComposerEditor]);
+
+	const toggleImageMode = useCallback(() => {
+		if (isImageMode) {
+			exitImageMode();
+		} else {
+			openImageMode();
+		}
+	}, [isImageMode, exitImageMode, openImageMode]);
+
+	const selectImageModel = useCallback((modelId: string) => {
+		setSelectedImageModel(modelId);
+		setIsModelPickerOpen(false);
+	}, []);
 
 	const generateChatImage = useCallback(
 		async (promptText: string, modelName?: string) => {
@@ -1321,7 +1393,15 @@ export function useAiChatState({
 
 			setErrorMessage(null);
 			setIsSending(true);
-			setIsImageGeneratorOpen(false);
+			const shouldClearDraft = trimmed === inputValue.trim() && inputValue.length > 0;
+			const previousDraft = shouldClearDraft ? inputValue : null;
+			if (shouldClearDraft) {
+				setInputValue("");
+			}
+			setIsImageMode(false);
+			setIsAttachMenuOpen(false);
+			setIsModelPickerOpen(false);
+			setIsCommandsInfoOpen(false);
 			const pendingImages = attachments.filter((a) => a.kind === "image");
 			setAttachments((prev) => prev.filter((a) => a.kind !== "image"));
 
@@ -1404,6 +1484,11 @@ export function useAiChatState({
 				});
 			} catch (error) {
 				setActiveSessionRecord(prevRecordSnapshot);
+				if (previousDraft !== null) {
+					setInputValue(previousDraft);
+				}
+				setIsImageMode(true);
+				setImageModeAction("generate");
 				if (pendingImages.length > 0) {
 					setAttachments((prev) => [...pendingImages, ...prev]);
 				}
@@ -1431,9 +1516,45 @@ export function useAiChatState({
 			liveWorkspaceAnchor,
 			contextAnchor.pinned,
 			currentLanguage,
+			inputValue,
 			runtime,
 		],
 	);
+
+	const submitComposer = useCallback(async () => {
+		if (isSending) return;
+		if (!isImageMode) {
+			await sendMessage();
+			return;
+		}
+		const trimmed = inputValue.trim();
+		if (imageModeAction === "generate") {
+			if (!trimmed) return;
+			await generateChatImage(trimmed, selectedImageModel);
+			return;
+		}
+		if (!trimmed && attachments.length === 0) return;
+		const prefixedPrompt = trimmed
+			? /^@image\b/i.test(trimmed)
+				? trimmed
+				: `@image ${trimmed}`
+			: "@image";
+		setIsImageMode(false);
+		await sendMessage(prefixedPrompt, {
+			clearDraft: true,
+			restoreDraft: inputValue,
+			restoreImageMode: true,
+		});
+	}, [
+		isSending,
+		isImageMode,
+		inputValue,
+		imageModeAction,
+		selectedImageModel,
+		attachments.length,
+		generateChatImage,
+		sendMessage,
+	]);
 
 	const runActionMutation = useCallback(
 		async (
@@ -1620,6 +1741,48 @@ export function useAiChatState({
 		setAttachments((prev) => prev.filter((item) => item.id !== id));
 	}, []);
 
+	const addGalleryAttachment = useCallback(
+		(image: { name?: string; displayName?: string; url?: string; sizeBytes?: number } | null | undefined) => {
+			if (!image?.url) return;
+			const sameKindCount = attachments.filter((a) => a.kind === "image").length;
+			if (sameKindCount >= MAX_AI_ATTACHMENTS) {
+				setErrorMessage(
+					lang.t("Maximum {count} attachments of the same type.", {
+						count: MAX_AI_ATTACHMENTS,
+					}),
+				);
+				setIsGalleryPickerOpen(false);
+				setIsAttachMenuOpen(false);
+				return;
+			}
+			setErrorMessage(null);
+			const name =
+				String(image.displayName || image.name || "gallery-image").trim() ||
+				"gallery-image";
+			const descriptor: AiChatAttachment = {
+				id: `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+				kind: "image",
+				name,
+				url: image.url,
+				sizeBytes: typeof image.sizeBytes === "number" ? image.sizeBytes : undefined,
+			};
+			const nextKey = getAttachedImageKey(descriptor);
+			setAttachments((prev) => {
+				if (prev.filter((a) => a.kind === "image").length >= MAX_AI_ATTACHMENTS) {
+					return prev;
+				}
+				if (prev.some((item) => item.kind === "image" && getAttachedImageKey(item) === nextKey)) {
+					return prev;
+				}
+				return [...prev, descriptor];
+			});
+			setIsGalleryPickerOpen(false);
+			setIsAttachMenuOpen(false);
+			focusComposerEditor();
+		},
+		[attachments, focusComposerEditor],
+	);
+
 	const saveApiKey = useCallback(async (apiKey: string) => {
 		const trimmed = String(apiKey || "").trim();
 		if (!trimmed) {
@@ -1728,31 +1891,40 @@ export function useAiChatState({
 		isContextSettingsOpen,
 		isCommandsInfoOpen,
 		isModelPickerOpen,
-		isImageGeneratorOpen,
-		imageGeneratorPromptDraft,
+		isAttachMenuOpen,
+		isGalleryPickerOpen,
+		isImageMode,
+		imageModeAction,
 		diffModalCard,
 		setInputValue,
 		setAutoApply,
 		setSelectedModel,
-		setSelectedImageModel,
+		setSelectedImageModel: selectImageModel,
 		setContextSettings,
 		setErrorMessage,
 		setIsHistoryOpen,
 		setIsContextSettingsOpen,
 		setIsCommandsInfoOpen,
 		setIsModelPickerOpen,
-		setIsImageGeneratorOpen,
-		setImageGeneratorPromptDraft,
+		setIsAttachMenuOpen,
+		setIsGalleryPickerOpen,
+		setImageModeAction,
 		setDiffModalCard,
+		registerComposerFocus,
+		focusComposerEditor,
 		createNewChat,
 		selectSession,
 		deleteSession,
 		sendMessage,
+		submitComposer,
 		editAndResendMessage,
 		regenerateLastResponse,
-		openImageGenerator,
+		openImageMode,
+		exitImageMode,
+		toggleImageMode,
 		generateChatImage,
 		cancelSending,
+		addGalleryAttachment,
 		applyActionCard,
 		saveCardDraftResources,
 		undoActionCard,
